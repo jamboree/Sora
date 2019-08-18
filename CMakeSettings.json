@@ -1,0 +1,93 @@
+{
+  "configurations": [
+    {
+      "name": "x86-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x86-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x86-RelWithDebInfo",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x86-MinSizeRel",
+      "generator": "Ninja",
+      "configurationType": "MinSizeRel",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "msvc_x64" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x64-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x64-RelWithDebInfo",
+      "generator": "Ninja",
+      "configurationType": "RelWithDebInfo",
+      "inheritEnvironments": [ "msvc_x64" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    {
+      "name": "x64-MinSizeRel",
+      "generator": "Ninja",
+      "configurationType": "MinSizeRel",
+      "inheritEnvironments": [ "msvc_x64" ],
+      "buildRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\build\\${name}",
+      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\Sora\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "-v",
+      "ctestCommandArgs": ""
+    },
+    { "cacheRoot": "" }
+  ]
+}

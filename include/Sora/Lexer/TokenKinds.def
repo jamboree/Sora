@@ -1,0 +1,97 @@
+//===--- TokenKinds.def - Token Kinds x-macros ------------------*- C++ -*-===//
+// Part of the Sora project, licensed under the MIT license.
+// See LICENSE.txt in the project root for license information.
+//
+// Copyright (c) 2019 Pierre van Houtryve
+//===----------------------------------------------------------------------===//
+
+/// A Token Kind.
+/// Other macros will default to TOKEN when left undefined.
+#ifndef TOKEN
+  #define TOKEN(ID)
+#endif
+
+/// A language keyword.
+/// This requires its own macro because we use this to generate the keyword
+/// identification logic.
+#ifndef KEYWORD
+  #define KEYWORD(ID, TEXT) TOKEN(ID)
+#endif
+
+// Misc. Token Kinds
+// NOTE: The "Invalid" Kind must always be first.
+TOKEN(Invalid)
+TOKEN(EndOfFile)
+
+// Identifier
+TOKEN(Identifier)
+
+// Constant/Literals
+TOKEN(DoubleLiteral)
+TOKEN(IntLiteral)
+
+// Punctuation
+TOKEN(Amp)            // &
+TOKEN(AmpAmp)         // &&
+TOKEN(AmpEqual)       // &=
+TOKEN(Arrow)          // ->
+TOKEN(Caret)          // ^
+TOKEN(CaretEqual)     // ^=
+TOKEN(Colon)          // :
+TOKEN(Comma)          // ,
+TOKEN(Dot)            // .
+TOKEN(Equal)          // =
+TOKEN(EqualEqual)     // ==
+TOKEN(Exclaim)        // !
+TOKEN(ExclaimEqual)   // !=
+TOKEN(Greater)        // >
+TOKEN(GreaterEqual)   // >=
+TOKEN(GreaterGreater) // >>
+TOKEN(GreaterGreaterEqual)  // >>=
+TOKEN(LCurly)         // {
+TOKEN(LParen)         // (
+TOKEN(LSquare)        // [
+TOKEN(Less)           // <
+TOKEN(LessEqual)      // <=
+TOKEN(LessLess)       // <<
+TOKEN(LessLessEqual)  // <<=
+TOKEN(Minus)          // -
+TOKEN(MinusEqual)     // -=
+TOKEN(Percent)        // %
+TOKEN(PercentEqual)   // %=
+TOKEN(Pipe)           // |
+TOKEN(PipeEqual)      // |=
+TOKEN(PipePipe)       // ||
+TOKEN(Plus)           // +
+TOKEN(PlusEqual)      // +=
+TOKEN(RCurly)         // }
+TOKEN(RParen)         // )
+TOKEN(RSquare)        // ]
+TOKEN(Semi)           // ;
+TOKEN(Slash)          // /
+TOKEN(SlashEqual)     // /=
+TOKEN(Star)           // *
+TOKEN(StarEqual)      // *=
+
+// Language Keywords
+KEYWORD(BreakKw,      "break")
+KEYWORD(ContinueKw,   "continue")
+KEYWORD(ElseKw,       "else")
+KEYWORD(FalseKw,      "false")
+KEYWORD(ForKw,        "for")
+KEYWORD(FuncKw,       "func")
+KEYWORD(IfKw,         "if")
+KEYWORD(InKw,         "in")
+KEYWORD(LetKw,        "let")
+KEYWORD(MaybeKw,      "maybe")
+KEYWORD(MutKw,        "mut")
+KEYWORD(NullKw,       "null")
+KEYWORD(ReturnKw,     "return")
+KEYWORD(StructKw,     "struct")
+KEYWORD(TrueKw,       "true")
+KEYWORD(TypeKw,       "type")
+KEYWORD(UnderscoreKw, "_")
+KEYWORD(WhileKw,      "while")
+
+#undef TOKEN
+#undef KEYWORD

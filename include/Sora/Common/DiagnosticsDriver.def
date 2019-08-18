@@ -1,0 +1,46 @@
+//===--- DiagnosticsDriver.def - Driver Diagnostic x-macros -----*- C++ -*-===//
+// Part of the Sora project, licensed under the MIT license.
+// See LICENSE.txt in the project root for license information.
+//
+// Copyright (c) 2019 Pierre van Houtryve
+//===----------------------------------------------------------------------===//
+
+#if !(defined(DIAG)\
+  || (defined(REMARK) && defined(NOTE) && defined(WARNING) && defined(ERROR)))
+# error "Must define DIAG or {REMARK, NOTE, WARNING, ERROR}"
+#endif
+
+#ifndef REMARK
+# define REMARK(ID, TEXT, SIGNATURE) DIAG(Remark, ID, TEXT, SIGNATURE)
+#endif
+
+#ifndef NOTE
+# define NOTE(ID, TEXT, SIGNATURE) DIAG(Note, ID, TEXT, SIGNATURE)
+#endif
+
+#ifndef WARNING
+# define WARNING(ID, TEXT, SIGNATURE) DIAG(Warning, ID, TEXT, SIGNATURE)
+#endif
+
+#ifndef ERROR
+# define ERROR(ID, TEXT, SIGNATURE) DIAG(Error, ID, TEXT, SIGNATURE)
+#endif
+
+//===----------------------------------------------------------------------===//
+
+ERROR(unknown_arg, "unknown argument '%0'", 
+  (StringRef))
+ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)", 
+  (StringRef, unsigned))
+
+//===----------------------------------------------------------------------===//
+
+#ifndef KEEP_DIAG_MACROS
+# ifdef DIAG
+#   undef DIAG
+# endif
+# undef REMARK
+# undef NOTE
+# undef WARNING
+# undef ERROR
+#endif
