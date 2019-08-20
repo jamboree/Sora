@@ -2,7 +2,7 @@
 
 ## Foreword
 
-Every project I do is to learn something, and Sora is no exception. Learning how to implement and work with SSA/CFG IRs is my goal for this project, so I will have a SSA/CFG IR for Sora, IR that will be lowered to LLVM IR. 
+Every project I do is to learn something, and Sora is no exception. Learning how to implement and work with SSA/CFG IRs is my goal for this project.
 
 As this is a complex topic, I prefer to start with a simplified version of Sora to get up and running quickly.
 
@@ -16,8 +16,11 @@ That said, let's begin.
 
 The first goal will be to implement a *heavily* simplified version of the language. This will be feature-poor and not capable of doing much, but it should be able to:
 - Generate valid Sora IR
-- Lower that IR to valid LLVM IR
+- Lower that IR to LLVM IR
 - Run simple programs (factorials, fibonnaci, etc.) correctly
+Additional requirements
+- Support various command-line options like `-check-semantics-only`, `-parse-only`, `-dump-ast`, `-dump-parse`, `-dump-ir`, `-emit-llvm` etc.
+- Have a modular, codebase that's easy to work with
 
 Here's a non-exhaustive list of features that will be present in the initial implementation.
 - Types:
@@ -68,7 +71,7 @@ Now that we got a solid foundation, we can add the more advanced stuff. These wi
 
 ## Part 3: Endgame
 
-**Note:** Ditto Part 2, but much worse. They're vague ideas, things I know I want but that take time to figure out and implement, and that may not even be implemented. Everything listed here is TBD, both for syntax and semantics. TL;DR: These are just ideas!
+**Note:** Ditto Part 2, but much worse. They're vague ideas about complex stuff; things I know I want to have but that take time to figure out and implement. Everything listed here is TBD, both for syntax and semantics. This is close to a "wish list", so absolutely no guarantees are made.
 
 - Traits
 - Generics
