@@ -230,7 +230,7 @@ public:
   }
 
   /// Creates a DiagnosticEngine with a PrintingDiagnosticConsumer that
-  /// outputs diagnostic messages to \p out
+  /// pretty-prints diagnostics to \p out
   DiagnosticEngine(SourceManager &srcMgr, raw_ostream &out)
       : DiagnosticEngine(srcMgr,
                          std::make_unique<PrintingDiagnosticConsumer>(out)) {}

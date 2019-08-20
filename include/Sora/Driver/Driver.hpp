@@ -4,24 +4,87 @@
 //
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
-// Sora Driver and CompilerInstance classes.
-//
-// Note: This is a pretty simple Driver. As it was written for the first version
-// of Sora, it should be completely rewritten when the compiler gets
-// bigger (e.g. to support parallel/incremental compilation, and to be more
-// modular overall).
+// This file contains the Driver and CompilerInstance classes.
+// Essentially, the driver is the glue holding all the parts of the compiler
+// together. It orchestrates compilation, handles command-line options, etc.
 //===----------------------------------------------------------------------===//
 
 #pragma once
 
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "Sora/Common/SourceManager.hpp"
 #include "llvm/Option/ArgList.h"
 #include <memory>
 
 namespace sora {
-/// The Sora Driver
+/// Represents an instance of the compiler. This owns the main singletons
+/// (SourceManager, ASTContext, DiagnosticEngine, etc.) and orchestrates
+/// the compilation process.
 ///
+/// Currently, you can't run the same compiler instance object more than once
+/// (simply because it's not needed)
+class CompilerInstance { 
+  friend class Driver;
+  CompilerInstance() = default;
+public:
+  /// A step in the compilation process
+  enum class Step : uint8_t {
+    /// Parsing, done by the Lexer and Parser components
+    Parsing,
+    /// Semantic Analysis, done by Sema
+    Sema,
+    /// The last step of the process
+    Last = Sema
+  };
+
+  struct {
+    /// If "true", dumps the AST after parsing.
+    /// Honored by doParsing()
+    bool dumpRawAST = false;
+    /// If "true", dumps the AST after semantic analysis.
+    /// Honored by doSema()
+    bool dumpCheckedAST = false;
+  } options;
+
+  /// Loads an input file into the SourceManager
+  /// \returns true if the file was loaded successfully
+  bool loadInput(StringRef filepath);
+
+  /// Runs this CompilerInstance.
+  ///
+  /// This can only be called once per CompilerInstance.
+  ///
+  /// \param stopAfter stops the compilation process after that step (default =
+  /// Step::Last)
+  /// \returns true if compilation was successful, false otherwise.
+  bool run(Step stopAfter = Step::Last);
+
+  /// \returns the set of input files
+  ArrayRef<BufferID> getInputBuffers() const;
+
+  SourceManager srcMgr;
+  DiagnosticEngine diagEng{srcMgr, llvm::outs()};
+
+private:
+  /// Whether this CompilerInstance was ran at least once.
+  bool ran = false;
+  /// The BufferIDs of the input files
+  std::vector<BufferID> inputBuffers;
+
+  /// Loads the inputFiles into the SourceManager.
+  /// \returns true if every file was loaded successfully, false otherwise
+  bool loadInputFilesIntoSourceManager();
+
+  /// Performs the parsing step
+  /// \returns true if parsing was successful, false otherwise.
+  bool doParsing();
+
+  /// Performs the semantic analysis step
+  /// \returns true if sema was successful, false otherwise.
+  bool doSema();
+};
+
 /// This is a high-level compiler driver. It handles command-line options and
 /// handles creation of CompilerInstances.
 class Driver {
@@ -49,9 +112,15 @@ public:
   /// false otherwise.
   bool handleImmediateArgs(llvm::opt::InputArgList &options);
 
+  /// (Tries to) create a compiler instance
+  /// \returns the created compiler instance, or nullptr on error.
+  std::unique_ptr<CompilerInstance>
+  createCompilerInstance(llvm::opt::InputArgList &options);
+
   /// Utility function to emit driver diagnostics.
-  template<typename ... Args>
-  InFlightDiagnostic diagnose(TypedDiag<Args...> diag,
+  template <typename... Args>
+  InFlightDiagnostic
+  diagnose(TypedDiag<Args...> diag,
            typename detail::PassArgument<Args>::type... args) {
     return driverDiags.diagnose<Args...>(SourceLoc(), diag, args...);
   }

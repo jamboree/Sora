@@ -28,10 +28,12 @@
 
 //===----------------------------------------------------------------------===//
 
-ERROR(unknown_arg, "unknown argument '%0'", 
-  (StringRef))
+// Argument parsing
+ERROR(unknown_arg, "unknown argument '%0'", (StringRef))
 ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)", 
   (StringRef, unsigned))
+// Input files loading
+ERROR(couldnt_load_input_file, "could not load input file '%0'", (StringRef))
 
 //===----------------------------------------------------------------------===//
 

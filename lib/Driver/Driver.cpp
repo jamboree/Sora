@@ -48,17 +48,19 @@ bool Driver::handleImmediateArgs(InputArgList &options) {
   return true;
 }
 
+std::unique_ptr<CompilerInstance>
+Driver::createCompilerInstance(llvm::opt::InputArgList &options) {
+  // TODO: Handle command-line options like
+  //    -dump-ast, -dump-ast=(raw | checked)
+  return std::make_unique<CompilerInstance>();
+}
+
 /*
   TODO:
     - unit-test options stuff
     - class CompilerInstance (friend class Driver)
       - Optional<CompilerInstance> Driver::createCompilerInstance
         - Creates and set-up a compiler instance. returns false on error.
-      - (unique_ptr)ASTContext, DiagnosticEngine, SourceManager, etc.
-      - struct Options
-        - bool dumpAST
-        - bool dumpParse
-        - bool dumpIR
       - enum class Kind { ParseOnly, Compile }
       - bool run() // return true if success, false otherwise.
           - doParse
@@ -69,3 +71,43 @@ bool Driver::handleImmediateArgs(InputArgList &options) {
           - doLLVMIROpt
           - doLLVMCodeGen
 */
+
+bool CompilerInstance::loadInput(StringRef filepath) {
+  if (auto result = llvm::MemoryBuffer::getFile(filepath)) {
+    if (auto buffer = srcMgr.giveBuffer(std::move(*result))) {
+      inputBuffers.push_back(buffer);
+      return true;
+    }
+  }
+  return false; 
+}
+
+bool CompilerInstance::run(Step stopAfter) {
+  assert(!ran && "already ran this CompilerInstance!");
+  ran = true;
+  bool success = true;
+  // Parsing
+  success = doParsing();
+  if (stopAfter == Step::Parsing)
+    return success;
+}
+
+ArrayRef<BufferID> CompilerInstance::getInputBuffers() const {
+  return inputBuffers;
+}
+
+bool CompilerInstance::doParsing() { 
+  // TODO: Nothing here yet.
+  if (options.dumpRawAST) {
+    // Dump Raw AST
+  }
+  return true; 
+}
+
+bool CompilerInstance::doSema() { 
+  // TODO: Nothing here yet.
+  if (options.dumpCheckedAST) {
+    // Dump Raw AST
+  }
+  return true; 
+}
