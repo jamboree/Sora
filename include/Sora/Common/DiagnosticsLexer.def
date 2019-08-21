@@ -1,4 +1,4 @@
-//===--- DiagnosticsAll.def - Diagnostic x-macros ---------------*- C++ -*-===//
+//===--- DiagnosticsLexer.def - Lexer Diagnostic x-macros -------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -28,13 +28,8 @@
 
 //===----------------------------------------------------------------------===//
 
-#define KEEP_DIAG_MACROS
-
-#include "DiagnosticsCommon.def"
-#include "DiagnosticsDriver.def"
-#include "DiagnosticsLexer.def"
-
-#undef KEEP_DIAG_MACROS
+ERROR(illegal_utf8_cp, "illegal utf-8 codepoint", ())
+ERROR(incomplete_utf8_cp, "incomplete utf-8 codepoint", ())
 
 //===----------------------------------------------------------------------===//
 

@@ -50,18 +50,20 @@ bool Driver::handleImmediateArgs(InputArgList &options) {
 
 std::unique_ptr<CompilerInstance>
 Driver::createCompilerInstance(llvm::opt::InputArgList &options) {
+  // To make make_unique work with the private constructor, we must
+  // use a small trick.
+  struct CompilerInstanceCreater : public CompilerInstance {
+    using CompilerInstance::CompilerInstance;
+  };
   // TODO: Handle command-line options like
   //    -dump-ast, -dump-ast=(raw | checked)
-  return std::make_unique<CompilerInstance>();
+  return llvm::make_unique<CompilerInstanceCreater>();
 }
 
 /*
   TODO:
     - unit-test options stuff
     - class CompilerInstance (friend class Driver)
-      - Optional<CompilerInstance> Driver::createCompilerInstance
-        - Creates and set-up a compiler instance. returns false on error.
-      - enum class Kind { ParseOnly, Compile }
       - bool run() // return true if success, false otherwise.
           - doParse
           - doSema
@@ -72,42 +74,49 @@ Driver::createCompilerInstance(llvm::opt::InputArgList &options) {
           - doLLVMCodeGen
 */
 
-bool CompilerInstance::loadInput(StringRef filepath) {
+BufferID CompilerInstance::loadFile(StringRef filepath) {
   if (auto result = llvm::MemoryBuffer::getFile(filepath)) {
     if (auto buffer = srcMgr.giveBuffer(std::move(*result))) {
       inputBuffers.push_back(buffer);
-      return true;
+      return buffer;
     }
   }
-  return false; 
+  return BufferID();
 }
 
 bool CompilerInstance::run(Step stopAfter) {
   assert(!ran && "already ran this CompilerInstance!");
   ran = true;
   bool success = true;
-  // Parsing
+  // Helper function, returns true if we can continue, false otherwise.
+  auto canContinue = [&](Step currentStep) {
+    return success && stopAfter != currentStep;
+  };
+  // Perform parsing
   success = doParsing();
-  if (stopAfter == Step::Parsing)
+  if (canContinue(Step::Parsing))
     return success;
+  // Perform Sema
+  //  TODO
+  return success;
 }
 
 ArrayRef<BufferID> CompilerInstance::getInputBuffers() const {
   return inputBuffers;
 }
 
-bool CompilerInstance::doParsing() { 
-  // TODO: Nothing here yet.
+bool CompilerInstance::doParsing() {
+  // TODO
   if (options.dumpRawAST) {
-    // Dump Raw AST
+    // TODO: Dump Raw AST
   }
-  return true; 
+  return true;
 }
 
-bool CompilerInstance::doSema() { 
-  // TODO: Nothing here yet.
+bool CompilerInstance::doSema() {
+  // TODO
   if (options.dumpCheckedAST) {
-    // Dump Raw AST
+    // TODO: Dump Raw AST
   }
-  return true; 
+  return true;
 }

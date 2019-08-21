@@ -125,7 +125,7 @@ public:
 
   /// Constructor for diagnostics with no arguments
   template <typename... Args>
-  RawDiagnostic(TypedDiag<> id, SourceLoc loc) : id(id), loc(loc) {}
+  RawDiagnostic(TypedDiag<> diag, SourceLoc loc) : id(diag.id), loc(loc) {}
 
   /// Adds a FixIt object to this Diagnostic.
   void addFixit(const FixIt &fixit) { fixits.push_back(fixit); }

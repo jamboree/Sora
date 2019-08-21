@@ -14,6 +14,7 @@
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
 #include <memory>
 
@@ -22,9 +23,9 @@ namespace sora {
 /// (SourceManager, ASTContext, DiagnosticEngine, etc.) and orchestrates
 /// the compilation process.
 ///
-/// Currently, you can't run the same compiler instance object more than once
+/// Currently, you can't run the same compiler instance more than once
 /// (simply because it's not needed)
-class CompilerInstance { 
+class CompilerInstance {
   friend class Driver;
   CompilerInstance() = default;
 public:
@@ -47,9 +48,11 @@ public:
     bool dumpCheckedAST = false;
   } options;
 
-  /// Loads an input file into the SourceManager
-  /// \returns true if the file was loaded successfully
-  bool loadInput(StringRef filepath);
+  /// Loads an file into the SourceManager
+  /// \param the absolute path of the file
+  /// \returns a valid BufferID if the file was loaded successfully, false
+  /// otherwise.
+  BufferID loadFile(StringRef filepath);
 
   /// Runs this CompilerInstance.
   ///
@@ -60,7 +63,7 @@ public:
   /// \returns true if compilation was successful, false otherwise.
   bool run(Step stopAfter = Step::Last);
 
-  /// \returns the set of input files
+  /// \returns the set of input buffers
   ArrayRef<BufferID> getInputBuffers() const;
 
   SourceManager srcMgr;
@@ -70,11 +73,7 @@ private:
   /// Whether this CompilerInstance was ran at least once.
   bool ran = false;
   /// The BufferIDs of the input files
-  std::vector<BufferID> inputBuffers;
-
-  /// Loads the inputFiles into the SourceManager.
-  /// \returns true if every file was loaded successfully, false otherwise
-  bool loadInputFilesIntoSourceManager();
+  SmallVector<BufferID, 4> inputBuffers;
 
   /// Performs the parsing step
   /// \returns true if parsing was successful, false otherwise.

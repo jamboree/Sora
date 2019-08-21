@@ -39,8 +39,9 @@ public:
   /// Prepares the Lexer to lex the buffer \p id
   void init(BufferID id);
 
-  /// Return the next token and lex the one after that.
-  /// \returns the next token
+  /// Lex a token and return it.
+  /// If we reached EOF, this will simply return the EOF token whenever
+  /// it is called.
   Token lex();
 
   /// \returns the next token to be returned by "lex" without consuming
@@ -53,15 +54,32 @@ public:
   DiagnosticEngine &diagEng;
 
 private:
+  /// Sentinel value for invalid UTF8 codepoints
   static constexpr uint32_t invalidCP = ~0U;
 
-  /// Advances the "cur" pointer by one codepoint.
-  /// \returns the codepoint skipped, or "invalidCP" if an error occured.
-  uint32_t advance();
+  /// Returns the current codepoint and moves the 'cur' iterator past the end
+  /// of the codepoint.
+  ///
+  /// \param isSourceExhaustedError boolean value set to true if we couldn't
+  /// advance due to the source being exhausted (cur = end);
+  /// \returns the codepoint or "invalidCP" if an error occured (note: errors
+  /// are diagnosed directly, no need to diagnose them again)
+  uint32_t advance(bool *isSourceExhaustedError = nullptr);
+
+  /// Tries to recover from a bad UTF8 codepoint. This increments 'cur' at
+  /// least once.
+  /// \returns true if recovery was successful, false otherwise
+  bool recoverFromBadUTF8();
+
+  /// Finishes lexing: sets nextToken to the EOF token and makes
+  /// cur = end.
+  void stopLexing();
 
   /// Performs the actual lexing.
   void doLex();
 
+  /// The beginning of the current token
+  const char *tokBeg = nullptr;
   /// The beginning of the file
   const char *beg = nullptr;
   /// The current iterator into the file
