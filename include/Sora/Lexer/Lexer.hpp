@@ -1,4 +1,4 @@
-//===--- Lexer.hpp - Lexical Analysis ---------------------------*- C++ -*-===//
+﻿//===--- Lexer.hpp - Lexical Analysis ---------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -9,7 +9,9 @@
 
 #pragma once
 
+#include "Sora/Common/LLVM.hpp"
 #include "Sora/Lexer/Token.hpp"
+#include "llvm/ADT/Optional.h"
 
 namespace sora {
 class SourceManager;
@@ -57,35 +59,32 @@ private:
   /// Sentinel value for invalid UTF8 codepoints
   static constexpr uint32_t invalidCP = ~0U;
 
-  /// Returns the current codepoint and moves the 'cur' iterator past the end
-  /// of the codepoint.
+  /// Returns the next valid UTF8 codepoint and moves the 'cur' iterator past
+  /// the end of that codepoint.
+  /// \returns the codepoint or "invalidCP" if an error occured
+  /// (note: errors are diagnosed directly, no need to diagnose them again)
+  uint32_t advance();
+
+  /// Peeks the next character without consuming it.
   ///
-  /// \param isSourceExhaustedError boolean value set to true if we couldn't
-  /// advance due to the source being exhausted (cur = end);
-  /// \returns the codepoint or "invalidCP" if an error occured (note: errors
-  /// are diagnosed directly, no need to diagnose them again)
-  uint32_t advance(bool *isSourceExhaustedError = nullptr);
+  /// \returns the codepoint or ~0U if an error occured
+  uint32_t peekChar() const;
 
-  /// Tries to recover from a bad UTF8 codepoint. This increments 'cur' at
-  /// least once.
-  /// \returns true if recovery was successful, false otherwise
-  bool recoverFromBadUTF8();
-
-  /// Finishes lexing: sets nextToken to the EOF token and makes
-  /// cur = end.
+  /// Finishes lexing (sets nextToken = EOF and cur = end)
   void stopLexing();
 
   /// Performs the actual lexing.
   void doLex();
-
   /// The beginning of the current token
   const char *tokBeg = nullptr;
-  /// The beginning of the file
-  const char *beg = nullptr;
   /// The current iterator into the file
   const char *cur = nullptr;
   /// The past-the-end iterator of the file
   const char *end = nullptr;
+  /// The next position of the "cur" pointer
+  const char *nextCur = nullptr;
+  /// The next codepoint that'll be returned by advance()
+  uint32_t nextCP = ~0U;
   /// The next token that'll be returned.
   Token nextToken;
 };
