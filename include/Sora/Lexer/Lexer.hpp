@@ -56,35 +56,25 @@ public:
   DiagnosticEngine &diagEng;
 
 private:
-  /// Sentinel value for invalid UTF8 codepoints
-  static constexpr uint32_t invalidCP = ~0U;
-
-  /// Returns the next valid UTF8 codepoint and moves the 'cur' iterator past
-  /// the end of that codepoint.
-  /// \returns the codepoint or "invalidCP" if an error occured
-  /// (note: errors are diagnosed directly, no need to diagnose them again)
-  uint32_t advance();
-
-  /// Peeks the next character without consuming it.
-  ///
-  /// \returns the codepoint or ~0U if an error occured
-  uint32_t peekChar() const;
-
   /// Finishes lexing (sets nextToken = EOF and cur = end)
   void stopLexing();
 
-  /// Performs the actual lexing.
-  void doLex();
-  /// The beginning of the current token
-  const char *tokBeg = nullptr;
-  /// The current iterator into the file
-  const char *cur = nullptr;
-  /// The past-the-end iterator of the file
-  const char *end = nullptr;
-  /// The next position of the "cur" pointer
-  const char *nextCur = nullptr;
-  /// The next codepoint that'll be returned by advance()
-  uint32_t nextCP = ~0U;
+  /// Lexs the body of an identifier which starts at tokBegPtr.
+  /// curPtr must point past-the-end of the head of the identifier.
+  void lexIdentifierBody();
+
+  /// Lexs an unknown (possibly utf-8) character sequence that starts at
+  /// tokBegPtr and moves curPtr past-the-end of the sequence (including
+  /// potential continuation codepoints)
+  void lexUnknown();
+
+  /// Lexing entry point
+  void lexImpl();
+
+  const char *tokBegPtr = nullptr;
+  const char *curPtr = nullptr;
+  const char *endPtr = nullptr;
+
   /// The next token that'll be returned.
   Token nextToken;
 };

@@ -27,6 +27,7 @@ StringRef sora::to_string(TokenKind kind) {
 #include "Sora/Lexer/TokenKinds.def"
   }
 }
+
 StringRef Token::str() const { return charRange.str(); }
 
 void Token::dump() const { dump(llvm::outs()); }
@@ -39,17 +40,13 @@ void Token::dump(raw_ostream &out) const {
 }
 
 void Lexer::init(StringRef str) {
-  cur = nextCur = str.begin();
-  end = str.end();
+  curPtr = str.begin();
+  endPtr = str.end();
   nextToken = Token();
   // TODO: Skip UTF8 bom if present
 
-  // Advance at least once and discard the value.
-  // The first call to advance() always returns ~0U.
-  advance();
-
   // Lex the first token (so nextToken has a value)
-  doLex();
+  lexImpl();
 }
 
 void Lexer::init(BufferID id) { init(srcMgr.getBufferStr(id)); }
@@ -58,40 +55,29 @@ Token Lexer::lex() {
   auto tok = nextToken;
   // Lex if we haven't reached EOF
   if (tok.isNot(TokenKind::EndOfFile))
-    doLex();
+    lexImpl();
   return tok;
 }
 
 Token Lexer::peek() const { return nextToken; }
 
-/// Tries to recover from a bad UTF8 codepoint. This increments 'cur' at
-/// least once.
-/// \returns true if recovery was successful, false otherwise
-static bool recoverFromBadUTF8(const char *&cur, const char *end) {
-  // always increment once to skip the codepoint
-  if (cur != end)
-    ++cur;
-  for (; cur != end; ++cur) {
-    // We are looking for an ASCII character ...
-    // (for ASCII characters, the top bit is simply not set.)
-    if (!(*cur & 0x80))
-      return true;
-    // ... or a UTF8 leading byte.
-    // UTF8 leading bytes start with 0b11, so if we do a right-shift
-    // of 6 bits, we will end up with 0xFF for UTF8 leading bytes.
-    // (the uint8_t conversion is needed due to integer promotion
-    // on shifts)
-    if ((uint8_t)(*cur >> 6) == 0xFF)
-      return true;
-  }
-  // Reached EOF, couldn't recover.
-  return false;
+void Lexer::stopLexing() {
+  assert(nextToken.isNot(TokenKind::EndOfFile) && "already EOF");
+  nextToken = Token(TokenKind::EndOfFile, CharSourceRange());
+  curPtr = endPtr;
+}
+
+namespace {
+/// \returns true if \p ch is a valid identifier head
+bool isValidIdentifierHead(char ch) {
+  // identifier-head = (uppercase or lowercase letter | "_")
+  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch == '_');
 }
 
 /// \returns the next valid UTF8 codepoint and moves the \p cur iterator past
 /// the end of that codepoint. On error, returns ~0U and leaves \p cur unchanged
-static uint32_t advanceUTF8(const char *&cur, const char *end,
-                            llvm::ConversionResult &result) {
+uint32_t advanceUTF8(const char *&cur, const char *end,
+                     llvm::ConversionResult &result) {
   if (cur >= end) {
     result = llvm::conversionOK;
     return ~0U;
@@ -106,76 +92,61 @@ static uint32_t advanceUTF8(const char *&cur, const char *end,
   return (result == llvm::conversionOK) ? cp : ~0U;
 }
 
-uint32_t Lexer::advance() {
-  // Save nextCP (because it's the value we'll return) and move "cur".
-  uint32_t ret = nextCP;
-  cur = nextCur;
+/// \returns true if \p ch is a UTF8 byte
+bool isUTF8(char ch) { return ((unsigned char)ch & 0x80); }
+} // namespace
 
-  // Check if not EOF
-  if (nextCur == end)
-    return ret;
-
-  // fast path for ASCII stuff
-  if (!(*nextCur & 0x80)) {
-    nextCP = *nextCur++;
-    return ret;
-  }
-
-  // TODO: This needs (unit) testing
-
-  // slow path for UTF8 stuff: try to advance using advanceUTF8
-  llvm::ConversionResult result;
-  nextCP = advanceUTF8(nextCur, end, result);
-
-  // handle the result
-  switch (result) {
-  default:
-    llvm_unreachable("unhandled ConversionResult");
-  case llvm::ConversionResult::targetExhausted:
-    // (pierre) I don't think this error is possible.
-    llvm_unreachable("target exhausted?");
-  case llvm::ConversionResult::conversionOK:
-    return ret;
-  case llvm::ConversionResult::sourceExhausted:
-    diagEng.diagnose(SourceLoc::fromPointer(cur), diag::incomplete_utf8_cp);
-    break;
-  case llvm::ConversionResult::sourceIllegal:
-    diagEng.diagnose(SourceLoc::fromPointer(cur), diag::illegal_utf8_cp);
-    break;
-  }
-
-  // When we have an error, nextCP will be ~0U and nextCur will be unchanged.
-  assert((nextCP == ~0U) && (nextCur == cur) && "invalid error situation");
-  // We can try to recover to the next ASCII character or UTF8 leading byte
-  // and re-try to advance from there (but discard the return value since the
-  // recursive call to advance() will just return ~0U)
-  recoverFromBadUTF8(nextCur, end);
-  advance();
-
-  return ret;
+void Lexer::lexIdentifierBody() {
+  // TODO: Eat the body of the identifier and push the token
 }
 
-uint32_t Lexer::peekChar() const { return nextCP; }
-
-void Lexer::stopLexing() {
-  assert(nextToken.isNot(TokenKind::EndOfFile) && "already EOF");
-  nextToken = Token(TokenKind::EndOfFile, CharSourceRange());
-  cur = end;
+void Lexer::lexUnknown() {
+  // TODO: Create an "Unknown" token
+  // Handle UTF8 codepoint with continuation codepoints as well.
+  // It isn't too hard. Diagnose invalid/partial codepoints as well.
 }
 
-void Lexer::doLex() {
+void Lexer::lexImpl() {
   assert(nextToken.isNot(TokenKind::EndOfFile));
-  if (cur == end)
+  if (curPtr == endPtr)
     return stopLexing();
-}
+  tokBegPtr = curPtr;
+  switch (char ch = *curPtr++) {
+  default:
+    lexUnknown();
+    break;
 
-// TODO: Plan Lexer more in-depth.
-// NOTE: Tokens need a half-open range, so we can always use "cur" as the end of
-// the token, even if it points to the beginning of the next char.
-//    How will doLex() work?
-//    How will token pushing work?
-//      beginToken
-//      pushToken
-//  Ideas:
-//      - doLex(): call "advance" at the beginning of the loop
-//      - advance(): save the CP in a "lastCP" variable
+  // TODO: All operator cases
+
+  // Note: for the rest of the switch we'll disable formatting, as
+  // we don't want to end up with 60+ extra lines.
+  // clang-format off
+
+  // Number literals
+  case '0': case '1': case '2': case '3': case '4': case '5': case '6':
+  case '7': case '8': case '9':
+    // lexNumber()
+    break;
+
+  // Identifiers
+  case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
+  case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
+  case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u':
+  case 'v': case 'w': case 'x': case 'y': case 'z': case 'A': case 'B':
+  case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I':
+  case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': case 'P':
+  case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W':
+  case 'X': case 'Y': case 'Z': case '_':
+    // lexIdentifierBody()
+    break;
+  }
+  // clang-format on
+}
+/*
+  tokStart = cur
+  switch(*cur++)
+    all cases (operator, trivias and stuff)
+    default: identifier stuff
+
+  lexIdentifier, lexLiteral and stuff always do cur = tokStart
+*/

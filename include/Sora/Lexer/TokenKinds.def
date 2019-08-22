@@ -21,6 +21,7 @@
 // Misc. Token Kinds
 // NOTE: The "Invalid" Kind must always be first.
 TOKEN(Invalid)
+TOKEN(Unknown)
 TOKEN(EndOfFile)
 
 // Identifier
