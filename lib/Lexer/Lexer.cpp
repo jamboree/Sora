@@ -39,13 +39,15 @@ void Token::dump(raw_ostream &out) const {
 }
 
 void Lexer::init(StringRef str) {
-  cur = str.begin();
+  cur = nextCur = str.begin();
   end = str.end();
   nextToken = Token();
   // TODO: Skip UTF8 bom if present
+
   // Advance at least once and discard the value.
   // The first call to advance() always returns ~0U.
   advance();
+
   // Lex the first token (so nextToken has a value)
   doLex();
 }
@@ -107,26 +109,25 @@ static uint32_t advanceUTF8(const char *&cur, const char *end,
 uint32_t Lexer::advance() {
   // Save nextCP (because it's the value we'll return) and move "cur".
   uint32_t ret = nextCP;
-  llvm::outs() << "cp: " << (char)nextCP << "\n";
   cur = nextCur;
 
   // Check if not EOF
-  if (cur == end)
+  if (nextCur == end)
     return ret;
 
   // fast path for ASCII stuff
-  if (!(*cur & 0x80)) {
-    nextCP = *cur++;
+  if (!(*nextCur & 0x80)) {
+    nextCP = *nextCur++;
     return ret;
   }
 
-  // slow path for UTF8 stuff
+  // TODO: This needs (unit) testing
 
-  // try to advance
+  // slow path for UTF8 stuff: try to advance using advanceUTF8
   llvm::ConversionResult result;
   nextCP = advanceUTF8(nextCur, end, result);
 
-  // handle the  result
+  // handle the result
   switch (result) {
   default:
     llvm_unreachable("unhandled ConversionResult");
