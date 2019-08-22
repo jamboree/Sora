@@ -28,7 +28,7 @@
 
 //===----------------------------------------------------------------------===//
 
-ERROR(hello_world, "Hello, %0! I've greeted you %1 times already!", 
+NOTE(hello_world, "Hello, %0! I've greeted you %1 times already!", 
   (StringRef, unsigned))
 
 //===----------------------------------------------------------------------===//
