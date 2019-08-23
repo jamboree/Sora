@@ -173,6 +173,7 @@ void DiagnosticEngine::emit() {
 
   // Feed it to the consumer
   consumer->handle(srcMgr, diag);
+  activeDiagnostic.reset();
 }
 
 void DiagnosticEngine::abort() { activeDiagnostic.reset(); }
