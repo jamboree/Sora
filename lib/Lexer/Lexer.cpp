@@ -174,10 +174,11 @@ void Lexer::lexIdentifierBody() {
 
 void Lexer::lexImpl() {
   assert(nextToken.isNot(TokenKind::EndOfFile));
-  if (curPtr == endPtr)
-    return stopLexing();
   // Consume the trivia
   consumeTrivia();
+  // Check if not EOF
+  if (curPtr == endPtr)
+    return stopLexing();
   // Start the new token
   tokBegPtr = curPtr;
   // Don't use formatting for this switch so we can stack cases on a
