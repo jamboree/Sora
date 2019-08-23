@@ -82,6 +82,17 @@ private:
   /// be Identifier.
   void lexIdentifierBody();
 
+  /// Handles a line (//) comment.
+  /// curPtr must be at the position of the first '/'.
+  /// Sets tokenIsAtStartOfLine to true if a '\n' was found.
+  void handleLineComment();
+
+  /// Handles a block (/* */) comment.
+  /// curPtr must be at the position of the first '/'.
+  /// Sets tokenIsAtStartOfLine to true if a '\n' was found
+  /// while skipping the block.
+  void handleBlockComment();
+
   /// Lexing entry point
   void lexImpl();
 
@@ -95,6 +106,8 @@ private:
 
   /// Consumes trivia characters in front of curPtr. This sets
   /// tokenIsAtStartOfLine if a \n is found.
+  ///
+  /// Trivia is any whitespace character, or comments.
   void consumeTrivia();
 
   /// \returns tokBegPtr as a SourceLoc

@@ -57,48 +57,71 @@ public:
 } // namespace
 
 #define CHECK_NEXT(KIND, STR, SOL)                                             \
-  EXPECT_TRUE(checkNext(TokenKind::KIND, STR, SOL)) << errStream.str();        \
+  EXPECT_TRUE(checkNext(KIND, STR, SOL)) << errStream.str();                   \
   ASSERT_FALSE(isDone)
-#define CHECK_LAST(KIND, STR, SOL)                                             \
-  EXPECT_TRUE(checkNext(TokenKind::KIND, STR, SOL)) << errStream.str()
+#define CHECK_EOF()                                                            \
+  EXPECT_TRUE(checkNext(TokenKind::EndOfFile, "", false)) << errStream.str()
 
-TEST_F(LexerTest, keywordAndIdentifiers) {
-  const char *input = "foo\n"
-                      "break continue\n"
+TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
+  const char *input = "foo // this is a comment\n"
+                      "break /* another comment*/ continue\n"
                       "else false\n"
                       "for func if in let\n"
                       "maybe mut null\n"
                       "return struct true type\n"
-                      "_ while";
+                      "_ while //goodbye";
   init(input);
   // Test
-  CHECK_NEXT(Identifier, "foo", true);
-  CHECK_NEXT(BreakKw, "break", true);
-  CHECK_NEXT(ContinueKw, "continue", false);
-  CHECK_NEXT(ElseKw, "else", true);
-  CHECK_NEXT(FalseKw, "false", false);
-  CHECK_NEXT(ForKw, "for", true);
-  CHECK_NEXT(FuncKw, "func", false);
-  CHECK_NEXT(IfKw, "if", false);
-  CHECK_NEXT(InKw, "in", false);
-  CHECK_NEXT(LetKw, "let", false);
-  CHECK_NEXT(MaybeKw, "maybe", true);
-  CHECK_NEXT(MutKw, "mut", false);
-  CHECK_NEXT(NullKw, "null", false);
-  CHECK_NEXT(ReturnKw, "return", true);
-  CHECK_NEXT(StructKw, "struct", false);
-  CHECK_NEXT(TrueKw, "true", false);
-  CHECK_NEXT(TypeKw, "type", false);
-  CHECK_NEXT(UnderscoreKw, "_", true);
-  CHECK_NEXT(WhileKw, "while", false);
-  CHECK_LAST(EndOfFile, "", false);
+  CHECK_NEXT(TokenKind::Identifier, "foo", true);
+  CHECK_NEXT(TokenKind::BreakKw, "break", true);
+  CHECK_NEXT(TokenKind::ContinueKw, "continue", false);
+  CHECK_NEXT(TokenKind::ElseKw, "else", true);
+  CHECK_NEXT(TokenKind::FalseKw, "false", false);
+  CHECK_NEXT(TokenKind::ForKw, "for", true);
+  CHECK_NEXT(TokenKind::FuncKw, "func", false);
+  CHECK_NEXT(TokenKind::IfKw, "if", false);
+  CHECK_NEXT(TokenKind::InKw, "in", false);
+  CHECK_NEXT(TokenKind::LetKw, "let", false);
+  CHECK_NEXT(TokenKind::MaybeKw, "maybe", true);
+  CHECK_NEXT(TokenKind::MutKw, "mut", false);
+  CHECK_NEXT(TokenKind::NullKw, "null", false);
+  CHECK_NEXT(TokenKind::ReturnKw, "return", true);
+  CHECK_NEXT(TokenKind::StructKw, "struct", false);
+  CHECK_NEXT(TokenKind::TrueKw, "true", false);
+  CHECK_NEXT(TokenKind::TypeKw, "type", false);
+  CHECK_NEXT(TokenKind::UnderscoreKw, "_", true);
+  CHECK_NEXT(TokenKind::WhileKw, "while", false);
+  CHECK_EOF();
 }
 
 TEST_F(LexerTest, unknownTokens) {
   const char *input = u8"ê€";
 
   init(input);
-  CHECK_NEXT(Unknown, u8"ê", true);
-  CHECK_NEXT(Unknown, u8"€", false);
-  CHECK_LAST(EndOfFile, "", false);
+  CHECK_NEXT(TokenKind::Unknown, u8"ê", true);
+  CHECK_NEXT(TokenKind::Unknown, u8"€", false);
+  CHECK_EOF();
+}
+
+TEST_F(LexerTest, operators) {
+  const char *input = "()[]{}/=/++=--=&&&=&;";
+
+  init(input);
+  CHECK_NEXT(TokenKind::LParen, "(", true);
+  CHECK_NEXT(TokenKind::RParen, ")", false);
+  CHECK_NEXT(TokenKind::LSquare, "[", false);
+  CHECK_NEXT(TokenKind::RSquare, "]", false);
+  CHECK_NEXT(TokenKind::LCurly, "{", false);
+  CHECK_NEXT(TokenKind::RCurly, "}", false);
+  CHECK_NEXT(TokenKind::SlashEqual, "/=", false);
+  CHECK_NEXT(TokenKind::Slash, "/", false);
+  CHECK_NEXT(TokenKind::Plus, "+", false);
+  CHECK_NEXT(TokenKind::PlusEqual, "+=", false);
+  CHECK_NEXT(TokenKind::Minus, "-", false);
+  CHECK_NEXT(TokenKind::MinusEqual, "-=", false);
+  CHECK_NEXT(TokenKind::AmpAmp, "&&", false);
+  CHECK_NEXT(TokenKind::AmpEqual, "&=", false);
+  CHECK_NEXT(TokenKind::Amp, "&", false);
+  CHECK_NEXT(TokenKind::Semi, ";", false);
+  CHECK_EOF();
 }

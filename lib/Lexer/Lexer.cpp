@@ -172,6 +172,38 @@ void Lexer::lexIdentifierBody() {
   pushToken(TokenKind::Identifier);
 }
 
+void Lexer::handleLineComment() {
+  assert(*curPtr == '/' && *(curPtr + 1) == '/');
+  // line-break = '\r'? '\n'
+  // line-comment-item = any character except '\n' or '\r'
+  // line-comment = "//" line-comment-item* line-break
+  curPtr += 2;
+  while (curPtr != endPtr) {
+    if (*curPtr++ == '\n') {
+      tokenIsAtStartOfLine = true;
+      return;
+    }
+  }
+}
+
+void Lexer::handleBlockComment() {
+  assert(*curPtr == '/' && *(curPtr + 1) == '*');
+  // line-break = '\r'? '\n'
+  // block-comment-item = any character except "*/"
+  // block-comment = "/*" block-comment-item* "*/"
+  curPtr += 2;
+  char ch;
+  while (curPtr != endPtr) {
+    ch = *curPtr++;
+    if (ch == '\n')
+      tokenIsAtStartOfLine = true;
+    else if ((ch == '*') && (*curPtr == '/')) {
+      ++curPtr;
+      return;
+    }
+  }
+}
+
 void Lexer::lexImpl() {
   assert(nextToken.isNot(TokenKind::EndOfFile));
   // Consume the trivia
@@ -190,7 +222,55 @@ void Lexer::lexImpl() {
     break;
   case 0: case ' ': case '\t': case '\r': case '\v': case '\f': case '\n':
     llvm_unreachable("should be handled by consumeTrivia()");
-  // TODO: All operator cases
+  case '&':
+    if (*curPtr == '&')
+      ++curPtr, pushToken(TokenKind::AmpAmp);
+    else if (*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::AmpEqual);
+    else 
+      pushToken(TokenKind::Amp);
+    break;
+  case '-':
+    if(*curPtr == '>')
+      ++curPtr, pushToken(TokenKind::Arrow);
+    else if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::MinusEqual);
+    else 
+      pushToken(TokenKind::Minus);
+    break;
+  case '+':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::PlusEqual);
+    else 
+      pushToken(TokenKind::Plus);
+    break;
+  case '/':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::SlashEqual);
+    else 
+      pushToken(TokenKind::Slash);
+    break;
+  case '{':
+    pushToken(TokenKind::LCurly);
+    break;
+  case '}':
+    pushToken(TokenKind::RCurly);
+    break;
+  case '(':
+    pushToken(TokenKind::LParen);
+    break;
+  case ')':
+    pushToken(TokenKind::RParen);
+    break;
+  case '[':
+    pushToken(TokenKind::LSquare);
+    break;
+  case ']':
+    pushToken(TokenKind::RSquare);
+    break;
+  case ';':
+    pushToken(TokenKind::Semi);
+    break;
   // numbers (floats & ints)
   case '0': case '1': case '2': case '3': case '4': case '5': case '6':
   case '7': case '8': case '9':
@@ -212,10 +292,21 @@ void Lexer::lexImpl() {
 }
 
 void Lexer::consumeTrivia() {
-  while ((curPtr != endPtr) && isTrivia(*curPtr)) {
-    if (*curPtr == '\n')
-      tokenIsAtStartOfLine = true;
-    ++curPtr;
+  while (curPtr != endPtr) {
+    // handle normal trivia
+    if (isTrivia(*curPtr)) {
+      if (*curPtr == '\n')
+        tokenIsAtStartOfLine = true;
+      ++curPtr;
+    }
+    // slash-slash "line" comments
+    else if ((*curPtr == '/') && (*(curPtr + 1) == '/'))
+      handleLineComment();
+    // slash-start "block" comments
+    else if ((*curPtr == '/') && (*(curPtr + 1) == '*'))
+      handleBlockComment();
+    else
+      break;
   }
 }
 
