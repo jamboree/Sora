@@ -16,7 +16,7 @@
 
 using namespace sora;
 
-TEST(DiagnosticEngine, diagnose) {
+TEST(DiagnosticEngineTest, diagnose) {
   StringRef str = "The Lazy Brown Fox Jumps Over The Lazy Dog";
   StringRef name = "some_file.sora";
 

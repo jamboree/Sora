@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Sora/Common/LLVM.hpp"
+#include "Sora/Common/SourceLoc.hpp"
 #include "Sora/Lexer/Token.hpp"
 #include "llvm/ADT/Optional.h"
 
@@ -48,7 +49,7 @@ public:
 
   /// \returns the next token to be returned by "lex" without consuming
   /// it or changing the state of the lexer.
-  Token peek() const;
+  Token peek() const { return nextToken; }
 
   /// The SourceManager instance
   SourceManager &srcMgr;
@@ -57,19 +58,53 @@ public:
 
 private:
   /// Finishes lexing (sets nextToken = EOF and cur = end)
-  void stopLexing();
-
-  /// Lexs the body of an identifier which starts at tokBegPtr.
-  /// curPtr must point past-the-end of the head of the identifier.
-  void lexIdentifierBody();
+  void stopLexing() {
+    assert(nextToken.isNot(TokenKind::EndOfFile) && "already EOF");
+    nextToken = Token(TokenKind::EndOfFile, CharSourceRange());
+    curPtr = endPtr;
+  }
 
   /// Lexs an unknown (possibly utf-8) character sequence that starts at
   /// tokBegPtr and moves curPtr past-the-end of the sequence (including
   /// potential continuation codepoints)
   void lexUnknown();
 
+  /// Lexs a number (int or float) that starts at tokBegPtr and moves
+  /// curPtr past-the-end of the number
+  void lexNumber();
+
+  /// Lexs the body of an identifier that starts at tokBegPtr and moves
+  /// curPtr past-the-end of the number. curPtr is assumed
+  /// to be positioned past-the-end of the head of the identifier.
+  ///
+  /// If the identifier is recognized as a language keyword, the
+  /// TokenKind will be the keyword's kind, else it'll simply
+  /// be Identifier.
+  void lexIdentifierBody();
+
   /// Lexing entry point
   void lexImpl();
+
+  /// Creates a new token and puts it in nextToken.
+  /// Sets tokenIsAtStartOfLine to false after pushing the token.
+  void pushToken(TokenKind kind) {
+    nextToken = Token(kind, CharSourceRange::fromPointers(tokBegPtr, curPtr),
+                      tokenIsAtStartOfLine);
+    tokenIsAtStartOfLine = false;
+  }
+
+  /// Consumes trivia characters in front of curPtr. This sets
+  /// tokenIsAtStartOfLine if a \n is found.
+  void consumeTrivia();
+
+  /// \returns tokBegPtr as a SourceLoc
+  SourceLoc getTokBegLoc() const { return SourceLoc::fromPointer(tokBegPtr); }
+
+  /// \returns the current token as a string
+  StringRef getTokStr() const;
+
+  /// Whether the next token is at the start of a line.
+  bool tokenIsAtStartOfLine = true;
 
   const char *tokBegPtr = nullptr;
   const char *curPtr = nullptr;

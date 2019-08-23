@@ -1,4 +1,4 @@
-//===--- TokenTests.cpp -----------------------------------------*- C++ -*-===//
+﻿//===--- TokenTests.cpp -----------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -12,7 +12,7 @@
 
 using namespace sora;
 
-TEST(Token, invalidKind) {
+TEST(TokenTest, invalidKind) {
   Token tok;
   EXPECT_FALSE(tok);
   EXPECT_TRUE(tok.is(TokenKind::Invalid))
@@ -20,18 +20,18 @@ TEST(Token, invalidKind) {
   EXPECT_FALSE(tok.isNot(TokenKind::Invalid));
 }
 
-TEST(Token, is_isNot) {
+TEST(TokenTest, is_isNot) {
   Token tok(TokenKind::Amp, CharSourceRange());
   EXPECT_TRUE(tok.is(TokenKind::Amp));
   EXPECT_TRUE(tok.isNot(TokenKind::AmpAmp));
   EXPECT_FALSE(tok.isNot(TokenKind::Amp));
 }
 
-TEST(Token, startOfLine) {
+TEST(TokenTest, startOfLine) {
   EXPECT_TRUE(Token(TokenKind::Amp, CharSourceRange(), true).isStartOfLine());
 }
 
-TEST(Token, str) {
+TEST(TokenTest, str) {
   const char *str = "Hello World";
   Token a(TokenKind::Amp, CharSourceRange::fromPointers(str, str + 5), false);
   Token b(TokenKind::LetKw, CharSourceRange::fromPointers(str + 6, str + 11),
@@ -40,7 +40,7 @@ TEST(Token, str) {
   EXPECT_EQ(b.str(), "World");
 }
 
-TEST(Token, dump) {
+TEST(TokenTest, dump) {
   const char *str = "Hello World";
   Token a(TokenKind::Amp, CharSourceRange::fromPointers(str, str + 5), false);
   Token b(TokenKind::LetKw, CharSourceRange::fromPointers(str + 6, str + 11),

@@ -1,4 +1,4 @@
-//===--- DiagnosticConsumerTests.cpp ----------------------------*- C++ -*-===//
+﻿//===--- DiagnosticConsumerTests.cpp ----------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -16,7 +16,7 @@
 
 using namespace sora;
 
-TEST(PrintingDiagnosticConsumer, handle) {
+TEST(PrintingDiagnosticConsumerTest, handle) {
   StringRef str = "The Lazy Brown Fox Jumps Over The Lazy Dog";
 
   auto buff = llvm::MemoryBuffer::getMemBuffer(str, "some_file.sora");

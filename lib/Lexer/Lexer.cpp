@@ -17,7 +17,7 @@
 
 using namespace sora;
 
-StringRef sora::to_string(TokenKind kind) {
+const char *sora::to_string(TokenKind kind) {
   switch (kind) {
   default:
     llvm_unreachable("unknown TokenKind");
@@ -59,14 +59,6 @@ Token Lexer::lex() {
   return tok;
 }
 
-Token Lexer::peek() const { return nextToken; }
-
-void Lexer::stopLexing() {
-  assert(nextToken.isNot(TokenKind::EndOfFile) && "already EOF");
-  nextToken = Token(TokenKind::EndOfFile, CharSourceRange());
-  curPtr = endPtr;
-}
-
 namespace {
 /// \returns true if \p ch is a valid identifier head
 bool isValidIdentifierHead(char ch) {
@@ -74,13 +66,42 @@ bool isValidIdentifierHead(char ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch == '_');
 }
 
+/// \returns true if \p ch is considered trivia (= a character that can be
+/// ignored safely)
+bool isTrivia(char ch) {
+  // Don't use formatting for this switch so we can stack cases on a
+  // single line to reduce clutter.
+  // clang-format off
+  switch (ch) {
+  default: return false;
+  case 0: case ' ': case '\t': case '\r': case '\v': case '\f': case '\n':
+    return true;
+  }
+  // clang-format on
+}
+
+/// \returns true if \p ch is a UTF8 byte
+bool isUTF8(char ch) { return ((unsigned char)ch & 0x80); }
+
+/// \returns true if \p ch is the first byte of a UTF8 continuation codepoint.
+bool isBeginningOfContinuationCodePoint(char ch) {
+  // Continuation codepoints begin with 10
+  return uint8_t(ch >> 6) == 0b11111110;
+}
+
 /// \returns the next valid UTF8 codepoint and moves the \p cur iterator past
-/// the end of that codepoint. On error, returns ~0U and leaves \p cur unchanged
+/// the end of that codepoint. On error, returns ~0U and leaves \p cur
+/// unchanged
 uint32_t advanceUTF8(const char *&cur, const char *end,
                      llvm::ConversionResult &result) {
   if (cur >= end) {
     result = llvm::conversionOK;
     return ~0U;
+  }
+  // ASCII fast path
+  if (!isUTF8(*cur)) {
+    result = llvm::conversionOK;
+    return *cur++;
   }
   // use llvm::convertUTF8Sequence to fetch the codepoint
   // FIXME: I think this could be cleaner.
@@ -91,44 +112,90 @@ uint32_t advanceUTF8(const char *&cur, const char *end,
   // Handle the conversion result
   return (result == llvm::conversionOK) ? cp : ~0U;
 }
-
-/// \returns true if \p ch is a UTF8 byte
-bool isUTF8(char ch) { return ((unsigned char)ch & 0x80); }
 } // namespace
 
-void Lexer::lexIdentifierBody() {
-  // TODO: Eat the body of the identifier and push the token
+void Lexer::lexUnknown() {
+  curPtr = tokBegPtr;
+
+  bool sourceOk = true;
+  auto advance = [&]() {
+    llvm::ConversionResult result;
+    advanceUTF8(curPtr, endPtr, result);
+    switch (result) {
+    default:
+      llvm_unreachable("unknown ConversionResult");
+    case llvm::targetExhausted:
+      llvm_unreachable("target exhausted?");
+    case llvm::conversionOK:
+      break;
+    case llvm::sourceExhausted:
+      diagEng.diagnose(getTokBegLoc(), diag::incomplete_utf8_cp);
+      sourceOk = false;
+      break;
+    case llvm::sourceIllegal:
+      diagEng.diagnose(getTokBegLoc(), diag::illegal_utf8_cp);
+      sourceOk = false;
+      break;
+    }
+  };
+
+  advance();
+
+  // When the source is valid, skip potential continuation codepoints,
+  // validating them in the process.
+  while (sourceOk && isBeginningOfContinuationCodePoint(*curPtr))
+    advance();
+  // When the source can't be trusted, just skip until the next ASCII character.
+  while (!sourceOk && !isUTF8(*curPtr))
+    ++curPtr;
+  // Push the token
+  pushToken(TokenKind::Unknown);
 }
 
-void Lexer::lexUnknown() {
-  // TODO: Create an "Unknown" token
-  // Handle UTF8 codepoint with continuation codepoints as well.
-  // It isn't too hard. Diagnose invalid/partial codepoints as well.
+void Lexer::lexNumber() {
+  // TODO
+}
+
+void Lexer::lexIdentifierBody() {
+  // identifier-head = (uppercase or lowercase letter | "_")
+  // identifier-body = (identifier-head | digit)
+  // NOTE: Currently, only ASCII is allowed in identifiers, so we
+  // can use ++curPtr safely, however if in the future UTF8 is
+  // allowed in identifiers, we'll need advanceUTF8.
+  while (isValidIdentifierHead(*curPtr) || isdigit(*curPtr))
+    ++curPtr;
+  StringRef tokStr = getTokStr();
+#define KEYWORD(KIND, TEXT)                                                    \
+  if (tokStr == TEXT)                                                          \
+    return pushToken(TokenKind::KIND);
+#include "Sora/Lexer/TokenKinds.def"
+  pushToken(TokenKind::Identifier);
 }
 
 void Lexer::lexImpl() {
   assert(nextToken.isNot(TokenKind::EndOfFile));
   if (curPtr == endPtr)
     return stopLexing();
+  // Consume the trivia
+  consumeTrivia();
+  // Start the new token
   tokBegPtr = curPtr;
+  // Don't use formatting for this switch so we can stack cases on a
+  // single line to reduce clutter.
+  // clang-format off
   switch (char ch = *curPtr++) {
   default:
     lexUnknown();
     break;
-
+  case 0: case ' ': case '\t': case '\r': case '\v': case '\f': case '\n':
+    llvm_unreachable("should be handled by consumeTrivia()");
   // TODO: All operator cases
-
-  // Note: for the rest of the switch we'll disable formatting, as
-  // we don't want to end up with 60+ extra lines.
-  // clang-format off
-
-  // Number literals
+  // numbers (floats & ints)
   case '0': case '1': case '2': case '3': case '4': case '5': case '6':
   case '7': case '8': case '9':
-    // lexNumber()
+    lexNumber();
     break;
-
-  // Identifiers
+  // identifiers & keywords
   case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':
   case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
   case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u':
@@ -137,16 +204,20 @@ void Lexer::lexImpl() {
   case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': case 'P':
   case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W':
   case 'X': case 'Y': case 'Z': case '_':
-    // lexIdentifierBody()
+    lexIdentifierBody();
     break;
   }
   // clang-format on
 }
-/*
-  tokStart = cur
-  switch(*cur++)
-    all cases (operator, trivias and stuff)
-    default: identifier stuff
 
-  lexIdentifier, lexLiteral and stuff always do cur = tokStart
-*/
+void Lexer::consumeTrivia() {
+  while ((curPtr != endPtr) && isTrivia(*curPtr)) {
+    if (*curPtr == '\n')
+      tokenIsAtStartOfLine = true;
+    ++curPtr;
+  }
+}
+
+StringRef Lexer::getTokStr() const {
+  return StringRef(tokBegPtr, std::distance(tokBegPtr, curPtr));
+}

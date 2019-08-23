@@ -1,4 +1,4 @@
-//===--- Token.hpp - Lexer Tokens -------------------------------*- C++ -*-===//
+﻿//===--- Token.hpp - Lexer Tokens -------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -19,7 +19,7 @@ enum class TokenKind : uint8_t {
 };
 
 /// \returns the string representation of a TokenKind
-StringRef to_string(TokenKind kind);
+const char *to_string(TokenKind kind);
 
 static_assert(TokenKind(0) == TokenKind::Invalid,
               "0 is not the invalid TokenKind");

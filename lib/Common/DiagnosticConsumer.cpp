@@ -1,4 +1,4 @@
-//===--- DiagnosticConsumer.cpp ---------------------------------*- C++ -*-===//
+﻿//===--- DiagnosticConsumer.cpp ---------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -17,11 +17,16 @@ namespace {
 llvm::SourceMgr::DiagKind getDKasLLVM(DiagnosticKind kind) {
   using DiagKind = llvm::SourceMgr::DiagKind;
   switch (kind) {
-    case DiagnosticKind::Remark: return DiagKind::DK_Note;
-    case DiagnosticKind::Note: return DiagKind::DK_Note;
-    case DiagnosticKind::Warning: return DiagKind::DK_Warning;
-    case DiagnosticKind::Error: return DiagKind::DK_Error;
-    default: llvm_unreachable("unknown DiagnosticKind");
+  case DiagnosticKind::Remark:
+    return DiagKind::DK_Note;
+  case DiagnosticKind::Note:
+    return DiagKind::DK_Note;
+  case DiagnosticKind::Warning:
+    return DiagKind::DK_Warning;
+  case DiagnosticKind::Error:
+    return DiagKind::DK_Error;
+  default:
+    llvm_unreachable("unknown DiagnosticKind");
   }
 }
 } // namespace
