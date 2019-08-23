@@ -16,10 +16,13 @@ using namespace sora;
 
 namespace {
 class LexerTest : public ::testing::Test {
+  std::string errStreamBuff;
+
 public:
   SourceManager srcMgr;
   DiagnosticEngine diagEngine{srcMgr, llvm::outs()};
   Lexer lexer{srcMgr, diagEngine};
+  llvm::raw_string_ostream errStream{errStreamBuff};
 
   bool isDone = false;
 
@@ -28,29 +31,36 @@ public:
   }
 
   /// \returns checks the next token, returns true on success and false
-  /// on failure.
-  bool checkNext(llvm::raw_string_ostream &out, TokenKind kind, StringRef str,
-                 bool startOfLine = false) {
+  /// on failure. In case of failure, the message can be found in
+  /// "errStream.str()"
+  bool checkNext(TokenKind kind, StringRef str, bool startOfLine = false) {
+    errStreamBuff.clear();
     Token token = lexer.lex();
     isDone = token.getKind() == TokenKind::EndOfFile;
     if (token.getKind() != kind) {
-      out << "mismatched kinds: expected '" << to_string(kind) << "' got '"
-          << to_string(token.getKind()) << "'";
+      errStream << "mismatched kinds: expected '" << to_string(kind)
+                << "' got '" << to_string(token.getKind()) << "'";
       return false;
     }
     if (token.isStartOfLine() != startOfLine) {
-      out << "token not at start of line";
+      errStream << "token not at start of line";
       return false;
     }
     if (token.str() != str) {
-      out << "mismatched token content: expected '" << str << "' got '"
-          << token.str() << "'";
+      errStream << "mismatched token content: expected '" << str << "' got '"
+                << token.str() << "'";
       return false;
     }
     return true;
   }
 };
 } // namespace
+
+#define CHECK_NEXT(KIND, STR, SOL)                                             \
+  EXPECT_TRUE(checkNext(TokenKind::KIND, STR, SOL)) << errStream.str();        \
+  ASSERT_FALSE(isDone)
+#define CHECK_LAST(KIND, STR, SOL)                                             \
+  EXPECT_TRUE(checkNext(TokenKind::KIND, STR, SOL)) << errStream.str()
 
 TEST_F(LexerTest, keywordAndIdentifiers) {
   const char *input = "foo\n"
@@ -61,32 +71,34 @@ TEST_F(LexerTest, keywordAndIdentifiers) {
                       "return struct true type\n"
                       "_ while";
   init(input);
-  std::string failureReason;
-  llvm::raw_string_ostream errStream(failureReason);
-#define CHECK(KIND, STR, SOL)                                                  \
-  EXPECT_TRUE(checkNext(errStream, TokenKind::KIND, STR, SOL))                 \
-      << errStream.str();                                                      \
-  failureReason.clear();                                                       \
-  ASSERT_FALSE(isDone)
   // Test
-  CHECK(Identifier, "foo", true);
-  CHECK(BreakKw, "break", true);
-  CHECK(ContinueKw, "continue", false);
-  CHECK(ElseKw, "else", true);
-  CHECK(FalseKw, "false", false);
-  CHECK(ForKw, "for", true);
-  CHECK(FuncKw, "func", false);
-  CHECK(IfKw, "if", false);
-  CHECK(InKw, "in", false);
-  CHECK(LetKw, "let", false);
-  CHECK(MaybeKw, "maybe", true);
-  CHECK(MutKw, "mut", false);
-  CHECK(NullKw, "null", false);
-  CHECK(ReturnKw, "return", true);
-  CHECK(StructKw, "struct", false);
-  CHECK(TrueKw, "true", false);
-  CHECK(TypeKw, "type", false);
-  CHECK(UnderscoreKw, "_", true);
-  CHECK(WhileKw, "while", false);
-#undef CHECK
+  CHECK_NEXT(Identifier, "foo", true);
+  CHECK_NEXT(BreakKw, "break", true);
+  CHECK_NEXT(ContinueKw, "continue", false);
+  CHECK_NEXT(ElseKw, "else", true);
+  CHECK_NEXT(FalseKw, "false", false);
+  CHECK_NEXT(ForKw, "for", true);
+  CHECK_NEXT(FuncKw, "func", false);
+  CHECK_NEXT(IfKw, "if", false);
+  CHECK_NEXT(InKw, "in", false);
+  CHECK_NEXT(LetKw, "let", false);
+  CHECK_NEXT(MaybeKw, "maybe", true);
+  CHECK_NEXT(MutKw, "mut", false);
+  CHECK_NEXT(NullKw, "null", false);
+  CHECK_NEXT(ReturnKw, "return", true);
+  CHECK_NEXT(StructKw, "struct", false);
+  CHECK_NEXT(TrueKw, "true", false);
+  CHECK_NEXT(TypeKw, "type", false);
+  CHECK_NEXT(UnderscoreKw, "_", true);
+  CHECK_NEXT(WhileKw, "while", false);
+  CHECK_LAST(EndOfFile, "", false);
+}
+
+TEST_F(LexerTest, unknownTokens) {
+  const char *input = u8"ê€";
+
+  init(input);
+  CHECK_NEXT(Unknown, u8"ê", true);
+  CHECK_NEXT(Unknown, u8"€", false);
+  CHECK_LAST(EndOfFile, "", false);
 }
