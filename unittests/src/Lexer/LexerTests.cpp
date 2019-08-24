@@ -30,6 +30,12 @@ public:
     lexer.init(srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(input)));
   }
 
+  void
+  installForwardingHandler(ForwardingDiagnosticConsumer::HandlerFunction func) {
+    diagEngine.replaceConsumer(
+        std::make_unique<ForwardingDiagnosticConsumer>(func));
+  }
+
   /// \returns checks the next token, returns true on success and false
   /// on failure. In case of failure, the message can be found in
   /// "errStream.str()"
@@ -101,6 +107,54 @@ TEST_F(LexerTest, unknownTokens) {
   CHECK_NEXT(TokenKind::Unknown, u8"ê", true);
   CHECK_NEXT(TokenKind::Unknown, u8"€", false);
   CHECK_EOF();
+}
+
+/// Test for invalid/illegal UTF-8 codepoint (ill-formed codepoints)
+TEST_F(LexerTest, invalidUTF8) {
+  const char *input = "\xa0\xa1";
+
+  unsigned diagCount = 0;
+  bool success = false;
+  std::string diagMsg;
+  SourceLoc diagLoc;
+
+  installForwardingHandler([&](SourceManager &srcMgr, const Diagnostic &diag) {
+    diagMsg = diag.message;
+    diagLoc = diag.loc;
+    ++diagCount;
+  });
+
+  init(input);
+  CHECK_NEXT(TokenKind::Unknown, "\xa0\xa1", true);
+  CHECK_EOF();
+
+  EXPECT_EQ(diagMsg, "illegal utf-8 codepoint");
+  EXPECT_EQ(diagLoc, SourceLoc::fromPointer(input));
+  EXPECT_EQ(diagCount, 1);
+}
+
+/// Test for unfinished UTF-8 codepoint (found EOF before rest of codepoint)
+TEST_F(LexerTest, incompleteUTF8) {
+  const char *input = "\xc3";
+
+  unsigned diagCount = 0;
+  bool success = false;
+  std::string diagMsg;
+  SourceLoc diagLoc;
+
+  installForwardingHandler([&](SourceManager &srcMgr, const Diagnostic &diag) {
+    diagMsg = diag.message;
+    diagLoc = diag.loc;
+    ++diagCount;
+  });
+
+  init(input);
+  CHECK_NEXT(TokenKind::Unknown, "\xc3", true);
+  CHECK_EOF();
+
+  EXPECT_EQ(diagMsg, "incomplete utf-8 codepoint");
+  EXPECT_EQ(diagLoc, SourceLoc::fromPointer(input));
+  EXPECT_EQ(diagCount, 1);
 }
 
 TEST_F(LexerTest, punctuationAndOperators) {

@@ -146,14 +146,14 @@ void Lexer::lexUnknown() {
   while (sourceOk && isBeginningOfContinuationCodePoint(*curPtr))
     advance();
   // When the source can't be trusted, just skip until the next ASCII character.
-  while (!sourceOk && !isUTF8(*curPtr))
+  while (!sourceOk && isUTF8(*curPtr) && (curPtr != endPtr))
     ++curPtr;
   // Push the token
   pushToken(TokenKind::Unknown);
 }
 
 void Lexer::lexNumberLiteral() {
-  assert(isdigit(*tokBegPtr) && (tokBegPtr+1 == curPtr));
+  assert(isdigit(*tokBegPtr) && (tokBegPtr + 1 == curPtr));
   // integer-literal = digit+
   // digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
   // floating-point-literal = integer-literal ('.' integer-literal)?
@@ -167,7 +167,7 @@ void Lexer::lexNumberLiteral() {
   consumeInteger();
   // check if there's a '.' followed by another digit, in that case we got a
   // floating-point literal.
-  if (*curPtr == '.' && isdigit(*(curPtr+1))) {
+  if (*curPtr == '.' && isdigit(*(curPtr + 1))) {
     ++curPtr;
     consumeInteger();
     pushToken(TokenKind::FloatingPointLiteral);
