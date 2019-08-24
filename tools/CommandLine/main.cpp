@@ -32,6 +32,9 @@ int main(int argc, char **argv) {
   // to do after that.
   if (!driver.handleImmediateArgs(inputArgs))
     return EXIT_SUCCESS;
-
-  return EXIT_SUCCESS;
+  // Try to create the CompilerInstance
+  auto compilerInstance = driver.tryCreateCompilerInstance(inputArgs);
+  if (!compilerInstance)  
+    return EXIT_FAILURE;
+  return compilerInstance->run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
