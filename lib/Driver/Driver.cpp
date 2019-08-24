@@ -49,7 +49,7 @@ bool Driver::handleImmediateArgs(InputArgList &options) {
 }
 
 std::unique_ptr<CompilerInstance>
-Driver::createCompilerInstance(llvm::opt::InputArgList &options) {
+Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &options) {
   // To make make_unique work with the private constructor, we must
   // use a small trick.
   struct CompilerInstanceCreater : public CompilerInstance {
@@ -105,7 +105,15 @@ ArrayRef<BufferID> CompilerInstance::getInputBuffers() const {
   return inputBuffers;
 }
 
+void CompilerInstance::createASTContext() {
+  if (!astContext)
+    astContext = ASTContext::create(srcMgr, diagEng);
+}
+
 bool CompilerInstance::doParsing() {
+  assert(!astContext && "ASTContext already created?");
+  // Create the root of the AST we'll create.
+  createASTContext();
   // TODO
   if (options.dumpRawAST) {
     // TODO: Dump Raw AST

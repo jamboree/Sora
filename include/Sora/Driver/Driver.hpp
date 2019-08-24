@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "Sora/AST/ASTContext.hpp"
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
@@ -28,6 +29,7 @@ namespace sora {
 class CompilerInstance {
   friend class Driver;
   CompilerInstance() = default;
+
 public:
   /// A step in the compilation process
   enum class Step : uint8_t {
@@ -68,8 +70,12 @@ public:
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
+  std::unique_ptr<ASTContext> astContext = nullptr;
 
 private:
+  /// Creates the ASTContext (if needed)
+  void createASTContext();
+
   /// Whether this CompilerInstance was ran at least once.
   bool ran = false;
   /// The BufferIDs of the input files
@@ -85,7 +91,7 @@ private:
 };
 
 /// This is a high-level compiler driver. It handles command-line options and
-/// handles creation of CompilerInstances.
+/// creation of CompilerInstances.
 class Driver {
 public:
   /// \param driverDiags the DiagnosticEngine that should be used by the Driver
@@ -114,7 +120,7 @@ public:
   /// (Tries to) create a compiler instance
   /// \returns the created compiler instance, or nullptr on error.
   std::unique_ptr<CompilerInstance>
-  createCompilerInstance(llvm::opt::InputArgList &options);
+  tryCreateCompilerInstance(llvm::opt::InputArgList &options);
 
   /// Utility function to emit driver diagnostics.
   template <typename... Args>
