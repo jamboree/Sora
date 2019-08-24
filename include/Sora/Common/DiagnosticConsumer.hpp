@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <stdint.h>
 #include <string>
+#include <functional>
 
 namespace sora {
 class SourceManager;
@@ -88,5 +89,21 @@ public:
   raw_ostream &out;
 
   void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override;
+};
+
+/// A DiagnosticConsumer that forwards diagnostic handling to a function
+class ForwardingDiagnosticConsumer : public DiagnosticConsumer {
+  public:
+    using HandlerFunction = std::function<void(SourceManager&, const Diagnostic&)>;
+
+    ForwardingDiagnosticConsumer(HandlerFunction func) : func(func) {}
+
+    /// Handles a diagnostic.
+    void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override {
+      func(srcMgr, diagnostic);
+    }
+
+  private:
+    HandlerFunction func;
 };
 } // namespace sora
