@@ -28,8 +28,10 @@ TOKEN(EndOfFile)
 TOKEN(Identifier)
 
 // Constant/Literals
-TOKEN(DoubleLiteral)
-TOKEN(IntLiteral)
+TOKEN(FloatingPointLiteral)
+TOKEN(IntegerLiteral)
+//TOKEN(StringLiteral)
+//TOKEN(CharLiteral)
 
 // Punctuation
 TOKEN(Amp)            // &
@@ -68,7 +70,6 @@ TOKEN(PlusEqual)      // +=
 TOKEN(RCurly)         // }
 TOKEN(RParen)         // )
 TOKEN(RSquare)        // ]
-TOKEN(Semi)           // ;
 TOKEN(Slash)          // /
 TOKEN(SlashEqual)     // /=
 TOKEN(Star)           // *

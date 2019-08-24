@@ -71,7 +71,7 @@ private:
 
   /// Lexs a number (int or float) that starts at tokBegPtr and moves
   /// curPtr past-the-end of the number
-  void lexNumber();
+  void lexNumberLiteral();
 
   /// Lexs the body of an identifier that starts at tokBegPtr and moves
   /// curPtr past-the-end of the number. curPtr is assumed

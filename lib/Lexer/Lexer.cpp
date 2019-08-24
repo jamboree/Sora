@@ -152,8 +152,27 @@ void Lexer::lexUnknown() {
   pushToken(TokenKind::Unknown);
 }
 
-void Lexer::lexNumber() {
-  // TODO
+void Lexer::lexNumberLiteral() {
+  assert(isdigit(*tokBegPtr) && (tokBegPtr+1 == curPtr));
+  // integer-literal = digit+
+  // digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+  // floating-point-literal = integer-literal ('.' integer-literal)?
+  auto consumeInteger = [&]() {
+    while (isdigit(*curPtr)) {
+      ++curPtr;
+    }
+  };
+
+  // consume the integer
+  consumeInteger();
+  // check if there's a '.' followed by another digit, in that case we got a
+  // floating-point literal.
+  if (*curPtr == '.' && isdigit(*(curPtr+1))) {
+    ++curPtr;
+    consumeInteger();
+    pushToken(TokenKind::FloatingPointLiteral);
+  } else
+    pushToken(TokenKind::IntegerLiteral);
 }
 
 void Lexer::lexIdentifierBody() {
@@ -238,6 +257,12 @@ void Lexer::lexImpl() {
     else 
       pushToken(TokenKind::Minus);
     break;
+  case '^':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::CaretEqual);
+    else 
+      pushToken(TokenKind::Caret);
+    break;
   case '+':
     if(*curPtr == '=')
       ++curPtr, pushToken(TokenKind::PlusEqual);
@@ -249,6 +274,73 @@ void Lexer::lexImpl() {
       ++curPtr, pushToken(TokenKind::SlashEqual);
     else 
       pushToken(TokenKind::Slash);
+    break;
+  case '*':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::StarEqual);
+    else 
+      pushToken(TokenKind::Star);
+    break;
+  case '%':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::PercentEqual);
+    else 
+      pushToken(TokenKind::Percent);
+    break;
+  case '|':
+    if(*curPtr == '|')
+      ++curPtr, pushToken(TokenKind::PipePipe);
+    else if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::PipeEqual);
+    else 
+      pushToken(TokenKind::Pipe);
+    break;
+  case '>':
+    if (*curPtr == '>') {
+      ++curPtr;
+      if(*curPtr == '=')
+        ++curPtr, pushToken(TokenKind::GreaterGreaterEqual);
+      else
+        pushToken(TokenKind::GreaterGreater);
+    }
+    else if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::GreaterEqual);
+    else 
+      pushToken(TokenKind::Greater);
+    break;
+  case '<':
+    if (*curPtr == '<') {
+      ++curPtr;
+      if(*curPtr == '=')
+        ++curPtr, pushToken(TokenKind::LessLessEqual);
+      else
+        pushToken(TokenKind::LessLess);
+    }
+    else if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::LessEqual);
+    else 
+      pushToken(TokenKind::Less);
+    break;
+  case ',':
+    pushToken(TokenKind::Comma);
+    break;
+  case '.':
+    pushToken(TokenKind::Dot);
+    break;
+  case ':':
+    pushToken(TokenKind::Colon);
+    break;
+  case '!':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::ExclaimEqual);
+    else 
+      pushToken(TokenKind::Exclaim);
+    break;
+  case '=':
+    if(*curPtr == '=')
+      ++curPtr, pushToken(TokenKind::EqualEqual);
+    else 
+      pushToken(TokenKind::Equal);
     break;
   case '{':
     pushToken(TokenKind::LCurly);
@@ -268,13 +360,10 @@ void Lexer::lexImpl() {
   case ']':
     pushToken(TokenKind::RSquare);
     break;
-  case ';':
-    pushToken(TokenKind::Semi);
-    break;
-  // numbers (floats & ints)
+  // numeric literal
   case '0': case '1': case '2': case '3': case '4': case '5': case '6':
   case '7': case '8': case '9':
-    lexNumber();
+    lexNumberLiteral();
     break;
   // identifiers & keywords
   case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g':

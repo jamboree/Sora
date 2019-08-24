@@ -103,8 +103,9 @@ TEST_F(LexerTest, unknownTokens) {
   CHECK_EOF();
 }
 
-TEST_F(LexerTest, operators) {
-  const char *input = "()[]{}/=/++=--=&&&=&;";
+TEST_F(LexerTest, punctuationAndOperators) {
+  const char *input =
+      "()[]{}/=/++=--=&&&=&**=%%=|||=|>>>=>>=><<<=<<=<:,.!!=^^=->";
 
   init(input);
   CHECK_NEXT(TokenKind::LParen, "(", true);
@@ -122,6 +123,73 @@ TEST_F(LexerTest, operators) {
   CHECK_NEXT(TokenKind::AmpAmp, "&&", false);
   CHECK_NEXT(TokenKind::AmpEqual, "&=", false);
   CHECK_NEXT(TokenKind::Amp, "&", false);
-  CHECK_NEXT(TokenKind::Semi, ";", false);
+  CHECK_NEXT(TokenKind::Star, "*", false);
+  CHECK_NEXT(TokenKind::StarEqual, "*=", false);
+  CHECK_NEXT(TokenKind::Percent, "%", false);
+  CHECK_NEXT(TokenKind::PercentEqual, "%=", false);
+  CHECK_NEXT(TokenKind::PipePipe, "||", false);
+  CHECK_NEXT(TokenKind::PipeEqual, "|=", false);
+  CHECK_NEXT(TokenKind::Pipe, "|", false);
+  CHECK_NEXT(TokenKind::GreaterGreater, ">>", false);
+  CHECK_NEXT(TokenKind::GreaterEqual, ">=", false);
+  CHECK_NEXT(TokenKind::GreaterGreaterEqual, ">>=", false);
+  CHECK_NEXT(TokenKind::Greater, ">", false);
+  CHECK_NEXT(TokenKind::LessLess, "<<", false);
+  CHECK_NEXT(TokenKind::LessEqual, "<=", false);
+  CHECK_NEXT(TokenKind::LessLessEqual, "<<=", false);
+  CHECK_NEXT(TokenKind::Less, "<", false);
+  CHECK_NEXT(TokenKind::Colon, ":", false);
+  CHECK_NEXT(TokenKind::Comma, ",", false);
+  CHECK_NEXT(TokenKind::Dot, ".", false);
+  CHECK_NEXT(TokenKind::Exclaim, "!", false);
+  CHECK_NEXT(TokenKind::ExclaimEqual, "!=", false);
+  CHECK_NEXT(TokenKind::Caret, "^", false);
+  CHECK_NEXT(TokenKind::CaretEqual, "^=", false);
+  CHECK_NEXT(TokenKind::Arrow, "->", false);
+  CHECK_EOF();
+}
+
+TEST_F(LexerTest, numbers) {
+  const char *input = "0 1 2 3 4 5 6 7 8 9\n"
+                      "0.0 1.1 2.2 3.3 4.4 5.5 6.6 7.7 8.8 9.9\n"
+                      "0.0.0 9999999999\n"
+                      "123456.123456";
+
+  init(input);
+#define CHECK_NEXT_INT(STR, SOL) CHECK_NEXT(TokenKind::IntegerLiteral, STR, SOL)
+#define CHECK_NEXT_FLT(STR, SOL)                                               \
+  CHECK_NEXT(TokenKind::FloatingPointLiteral, STR, SOL)
+
+  CHECK_NEXT_INT("0", true);
+  CHECK_NEXT_INT("1", false);
+  CHECK_NEXT_INT("2", false);
+  CHECK_NEXT_INT("3", false);
+  CHECK_NEXT_INT("4", false);
+  CHECK_NEXT_INT("5", false);
+  CHECK_NEXT_INT("6", false);
+  CHECK_NEXT_INT("7", false);
+  CHECK_NEXT_INT("8", false);
+  CHECK_NEXT_INT("9", false);
+
+  CHECK_NEXT_FLT("0.0", true);
+  CHECK_NEXT_FLT("1.1", false);
+  CHECK_NEXT_FLT("2.2", false);
+  CHECK_NEXT_FLT("3.3", false);
+  CHECK_NEXT_FLT("4.4", false);
+  CHECK_NEXT_FLT("5.5", false);
+  CHECK_NEXT_FLT("6.6", false);
+  CHECK_NEXT_FLT("7.7", false);
+  CHECK_NEXT_FLT("8.8", false);
+  CHECK_NEXT_FLT("9.9", false);
+
+  CHECK_NEXT_FLT("0.0", true);
+  CHECK_NEXT(TokenKind::Dot, ".", false);
+  CHECK_NEXT_INT("0", false);
+  CHECK_NEXT_INT("9999999999", false);
+
+  CHECK_NEXT_FLT("123456.123456", true);
+
+#undef CHECK_NEXT_INT
+#undef CHECK_NEXT_FLT
   CHECK_EOF();
 }
