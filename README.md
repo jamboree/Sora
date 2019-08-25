@@ -27,7 +27,7 @@ Sora is mostly a learning project. It is not intended for widespread or producti
 Currently, Sora is still in its infancy. Nothing is working yet.
 
 #### Implementation Roadmap
-Note: For the actual language features roadmap see [doc/roadmap](doc/Roadmap.md))
+Note: For the actual language features roadmap see [doc/roadmap](doc/Roadmap.md)
 
 - :white_check_mark: Common (*Note: This module grows as needed. It's a constant work in progress. This only enumerates the most important parts of this module*)
   - :white_check_mark: Diagnostic Engine
