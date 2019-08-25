@@ -1,10 +1,8 @@
 ## Sora Language Grammar.
 
 TODOs: 
- - Identifiers should allow unicode stuff
- - Escaped unicode stuff (`\u0000`)
- - Methods
- - Generics
+ - Identifiers should allow unicode.
+ - Escaped stuff in strings (e.g. `\u0000`)
  - Enum, Union?
  - Binary/Hex literals
 
