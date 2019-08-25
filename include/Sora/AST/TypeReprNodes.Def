@@ -1,0 +1,16 @@
+//===--- TypeReprNodes.def - Type Representation ASTs x-macros --*- C++ -*-===//
+// Part of the Sora project, licensed under the MIT license.
+// See LICENSE.txt in the project root for license information.
+//
+// Copyright (c) 2019 Pierre van Houtryve
+//===----------------------------------------------------------------------===//
+
+#ifndef TYPEREPR(KIND)
+# define TYPEREPR(KIND)
+#endif
+
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+
+#undef TYPEREPR

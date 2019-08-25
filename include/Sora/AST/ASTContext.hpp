@@ -49,8 +49,13 @@ public:
                                             DiagnosticEngine &diagEngine);
   ~ASTContext();
 
+  /// Fetch an allocator. This can be used to allocate or free memory.
+  /// ASTContext allocators are "bump pointer allocators", or "arena"
+  /// allocators if you will. You can only free *everything* at once
+  /// (deallocate is useless).
+  ///
   /// \param kind the kind of allocator desired (default = Permanent)
-  /// \returns the allocator corresponding to \p kind
+  /// \returns a reference the allocator corresponding to \p kind
   llvm::BumpPtrAllocator &
   getAllocator(ASTAllocatorKind kind = ASTAllocatorKind::Permanent);
 

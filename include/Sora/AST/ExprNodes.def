@@ -1,0 +1,16 @@
+//===--- ExprNodes.def - Expression ASTs x-macros ---------------*- C++ -*-===//
+// Part of the Sora project, licensed under the MIT license.
+// See LICENSE.txt in the project root for license information.
+//
+// Copyright (c) 2019 Pierre van Houtryve
+//===----------------------------------------------------------------------===//
+
+#ifndef EXPR(KIND)
+# define EXPR(KIND)
+#endif
+
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+
+#undef EXPR

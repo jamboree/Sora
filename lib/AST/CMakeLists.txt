@@ -1,3 +1,9 @@
 add_source(ast_src
   "ASTContext.cpp"
+  "Decl.cpp"
+  "Expr.cpp"
+  "Pattern.cpp"
+  "Stmt.cpp"
+  "TypeRepr.cpp"
+  "Types.cpp"
 )
