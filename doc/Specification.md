@@ -1,6 +1,6 @@
 ## Sora Language Specification
 
-Note: This is a rough draft.
+Note: This is a rough draft. Nothing is definitive yet.
 
 TO-DOs:
   - Grammar/Spellchecking
