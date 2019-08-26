@@ -22,9 +22,9 @@ class SourceManager;
 class SourceLoc {
   friend class SourceManager;
 
-public:
   llvm::SMLoc value;
 
+public:
   SourceLoc() = default;
   explicit SourceLoc(llvm::SMLoc value) : value(value) {}
 
@@ -36,13 +36,16 @@ public:
   }
 
   /// \returns the pointer value of this SourceLoc.
-  const char *getPointer() { return value.getPointer(); }
+  const char *getPointer() const { return value.getPointer(); }
 
   /// \returns a copy of this SourceLoc advanced by \p offset bytes, or
   /// SourceLoc() if this SourceLoc is not valid.
   SourceLoc getAdvancedLocIfValid(unsigned numBytes) const {
     return isValid() ? getAdvancedLoc(numBytes) : SourceLoc();
   }
+
+  /// \returns the underlying llvm::SMLoc
+  llvm::SMLoc getSMLoc() const { return value; }
 
   /// Creates a SourceLoc from a pointer \p ptr
   /// NOTE: To be used wisely. Don't mix this with SourceLocs into files managed
@@ -56,7 +59,7 @@ public:
   /// \returns true if this SourceLoc is invalid
   bool isInvalid() const { return !isValid(); }
   /// \returns true if this SourceLoc is valid
-  explicit operator bool() { return isValid(); }
+  explicit operator bool() const { return isValid(); }
 
   bool operator==(const SourceLoc other) const { return value == other.value; }
   bool operator!=(const SourceLoc other) const { return value != other.value; }
@@ -93,7 +96,7 @@ public:
   /// \returns true if this SourceRange is invalid
   bool isInvalid() const { return !isValid(); }
   /// \returns true if this SourceRange is valid
-  explicit operator bool() { return isValid(); }
+  explicit operator bool() const { return isValid(); }
 
   bool operator==(const SourceRange &other) const {
     return (begin == other.begin) && (end == other.end);
@@ -127,10 +130,12 @@ public:
   bool isInvalid() const { return !isValid(); }
   /// \returns true if this CharSourceRange is valid
   bool empty() const { return byteLength == 0; }
+  /// \returns true if this CharSourceRange is valid
+  explicit operator bool() const { return isValid(); }
 
   /// \returns this CharSourceRange as a llvm::SMRange
   llvm::SMRange getSMRange() const {
-    return {getBegin().value, getEnd().value};
+    return {getBegin().getSMLoc(), getEnd().getSMLoc()};
   }
 
   /// \returns the begin SourceLoc

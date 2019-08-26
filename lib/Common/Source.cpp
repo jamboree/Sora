@@ -47,5 +47,5 @@ CharSourceRange::CharSourceRange(SourceManager &srcMgr, SourceLoc begin,
 }
 
 StringRef CharSourceRange::str() const {
-  return StringRef(begin.value.getPointer(), byteLength);
+  return StringRef(begin.getPointer(), byteLength);
 }

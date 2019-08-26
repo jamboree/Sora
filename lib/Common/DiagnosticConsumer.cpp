@@ -47,7 +47,7 @@ void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
     fixits.push_back({fixit.getCharRange().getSMRange(), fixit.getText()});
   // Get the message
   auto msg = srcMgr.llvmSourceMgr.GetMessage(
-      diagnostic.loc.value,         // diagnostic location
+      diagnostic.loc.getSMLoc(),    // diagnostic location
       getDKasLLVM(diagnostic.kind), // diagnostic kind
       diagnostic.message,           // diagnostic message
       ranges,                       // additional ranges
