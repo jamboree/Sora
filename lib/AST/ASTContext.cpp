@@ -1,4 +1,4 @@
-//===--- ASTContext.cpp -----------------------------------------*- C++ -*-===//
+﻿//===--- ASTContext.cpp -----------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -6,9 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/ASTContext.hpp"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include <algorithm>
+#include <tuple>
 
 using namespace sora;
 
@@ -18,6 +20,9 @@ struct ASTContext::Impl {
   llvm::BumpPtrAllocator permanentAllocator;
   /// for ASTArenaKind::Unresolved
   llvm::BumpPtrAllocator unresolvedAllocator;
+
+  /// FIXME: Is using MallocAllocator the right thing to do here?
+  llvm::StringSet<> identifierTable;
 };
 
 ASTContext::ASTContext(SourceManager &srcMgr, DiagnosticEngine &diagEngine)
@@ -48,7 +53,7 @@ std::unique_ptr<ASTContext> ASTContext::create(SourceManager &srcMgr,
   implMemory =
       reinterpret_cast<void *>(llvm::alignAddr(implMemory, alignof(Impl)));
 
-  // Do some checking because I'm kinda parano�d.
+  // Do some checking because I'm kinda paranoïd.
   //  Check that we aren't going out of bounds and going to segfault later.
   assert(((char *)implMemory + sizeof(Impl)) < ((char *)memory + sizeToAlloc) &&
          "Going out-of-bounds of the allocated memory");
@@ -76,4 +81,11 @@ llvm::BumpPtrAllocator &ASTContext::getAllocator(ASTAllocatorKind kind) {
   case ASTAllocatorKind::Unresolved:
     return getImpl().unresolvedAllocator;
   }
+}
+
+Identifier ASTContext::getIdentifier(StringRef str) {
+  // Don't intern null & empty strings (StringRef::size() returns 0 for null
+  // strings)
+  return str.size() ? getImpl().identifierTable.insert(str).first->getKeyData()
+                    : Identifier();
 }

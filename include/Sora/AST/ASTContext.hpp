@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Sora/AST/Identifier.hpp"
 #include "llvm/Support/Allocator.h"
 #include <memory>
 
@@ -58,6 +59,10 @@ public:
   /// \returns a reference the allocator corresponding to \p kind
   llvm::BumpPtrAllocator &
   getAllocator(ASTAllocatorKind kind = ASTAllocatorKind::Permanent);
+
+  /// Interns an identifier string
+  /// \returns an identifier object for \p str
+  Identifier getIdentifier(StringRef str);
 
   /// The SourceManager that owns the source buffers that created this AST.
   SourceManager &srcMgr;

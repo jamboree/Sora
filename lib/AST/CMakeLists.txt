@@ -2,6 +2,7 @@ add_source(ast_src
   "ASTContext.cpp"
   "Decl.cpp"
   "Expr.cpp"
+  "Identifier.cpp"
   "Pattern.cpp"
   "Stmt.cpp"
   "TypeRepr.cpp"
