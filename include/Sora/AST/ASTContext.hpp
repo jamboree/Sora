@@ -50,6 +50,23 @@ public:
                                             DiagnosticEngine &diagEngine);
   ~ASTContext();
 
+  /// Allocates memory using \p allocator.
+  /// \returns a pointer to the allocated memory (aligned to \p align) or
+  /// nullptr if \p size == 0
+  void *allocate(size_t size, size_t align,
+                 ASTAllocatorKind allocator = ASTAllocatorKind::Permanent) {
+    return size ? getAllocator(allocator).Allocate(size, align) : nullptr;
+  }
+
+  /// Allocates enough memory for an object \p Ty.
+  /// This simply calls allocate using sizeof/alignof Ty.
+  /// This does not construct the object. You'll need to use placement
+  /// new for that.
+  template <typename Ty>
+  void* allocate(ASTAllocatorKind allocator = ASTAllocatorKind::Permanent) {
+    return allocate(sizeof(Ty), alignof(Ty), allocator);
+  }
+
   /// Fetch an allocator. This can be used to allocate or free memory.
   /// ASTContext allocators are "bump pointer allocators", or "arena"
   /// allocators if you will. You can only free *everything* at once
