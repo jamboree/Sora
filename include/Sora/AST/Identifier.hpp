@@ -52,7 +52,7 @@ class IdentifierLoc {
   SourceLoc loc;
 
 public:
-  IdentifierLoc(Identifier indent, SourceLoc loc = SourceLoc())
+  IdentifierLoc(Identifier ident, SourceLoc loc = SourceLoc())
       : ident(ident), loc(loc) {}
 
   /// \returns the SourceLoc

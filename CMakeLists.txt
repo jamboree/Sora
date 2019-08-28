@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.4.3)
 project(Sora)
 
 # set minimal C++ standard: we need C++17 at a minimum.
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # include the commonly used macros/helpers.

@@ -22,8 +22,8 @@ int main(int argc, char **argv) {
   Driver driver(diags);
   // Parse the arguments
   bool hadError;
-  InputArgList &inputArgs =
-      driver.parseArgs(ArrayRef(argv, argv + argc), hadError);
+  InputArgList inputArgs =
+      driver.parseArgs(ArrayRef<const char*>(argv, argv + argc), hadError);
   // Stop here if an error occured during the parsing of the arguments
   // (because the arguments cannot be trusted)
   if (hadError)

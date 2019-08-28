@@ -213,13 +213,6 @@ class DiagnosticEngine {
   /// Initializes the bitfields above
   void initBitfields();
 
-  /// The Diagnostic Consumer
-  std::unique_ptr<DiagnosticConsumer> consumer = nullptr;
-
-  /// The currently active diagnostic, or "None" if there is no
-  /// active diagnostic.
-  Optional<RawDiagnostic> activeDiagnostic;
-
 public:
   /// Creates a DiagnosticEngine using a pre-existing consumer
   DiagnosticEngine(SourceManager &srcMgr,
@@ -302,6 +295,13 @@ private:
 
   /// \returns true if we have an active diagnostic.
   bool hasActiveDiagnostic() const { return activeDiagnostic.hasValue(); }
+
+  /// The Diagnostic Consumer
+  std::unique_ptr<DiagnosticConsumer> consumer = nullptr;
+
+  /// The currently active diagnostic, or "None" if there is no
+  /// active diagnostic.
+  Optional<RawDiagnostic> activeDiagnostic;
 };
 
 } // namespace sora

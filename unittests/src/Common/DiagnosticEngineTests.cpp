@@ -28,7 +28,6 @@ TEST(DiagnosticEngineTest, diagnose) {
   SourceLoc loc = SourceLoc::fromPointer(str.data() + 4);
   SourceLoc ins = SourceLoc::fromPointer(str.data() + 3);
   SourceLoc beg = SourceLoc::fromPointer(str.data() + 5);
-  SourceLoc end = SourceLoc::fromPointer(str.data() + 7);
 
   CharSourceRange additionalRange(beg, 3);
   CharSourceRange wordRange(loc, 4);

@@ -35,8 +35,6 @@ PrintingDiagnosticConsumer::PrintingDiagnosticConsumer() : out(llvm::outs()) {}
 
 void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
                                         const Diagnostic &diagnostic) {
-  // Get the DiagKind
-  auto dk = getDKasLLVM(diagnostic.kind);
   // Get the SMRanges
   SmallVector<llvm::SMRange, 2> ranges;
   for (auto range : diagnostic.ranges)

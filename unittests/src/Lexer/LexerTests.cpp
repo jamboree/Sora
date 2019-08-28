@@ -114,7 +114,6 @@ TEST_F(LexerTest, invalidUTF8) {
   const char *input = "\xa0\xa1";
 
   unsigned diagCount = 0;
-  bool success = false;
   std::string diagMsg;
   SourceLoc diagLoc;
 
@@ -138,7 +137,6 @@ TEST_F(LexerTest, incompleteUTF8) {
   const char *input = "\xc3";
 
   unsigned diagCount = 0;
-  bool success = false;
   std::string diagMsg;
   SourceLoc diagLoc;
 

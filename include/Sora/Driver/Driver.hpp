@@ -137,9 +137,9 @@ public:
   }
 
 private:
-  /// The option table
-  std::unique_ptr<llvm::opt::OptTable> optTable;
   /// Driver Diagnostics
   DiagnosticEngine &driverDiags;
+  /// The option table
+  std::unique_ptr<llvm::opt::OptTable> optTable;
 };
 } // namespace sora

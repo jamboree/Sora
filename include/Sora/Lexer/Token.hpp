@@ -38,7 +38,7 @@ public:
   /// \param charRange the CharSourceRange of the token
   /// \param startOfLine true if the token is at the start of a line
   Token(TokenKind kind, CharSourceRange charRange, bool startOfLine = false)
-      : kind(kind), charRange(charRange), startOfLine(startOfLine) {}
+      : charRange(charRange), startOfLine(startOfLine), kind(kind) {}
 
   /// \returns true if kind == \p kind
   bool is(TokenKind kind) const { return this->kind == kind; }
@@ -71,11 +71,11 @@ public:
   void dump(raw_ostream &out) const;
 
 private:
+  /// The CharSourceRange of this Token
+  CharSourceRange charRange;
   /// Set to true if the token is at the start of a line, false otherwise.
   bool startOfLine = false;
   /// The kind of this Token
   TokenKind kind = TokenKind::Invalid;
-  /// The CharSourceRange of this Token
-  CharSourceRange charRange;
 };
 } // namespace sora

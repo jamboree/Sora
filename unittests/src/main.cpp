@@ -24,9 +24,5 @@ int main(int argc, char **argv) {
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
   ::testing::InitGoogleTest(&argc, argv);
-  auto result = RUN_ALL_TESTS();
-#ifndef NDEBUG
-  std::getchar();
-#endif
-  return result;
+  return RUN_ALL_TESTS();
 }
