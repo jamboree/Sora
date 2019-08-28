@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.4.3)
 # set project name
 project(Sora)
 
-# set minimal C++ standard: we need C++17 at a minimum.
+# set minimal C++ standard
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -26,6 +26,15 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # set _HAS_EXCEPTIONS to 0
 add_definitions(-D_HAS_EXCEPTIONS=0)
+
+# check if we should enable leak-checking
+if(EXISTS SORA_CHECK_LEAKS)
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+		add_definitions("-fsanitize=address")
+	else()
+		message(FATAL_ERROR "Leak Checking is only supported on Clang")
+	endif()
+endif()
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
