@@ -8,6 +8,9 @@ project(Sora)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# set options 
+option(ENABLE_ASAN "Enables Clang's AddressSanitizer (-fsanitize=address)" OFF)
+
 # include the commonly used macros/helpers.
 include(cmake/AddSource.cmake)  # defines the add_source macro
 
@@ -28,7 +31,7 @@ add_definitions(${LLVM_DEFINITIONS})
 add_definitions(-D_HAS_EXCEPTIONS=0)
 
 # check if we should enable leak-checking
-if(EXISTS SORA_CHECK_LEAKS)
+if(ENABLE_ASAN)
 	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		add_definitions("-fsanitize=address")
 	else()
