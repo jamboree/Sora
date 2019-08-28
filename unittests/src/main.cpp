@@ -6,23 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
+#include "Sora/Common/InitLLVM.hpp"
 #include <cstdio>
 
-// Check if we can leak-check using _Crt leak-checking tools
-#if defined(_MSC_VER) && !defined(_NDEBUG)
-#define CAN_LEAK_CHECK_ON_MSVC 1
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#include <stdlib.h>
-#else
-#define CAN_LEAK_CHECK_ON_MSVC 0
-#endif
-
 int main(int argc, char **argv) {
-// Enable leak checking under MSVC.
-#if CAN_LEAK_CHECK_ON_MSVC
-  _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
+  PROGRAM_START(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
