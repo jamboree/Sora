@@ -63,6 +63,7 @@ statement = block-statement
           | expression
           | if-statement
           | while-statement
+          | do-while-statement
           | for-statement
           | control-transfer-statement
           | declaration-statement
@@ -74,6 +75,8 @@ block-statement = '{' statement* '}'
 if-statement = "if" (expression | variable-declaration) block-statement ("else" (brace-statement | if-statement))?
 
 while-statement = "while" expression block-statement
+
+do-while-statement "do" block-statement "while" expression
 
 for-statement = "for" pattern "in" expression block-statement
 
