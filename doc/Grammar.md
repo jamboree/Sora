@@ -45,7 +45,7 @@ struct-member-declaration = pattern-initializer
 
 type-declaration = "type" identifier "=" type
 
-function-declaration = "func" identifier parameter-declaration-list ("->" type)? compound-statement // note: if the return type isn't present, the function returns void.
+function-declaration = "func" identifier parameter-declaration-list ("->" type)? block-statement // note: if the return type isn't present, the function returns void.
 parameter-declaration-list = '(' parameter-declaration (',' parameter-declaration)* ')'
 parameter-declaration = "mut"? identifier type-annotation
 
@@ -59,23 +59,26 @@ tuple-pattern = '(' pattern (',' pattern)* ')'
 pattern-initializer = pattern ('=' expression)?
 
 // Statements 
-statement = brace-statement
+statement = block-statement
           | expression
           | if-statement
           | while-statement
+          | do-while-statement
           | for-statement
           | control-transfer-statement
           | declaration-statement
           
 declaration-statement = function-declaration | type-declaration | struct-declaration | let-declaration
 
-brace-statement = '{' statement* '}'
+block-statement = '{' statement* '}'
 
-if-statement = "if" (expression | variable-declaration) brace-statement ("else" (brace-statement | if-statement))?
+if-statement = "if" (expression | variable-declaration) block-statement ("else" (brace-statement | if-statement))?
 
-while-statement = "while" expression brace-statement
+while-statement = "while" expression block-statement
 
-for-statement = "for" pattern "in" expression brace-statement
+do-while-statement "do" block-statement "while" expression
+
+for-statement = "for" pattern "in" expression block-statement
 
 control-transfer-statement = continue-statement 
                            | break-statement
@@ -108,8 +111,7 @@ prefix-operator = '+' | '-' | '!' | '*' | '&'
 expression = assignement-expression
 assignement-expression = conditional-expression (assignement-operator expression)?
 conditional-expression = binary-expression ('?' expression ':' expression)
-binary-expression = cast-expression (binary-operator cast-expression)*
-cast-expression = prefix-expression ("as" type)*
+binary-expression = prefix-expression (binary-operator prefix-expression)*
 prefix-expression = prefix-operator prefix-expression
                   | postfix-expression
 postfix-expression = primary-expression suffix* 
