@@ -108,8 +108,7 @@ prefix-operator = '+' | '-' | '!' | '*' | '&'
 expression = assignement-expression
 assignement-expression = conditional-expression (assignement-operator expression)?
 conditional-expression = binary-expression ('?' expression ':' expression)
-binary-expression = cast-expression (binary-operator cast-expression)*
-cast-expression = prefix-expression ("as" type)*
+binary-expression = prefix-expression (binary-operator prefix-expression)*
 prefix-expression = prefix-operator prefix-expression
                   | postfix-expression
 postfix-expression = primary-expression suffix* 
