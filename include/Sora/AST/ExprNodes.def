@@ -5,12 +5,48 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef EXPR(KIND)
-# define EXPR(KIND)
+#ifndef EXPR
+# define EXPR(KIND, PARENT)
+#endif
+
+#ifndef ABSTRACT_EXPR
+# define ABSTRACT_EXPR(KIND, PARENT)
+#endif
+
+#ifndef EXPR_RANGE
+# define EXPR_RANGE(NAME, FIRST, LAST)
 #endif
 
 //===----------------------------------------------------------------------===//
 
+ABSTRACT_EXPR(Unresolved, Expr)
+	EXPR(UnresolvedDeclRef, Unresolved)
+	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedDeclRef)
+
+EXPR(ConstructorDeclRef, Expr)
+EXPR(DeclRef, Expr)
+
+EXPR(Discard, Expr)
+
+ABSTRACT_EXPR(AnyLiteral, Expr)
+	EXPR(IntegerLiteral, AnyLiteral)
+	EXPR(FloatLiteral, AnyLiteral)
+	EXPR(BooleanLiteral, AnyLiteral)
+	EXPR(NullLiteral, AnyLiteral)
+	EXPR_RANGE(AnyLiteral, IntegerLiteral, NullLiteral)
+
+EXPR(Error, Expr)
+
+EXPR(TupleIndexing, Expr)
+EXPR(Tuple, Expr)
+
+EXPR(Assign, Expr)
+EXPR(Binary, Expr)
+EXPR(Unary, Expr)
+
+EXPR(Call, Expr)
+
 //===----------------------------------------------------------------------===//
 
 #undef EXPR
+#undef ABSTRACT_EXPR

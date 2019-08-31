@@ -7,6 +7,11 @@
 
 #pragma once
 
-namespace sora {
+#include <stdint.h>
 
+namespace sora {
+enum class StmtKind : uint8_t {
+#define STMT(KIND, PARENT) KIND,
+#include "Sora/AST/StmtNodes.def"
+};
 }

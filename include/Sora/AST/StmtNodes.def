@@ -5,11 +5,18 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef STMT(KIND)
-# define STMT(KIND)
+#ifndef STMT
+# define STMT(KIND, PARENT)
 #endif
 
 //===----------------------------------------------------------------------===//
+
+STMT(Block, Stmt)
+STMT(DoWhile, Stmt)
+STMT(While, Stmt)
+STMT(If, Stmt)
+STMT(Continue, Stmt)
+STMT(Break, Stmt)
 
 //===----------------------------------------------------------------------===//
 

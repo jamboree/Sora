@@ -7,6 +7,12 @@
 
 #pragma once
 
-namespace sora {
+#include <stdint.h>
 
+namespace sora {
+enum class ExprKind : uint8_t {
+#define EXPR(KIND, PARENT) KIND,
+#define EXPR_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
+#include "Sora/AST/ExprNodes.def"
+};
 }
