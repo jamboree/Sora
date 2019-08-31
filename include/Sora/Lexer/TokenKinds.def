@@ -78,6 +78,7 @@ TOKEN(StarEqual)      // *=
 // Language Keywords
 KEYWORD(BreakKw,      "break")
 KEYWORD(ContinueKw,   "continue")
+KEYWORD(DoKw,	      "do")
 KEYWORD(ElseKw,       "else")
 KEYWORD(FalseKw,      "false")
 KEYWORD(ForKw,        "for")
