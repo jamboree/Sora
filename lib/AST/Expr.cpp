@@ -7,6 +7,8 @@
 
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include <type_traits>
 
 using namespace sora;
@@ -36,13 +38,18 @@ constexpr bool isOverridenFromExpr(Rtr (Expr::*)() const) {
                 #CLASSNAME " does not override Expr::" #METHOD);               \
   return static_cast<const CLASSNAME *>(this)->METHOD()
 
-SourceLoc Expr::getStartLoc() const {
+// FIXME: Rework this so it always use getSourceRange or getStartLoc/getEndLoc.
+// It should auto-adapt (support either getSourceRange or the
+// getStartLoc/getEndLoc combo). Once that's done change ErrorExpr to remove
+// getStartLoc/getEndLoc.
+
+SourceLoc Expr::getBegLoc() const {
   switch (getKind()) {
   default:
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    DISPATCH_OVERRIDEN(ID##Expr, getStartLoc);
+    DISPATCH_OVERRIDEN(ID##Expr, getBegLoc);
 #include "Sora/AST/ExprNodes.def"
   }
 }
@@ -57,6 +64,21 @@ SourceLoc Expr::getEndLoc() const {
 #include "Sora/AST/ExprNodes.def"
   }
 }
+SourceRange Expr::getSourceRange() const {
+  // For getSourceRange, we use the getSourceRange of the derived expression
+  // if it reimplements it, else we simply create the SourceRange using
+  // getBegLoc & getEndLoc
+  switch (getKind()) {
+  default:
+    llvm_unreachable("unknown ExprKind");
+#define EXPR(ID, PARENT)                                                       \
+  case ExprKind::ID:                                                           \
+    return isOverridenFromExpr(&ID##Expr::getSourceRange)                      \
+               ? static_cast<const ID##Expr *>(this)->getSourceRange()         \
+               : SourceRange(getBegLoc(), getEndLoc());
+#include "Sora/AST/ExprNodes.def"
+  }
+}
 #undef DISPATCH_OVERRIDEN
 
 void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
@@ -66,4 +88,14 @@ void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
 void *UnresolvedExpr::operator new(size_t size, ASTContext &ctxt,
                                    unsigned align) {
   return ctxt.allocate(size, align, ASTAllocatorKind::UnresolvedNodes);
+}
+
+APInt IntegerLiteralExpr::getRawValue() const {
+  APInt result;
+  /// For now Sora only has base 10 literals.
+  unsigned radix = 10;
+  /// Parse it (true = error)
+  if (strValue.getAsInteger(radix, result))
+    llvm_unreachable("Integer Parsing Error - Ill-formed integer token?");
+  return result;
 }
