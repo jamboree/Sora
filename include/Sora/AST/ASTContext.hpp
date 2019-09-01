@@ -10,18 +10,19 @@
 #include "Sora/AST/Identifier.hpp"
 #include "llvm/Support/Allocator.h"
 #include <memory>
+#include <stdint.h>
 
 namespace sora {
 class SourceManager;
 class DiagnosticEngine;
 
-enum class ASTAllocatorKind {
+enum class ASTAllocatorKind : uint8_t {
   /// The "permanent" AST allocator that holds long-lived objects such as types,
   /// resolved AST nodes, etc.
   Permanent,
-  /// The "unresolved" AST allocator that holds unresolved AST nodes. This is
-  /// freed right after semantic analysis.
-  Unresolved
+  /// The AST allocator for unresolved AST nodes.
+  /// This is usually freed right after semantic analysis.
+  UnresolvedNodes
 };
 
 /// The ASTContext is a large object designed as the core of the AST.
@@ -63,7 +64,7 @@ public:
   /// This does not construct the object. You'll need to use placement
   /// new for that.
   template <typename Ty>
-  void* allocate(ASTAllocatorKind allocator = ASTAllocatorKind::Permanent) {
+  void *allocate(ASTAllocatorKind allocator = ASTAllocatorKind::Permanent) {
     return allocate(sizeof(Ty), alignof(Ty), allocator);
   }
 

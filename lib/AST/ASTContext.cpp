@@ -16,9 +16,9 @@ using namespace sora;
 
 /// the ASTContext's implementation
 struct ASTContext::Impl {
-  /// for ASTArenaKind::Permanent
+  /// for ASTAllocatorKind::Permanent
   llvm::BumpPtrAllocator permanentAllocator;
-  /// for ASTArenaKind::Unresolved
+  /// for ASTAllocatorKind::UnresolvedNodes
   llvm::BumpPtrAllocator unresolvedAllocator;
 
   /// FIXME: Is using MallocAllocator the right thing to do here?
@@ -78,7 +78,7 @@ llvm::BumpPtrAllocator &ASTContext::getAllocator(ASTAllocatorKind kind) {
     llvm_unreachable("unknown allocator kind");
   case ASTAllocatorKind::Permanent:
     return getImpl().permanentAllocator;
-  case ASTAllocatorKind::Unresolved:
+  case ASTAllocatorKind::UnresolvedNodes:
     return getImpl().unresolvedAllocator;
   }
 }

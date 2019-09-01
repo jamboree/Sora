@@ -23,6 +23,7 @@ ABSTRACT_EXPR(Unresolved, Expr)
 	EXPR(UnresolvedDeclRef, Unresolved)
 	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedDeclRef)
 
+/*
 EXPR(ConstructorDeclRef, Expr)
 EXPR(DeclRef, Expr)
 
@@ -45,8 +46,9 @@ EXPR(Binary, Expr)
 EXPR(Unary, Expr)
 
 EXPR(Call, Expr)
-
+*/
 //===----------------------------------------------------------------------===//
 
 #undef EXPR
 #undef ABSTRACT_EXPR
+#undef EXPR_RANGE
