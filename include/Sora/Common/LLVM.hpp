@@ -16,6 +16,8 @@
 namespace llvm {
 class raw_ostream;
 class StringRef;
+class APInt;
+class APFloat;
 template <typename T> class SmallVectorImpl;
 template <typename T, unsigned N> class SmallVector;
 template <typename T> class ArrayRef;
@@ -40,4 +42,8 @@ using llvm::None;
 using llvm::Optional;
 using llvm::ArrayRef;
 using llvm::MutableArrayRef;
+
+// APInt & APFloat
+using llvm::APInt;
+using llvm::APFloat;
 } // namespace sora
