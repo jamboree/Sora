@@ -6,5 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Expr.hpp"
+#include "Sora/AST/ASTContext.hpp"
 
 using namespace sora;
+
+void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
+  return ctxt.allocate(size, align);
+}
