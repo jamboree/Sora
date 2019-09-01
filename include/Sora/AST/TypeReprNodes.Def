@@ -11,6 +11,11 @@
 
 //===----------------------------------------------------------------------===//
 
+TYPEREPR(Identifier,	TypeRepr)
+TYPEREPR(Tuple,			TypeRepr)
+TYPEREPR(Reference,		TypeRepr)
+TYPEREPR(Pointer,		TypeRepr)
+
 //===----------------------------------------------------------------------===//
 
 #undef TYPEREPR

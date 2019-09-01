@@ -5,12 +5,34 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef TYPE(KIND)
-# define TYPE(KIND)
+#ifndef TYPE
+# define TYPE(KIND, PARENT)
+#endif
+
+#ifndef ABSTRACT_TYPE
+# define ABSTRACT_TYPE(KIND, PARENT)
+#endif
+
+#ifndef TYPE_RANGE
+# define TYPE_RANGE(NAME, FIRST, LAST)
 #endif
 
 //===----------------------------------------------------------------------===//
 
+ABSTRACT_TYPE(Basic,	Type)
+	TYPE(Integer,		BasicType)
+	TYPE(Floating,		BasicType)
+	TYPE(Void,			BasicType)
+	TYPE_RANGE(Basic, Integer, Void)
+
+TYPE(Reference,	Type)
+TYPE(Pointer,	Type)
+TYPE(Tuple,		Type)
+TYPE(LValue,	Type)
+TYPE(Error,		Type)
+
 //===----------------------------------------------------------------------===//
 
 #undef TYPE
+#undef ABSTRACT_TYPE
+#undef TYPE_RANGE
