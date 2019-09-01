@@ -19,17 +19,17 @@
 
 //===----------------------------------------------------------------------===//
 
-ABSTRACT_TYPE(Basic,	Type)
-	TYPE(Integer,		BasicType)
-	TYPE(Floating,		BasicType)
-	TYPE(Void,			BasicType)
-	TYPE_RANGE(Basic, Integer, Void)
+TYPE(Error,		  Type)
+TYPE(Integer,		Type)
+TYPE(Float,		  Type)
+TYPE(Void,			Type)
 
 TYPE(Reference,	Type)
-TYPE(Pointer,	Type)
-TYPE(Tuple,		Type)
-TYPE(LValue,	Type)
-TYPE(Error,		Type)
+TYPE(Pointer,	  Type)
+
+TYPE(Tuple,		  Type)
+
+TYPE(LValue,	  Type)
 
 //===----------------------------------------------------------------------===//
 
