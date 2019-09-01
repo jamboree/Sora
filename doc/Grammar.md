@@ -52,8 +52,8 @@ parameter-declaration = "mut"? identifier type-annotation
 let-declaration = "let" pattern-initializer
 
 // Patterns
-pattern = "mut"? (tuple-pattern | identifier-pattern | wildcard-pattern) type-annotation?
-wildcard-pattern = '_'
+pattern = "mut"? (tuple-pattern | identifier-pattern | discard-pattern) type-annotation?
+discard-pattern = '_'
 identifier-pattern = identifier
 tuple-pattern = '(' pattern (',' pattern)* ')'
 pattern-initializer = pattern ('=' expression)?
@@ -118,8 +118,8 @@ postfix-expression = primary-expression suffix*
 suffix = tuple-expression // suffixes = calls, member accesses and subscripts.
        | member-access-expression
        | array-subscript
-primary-expression = identifier | literal | tuple-expression | wildcard-expression
-wildcard-expression = '_'
+primary-expression = identifier | literal | tuple-expression | discard-expression
+discard-expression = '_'
 tuple-expression = '(' expression-list? ')'
 expression-list = expression (',' expression)*
 member-access-expression = ('.' | "->") (identifier | integer-literal)
