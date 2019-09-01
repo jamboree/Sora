@@ -23,9 +23,10 @@ ABSTRACT_EXPR(Unresolved, Expr)
 	EXPR(UnresolvedDeclRef, Unresolved)
 	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedDeclRef)
 
-/*
-EXPR(ConstructorDeclRef, Expr)
-EXPR(DeclRef, Expr)
+
+// (TBA: For Sema)
+//EXPR(ConstructorDeclRef, Expr)
+//EXPR(DeclRef, Expr)
 
 EXPR(Discard, Expr)
 
@@ -36,8 +37,10 @@ ABSTRACT_EXPR(AnyLiteral, Expr)
 	EXPR(NullLiteral, AnyLiteral)
 	EXPR_RANGE(AnyLiteral, IntegerLiteral, NullLiteral)
 
+
 EXPR(Error, Expr)
 
+/*
 EXPR(TupleIndexing, Expr)
 EXPR(Tuple, Expr)
 
