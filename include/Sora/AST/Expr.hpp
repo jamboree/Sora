@@ -149,8 +149,8 @@ public:
 
 /// Common base class for literal expressions.
 class AnyLiteralExpr : public Expr {
-  /// Currently, literals are always single tokens, so we can simply
-  /// store the loc here.
+  /// Currently, literals are always represented using a single token, so we can
+  /// simply store the loc of the token here.
   SourceLoc loc;
 
 protected:
