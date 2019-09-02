@@ -49,6 +49,11 @@ llvm_map_components_to_libnames(llvm_libs support option)
 
 add_subdirectory(tools/CommandLine)
 
+# enable -Wall on clang-cl
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" AND "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
+  add_definitions("/clang:-Wall")
+endif()
+
 # add unittests, lib and include
 #   unittests: create unit test target
 #   lib: creates libsora_src
