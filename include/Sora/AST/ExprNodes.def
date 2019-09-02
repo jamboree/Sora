@@ -40,15 +40,17 @@ ABSTRACT_EXPR(AnyLiteral, Expr)
 
 EXPR(Error, Expr)
 
-/*
+
 EXPR(TupleIndexing, Expr)
 EXPR(Tuple, Expr)
+EXPR(Paren, Expr)
 
+EXPR(Call, Expr)
+
+/*
 EXPR(Assign, Expr)
 EXPR(Binary, Expr)
 EXPR(Unary, Expr)
-
-EXPR(Call, Expr)
 */
 //===----------------------------------------------------------------------===//
 

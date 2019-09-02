@@ -9,6 +9,7 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <type_traits>
 
 using namespace sora;
@@ -85,6 +86,12 @@ void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);
 }
 
+Expr *Expr::ignoreParens() {
+  if (ParenExpr *paren = dyn_cast<ParenExpr>(this))
+    return paren->getSubExpr()->ignoreParens();
+  return this;
+}
+
 void *UnresolvedExpr::operator new(size_t size, ASTContext &ctxt,
                                    unsigned align) {
   return ctxt.allocate(size, align, ASTAllocatorKind::UnresolvedNodes);
@@ -98,4 +105,45 @@ APInt IntegerLiteralExpr::getRawValue() const {
   if (strValue.getAsInteger(radix, result))
     llvm_unreachable("Integer Parsing Error - Ill-formed integer token?");
   return result;
+}
+
+TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
+                     ArrayRef<SourceLoc> locs, SourceLoc rParenLoc)
+    : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
+      numElements(exprs.size()) {
+  assert(exprs.size() ? (locs.size() == (exprs.size() - 1)) : true);
+  std::uninitialized_copy(exprs.begin(), exprs.end(),
+                          getTrailingObjects<Expr *>());
+  std::uninitialized_copy(locs.begin(), locs.end(),
+                          getTrailingObjects<SourceLoc>());
+}
+
+TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
+                             ArrayRef<Expr *> exprs, ArrayRef<SourceLoc> locs,
+                             SourceLoc rParenLoc) {
+  // Need manual memory allocation here because of trailing objects.
+  auto size = totalSizeToAlloc<Expr *, SourceLoc>(exprs.size(), locs.size());
+  void *mem = ctxt.allocate(size, alignof(TupleExpr));
+  return new (mem) TupleExpr(lParenLoc, exprs, locs, rParenLoc);
+}
+
+TupleExpr *TupleExpr::createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
+                                  SourceLoc rParenLoc) {
+  return create(ctxt, lParenLoc, {}, {}, rParenLoc);
+}
+
+MutableArrayRef<Expr *> TupleExpr::getElements() {
+  return {getTrailingObjects<Expr *>(), getNumElements()};
+}
+
+ArrayRef<Expr *> TupleExpr::getElements() const {
+  return {getTrailingObjects<Expr *>(), getNumElements()};
+}
+
+Expr *TupleExpr::getElement(size_t n) { return getElements()[n]; }
+
+SourceLoc TupleExpr::getCommaLoc(size_t n) const { return getCommaLocs()[n]; }
+
+ArrayRef<SourceLoc> TupleExpr::getCommaLocs() const {
+  return {getTrailingObjects<SourceLoc>(), getNumCommas()};
 }
