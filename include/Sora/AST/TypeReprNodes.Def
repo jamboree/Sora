@@ -5,7 +5,7 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef TYPEREPR(KIND)
+#ifndef TYPEREPR
 # define TYPEREPR(KIND)
 #endif
 
