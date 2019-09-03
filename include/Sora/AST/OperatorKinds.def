@@ -1,0 +1,97 @@
+//===--- OperatorKinds.def - Kinds of Expr Operators x-macros ---*- C++ -*-===//
+// Part of the Sora project, licensed under the MIT license.
+// See LICENSE.txt in the project root for license information.
+//
+// Copyright (c) 2019 Pierre van Houtryve
+//===----------------------------------------------------------------------===//
+
+// Unary Operators
+//    ID: The ID of the operator, e.g. Add
+//    SPELLING: How the operator is spelled in source code, e.g. "+"
+#ifndef UNARY_OP
+# define UNARY_OP(ID, SPELLING)
+#endif
+
+// Binary Operators, including Assign Operators.
+//    ID: The ID of the operator, e.g. Add
+//    SPELLING: How the operator is spelled in source code, e.g. "+"
+#ifndef BINARY_OP
+# define BINARY_OP(ID, SPELLING)
+#endif
+
+// Compound Assignement Operators (e.g. +=).
+//    ID: The ID of the operator, e.g. AssignAdd
+//    SPELLING: How the operator is spelled in source code, e.g. "+="
+//    OP: The ID of the binary operation that's performed before the 
+//        assignement takes places, e.g. "Add"
+#ifndef COMPOUND_ASSIGN_OP
+# define COMPOUND_ASSIGN_OP(ID, SPELLING, OP) BINARY_OP(ID, SPELLING)
+#endif
+
+//===--- Unary Operators --------------------------------------------------===//
+
+UNARY_OP(Plus, "+")
+UNARY_OP(Minus, "-")
+UNARY_OP(LNot, "!")
+UNARY_OP(Not, "~")
+UNARY_OP(Deref, "*")
+UNARY_OP(AddressOf, "&")
+
+//===--- Binary Operators -------------------------------------------------===//
+// Some instructions regarding the ordering of Assignement & Binary operators:
+//
+// - Keep them in groups and don't break groups, insert new operators at the 
+//   end of the list.
+//
+// - Assignement operators must always come after the last "normal" binary
+//   operator, and Assign must always be the first operator to appear.
+//===----------------------------------------------------------------------===//
+// Additive Operators
+BINARY_OP(Add,  "+")
+BINARY_OP(Sub,  "-")
+// Multiplicative Operators
+BINARY_OP(Mul,  "*")
+BINARY_OP(Div,  "/")
+BINARY_OP(Mod,  "%")
+// Bitwise Shift Operators
+BINARY_OP(Shl,  "<<")
+BINARY_OP(Shr,  ">>")
+// Bitwise AND
+BINARY_OP(And,  "&")
+// Bitwise OR
+BINARY_OP(Or,   "|")
+// Bitwise XOR
+BINARY_OP(XOr,  "^")
+// Equality Operators
+BINARY_OP(Eq,   "==")
+BINARY_OP(NEq,  "!=")
+// Relational Operators
+BINARY_OP(LT,   "<")
+BINARY_OP(LE,   "<=")
+BINARY_OP(GT,   ">")
+BINARY_OP(GE,   ">=")
+// Logical AND
+BINARY_OP(LAnd, "||")
+// Logical OR
+BINARY_OP(LOr,  "&&")
+
+//===--- Assignement Operators --------------------------------------------===//
+
+
+BINARY_OP(Assign,     "=")
+COMPOUND_ASSIGN_OP(AddAssign,  "+=",  Add)
+COMPOUND_ASSIGN_OP(SubAssign,  "-=",  Sub)
+COMPOUND_ASSIGN_OP(MulAssign,  "*=",  Mul)
+COMPOUND_ASSIGN_OP(DivAssign,  "/=",  Div)
+COMPOUND_ASSIGN_OP(ModAssign,  "%=",  Mod)
+COMPOUND_ASSIGN_OP(ShlAssign,  "<<=", Shl)
+COMPOUND_ASSIGN_OP(ShrAssign,  ">>=", Shr)
+COMPOUND_ASSIGN_OP(AndAssign,  "&=",  And)
+COMPOUND_ASSIGN_OP(OrAssign,   "|=",  Or)
+COMPOUND_ASSIGN_OP(XOrAssign,  "^=",  XOr)
+
+//===----------------------------------------------------------------------===//
+
+#undef BINARY_OP
+#undef UNARY_OP
+#undef COMPOUND_ASSIGN_OP

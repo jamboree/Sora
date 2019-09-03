@@ -3,6 +3,7 @@ add_source(ast_src
   "Decl.cpp"
   "Expr.cpp"
   "Identifier.cpp"
+  "OperatorKinds.cpp"
   "Pattern.cpp"
   "Stmt.cpp"
   "TypeRepr.cpp"

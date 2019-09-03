@@ -9,6 +9,7 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Identifier.hpp"
+#include "Sora/AST/OperatorKinds.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
@@ -308,11 +309,11 @@ public:
 /// IntegerLiteralExpr (of type usize).
 class TupleIndexingExpr final : public Expr {
   /// The base expression
-  Expr *base = nullptr;
+  Expr *base;
   /// The SourceLoc of the '.'
   SourceLoc dotLoc;
   /// The integer literal (index)
-  IntegerLiteralExpr *index = nullptr;
+  IntegerLiteralExpr *index;
 
 public:
   TupleIndexingExpr(Expr *base, SourceLoc dotLoc, IntegerLiteralExpr *index)
@@ -518,6 +519,125 @@ public:
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Call;
+  }
+};
+
+/// Represents an infix binary operation
+///
+/// e.g a = b, 1 + 2, c += d, 32 ^ 56
+class BinaryExpr final : public Expr {
+public:
+  using OpKind = BinaryOperatorKind;
+
+private:
+  Expr *lhs;
+  Expr *rhs;
+  OpKind op;
+  SourceLoc opLoc;
+
+public:
+  BinaryExpr(Expr *lhs, OpKind op, SourceLoc opLoc, Expr *rhs)
+      : Expr(ExprKind::Binary), lhs(lhs), rhs(rhs), op(op), opLoc(opLoc) {}
+
+  /// \returns the LHS of the expression
+  Expr *getLHS() const { return lhs; }
+  /// Replaces the LHS of the expression with \p lhs
+  void setLHS(Expr *lhs) { this->lhs = lhs; }
+  /// \returns the RHS of the expression
+  Expr *getRHS() const { return rhs; }
+  /// Replaces the RHS of the expression with \p rhs
+  void setRHS(Expr *rhs) { this->rhs = rhs; }
+
+  /// \returns the SourceLoc of the operator
+  SourceLoc getOpLoc() const { return opLoc; }
+  /// \returns the kind of the operator
+  OpKind getOpKind() const { return op; }
+
+  /// \returns true if \p op is + or -
+  bool isAdditiveOp() const { return sora::isAdditiveOp(op); }
+  /// \returns true if \p op is * / or %
+  bool isMultiplicativeOp() const { return sora::isMultiplicativeOp(op); }
+  /// \returns true if \p op is << or >>
+  bool isShiftOp() const { return sora::isShiftOp(op); }
+  /// \returns true if \p op is | & or ^
+  bool isBitwiseOp() const { return sora::isBitwiseOp(op); }
+  /// \returns true if \p op is == or !=
+  bool isEqualityOp() const { return sora::isEqualityOp(op); }
+  /// \returns true if \p op is < <= > or >=
+  bool isRelationalOp() const { return sora::isRelationalOp(op); }
+  /// \returns true if \p op is || or &&
+  bool isLogicalOp() const { return sora::isLogicalOp(op); }
+  /// \returns true if \p op is any assignement operator
+  bool isAssignementOp() const { return sora::isAssignementOp(op); }
+  /// \returns true if \p op is a compound assignement operator
+  bool isCompoundAssignementOp() const {
+    return sora::isCompoundAssignementOp(op);
+  }
+  /// \returns the spelling of the operator (e.g. "+" for Add)
+  const char *getOpSpelling() const { return getSpelling(op); }
+
+  /// \returns the operator of a compound assignement. e.g. for AddAssign this
+  /// returns Add.
+  OpKind getOpForCompoundAssignementOp() const {
+    return sora::getOpForCompoundAssignementOp(op);
+  }
+
+  /// \returns the location of the beginning of the expression
+  SourceLoc getBegLoc() const {
+    assert(lhs && "no lhs");
+    return lhs->getBegLoc();
+  }
+
+  /// \returns the location of the end of the expression
+  SourceLoc getEndLoc() const {
+    assert(rhs && "no rhs");
+    return rhs->getEndLoc();
+  }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::Binary;
+  }
+};
+
+/// Represents a prefix unary operation
+///
+/// e.g. +1, -2, &foo
+class UnaryExpr final : public Expr {
+public:
+  using OpKind = UnaryOperatorKind;
+
+private:
+  Expr *subExpr;
+  OpKind op;
+  SourceLoc opLoc;
+
+public:
+  UnaryExpr(OpKind op, SourceLoc opLoc, Expr *subExpr)
+      : Expr(ExprKind::Unary), subExpr(subExpr), op(op), opLoc(opLoc) {}
+
+  /// \returns the subexpression
+  Expr *getSubExpr() const { return subExpr; }
+  /// replaces the subexpression with \p expr
+  void setSubExpr(Expr *expr) { subExpr = expr; }
+
+  /// \returns the operator's SourceLoc
+  SourceLoc getOpLoc() const { return opLoc; }
+  /// \returns the kind of the operator
+  OpKind getOpKind() const { return op; }
+  /// \returns the spelling of the operator
+  const char *getOpSpelling() const { return getSpelling(op); }
+
+  /// \returns the location of the beginning of the expression
+  SourceLoc getBegLoc() const { return opLoc; }
+
+  /// \returns the location of the end of the expression
+  SourceLoc getEndLoc() const {
+    assert(subExpr && "no subExpr");
+    return subExpr->getEndLoc();
+  }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::Unary;
   }
 };
 } // namespace sora
