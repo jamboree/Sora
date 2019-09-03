@@ -41,11 +41,12 @@ UNARY_OP(AddressOf, "&")
 // Some instructions regarding the ordering of Assignement & Binary operators:
 //
 // - Keep them in groups and don't break groups, insert new operators at the 
-//   end of the list.
+//   end of the list (after the last binary or assignement operator)
 //
 // - Assignement operators must always come after the last "normal" binary
-//   operator, and Assign must always be the first operator to appear.
+//   operator, and Assign must always be the first operator in the list.
 //===----------------------------------------------------------------------===//
+
 // Additive Operators
 BINARY_OP(Add,  "+")
 BINARY_OP(Sub,  "-")
@@ -71,12 +72,11 @@ BINARY_OP(LE,   "<=")
 BINARY_OP(GT,   ">")
 BINARY_OP(GE,   ">=")
 // Logical AND
-BINARY_OP(LAnd, "||")
+BINARY_OP(LAnd, "&&")
 // Logical OR
-BINARY_OP(LOr,  "&&")
+BINARY_OP(LOr,  "||")
 
 //===--- Assignement Operators --------------------------------------------===//
-
 
 BINARY_OP(Assign,     "=")
 COMPOUND_ASSIGN_OP(AddAssign,  "+=",  Add)
