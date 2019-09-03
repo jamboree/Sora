@@ -342,6 +342,9 @@ void Lexer::lexImpl() {
     else 
       pushToken(TokenKind::Equal);
     break;
+  case '~':
+    pushToken(TokenKind::Tilde);
+    break;
   case '{':
     pushToken(TokenKind::LCurly);
     break;

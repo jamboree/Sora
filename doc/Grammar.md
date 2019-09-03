@@ -106,7 +106,7 @@ binary-operator = '+' | '-' | '/' | '*' | '%'
                 | "||" | "&&"
 assignement-operator = '=' | "+=" | "-=" | "/=" | "*=" | "%="
                      | ">>=" | "<<=" | "&=" | "|=" | "^=" 
-prefix-operator = '+' | '-' | '!' | '*' | '&'
+prefix-operator = '+' | '-' | '!' | '*' | '&' | '~'
 
 expression = assignement-expression
 assignement-expression = conditional-expression (assignement-operator expression)?

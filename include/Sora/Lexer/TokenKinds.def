@@ -74,6 +74,7 @@ TOKEN(Slash)          // /
 TOKEN(SlashEqual)     // /=
 TOKEN(Star)           // *
 TOKEN(StarEqual)      // *=
+TOKEN(Tilde)          // ~
 
 // Language Keywords
 KEYWORD(BreakKw,      "break")
