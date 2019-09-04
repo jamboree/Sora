@@ -8,6 +8,10 @@ project(Sora)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif()
+
 # include the commonly used macros/helpers.
 include(cmake/AddSource.cmake)  # defines the add_source macro
 
