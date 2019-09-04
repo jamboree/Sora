@@ -52,9 +52,9 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Expr));
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const;
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const;
   /// \returns the full range of this expression
   SourceRange getSourceRange() const;
@@ -118,9 +118,9 @@ public:
       : UnresolvedExpr(ExprKind::UnresolvedDeclRef), ident(ident),
         identLoc(identLoc) {}
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return identLoc; }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return identLoc; }
   /// \returns the identifier referenced
   Identifier getIdentifier() const { return ident; }
@@ -138,9 +138,9 @@ class DiscardExpr final : public Expr {
 public:
   DiscardExpr(SourceLoc loc) : Expr(ExprKind::Discard), loc(loc) {}
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return loc; }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return loc; }
 
   static bool classof(const Expr *expr) {
@@ -158,9 +158,9 @@ protected:
   AnyLiteralExpr(ExprKind kind, SourceLoc loc) : Expr(kind), loc(loc) {}
 
 public:
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return loc; }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return loc; }
 
   static bool classof(const Expr *expr) {
@@ -289,9 +289,9 @@ public:
   ErrorExpr(UnresolvedExpr *expr)
       : Expr(ExprKind::Error), range(expr->getSourceRange()) {}
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return range.begin; }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return range.end; }
   /// \returns the full range of this expression
   SourceRange getSourceRange() const { return range; }
@@ -333,12 +333,12 @@ public:
   /// \returns the SourceLoc of the '.'
   SourceLoc getDotLoc() const { return dotLoc; }
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const {
     assert(base && "no base expr");
     return base->getBegLoc();
   }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(index && "no index expr");
     return index->getEndLoc();
@@ -434,9 +434,9 @@ public:
   /// \returns true if this is an empty tuple
   bool isEmpty() const { return numElements == 0; }
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return lParenLoc; }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return rParenLoc; }
 
   static bool classof(const Expr *expr) {
@@ -469,9 +469,9 @@ public:
   /// \returns the SourceLoc of the right paren )
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return lParenLoc; }
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return rParenLoc; }
 
   static bool classof(const Expr *expr) {
@@ -505,13 +505,13 @@ public:
   /// Replaces the call arguments with \p args
   void setArgs(TupleExpr *args) { this->args = args; }
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const {
     assert(fn && "no fn");
     return fn->getBegLoc();
   }
 
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(args && "no args");
     return args->getEndLoc();
@@ -582,13 +582,13 @@ public:
     return sora::getOpForCompoundAssignementOp(op);
   }
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const {
     assert(lhs && "no lhs");
     return lhs->getBegLoc();
   }
 
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(rhs && "no rhs");
     return rhs->getEndLoc();
@@ -627,10 +627,10 @@ public:
   /// \returns the spelling of the operator
   const char *getOpSpelling() const { return getSpelling(op); }
 
-  /// \returns the location of the beginning of the expression
+  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return opLoc; }
 
-  /// \returns the location of the end of the expression
+  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(subExpr && "no subExpr");
     return subExpr->getEndLoc();
