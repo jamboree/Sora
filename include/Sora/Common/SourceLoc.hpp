@@ -87,7 +87,7 @@ public:
   SourceRange(SourceLoc begin, SourceLoc end) : begin(begin), end(end) {
     assert(begin.isValid() == end.isValid() &&
            "begin & end should both be valid or invalid");
-    assert((begin.isValid() ? (begin.getPointer() < end.getPointer()) : true) &&
+    assert((begin.isValid() ? (begin.getPointer() <= end.getPointer()) : true) &&
            "end > begin!");
   }
 
