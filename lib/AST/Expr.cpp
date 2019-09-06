@@ -32,17 +32,37 @@ template <typename Rtr>
 constexpr bool isOverridenFromExpr(Rtr (Expr::*)() const) {
   return false;
 }
+
+/// Expressions can override (getSourceRange) or (getBegLoc & getEndLoc) or
+/// both. We adapt automatically based on what's available.
+template <typename Ty> struct ExprFetchLoc {
+  static constexpr bool hasGetRange = isOverridenFromExpr(&Ty::getSourceRange);
+  static constexpr bool hasGetBeg = isOverridenFromExpr(&Ty::getBegLoc);
+  static constexpr bool hasGetEnd = isOverridenFromExpr(&Ty::getEndLoc);
+
+  static_assert(hasGetRange || (hasGetBeg && hasGetEnd),
+                "Statements must override (getSourceRange) or "
+                "(getBegLoc/getEndLoc) or both.");
+
+  static SourceRange getSourceRange(const Ty *expr) {
+    if (hasGetRange)
+      return expr->getSourceRange();
+    return {expr->getBegLoc(), expr->getEndLoc()};
+  }
+
+  static SourceLoc getBegLoc(const Ty *expr) {
+    if (hasGetBeg)
+      return expr->getBegLoc();
+    return expr->getSourceRange().begin;
+  }
+
+  static SourceLoc getEndLoc(const Ty *expr) {
+    if (hasGetEnd)
+      return expr->getEndLoc();
+    return expr->getSourceRange().end;
+  }
+};
 } // namespace
-
-#define DISPATCH_OVERRIDEN(CLASSNAME, METHOD)                                  \
-  static_assert(isOverridenFromExpr(&CLASSNAME::METHOD),                       \
-                #CLASSNAME " does not override Expr::" #METHOD);               \
-  return static_cast<const CLASSNAME *>(this)->METHOD()
-
-// FIXME: Rework this so it always use getSourceRange or getStartLoc/getEndLoc.
-// It should auto-adapt (support either getSourceRange or the
-// getStartLoc/getEndLoc combo). Once that's done change ErrorExpr to remove
-// getStartLoc/getEndLoc.
 
 SourceLoc Expr::getBegLoc() const {
   switch (getKind()) {
@@ -50,7 +70,7 @@ SourceLoc Expr::getBegLoc() const {
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    DISPATCH_OVERRIDEN(ID##Expr, getBegLoc);
+    return ExprFetchLoc<ID##Expr>::getBegLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
 }
@@ -61,26 +81,20 @@ SourceLoc Expr::getEndLoc() const {
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    DISPATCH_OVERRIDEN(ID##Expr, getEndLoc);
+    return ExprFetchLoc<ID##Expr>::getEndLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
 }
 SourceRange Expr::getSourceRange() const {
-  // For getSourceRange, we use the getSourceRange of the derived expression
-  // if it reimplements it, else we simply create the SourceRange using
-  // getBegLoc & getEndLoc
   switch (getKind()) {
   default:
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    return isOverridenFromExpr(&ID##Expr::getSourceRange)                      \
-               ? static_cast<const ID##Expr *>(this)->getSourceRange()         \
-               : SourceRange(getBegLoc(), getEndLoc());
+    return ExprFetchLoc<ID##Expr>::getSourceRange(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
 }
-#undef DISPATCH_OVERRIDEN
 
 void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);

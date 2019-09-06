@@ -29,7 +29,8 @@ enum class ExprKind : uint8_t {
 #include "Sora/AST/ExprNodes.def"
 };
 
-class alignas(sora::ExprAlignement) Expr {
+/// Base class for every Expression node.
+class alignas(ExprAlignement) Expr {
   // Disable vanilla new/delete for expressions
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
