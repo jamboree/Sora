@@ -5,12 +5,32 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef DECL(KIND)
-# define DECL(KIND)
+#ifndef DECL
+# define DECL(KIND, PARENT)
+#endif
+
+#ifndef ABSTRACT_DECL
+# define ABSTRACT_DECL(KIND, PARENT)
+#endif
+
+#ifndef DECL_RANGE
+# define DECL_RANGE(KIND, FIRST, LAST)
 #endif
 
 //===----------------------------------------------------------------------===//
 
+/*
+ABSTRACT_DECL(Value, Decl)
+  DECL(Func, ValueDecl)
+  ABSTRACT_DECL(AnyVar, ValueDecl)
+    DECL(Var, AnyVarDecl)
+    DECL(Param, AnyVarDecl)
+    DECL_RANGE(AnyVar, Var, Param)
+DECL(PatternBinding, Decl) // Is the name right?
+*/
+
 //===----------------------------------------------------------------------===//
 
 #undef DECL
+#undef ABSTRACT_DECL
+#undef DECL_RANGE
