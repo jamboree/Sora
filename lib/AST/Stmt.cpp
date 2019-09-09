@@ -6,8 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Stmt.hpp"
-#include "Sora/AST/ASTContext.hpp"
 #include "ASTNodeLoc.hpp"
+#include "Sora/AST/ASTContext.hpp"
+#include "llvm/ADT/ArrayRef.h"
 
 using namespace sora;
 
@@ -29,7 +30,7 @@ SourceLoc Stmt::getBegLoc() const {
     llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
-    return Fetchloc<Stmt, ID##Stmt>::getBegLoc(cast<ID##Stmt>(this));
+    return ASTNodeLoc<Stmt, ID##Stmt>::getBegLoc(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
 }
@@ -40,7 +41,7 @@ SourceLoc Stmt::getEndLoc() const {
     llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
-    return Fetchloc<Stmt, ID##Stmt>::getEndLoc(cast<ID##Stmt>(this));
+    return ASTNodeLoc<Stmt, ID##Stmt>::getEndLoc(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
 }
@@ -50,7 +51,39 @@ SourceRange Stmt::getSourceRange() const {
     llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
-    return Fetchloc<Stmt, ID##Stmt>::getSourceRange(cast<ID##Stmt>(this));
+    return ASTNodeLoc<Stmt, ID##Stmt>::getSourceRange(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
 }
+
+BlockStmt::BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes,
+                     SourceLoc rCurlyLoc)
+    : Stmt(StmtKind::Block), lCurlyLoc(lCurlyLoc), rCurlyLoc(rCurlyLoc),
+      numElem(nodes.size()) {
+  std::uninitialized_copy(nodes.begin(), nodes.end(),
+                          getTrailingObjects<ASTNode>());
+}
+
+BlockStmt *BlockStmt::create(ASTContext &ctxt, SourceLoc lCurlyLoc,
+                             ArrayRef<ASTNode> nodes, SourceLoc rCurlyLoc) {
+  auto size = totalSizeToAlloc<ASTNode>(nodes.size());
+  void *mem = ctxt.allocate(size, alignof(BlockStmt));
+  return new (mem) BlockStmt(lCurlyLoc, nodes, rCurlyLoc);
+}
+
+BlockStmt *BlockStmt::createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,
+                                  SourceLoc rCurlyLoc) {
+  return create(ctxt, lCurlyLoc, {}, rCurlyLoc);
+}
+
+ArrayRef<ASTNode> BlockStmt::getElements() const {
+  return {getTrailingObjects<ASTNode>(), numElem};
+}
+
+MutableArrayRef<ASTNode> BlockStmt::getElements() {
+  return {getTrailingObjects<ASTNode>(), numElem};
+}
+
+ASTNode BlockStmt::getElement(size_t n) const { return getElements()[n]; }
+
+void BlockStmt::setElement(size_t n, ASTNode node) { getElements()[n] = node; }

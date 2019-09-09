@@ -9,15 +9,19 @@
 # define STMT(KIND, PARENT)
 #endif
 
+
 //===----------------------------------------------------------------------===//
 
-/*
+STMT(Continue, Stmt)
+STMT(Break, Stmt)
+
 STMT(Block, Stmt)
+
+/*
 STMT(DoWhile, Stmt)
 STMT(While, Stmt)
 STMT(If, Stmt)
-STMT(Continue, Stmt)
-STMT(Break, Stmt)
+
 */
 
 //===----------------------------------------------------------------------===//
