@@ -39,7 +39,6 @@ Here's a non-exhaustive list of features that will be present in the initial imp
 - Basic C FFI
   - Semantics TBD (A basic one, so I can import a few C functions, e.g. a "print" function. It can even be built-in/hardcoded while waiting for a better solution)
     - Example syntax: `extern "C" { func malloc(size: usize) -> *mut void }`
-- Struct
 
 This phase is all about "making it work" & preparing for what's next.
 
@@ -49,6 +48,11 @@ Now that we got a solid foundation, we can add the more advanced stuff. These wi
 
 **Note:** Most of the features listed here are relatively vague. I don't have a real plan for their semantics yet. I just know that I may implement them someday.
 
+- Struct
+  - Mostly Rust-like
+    - Instantiate with `Foo{ field: value }`
+    - "Update" with `Foo { field: value, ..oldFoo}`
+    - Access using `foo.bar` or `foo->bar` for pointers
 - Array type, Slices, `array-literal` and `subscript-expression`
 - `for ... in ...` statement
 - Strings & Chars: `string`, `char` and slice types; `string-literal` and `char-literal`
