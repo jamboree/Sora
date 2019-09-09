@@ -10,6 +10,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "ASTNodeLoc.hpp"
 #include <type_traits>
 
 using namespace sora;
@@ -22,55 +23,13 @@ using namespace sora;
                 #ID "Expr is not trivially destructible.");
 #include "Sora/AST/ExprNodes.def"
 
-namespace {
-template <typename Rtr, typename Class>
-constexpr bool isOverridenFromExpr(Rtr (Class::*)() const) {
-  return true;
-}
-
-template <typename Rtr>
-constexpr bool isOverridenFromExpr(Rtr (Expr::*)() const) {
-  return false;
-}
-
-/// Expressions can override (getSourceRange) or (getBegLoc & getEndLoc) or
-/// both. We adapt automatically based on what's available.
-template <typename Ty> struct ExprFetchLoc {
-  static constexpr bool hasGetRange = isOverridenFromExpr(&Ty::getSourceRange);
-  static constexpr bool hasGetBeg = isOverridenFromExpr(&Ty::getBegLoc);
-  static constexpr bool hasGetEnd = isOverridenFromExpr(&Ty::getEndLoc);
-
-  static_assert(hasGetRange || (hasGetBeg && hasGetEnd),
-                "Statements must override (getSourceRange) or "
-                "(getBegLoc/getEndLoc) or both.");
-
-  static SourceRange getSourceRange(const Ty *expr) {
-    if (hasGetRange)
-      return expr->getSourceRange();
-    return {expr->getBegLoc(), expr->getEndLoc()};
-  }
-
-  static SourceLoc getBegLoc(const Ty *expr) {
-    if (hasGetBeg)
-      return expr->getBegLoc();
-    return expr->getSourceRange().begin;
-  }
-
-  static SourceLoc getEndLoc(const Ty *expr) {
-    if (hasGetEnd)
-      return expr->getEndLoc();
-    return expr->getSourceRange().end;
-  }
-};
-} // namespace
-
 SourceLoc Expr::getBegLoc() const {
   switch (getKind()) {
   default:
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    return ExprFetchLoc<ID##Expr>::getBegLoc(cast<ID##Expr>(this));
+    return ASTNodeLoc<Expr, ID##Expr>::getBegLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
 }
@@ -81,7 +40,7 @@ SourceLoc Expr::getEndLoc() const {
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    return ExprFetchLoc<ID##Expr>::getEndLoc(cast<ID##Expr>(this));
+    return ASTNodeLoc<Expr, ID##Expr>::getEndLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
 }
@@ -91,7 +50,7 @@ SourceRange Expr::getSourceRange() const {
     llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
-    return ExprFetchLoc<ID##Expr>::getSourceRange(cast<ID##Expr>(this));
+    return ASTNodeLoc<Expr, ID##Expr>::getSourceRange(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
 }
