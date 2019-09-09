@@ -81,25 +81,27 @@ APInt IntegerLiteralExpr::getRawValue() const {
 }
 
 TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
-                     ArrayRef<SourceLoc> locs, SourceLoc rParenLoc)
+                     ArrayRef<SourceLoc> commaLocs, SourceLoc rParenLoc)
     : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
       numElements(exprs.size()) {
-  assert((exprs.size() ? (locs.size() == (exprs.size() - 1)) : true) &&
+  assert((exprs.size() ? (commaLocs.size() == (exprs.size() - 1)) : true) &&
          "There must be N expressions and N-1 comma Source locations (or 0 of "
          "both)");
   std::uninitialized_copy(exprs.begin(), exprs.end(),
                           getTrailingObjects<Expr *>());
-  std::uninitialized_copy(locs.begin(), locs.end(),
+  std::uninitialized_copy(commaLocs.begin(), commaLocs.end(),
                           getTrailingObjects<SourceLoc>());
 }
 
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
-                             ArrayRef<Expr *> exprs, ArrayRef<SourceLoc> locs,
+                             ArrayRef<Expr *> exprs,
+                             ArrayRef<SourceLoc> commaLocs,
                              SourceLoc rParenLoc) {
   // Need manual memory allocation here because of trailing objects.
-  auto size = totalSizeToAlloc<Expr *, SourceLoc>(exprs.size(), locs.size());
+  auto size =
+      totalSizeToAlloc<Expr *, SourceLoc>(exprs.size(), commaLocs.size());
   void *mem = ctxt.allocate(size, alignof(TupleExpr));
-  return new (mem) TupleExpr(lParenLoc, exprs, locs, rParenLoc);
+  return new (mem) TupleExpr(lParenLoc, exprs, commaLocs, rParenLoc);
 }
 
 TupleExpr *TupleExpr::createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,

@@ -60,16 +60,11 @@ public:
   /// \returns the full range of this expression
   SourceRange getSourceRange() const;
 
-  /// Marks this expression as being implicit (or not)
   void setImplicit(bool implicit = true) { typeAndIsImplicit.setInt(implicit); }
-  /// \returns whether this expression is implicit or not
   bool isImplicit() const { return typeAndIsImplicit.getInt(); }
 
-  /// \returns the type of this expression
   Type getType() const { return typeAndIsImplicit.getPointer(); }
-  /// \returns true if this expression has a type
   bool hasType() const { return (bool)getType(); }
-  /// Sets the type of this expression to \p type
   void setType(Type type) { typeAndIsImplicit.setPointer(type); }
 
   /// Recursively ignores the ParenExprs that might surround this expression.
@@ -123,7 +118,7 @@ public:
   SourceLoc getBegLoc() const { return identLoc; }
   /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return identLoc; }
-  /// \returns the identifier referenced
+
   Identifier getIdentifier() const { return ident; }
 
   static bool classof(const Expr *expr) {
@@ -138,6 +133,8 @@ class DiscardExpr final : public Expr {
 
 public:
   DiscardExpr(SourceLoc loc) : Expr(ExprKind::Discard), loc(loc) {}
+
+  SourceLoc getLoc() const { return loc; }
 
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return loc; }
@@ -159,6 +156,8 @@ protected:
   AnyLiteralExpr(ExprKind kind, SourceLoc loc) : Expr(kind), loc(loc) {}
 
 public:
+  SourceLoc getLoc() const { return loc; }
+
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return loc; }
   /// \returns the SourceLoc of the last token of the expression
@@ -177,13 +176,11 @@ class IntegerLiteralExpr final : public AnyLiteralExpr {
   StringRef strValue;
 
 public:
-  /// \param strValue the string value as written by the user
-  /// \param loc the loc of the literal
   IntegerLiteralExpr(StringRef strValue, SourceLoc loc)
       : AnyLiteralExpr(ExprKind::IntegerLiteral, loc), strValue(strValue) {}
 
-  /// \returns the string literal as written by the user
-  StringRef asString() const { return strValue; }
+  /// \returns the string version of the literal as written by the user
+  StringRef getString() const { return strValue; }
 
   /// \returns the raw integer value (that doesn't respect the target's type bit
   /// width)
@@ -215,13 +212,11 @@ class FloatLiteralExpr final : public AnyLiteralExpr {
   StringRef strValue;
 
 public:
-  /// \param strValue the string value as written by the user
-  /// \param loc the loc of the literal
   FloatLiteralExpr(StringRef strValue, SourceLoc loc)
       : AnyLiteralExpr(ExprKind::FloatLiteral, loc), strValue(strValue) {}
 
   /// \returns the string literal as written by the user
-  StringRef asString() const { return strValue; }
+  StringRef getString() const { return strValue; }
 
   /// \returns the value as an APFloat that respects the target's type.
   ///
@@ -244,12 +239,9 @@ class BooleanLiteralExpr final : public AnyLiteralExpr {
   bool value;
 
 public:
-  /// \param value the value of the literal
-  /// \param loc the loc of the literal (of the "true" or "false" keyword
   BooleanLiteralExpr(bool value, SourceLoc loc)
       : AnyLiteralExpr(ExprKind::BooleanLiteral, loc), value(value) {}
 
-  /// \returns the value of the literal
   bool getValue() const { return value; }
 
   static bool classof(const Expr *expr) {
@@ -260,7 +252,6 @@ public:
 /// Represents a null pointer literal (null).
 class NullLiteralExpr final : public AnyLiteralExpr {
 public:
-  /// \param loc the loc of the "null" keyword
   NullLiteralExpr(SourceLoc loc) : AnyLiteralExpr(ExprKind::NullLiteral, loc) {}
 
   static bool classof(const Expr *expr) {
@@ -290,7 +281,8 @@ public:
   ErrorExpr(UnresolvedExpr *expr)
       : Expr(ExprKind::Error), range(expr->getSourceRange()) {}
 
-  /// \returns the full range of this expression
+  /// \returns the full range of this expression. (This is the original
+  /// SourceRange of the expression that couldn't be resolved)
   SourceRange getSourceRange() const { return range; }
 
   static bool classof(const Expr *expr) {
@@ -298,18 +290,15 @@ public:
   }
 };
 
-/// Represents a tuple indexing expression.
+/// Represents a tuple indexing expression (base.index)
 ///
 /// e.g. tuple.0, (0, 1, 2).2, etc.
 ///
 /// The base (the tuple) can be any expression, and the index is always an
 /// IntegerLiteralExpr (of type usize).
 class TupleIndexingExpr final : public Expr {
-  /// The base expression
   Expr *base;
-  /// The SourceLoc of the '.'
   SourceLoc dotLoc;
-  /// The integer literal (index)
   IntegerLiteralExpr *index;
 
 public:
@@ -317,17 +306,12 @@ public:
       : Expr(ExprKind::TupleIndexing), base(base), dotLoc(dotLoc),
         index(index) {}
 
-  /// \returns the base expression
   Expr *getBase() const { return base; }
-  /// Replaces the base expression by \p base
   void setBase(Expr *base) { this->base = base; }
 
-  /// \returns the index expression
   IntegerLiteralExpr *getIndex() const { return index; }
-  /// Replaces the index expression by \p base
   void setIndex(IntegerLiteralExpr *index) { this->index = index; }
 
-  /// \returns the SourceLoc of the '.'
   SourceLoc getDotLoc() const { return dotLoc; }
 
   /// \returns the SourceLoc of the first token of the expression
@@ -387,48 +371,35 @@ class TupleExpr final
 public:
   /// Creates a TupleExpr with one or more element.
   ///
-  /// \param ctxt the ASTContext in which memory will be allocated
-  /// \param lParenLoc the location of the left paren (
-  /// \param exprs the expressions.
-  /// \param locs the location of the commas. The size of this array must be
-  ///             expr.size()-1 or zero if exprs.size() <= 1
-  /// \param rParenLoc the location of the right paren )
+  /// Note that the size of the \p commaLocs array must be that of the \p exprs
+  /// array minus one, or zero if \p expr's size is zero.
+  ///
+  /// \verbatim
+  ///   if exprs.size() = 0, commaLocs.size() must be 0
+  ///   if exprs.size() = 1, commaLocs.size() must be 0
+  ///   if exprs.size() = 2, commaLocs.size() must be 1
+  ///   if exprs.size() = 30, commaLocs.size() must be 29
+  /// \endverbatim
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
-                           ArrayRef<Expr *> exprs, ArrayRef<SourceLoc> locs,
-                           SourceLoc rParenLoc);
+                           ArrayRef<Expr *> exprs,
+                           ArrayRef<SourceLoc> commaLocs, SourceLoc rParenLoc);
 
   /// Creates an empty TupleExpr.
-  /// \param ctxt the ASTContext in which memory will be allocated
-  /// \param lParenLoc the location of the left paren (
-  /// \param rParenLoc the location of the right paren )
   static TupleExpr *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
                                 SourceLoc rParenLoc);
 
-  /// \returns the number of expressions in the tuple
   size_t getNumElements() const { return numElements; }
-  /// \returns the array of expressions
   MutableArrayRef<Expr *> getElements();
-  /// \returns a view of the array of expressions
   ArrayRef<Expr *> getElements() const;
-  /// \returns the expression at index \p n
   Expr *getElement(size_t n);
-  /// Replaces the expression at index \p n with \p expr
   void setElement(size_t n, Expr *expr);
 
-  /// \returns the number of commas in the tuples. This is always
-  /// getNumElements()-1 or zero.
   size_t getNumCommas() const { return numElements ? numElements - 1 : 0; }
-  /// \returns the SourceLoc of the nth comma
   SourceLoc getCommaLoc(size_t n) const;
-  /// \returns a view of the array of SourceLocs (one SourceLoc per comma in the
-  /// tuple)
   ArrayRef<SourceLoc> getCommaLocs() const;
-  /// \returns the SourceLoc of the left paren (
   SourceLoc getLParenLoc() const { return lParenLoc; }
-  /// \returns the SourceLoc of the right paren )
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
-  /// \returns true if this is an empty tuple
   bool isEmpty() const { return numElements == 0; }
 
   /// \returns the SourceLoc of the first token of the expression
@@ -449,21 +420,14 @@ class ParenExpr final : public Expr {
   SourceLoc lParenLoc, rParenLoc;
 
 public:
-  /// \param lParenLoc the SourceLoc of the (
-  /// \param subExpr the sub expression
-  /// \param rParenLoc the SourceLoc of the )
   ParenExpr(SourceLoc lParenLoc, Expr *subExpr, SourceLoc rParenLoc)
       : Expr(ExprKind::Paren), subExpr(subExpr), lParenLoc(lParenLoc),
         rParenLoc(rParenLoc) {}
 
-  /// \returns the sub expression
   Expr *getSubExpr() const { return subExpr; }
-  /// replaces the sub expression with \p subExpr
   void setSubExpr(Expr *subExpr) { this->subExpr = subExpr; }
 
-  /// \returns the SourceLoc of the left paren (
   SourceLoc getLParenLoc() const { return lParenLoc; }
-  /// \returns the SourceLoc of the right paren )
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
   /// \returns the SourceLoc of the first token of the expression
@@ -486,20 +450,13 @@ class CallExpr final : public Expr {
   TupleExpr *args;
 
 public:
-  /// Creates a CallExpr
-  /// \param fn the function expression
-  /// \param args the arguments tuple
   CallExpr(Expr *fn, TupleExpr *args)
       : Expr(ExprKind::Call), fn(fn), args(args) {}
 
-  /// \returns the function
   Expr *getFn() const { return fn; }
-  /// Replaces the function with \p fn
   void setFn(Expr *base) { this->fn = base; }
 
-  /// \returns the call arguments
   TupleExpr *getArgs() const { return args; }
-  /// Replaces the call arguments with \p args
   void setArgs(TupleExpr *args) { this->args = args; }
 
   /// \returns the SourceLoc of the first token of the expression
@@ -536,19 +493,16 @@ public:
   BinaryExpr(Expr *lhs, OpKind op, SourceLoc opLoc, Expr *rhs)
       : Expr(ExprKind::Binary), lhs(lhs), rhs(rhs), op(op), opLoc(opLoc) {}
 
-  /// \returns the LHS of the expression
   Expr *getLHS() const { return lhs; }
-  /// Replaces the LHS of the expression with \p lhs
   void setLHS(Expr *lhs) { this->lhs = lhs; }
-  /// \returns the RHS of the expression
+
   Expr *getRHS() const { return rhs; }
-  /// Replaces the RHS of the expression with \p rhs
   void setRHS(Expr *rhs) { this->rhs = rhs; }
 
-  /// \returns the SourceLoc of the operator
   SourceLoc getOpLoc() const { return opLoc; }
-  /// \returns the kind of the operator
   OpKind getOpKind() const { return op; }
+  /// \returns the spelling of the operator (e.g. "+" for Add)
+  const char *getOpSpelling() const { return getSpelling(op); }
 
   /// \returns true if \p op is + or -
   bool isAdditiveOp() const { return sora::isAdditiveOp(op); }
@@ -570,8 +524,6 @@ public:
   bool isCompoundAssignementOp() const {
     return sora::isCompoundAssignementOp(op);
   }
-  /// \returns the spelling of the operator (e.g. "+" for Add)
-  const char *getOpSpelling() const { return getSpelling(op); }
 
   /// \returns the operator of a compound assignement. e.g. for AddAssign this
   /// returns Add.
@@ -612,21 +564,16 @@ public:
   UnaryExpr(OpKind op, SourceLoc opLoc, Expr *subExpr)
       : Expr(ExprKind::Unary), subExpr(subExpr), op(op), opLoc(opLoc) {}
 
-  /// \returns the subexpression
   Expr *getSubExpr() const { return subExpr; }
-  /// replaces the subexpression with \p expr
   void setSubExpr(Expr *expr) { subExpr = expr; }
 
-  /// \returns the operator's SourceLoc
   SourceLoc getOpLoc() const { return opLoc; }
-  /// \returns the kind of the operator
   OpKind getOpKind() const { return op; }
   /// \returns the spelling of the operator
   const char *getOpSpelling() const { return getSpelling(op); }
 
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return opLoc; }
-
   /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(subExpr && "no subExpr");
