@@ -1,4 +1,4 @@
-//===--- ASTNodeLoc.hpp - AST Node Source Loc Information Util --*- C++ -*-===//
+//===--- ASTNodeLoc.hpp - AST Node Source Loc Information Utils -*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
