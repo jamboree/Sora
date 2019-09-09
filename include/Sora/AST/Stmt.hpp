@@ -41,7 +41,7 @@ protected:
   Stmt(StmtKind kind) : kind(kind) {}
 
 public:
-  // Publicly allow allocation of expressions using the ASTContext.
+  // Publicly allow allocation of statements using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Stmt));
 
@@ -49,7 +49,7 @@ public:
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the statement
   SourceLoc getEndLoc() const;
-  /// \returns the full range of this expression
+  /// \returns the full range of this statement
   SourceRange getSourceRange() const;
 
   /// \return the kind of statement this is

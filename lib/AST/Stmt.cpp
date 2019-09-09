@@ -13,7 +13,7 @@ using namespace sora;
 /// Check that all statements are trivially destructible. This is needed
 /// because, as they are allocated in the ASTContext's arenas, their destructors
 /// are never called.
-#define EXPR(ID, PARENT)                                                       \
+#define STMT(ID, PARENT)                                                       \
   static_assert(std::is_trivially_destructible<ID##Stmt>::value,               \
                 #ID "Stmt is not trivially destructible.");
 #include "Sora/AST/StmtNodes.def"
