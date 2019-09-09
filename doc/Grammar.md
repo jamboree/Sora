@@ -82,8 +82,11 @@ for-statement = "for" pattern "in" expression block-statement
 
 control-transfer-statement = continue-statement 
                            | break-statement
+                           | return-statement
+
 continue-statement = "continue"
 break-statement = "break"
+return-statement = "return" expression?
 
 // Types
 type = identifier
