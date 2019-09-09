@@ -6,11 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Expr.hpp"
+#include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "ASTNodeLoc.hpp"
 #include <type_traits>
 
 using namespace sora;
@@ -84,7 +84,9 @@ TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
                      ArrayRef<SourceLoc> locs, SourceLoc rParenLoc)
     : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
       numElements(exprs.size()) {
-  assert(exprs.size() ? (locs.size() == (exprs.size() - 1)) : true);
+  assert((exprs.size() ? (locs.size() == (exprs.size() - 1)) : true) &&
+         "There must be N expressions and N-1 comma Source locations (or 0 of "
+         "both)");
   std::uninitialized_copy(exprs.begin(), exprs.end(),
                           getTrailingObjects<Expr *>());
   std::uninitialized_copy(locs.begin(), locs.end(),
