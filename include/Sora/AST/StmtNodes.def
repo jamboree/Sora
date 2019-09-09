@@ -9,21 +9,30 @@
 # define STMT(KIND, PARENT)
 #endif
 
+#ifndef ABSTRACT_STMT
+# define ABSTRACT_STMT(KIND, PARENT)
+#endif
+
+#ifndef STMT_RANGE
+# define STMT_RANGE(KIND, FIRST, LAST)
+#endif
 
 //===----------------------------------------------------------------------===//
 
 STMT(Continue, Stmt)
 STMT(Break, Stmt)
+STMT(Return, Stmt)
 
 STMT(Block, Stmt)
 
-/*
-STMT(DoWhile, Stmt)
-STMT(While, Stmt)
-STMT(If, Stmt)
-
-*/
+ABSTRACT_STMT(Conditional, Stmt)
+  STMT(If, ConditionalStmt)
+  STMT(While, ConditionalStmt)
+  STMT(DoWhile, ConditionalStmt)
+  STMT_RANGE(Conditional, If, DoWhile)
 
 //===----------------------------------------------------------------------===//
 
 #undef STMT
+#undef ABSTRACT_STMT
+#undef STMT_RANGE

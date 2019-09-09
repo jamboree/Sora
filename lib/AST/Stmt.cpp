@@ -1,4 +1,5 @@
 //===--- Stmt.cpp -----------------------------------------------*- C++ -*-===//
+//===--- Stmt.cpp -----------------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -8,6 +9,7 @@
 #include "Sora/AST/Stmt.hpp"
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Expr.hpp"
 #include "llvm/ADT/ArrayRef.h"
 
 using namespace sora;
@@ -56,6 +58,12 @@ SourceRange Stmt::getSourceRange() const {
   }
 }
 
+SourceLoc ReturnStmt::getBegLoc() const { return returnLoc; }
+
+SourceLoc ReturnStmt::getEndLoc() const {
+  return result ? result->getEndLoc() : returnLoc;
+}
+
 BlockStmt::BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes,
                      SourceLoc rCurlyLoc)
     : Stmt(StmtKind::Block), lCurlyLoc(lCurlyLoc), rCurlyLoc(rCurlyLoc),
@@ -87,3 +95,15 @@ MutableArrayRef<ASTNode> BlockStmt::getElements() {
 ASTNode BlockStmt::getElement(size_t n) const { return getElements()[n]; }
 
 void BlockStmt::setElement(size_t n, ASTNode node) { getElements()[n] = node; }
+
+SourceLoc StmtCondition::getBegLoc() const {
+  if (isExpr())
+    return expr->getBegLoc();
+  llvm_unreachable("unknown condition kind");
+}
+
+SourceLoc StmtCondition::getEndLoc() const {
+  if (isExpr())
+    return expr->getEndLoc();
+  llvm_unreachable("unknown condition kind");
+}

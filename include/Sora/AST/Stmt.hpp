@@ -22,6 +22,7 @@ class ASTContext;
 /// Kinds of Statements
 enum class StmtKind : uint8_t {
 #define STMT(KIND, PARENT) KIND,
+#define STMT_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
 #include "Sora/AST/StmtNodes.def"
 };
 
@@ -59,7 +60,6 @@ public:
   StmtKind getKind() const { return kind; }
 };
 
-
 /// Represents a simple "break" statement indicating that we can break out of
 /// the innermost loop.
 class BreakStmt final : public Stmt {
@@ -89,10 +89,8 @@ class ContinueStmt final : public Stmt {
   SourceLoc loc;
 
 public:
-  /// \param loc the SourceLoc of the "continue" keyword
   ContinueStmt(SourceLoc loc) : Stmt(StmtKind::Continue), loc(loc) {}
 
-  /// \returns the SourceLoc of the "continue" keyword
   SourceLoc getLoc() const { return loc; }
 
   /// \returns the SourceLoc of the first token of the statement
@@ -102,6 +100,36 @@ public:
 
   static bool classof(const Stmt *stmt) {
     return stmt->getKind() == StmtKind::Continue;
+  }
+};
+
+/// Represents a "return" statement
+///
+/// \verbatim
+///   return
+///   return 0
+/// \endverbatim
+class ReturnStmt : public Stmt {
+  SourceLoc returnLoc;
+  Expr *result = nullptr;
+
+public:
+  ReturnStmt(SourceLoc returnLoc, Expr *result = nullptr)
+      : Stmt(StmtKind::Return), returnLoc(returnLoc), result(result) {}
+
+  SourceLoc getReturnLoc() const { return returnLoc; }
+
+  bool hasResult() const { return (bool)result; }
+  Expr *getResult() const { return result; }
+  void setResult(Expr *expr) { this->result = expr; }
+
+  /// \returns the SourceLoc of the first token of the statement
+  SourceLoc getBegLoc() const;
+  /// \returns the SourceLoc of the last token of the statement
+  SourceLoc getEndLoc() const;
+
+  static bool classof(const Stmt *stmt) {
+    return stmt->getKind() == StmtKind::Return;
   }
 };
 
@@ -126,34 +154,20 @@ class BlockStmt final : public Stmt,
 
 public:
   /// Creates a Block Stmt
-  /// \param ctxt the ASTContext in which memory will be allocated
-  /// \param lCurlyLoc the SourceLoc of the left (opening) curly bracket {
-  /// \param nodes the elements of the block statement
-  /// \param rCurlyLoc the SourceLoc of the right (closing) curly bracket }
   static BlockStmt *create(ASTContext &ctxt, SourceLoc lCurlyLoc,
                            ArrayRef<ASTNode> nodes, SourceLoc rCurlyLoc);
 
   /// Creates an empty Block Stmt
-  /// \param ctxt the ASTContext in which memory will be allocated
-  /// \param lCurlyLoc the SourceLoc of the left (opening) curly bracket {
-  /// \param rCurlyLoc the SourceLoc of the right (closing) curly bracket }
   static BlockStmt *createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,
                                 SourceLoc rCurlyLoc);
 
-  /// \returns the SourceLoc of the left (opening) curly bracket {
   SourceLoc getLeftCurlyLoc() const { return lCurlyLoc; }
-  /// \returns the SourceLoc of the right (closing) curly bracket }
   SourceLoc getRightCurlyLoc() const { return rCurlyLoc; }
 
-  /// \returns the number of elements in the BlockStmt
   size_t getNumElements() const { return numElem; }
-  /// \returns a view of the array of elements
   ArrayRef<ASTNode> getElements() const;
-  /// \returns the array of elements
   MutableArrayRef<ASTNode> getElements();
-  /// \returns the element at index \p n
   ASTNode getElement(size_t n) const;
-  /// Replaces the element at index \p n with \p node
   void setElement(size_t n, ASTNode node);
 
   /// \returns the SourceLoc of the first token of the statement
@@ -165,4 +179,189 @@ public:
     return stmt->getKind() == StmtKind::Block;
   }
 };
+
+/// Represents the condition of a loop or an if statement.
+/// This can be a boolean expression (or a "let" declaration in the future)
+class StmtCondition final {
+  Expr *expr = nullptr; // FIXME: Make this a PointerUnion w/ a "let" decl
+
+public:
+  /// Creates a null (empty) condition
+  StmtCondition() = default;
+
+  /// Creates an expression condition
+  StmtCondition(Expr *expr) : expr(expr) {}
+
+  bool isExpr() const { return true; }
+  Expr *getExpr() const {
+    assert(isExpr() && "not an expr");
+    return expr;
+  }
+  void setExpr(Expr *expr) {
+    assert(isExpr() && "not an expr");
+    this->expr = expr;
+  }
+
+  /// \returns the SourceLoc of the first token of the statement
+  SourceLoc getBegLoc() const;
+  /// \returns the SourceLoc of the last token of the statement
+  SourceLoc getEndLoc() const;
+};
+
+/// Common base class for conditional statements ("if-then-else", "while" and
+/// "do-while)
+class ConditionalStmt : public Stmt {
+  StmtCondition cond;
+
+protected:
+  ConditionalStmt(StmtKind kind, StmtCondition cond) : Stmt(kind), cond(cond) {}
+
+public:
+  StmtCondition getCond() const { return cond; }
+  void setCond(StmtCondition cond) { this->cond = cond; }
+
+  static bool classof(const Stmt *stmt) {
+    return (stmt->getKind() >= StmtKind::First_Conditional) &&
+           (stmt->getKind() <= StmtKind::Last_Conditional);
+  }
+};
+
+/// Represents an "if-then-else" statement
+///
+/// \verbatim
+/// if cond {
+///   /* do something */
+/// }
+///
+/// if cond {
+///   /* do something */
+/// }
+/// else {
+///   /* do something */
+/// }
+///
+/// if cond {
+///   /* do something */
+/// }
+/// else if cond {
+///   /* do something */
+/// }
+///
+/// /*etc*/
+/// \endverbatim
+class IfStmt final : public ConditionalStmt {
+  Stmt *thenStmt = nullptr;
+  Stmt *elseStmt = nullptr;
+  SourceLoc ifLoc;
+  SourceLoc elseLoc;
+
+public:
+  /// \param ifLoc the SourceLoc of the "if" keyword
+  /// \param cond the condition
+  /// \param thenStmt the "then" statement
+  /// \param ifLoc the SourceLoc of the "else" keyword
+  /// \param thenStmt the "else" statement
+  IfStmt(SourceLoc ifLoc, StmtCondition cond, Stmt *thenStmt, SourceLoc elseLoc,
+         Stmt *elseStmt)
+      : ConditionalStmt(StmtKind::If, cond), thenStmt(thenStmt),
+        elseStmt(elseStmt), ifLoc(ifLoc), elseLoc(elseLoc) {}
+
+  /// \param ifLoc the SourceLoc of the "if" keyword
+  /// \param thenStmt the "then" statement
+  IfStmt(SourceLoc ifLoc, StmtCondition cond, Stmt *thenStmt)
+      : IfStmt(ifLoc, cond, thenStmt, SourceLoc(), nullptr) {}
+
+  SourceLoc getIfLoc() const { return ifLoc; }
+  SourceLoc getElseLoc() const { return elseLoc; }
+
+  Stmt *getThen() const { return thenStmt; }
+  void setThen(Stmt *stmt) { thenStmt = stmt; }
+
+  Stmt *getElse() const { return elseStmt; }
+  void setElse(Stmt *stmt) { elseStmt = stmt; }
+
+  /// \returns the SourceLoc of the first token of the statement
+  SourceLoc getBegLoc() const { return ifLoc; }
+  /// \returns the SourceLoc of the last token of the statement
+  SourceLoc getEndLoc() const {
+    return elseStmt ? elseStmt->getEndLoc() : thenStmt->getEndLoc();
+  }
+
+  static bool classof(const Stmt *stmt) {
+    return stmt->getKind() == StmtKind::If;
+  }
+};
+
+/// Represents a "while" loop
+///
+/// \verbatim
+/// while cond {
+///   /* do something */
+/// }
+/// \endverbatim
+class WhileStmt final : public ConditionalStmt {
+  SourceLoc whileLoc;
+  Stmt *body = nullptr;
+
+public:
+  /// \param whileLoc the SourceLoc of the "while" keyword
+  /// \param cond the loop condition
+  /// \param body the body of the while loop
+  WhileStmt(SourceLoc whileLoc, StmtCondition cond, Stmt *body)
+      : ConditionalStmt(StmtKind::While, cond), whileLoc(whileLoc), body(body) {
+  }
+
+  SourceLoc getWhileLoc() const { return whileLoc; }
+
+  Stmt *getBody() const { return body; }
+  void setBody(Stmt *body) { this->body = body; }
+
+  /// \returns the SourceLoc of the first token of the statement
+  SourceLoc getBegLoc() const { return whileLoc; }
+  /// \returns the SourceLoc of the last token of the statement
+  SourceLoc getEndLoc() const { return body->getEndLoc(); }
+
+  static bool classof(const Stmt *stmt) {
+    return stmt->getKind() == StmtKind::While;
+  }
+};
+
+/// Represents a "do-while" loop
+///
+/// \verbatim
+/// do {
+///   /* do something */
+/// } while cond
+/// \endverbatim
+class DoWhileStmt final : public ConditionalStmt {
+  SourceLoc doLoc, whileLoc;
+  Stmt *body = nullptr;
+
+public:
+  /// \param doLoc the SourceLoc of the "do" keyword
+  /// \param body the body of the while loop
+  /// \param whileLoc the SourceLoc of the "while" keyword
+  /// \param cond the loop condition
+  DoWhileStmt(SourceLoc doLoc, Stmt *body, SourceLoc whileLoc,
+              StmtCondition cond)
+      : ConditionalStmt(StmtKind::DoWhile, cond), doLoc(doLoc),
+        whileLoc(whileLoc), body(body) {}
+
+  SourceLoc getWhileLoc() const { return whileLoc; }
+
+  SourceLoc getDoLoc() const { return doLoc; }
+
+  Stmt *getBody() const { return body; }
+  void setBody(Stmt *body) { this->body = body; }
+
+  /// \returns the SourceLoc of the first token of the statement
+  SourceLoc getBegLoc() const { return doLoc; }
+  /// \returns the SourceLoc of the last token of the statement
+  SourceLoc getEndLoc() const { return getCond().getEndLoc(); }
+
+  static bool classof(const Stmt *stmt) {
+    return stmt->getKind() == StmtKind::DoWhile;
+  }
+};
+
 } // namespace sora
