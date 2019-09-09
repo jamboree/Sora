@@ -290,10 +290,6 @@ public:
   ErrorExpr(UnresolvedExpr *expr)
       : Expr(ExprKind::Error), range(expr->getSourceRange()) {}
 
-  /// \returns the SourceLoc of the first token of the expression
-  SourceLoc getBegLoc() const { return range.begin; }
-  /// \returns the SourceLoc of the last token of the expression
-  SourceLoc getEndLoc() const { return range.end; }
   /// \returns the full range of this expression
   SourceRange getSourceRange() const { return range; }
 
