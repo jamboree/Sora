@@ -28,8 +28,7 @@ STMT(Block, Stmt)
 ABSTRACT_STMT(Conditional, Stmt)
   STMT(If, ConditionalStmt)
   STMT(While, ConditionalStmt)
-  STMT(DoWhile, ConditionalStmt)
-  STMT_RANGE(Conditional, If, DoWhile)
+  STMT_RANGE(Conditional, If, While)
 
 //===----------------------------------------------------------------------===//
 

@@ -208,8 +208,7 @@ public:
   SourceLoc getEndLoc() const;
 };
 
-/// Common base class for conditional statements ("if-then-else", "while" and
-/// "do-while)
+/// Common base class for conditional statements ("if-then-else" & "while")
 class ConditionalStmt : public Stmt {
   StmtCondition cond;
 
@@ -325,43 +324,4 @@ public:
     return stmt->getKind() == StmtKind::While;
   }
 };
-
-/// Represents a "do-while" loop
-///
-/// \verbatim
-/// do {
-///   /* do something */
-/// } while cond
-/// \endverbatim
-class DoWhileStmt final : public ConditionalStmt {
-  SourceLoc doLoc, whileLoc;
-  Stmt *body = nullptr;
-
-public:
-  /// \param doLoc the SourceLoc of the "do" keyword
-  /// \param body the body of the while loop
-  /// \param whileLoc the SourceLoc of the "while" keyword
-  /// \param cond the loop condition
-  DoWhileStmt(SourceLoc doLoc, Stmt *body, SourceLoc whileLoc,
-              StmtCondition cond)
-      : ConditionalStmt(StmtKind::DoWhile, cond), doLoc(doLoc),
-        whileLoc(whileLoc), body(body) {}
-
-  SourceLoc getWhileLoc() const { return whileLoc; }
-
-  SourceLoc getDoLoc() const { return doLoc; }
-
-  Stmt *getBody() const { return body; }
-  void setBody(Stmt *body) { this->body = body; }
-
-  /// \returns the SourceLoc of the first token of the statement
-  SourceLoc getBegLoc() const { return doLoc; }
-  /// \returns the SourceLoc of the last token of the statement
-  SourceLoc getEndLoc() const { return getCond().getEndLoc(); }
-
-  static bool classof(const Stmt *stmt) {
-    return stmt->getKind() == StmtKind::DoWhile;
-  }
-};
-
 } // namespace sora
