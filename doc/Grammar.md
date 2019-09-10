@@ -72,11 +72,11 @@ declaration-statement = function-declaration | type-declaration | struct-declara
 
 block-statement = '{' statement* '}'
 
-if-statement = "if" (expression | variable-declaration) block-statement ("else" (brace-statement | if-statement))?
+if-statement = "if" condition block-statement ("else" (brace-statement | if-statement))?
 
-while-statement = "while" expression block-statement
+while-statement = "while" condition block-statement
 
-do-while-statement "do" block-statement "while" expression
+condition = expression | let-declaration
 
 for-statement = "for" pattern "in" expression block-statement
 
