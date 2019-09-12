@@ -16,7 +16,10 @@
 
 namespace sora {
 class TypeBase;
+class TypeRepr;
 
+/// Wrapper around a TypeBase* used to disable direct pointer comparison, as it
+/// can cause bugs when canonical types are involved.
 class Type {
   TypeBase *ptr = nullptr;
 
@@ -29,6 +32,8 @@ public:
 
   TypeBase *getPtr() { return ptr; }
   const TypeBase *getPtr() const { return ptr; }
+
+  bool isNull() const { return ptr == nullptr; }
 
   TypeBase *operator->() {
     assert(ptr && "cannot use this on a null pointer");
@@ -54,6 +59,39 @@ public:
 
   // for STL containers
   bool operator<(const Type other) const { return ptr < other.ptr; }
+};
+
+/// A simple Type/TypeRepr* pair, used to represent a type as written
+/// down by the user.
+///
+/// This may not always have a valid TypeRepr*, because it can be used
+/// in places where an explicit type is optional.
+/// For instance, a TypeLoc inside a ParamDecl will always have a TypeRepr
+/// because the type annotation is mandatory, but it may not have a TypeRepr
+/// inside a VarDecl, because the type annotation is not mandatory for
+/// variable declarations.
+class TypeLoc {
+  Type type;
+  TypeRepr *repr = nullptr;
+
+public:
+  TypeLoc() = default;
+  TypeLoc(Type type) : type(type) {}
+  TypeLoc(Type type, TypeRepr *repr) : type(type), repr(repr) {}
+
+  /// TODO (all of these are only valid if hasLocation() returns true)
+  /// SourceRange getSourceRange() const
+  /// SourceRange getBegLoc() const
+  /// SourceRange getLoc() const
+  /// SourceRange getEndLoc() const
+
+  bool hasLocation() { return repr != nullptr; }
+  bool hasType() { return !type.isNull(); }
+
+  TypeRepr *getTypeRepr() const { return repr; }
+
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
 };
 } // namespace sora
 
