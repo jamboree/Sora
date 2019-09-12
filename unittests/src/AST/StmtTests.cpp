@@ -71,6 +71,7 @@ TEST_F(StmtTest, getSourceRange) {
   // ContinueStmt
   {
     Stmt *stmt = new (*ctxt) ContinueStmt(beg);
+    EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getBegLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), beg);
     EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, beg));
@@ -80,6 +81,7 @@ TEST_F(StmtTest, getSourceRange) {
   // BreakStmt
   {
     Stmt *stmt = new (*ctxt) BreakStmt(beg);
+    EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getBegLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), beg);
     EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, beg));
@@ -89,6 +91,7 @@ TEST_F(StmtTest, getSourceRange) {
   // ReturnStmt
   {
     Stmt *stmt = new (*ctxt) ReturnStmt(beg);
+    EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getBegLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), beg);
     EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, beg));
@@ -101,6 +104,7 @@ TEST_F(StmtTest, getSourceRange) {
   // BlockStmt
   {
     Stmt *stmt = BlockStmt::createEmpty(*ctxt, beg, end);
+    EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getBegLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), end);
     EXPECT_EQ(stmt->getSourceRange(), range);
@@ -111,6 +115,7 @@ TEST_F(StmtTest, getSourceRange) {
     Stmt *stmt =
         new (*ctxt) IfStmt(beg, nullptr, new (*ctxt) ContinueStmt(mid));
     EXPECT_EQ(stmt->getBegLoc(), beg);
+    EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), mid);
     EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, mid));
     cast<IfStmt>(stmt)->setElse(new (*ctxt) ContinueStmt(end));
@@ -122,6 +127,7 @@ TEST_F(StmtTest, getSourceRange) {
   // WhileStmt
   {
     Stmt *stmt = new (*ctxt) WhileStmt(beg, nullptr, new (*ctxt) ContinueStmt(end));
+    EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getBegLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), end);
     EXPECT_EQ(stmt->getSourceRange(), range);

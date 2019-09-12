@@ -46,6 +46,18 @@ SourceLoc Stmt::getEndLoc() const {
 #include "Sora/AST/StmtNodes.def"
   }
 }
+
+SourceLoc Stmt::getLoc() const {
+  switch (getKind()) {
+  default:
+    llvm_unreachable("unknown StmtKind");
+#define STMT(ID, PARENT)                                                       \
+  case StmtKind::ID:                                                           \
+    return ASTNodeLoc<Stmt, ID##Stmt>::getLoc(cast<ID##Stmt>(this));
+#include "Sora/AST/StmtNodes.def"
+  }
+}
+
 SourceRange Stmt::getSourceRange() const {
   switch (getKind()) {
   default:

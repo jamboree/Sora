@@ -57,6 +57,9 @@ public:
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const;
+  /// \returns the preffered SourceLoc for diagnostics. This is defaults to
+  /// getBegLoc but nodes can override it as they please.
+  SourceLoc getLoc() const;
   /// \returns the full range of this expression
   SourceRange getSourceRange() const;
 
@@ -324,6 +327,8 @@ public:
     assert(index && "no index expr");
     return index->getEndLoc();
   }
+  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getLoc() const { return dotLoc; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::TupleIndexing;
@@ -434,6 +439,8 @@ public:
   SourceLoc getBegLoc() const { return lParenLoc; }
   /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return rParenLoc; }
+  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getLoc() const { return subExpr->getBegLoc(); }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Paren;
@@ -464,11 +471,15 @@ public:
     assert(fn && "no fn");
     return fn->getBegLoc();
   }
-
   /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(args && "no args");
     return args->getEndLoc();
+  }
+  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getLoc() const {
+    /// FIXME: Is this the best choice?
+    return fn->getLoc();
   }
 
   static bool classof(const Expr *expr) {
@@ -536,12 +547,13 @@ public:
     assert(lhs && "no lhs");
     return lhs->getBegLoc();
   }
-
   /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(rhs && "no rhs");
     return rhs->getEndLoc();
   }
+  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getLoc() const { return opLoc; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Binary;
@@ -578,6 +590,11 @@ public:
   SourceLoc getEndLoc() const {
     assert(subExpr && "no subExpr");
     return subExpr->getEndLoc();
+  }
+  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getLoc() const {
+    /// FIXME: Is this the best choice?
+    return subExpr->getLoc();
   }
 
   static bool classof(const Expr *expr) {

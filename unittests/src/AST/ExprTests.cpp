@@ -108,6 +108,7 @@ TEST_F(ExprTest, rtti) {
 TEST_F(ExprTest, getSourceRange) {
   const char *str = "Hello, World!";
   SourceLoc beg = SourceLoc::fromPointer(str);
+  SourceLoc mid = SourceLoc::fromPointer(str + 5);
   SourceLoc end = SourceLoc::fromPointer(str + 10);
   SourceRange range(beg, end);
 
@@ -115,6 +116,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) UnresolvedDeclRefExpr(Identifier(), beg);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(beg, expr->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
   }
@@ -123,6 +125,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) DiscardExpr(beg);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(beg, expr->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
   }
@@ -131,6 +134,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) IntegerLiteralExpr("0", beg);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(beg, expr->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
   }
@@ -139,6 +143,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) FloatLiteralExpr("0", beg);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(beg, expr->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
   }
@@ -147,6 +152,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) BooleanLiteralExpr("0", beg);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(beg, expr->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
   }
@@ -155,6 +161,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) NullLiteralExpr(beg);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(beg, expr->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
   }
@@ -163,6 +170,7 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt) ErrorExpr(range);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(end, expr->getEndLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
@@ -170,10 +178,11 @@ TEST_F(ExprTest, getSourceRange) {
   // TupleIndexingExpr
   {
     Expr *expr =
-        new (*ctxt) TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), SourceLoc(),
+        new (*ctxt) TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), mid,
                                       new (*ctxt) IntegerLiteralExpr("0", end));
     EXPECT_EQ(beg, expr->getBegLoc());
     EXPECT_EQ(end, expr->getEndLoc());
+    EXPECT_EQ(mid, expr->getLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
 
@@ -181,15 +190,17 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = TupleExpr::createEmpty(*ctxt, beg, end);
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(end, expr->getEndLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
 
   // ParenExpr
   {
-    Expr *expr = new (*ctxt) ParenExpr(beg, nullptr, end);
+    Expr *expr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
     EXPECT_EQ(beg, expr->getBegLoc());
     EXPECT_EQ(end, expr->getEndLoc());
+    EXPECT_EQ(mid, expr->getLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
 
@@ -198,6 +209,7 @@ TEST_F(ExprTest, getSourceRange) {
     Expr *expr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
                                       TupleExpr::createEmpty(*ctxt, beg, end));
     EXPECT_EQ(beg, expr->getBegLoc());
+    EXPECT_EQ(beg, expr->getLoc());
     EXPECT_EQ(end, expr->getEndLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
@@ -206,9 +218,10 @@ TEST_F(ExprTest, getSourceRange) {
   {
     Expr *expr = new (*ctxt)
         BinaryExpr(new (*ctxt) DiscardExpr(beg), BinaryOperatorKind::Add,
-                   SourceLoc(), new (*ctxt) DiscardExpr(end));
+                   mid, new (*ctxt) DiscardExpr(end));
     EXPECT_EQ(beg, expr->getBegLoc());
     EXPECT_EQ(end, expr->getEndLoc());
+    EXPECT_EQ(mid, expr->getLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
 
@@ -218,6 +231,7 @@ TEST_F(ExprTest, getSourceRange) {
                                        new (*ctxt) DiscardExpr(end));
     EXPECT_EQ(beg, expr->getBegLoc());
     EXPECT_EQ(end, expr->getEndLoc());
+    EXPECT_EQ(end, expr->getLoc());
     EXPECT_EQ(range, expr->getSourceRange());
   }
 }

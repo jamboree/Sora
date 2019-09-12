@@ -44,6 +44,18 @@ SourceLoc Decl::getEndLoc() const {
 #include "Sora/AST/DeclNodes.def"
   }
 }
+
+SourceLoc Decl::getLoc() const {
+  switch (getKind()) {
+  default:
+    llvm_unreachable("unknown DeclKind");
+#define DECL(ID, PARENT)                                                       \
+  case DeclKind::ID:                                                           \
+    return ASTNodeLoc<Decl, ID##Decl>::getLoc(cast<ID##Decl>(this));
+#include "Sora/AST/DeclNodes.def"
+  }
+}
+
 SourceRange Decl::getSourceRange() const {
   switch (getKind()) {
   default:

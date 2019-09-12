@@ -53,6 +53,9 @@ public:
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the statement
   SourceLoc getEndLoc() const;
+  /// \returns the preffered SourceLoc for diagnostics. This is defaults to
+  /// getBegLoc but nodes can override it as they please.
+  SourceLoc getLoc() const;
   /// \returns the full range of this statement
   SourceRange getSourceRange() const;
 

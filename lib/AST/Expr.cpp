@@ -44,6 +44,17 @@ SourceLoc Expr::getEndLoc() const {
 #include "Sora/AST/ExprNodes.def"
   }
 }
+
+SourceLoc Expr::getLoc() const {
+  switch (getKind()) {
+  default:
+    llvm_unreachable("unknown ExprKind");
+#define EXPR(ID, PARENT)                                                       \
+  case ExprKind::ID:                                                           \
+    return ASTNodeLoc<Expr, ID##Expr>::getLoc(cast<ID##Expr>(this));
+#include "Sora/AST/ExprNodes.def"
+  }
+}
 SourceRange Expr::getSourceRange() const {
   switch (getKind()) {
   default:
