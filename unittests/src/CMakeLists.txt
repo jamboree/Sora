@@ -1,8 +1,9 @@
 add_source(unittest_src
   "main.cpp"
   "AST/ASTContextTests.cpp"
-  "AST/OperatorKindsTests.cpp"
   "AST/ExprTests.cpp"
+  "AST/OperatorKindsTests.cpp"
+  "AST/StmtTests.cpp"
   "Common/DiagnosticConsumerTests.cpp"
   "Common/DiagnosticEngineTests.cpp"
   "Common/SourceTests.cpp"
