@@ -20,13 +20,21 @@
 //===----------------------------------------------------------------------===//
 
 /*
-ABSTRACT_DECL(Value, Decl)
-  DECL(Func, ValueDecl)
-  ABSTRACT_DECL(AnyVar, ValueDecl)
-    DECL(Var, AnyVarDecl)
-    DECL(Param, AnyVarDecl)
-    DECL_RANGE(AnyVar, Var, Param)
-DECL(PatternBinding, Decl) // Is the name right?
+ABSTRACT_DECL(Named, Decl)
+  ABSTRACT_DECL(Value, NamedDecl)
+    DECL(Func, ValueDecl)
+    // Represents a single variable (contains identifier + TypeLoc)
+    // TypeLoc can have no repr and just a type (if inferred type) or
+    // both (if explicit type)
+    DECL(Var, ValueDecl)
+    // Represents a parameter declaration. No link to the PBD whatsoever.
+    DECL(Param, ValueDecl)  //
+    DECL_RANGE(Value, Func, Param)
+  DECL_RANGE(Named, Func, Param)
+
+ABSTRACT_DECL(PatternBinding, Decl)
+  DECL(Let, Decl)
+  DECL_RANGE(PatternBinding, Let, Let)
 */
 
 //===----------------------------------------------------------------------===//
