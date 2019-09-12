@@ -9,6 +9,10 @@
 # define DECL(KIND, PARENT)
 #endif
 
+#ifndef VALUE_DECL
+# define VALUE_DECL(KIND, PARENT) DECL(KIND, PARENT)
+#endif
+
 #ifndef ABSTRACT_DECL
 # define ABSTRACT_DECL(KIND, PARENT)
 #endif
@@ -19,19 +23,14 @@
 
 //===----------------------------------------------------------------------===//
 
-/*
-ABSTRACT_DECL(Named, Decl)
-  ABSTRACT_DECL(Value, NamedDecl)
-    DECL(Func, ValueDecl)
-    // Represents a single variable (contains identifier + TypeLoc)
-    // TypeLoc can have no repr and just a type (if inferred type) or
-    // both (if explicit type)
-    DECL(Var, ValueDecl)
-    // Represents a parameter declaration. No link to the PBD whatsoever.
-    DECL(Param, ValueDecl)  //
-    DECL_RANGE(Value, Func, Param)
-  DECL_RANGE(Named, Func, Param)
 
+ABSTRACT_DECL(Value, Decl)
+  VALUE_DECL(Var, ValueDecl)
+  VALUE_DECL(Param, ValueDecl)
+  VALUE_DECL(Func, ValueDecl)
+  DECL_RANGE(Value, Func, Param)
+
+/*
 ABSTRACT_DECL(PatternBinding, Decl)
   DECL(Let, Decl)
   DECL_RANGE(PatternBinding, Let, Let)
@@ -40,5 +39,6 @@ ABSTRACT_DECL(PatternBinding, Decl)
 //===----------------------------------------------------------------------===//
 
 #undef DECL
+#undef VALUE_DECL
 #undef ABSTRACT_DECL
 #undef DECL_RANGE

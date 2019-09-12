@@ -6,8 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Decl.hpp"
-#include "Sora/AST/ASTContext.hpp"
 #include "ASTNodeLoc.hpp"
+#include "Sora/AST/ASTContext.hpp"
 
 using namespace sora;
 
@@ -26,7 +26,7 @@ void *Decl::operator new(size_t size, ASTContext &ctxt, unsigned align) {
 SourceLoc Decl::getBegLoc() const {
   switch (getKind()) {
   default:
-    llvm_unreachable("unknown StmtKind");
+    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getBegLoc(cast<ID##Decl>(this));
@@ -37,7 +37,7 @@ SourceLoc Decl::getBegLoc() const {
 SourceLoc Decl::getEndLoc() const {
   switch (getKind()) {
   default:
-    llvm_unreachable("unknown StmtKind");
+    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getEndLoc(cast<ID##Decl>(this));
@@ -47,10 +47,21 @@ SourceLoc Decl::getEndLoc() const {
 SourceRange Decl::getSourceRange() const {
   switch (getKind()) {
   default:
-    llvm_unreachable("unknown StmtKind");
+    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getSourceRange(cast<ID##Decl>(this));
+#include "Sora/AST/DeclNodes.def"
+  }
+}
+
+Type ValueDecl::getValueType() const {
+  switch (getKind()) {
+  default:
+    llvm_unreachable("unknown ValueDecl kind");
+#define VALUE_DECL(ID, PARENT)                                                 \
+  case DeclKind::ID:                                                           \
+    return cast<ID##Decl>(this)->getValueType();
 #include "Sora/AST/DeclNodes.def"
   }
 }
