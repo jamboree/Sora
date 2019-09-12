@@ -202,9 +202,9 @@ public:
     this->expr = expr;
   }
 
-  /// \returns the SourceLoc of the first token of the statement
+  /// \returns the SourceLoc of the first token of the condition
   SourceLoc getBegLoc() const;
-  /// \returns the SourceLoc of the last token of the statement
+  /// \returns the SourceLoc of the last token of the condition
   SourceLoc getEndLoc() const;
 };
 
