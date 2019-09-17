@@ -8,6 +8,7 @@
 #include "Sora/AST/Decl.hpp"
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Stmt.hpp"
 
 using namespace sora;
 
@@ -76,4 +77,17 @@ Type ValueDecl::getValueType() const {
     return cast<ID##Decl>(this)->getValueType();
 #include "Sora/AST/DeclNodes.def"
   }
+}
+
+SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
+
+SourceLoc FuncDecl::getEndLoc() const { return body->getEndLoc(); }
+
+ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
+                             ArrayRef<ParamDecl *> params,
+                             SourceLoc rParenLoc) {
+  // Need manual memory allocation here because of trailing objects.
+  auto size = totalSizeToAlloc<ParamDecl *>(params.size());
+  void *mem = ctxt.allocate(size, alignof(ParamList));
+  return new (mem) ParamList(lParenLoc, params, rParenLoc);
 }
