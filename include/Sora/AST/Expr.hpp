@@ -39,9 +39,7 @@ class alignas(ExprAlignement) Expr {
 
   llvm::PointerIntPair<Type, 1, bool> typeAndIsImplicit;
   ExprKind kind;
-  /// Due to padding we have 24/56 "free" (padding) bits here, so let's put them
-  /// to good use by allowing derived classes to use them to store some data.
-  /// To make things simpler, we'll always use 56 bits, even in 32 bits mode.
+  /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfield themselves.
   LLVM_PACKED(union Bits {
     Bits() : raw() {}
