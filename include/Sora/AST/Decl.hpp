@@ -114,7 +114,7 @@ public:
 /// Type after semantic analysis.
 /// \verbatim
 ///   let x : i32 // has valid TypeRepr*
-///   let (y, x) : (i32, i32) // has valid TypeRepr* (of the 
+///   let (y, x) : (i32, i32) // has valid TypeRepr* (of the
 /// \endverbatim
 class VarDecl final : public ValueDecl {
   TypeLoc tyLoc;
