@@ -345,7 +345,7 @@ public:
 /// TupleExpr.
 class TupleExpr final : public Expr,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
-  friend llvm::TrailingObjects<TupleExpr, Expr *, SourceLoc>;
+  friend llvm::TrailingObjects<TupleExpr, Expr *>;
 
   TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 
