@@ -7,6 +7,4 @@
 
 #pragma once
 
-namespace sora {
-
-}
+namespace sora {}

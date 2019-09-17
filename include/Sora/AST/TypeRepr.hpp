@@ -21,4 +21,4 @@ enum class TypeReprKind : uint8_t {
 #define TYPEREPR(KIND, PARENT) KIND,
 #include "Sora/AST/TypeReprNodes.def"
 };
-}
+} // namespace sora

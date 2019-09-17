@@ -20,7 +20,7 @@ class TypeBase;
   constexpr std::size_t CLASS##FreeLowBits = FREE_BITS_DESIRED##u;             \
   constexpr std::size_t CLASS##Alignement = 1u << FREE_BITS_DESIRED##u
 
-    DECLARE(TypeBase, 1);
+DECLARE(TypeBase, 1);
 DECLARE(Expr, 3);
 DECLARE(Decl, 3);
 DECLARE(Stmt, 3);
@@ -35,7 +35,7 @@ template <class T> struct PointerLikeTypeTraits;
   template <> struct PointerLikeTypeTraits<::sora::CLASS *> {                  \
     enum { NumLowBitsAvailable = ::sora::CLASS##FreeLowBits };                 \
     static inline void *getAsVoidPointer(::sora::CLASS *ptr) { return ptr; }   \
-    static inline ::sora::CLASS *getFromVoidPointer(void *ptr) {                \
+    static inline ::sora::CLASS *getFromVoidPointer(void *ptr) {               \
       return static_cast<::sora::CLASS *>(ptr);                                \
     }                                                                          \
   }
