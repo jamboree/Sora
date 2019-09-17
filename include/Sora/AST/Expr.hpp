@@ -347,7 +347,7 @@ public:
 /// objects.
 ///
 /// \verbatim
-/// Example: for the expression (0, 1, 2)
+/// Example: for the *correctly formed* expression (0, 1, 2)
 ///   (     ->      getBegLoc()     or getLParenLoc()
 ///   0     ->      getElement(0)   or getElements()[0]
 ///   ,     ->      getCommaLoc(0)  or getCommaLocs()[0]
@@ -367,24 +367,14 @@ class TupleExpr final
   size_t numTrailingObjects(OverloadToken<Expr *>) const { return numElements; }
 
   size_t numTrailingObjects(OverloadToken<SourceLoc>) const {
-    return getNumCommas();
+    return numCommas;
   }
 
   SourceLoc lParenLoc, rParenLoc;
-  size_t numElements = 0;
+  uint32_t numElements = 0, numCommas = 0;
 
 public:
   /// Creates a TupleExpr with one or more element.
-  ///
-  /// Note that the size of the \p commaLocs array must be that of the \p exprs
-  /// array minus one, or zero if \p expr's size is zero.
-  ///
-  /// \verbatim
-  ///   if exprs.size() = 0, commaLocs.size() must be 0
-  ///   if exprs.size() = 1, commaLocs.size() must be 0
-  ///   if exprs.size() = 2, commaLocs.size() must be 1
-  ///   if exprs.size() = 30, commaLocs.size() must be 29
-  /// \endverbatim
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
                            ArrayRef<Expr *> exprs,
                            ArrayRef<SourceLoc> commaLocs, SourceLoc rParenLoc);
@@ -399,9 +389,14 @@ public:
   Expr *getElement(size_t n);
   void setElement(size_t n, Expr *expr);
 
-  size_t getNumCommas() const { return numElements ? numElements - 1 : 0; }
-  SourceLoc getCommaLoc(size_t n) const;
+  /// Tries to fetch the SourceLoc of the comma that is right after \p expr.
+  /// This works by returning the first SourceLoc that's greater than the end of
+  /// \p expr
+  /// \returns a valid SourceLoc on success, an invalid one on failure.
+  SourceLoc getCommaLocForExpr(Expr *expr) const;
+  size_t getNumCommas() const { return numCommas; }
   ArrayRef<SourceLoc> getCommaLocs() const;
+
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
