@@ -140,7 +140,7 @@ public:
   SourceLoc getEndLoc() const { return getIdentifierLoc(); }
 
   static bool classof(const Decl *decl) {
-    return decl->getKind() >= DeclKind::Var;
+    return decl->getKind() == DeclKind::Var;
   }
 };
 
@@ -171,7 +171,7 @@ public:
   }
 
   static bool classof(const Decl *decl) {
-    return decl->getKind() >= DeclKind::Param;
+    return decl->getKind() == DeclKind::Param;
   }
 };
 
@@ -251,7 +251,7 @@ public:
   SourceLoc getEndLoc() const;
 
   static bool classof(const Decl *decl) {
-    return decl->getKind() >= DeclKind::Func;
+    return decl->getKind() == DeclKind::Func;
   }
 };
 } // namespace sora
