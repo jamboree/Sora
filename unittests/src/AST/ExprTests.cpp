@@ -235,18 +235,3 @@ TEST_F(ExprTest, getSourceRange) {
     EXPECT_EQ(range, expr->getSourceRange());
   }
 }
-
-TEST_F(ExprTest, TupleExpr_getCommaLocForExpr) {
-  const char *str = "(,_,,_,)";
-  SourceLoc lParen = SourceLoc::fromPointer(str);
-  SourceLoc rParen = SourceLoc::fromPointer(str);
-  SmallVector<SourceLoc, 4> commas = {
-      SourceLoc::fromPointer(str + 1), SourceLoc::fromPointer(str + 3),
-      SourceLoc::fromPointer(str + 4), SourceLoc::fromPointer(str + 6)};
-  SmallVector<Expr *, 4> elems = {
-      new (*ctxt) DiscardExpr(SourceLoc::fromPointer(str + 2)),
-      new (*ctxt) DiscardExpr(SourceLoc::fromPointer(str + 5))};
-  auto tuple = TupleExpr::create(*ctxt, lParen, elems, commas, rParen);
-  EXPECT_EQ(commas[1], tuple->getCommaLocForExpr(elems[0]));
-  EXPECT_EQ(commas[3], tuple->getCommaLocForExpr(elems[1]));
-}

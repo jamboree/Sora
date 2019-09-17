@@ -13,6 +13,7 @@
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -342,42 +343,21 @@ public:
 /// represented as a TupleExpr but as a ParenExpr. For instance, (0) is
 /// represented at a ParenExpr, but in foo(0), the (0) is represented as a
 /// TupleExpr.
-///
-/// The expressions and the SourceLocs of the commas are stored as trailing
-/// objects.
-///
-/// \verbatim
-/// Example: for the *correctly formed* expression (0, 1, 2)
-///   (     ->      getBegLoc()     or getLParenLoc()
-///   0     ->      getElement(0)   or getElements()[0]
-///   ,     ->      getCommaLoc(0)  or getCommaLocs()[0]
-///   1     ->      getElement(1)   or getElements()[1]
-///   ,     ->      getCommaLoc(1)  or getCommaLocs()[1]
-///   2     ->      getElement(2)   or getElements()[2]
-///   )     ->      getEndLoc()     or getRParenloc()
-/// \endverbatim
-class TupleExpr final
-    : public Expr,
-      private llvm::TrailingObjects<TupleExpr, Expr *, SourceLoc> {
+class TupleExpr final : public Expr,
+                        private llvm::TrailingObjects<TupleExpr, Expr *> {
   friend llvm::TrailingObjects<TupleExpr, Expr *, SourceLoc>;
 
-  TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
-            ArrayRef<SourceLoc> locs, SourceLoc rParenLoc);
+  TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 
   size_t numTrailingObjects(OverloadToken<Expr *>) const { return numElements; }
 
-  size_t numTrailingObjects(OverloadToken<SourceLoc>) const {
-    return numCommas;
-  }
-
   SourceLoc lParenLoc, rParenLoc;
-  uint32_t numElements = 0, numCommas = 0;
+  uint32_t numElements = 0;
 
 public:
   /// Creates a TupleExpr with one or more element.
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
-                           ArrayRef<Expr *> exprs,
-                           ArrayRef<SourceLoc> commaLocs, SourceLoc rParenLoc);
+                           ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 
   /// Creates an empty TupleExpr.
   static TupleExpr *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
@@ -388,14 +368,6 @@ public:
   ArrayRef<Expr *> getElements() const;
   Expr *getElement(size_t n);
   void setElement(size_t n, Expr *expr);
-
-  /// Tries to fetch the SourceLoc of the comma that is right after \p expr.
-  /// This works by returning the first SourceLoc that's greater than the end of
-  /// \p expr
-  /// \returns a valid SourceLoc on success, an invalid one on failure.
-  SourceLoc getCommaLocForExpr(Expr *expr) const;
-  size_t getNumCommas() const { return numCommas; }
-  ArrayRef<SourceLoc> getCommaLocs() const;
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }

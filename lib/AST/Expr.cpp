@@ -10,7 +10,6 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
 #include <type_traits>
 
 using namespace sora;
@@ -91,33 +90,26 @@ APInt IntegerLiteralExpr::getRawValue() const {
   return result;
 }
 
-TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
-                     ArrayRef<SourceLoc> commaLocs, SourceLoc rParenLoc)
+TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc)
     : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
-      numElements(exprs.size()), numCommas(commaLocs.size()) {
-  assert((exprs.size() ? (commaLocs.size() == (exprs.size() - 1)) : true) &&
-         "There must be N expressions and N-1 comma Source locations (or 0 of "
-         "both)");
+      numElements(exprs.size()) {
   std::uninitialized_copy(exprs.begin(), exprs.end(),
                           getTrailingObjects<Expr *>());
-  std::uninitialized_copy(commaLocs.begin(), commaLocs.end(),
-                          getTrailingObjects<SourceLoc>());
 }
 
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
                              ArrayRef<Expr *> exprs,
-                             ArrayRef<SourceLoc> commaLocs,
                              SourceLoc rParenLoc) {
   // Need manual memory allocation here because of trailing objects.
   auto size =
-      totalSizeToAlloc<Expr *, SourceLoc>(exprs.size(), commaLocs.size());
+      totalSizeToAlloc<Expr *>(exprs.size());
   void *mem = ctxt.allocate(size, alignof(TupleExpr));
-  return new (mem) TupleExpr(lParenLoc, exprs, commaLocs, rParenLoc);
+  return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc);
 }
 
 TupleExpr *TupleExpr::createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
                                   SourceLoc rParenLoc) {
-  return create(ctxt, lParenLoc, {}, {}, rParenLoc);
+  return create(ctxt, lParenLoc, {}, rParenLoc);
 }
 
 MutableArrayRef<Expr *> TupleExpr::getElements() {
@@ -131,28 +123,3 @@ ArrayRef<Expr *> TupleExpr::getElements() const {
 Expr *TupleExpr::getElement(size_t n) { return getElements()[n]; }
 
 void TupleExpr::setElement(size_t n, Expr *expr) { getElements()[n] = expr; }
-
-SourceLoc TupleExpr::getCommaLocForExpr(Expr *expr) const {
-#ifndef NDEBUG
-  bool found = false;
-  for (auto elem : getElements()) {
-    if (elem == expr) {
-      found = true;
-      break;
-    }
-  }
-  assert(found && "Expr does not belong to this Tuple!");
-#endif
-  SourceLoc exprEnd = expr->getEndLoc();
-  assert(exprEnd && "invalid end loc for expr");
-  for (auto comma : getCommaLocs()) {
-    assert(comma && "invalid comma loc!");
-    if (comma > exprEnd)
-      return comma;
-  }
-  return SourceLoc();
-}
-
-ArrayRef<SourceLoc> TupleExpr::getCommaLocs() const {
-  return {getTrailingObjects<SourceLoc>(), getNumCommas()};
-}
