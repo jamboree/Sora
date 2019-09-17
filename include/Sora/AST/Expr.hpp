@@ -366,10 +366,14 @@ public:
   }
 
   size_t getNumElements() const { return numElements; }
-  MutableArrayRef<Expr *> getElements();
-  ArrayRef<Expr *> getElements() const;
-  Expr *getElement(size_t n);
-  void setElement(size_t n, Expr *expr);
+  MutableArrayRef<Expr *> getElements() {
+    return {getTrailingObjects<Expr *>(), getNumElements()};
+  }
+  ArrayRef<Expr *> getElements() const {
+    return {getTrailingObjects<Expr *>(), getNumElements()};
+  }
+  Expr *getElement(size_t n) { return getElements()[n]; }
+  void setElement(size_t n, Expr *expr) { getElements()[n] = expr; }
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }

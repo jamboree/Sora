@@ -90,7 +90,8 @@ APInt IntegerLiteralExpr::getRawValue() const {
   return result;
 }
 
-TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc)
+TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
+                     SourceLoc rParenLoc)
     : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
       numElements(exprs.size()) {
   std::uninitialized_copy(exprs.begin(), exprs.end(),
@@ -98,23 +99,9 @@ TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rPar
 }
 
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
-                             ArrayRef<Expr *> exprs,
-                             SourceLoc rParenLoc) {
+                             ArrayRef<Expr *> exprs, SourceLoc rParenLoc) {
   // Need manual memory allocation here because of trailing objects.
-  auto size =
-      totalSizeToAlloc<Expr *>(exprs.size());
+  auto size = totalSizeToAlloc<Expr *>(exprs.size());
   void *mem = ctxt.allocate(size, alignof(TupleExpr));
   return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc);
 }
-
-MutableArrayRef<Expr *> TupleExpr::getElements() {
-  return {getTrailingObjects<Expr *>(), getNumElements()};
-}
-
-ArrayRef<Expr *> TupleExpr::getElements() const {
-  return {getTrailingObjects<Expr *>(), getNumElements()};
-}
-
-Expr *TupleExpr::getElement(size_t n) { return getElements()[n]; }
-
-void TupleExpr::setElement(size_t n, Expr *expr) { getElements()[n] = expr; }
