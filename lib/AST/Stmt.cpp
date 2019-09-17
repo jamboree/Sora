@@ -95,18 +95,6 @@ BlockStmt *BlockStmt::createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,
   return create(ctxt, lCurlyLoc, {}, rCurlyLoc);
 }
 
-ArrayRef<ASTNode> BlockStmt::getElements() const {
-  return {getTrailingObjects<ASTNode>(), numElem};
-}
-
-MutableArrayRef<ASTNode> BlockStmt::getElements() {
-  return {getTrailingObjects<ASTNode>(), numElem};
-}
-
-ASTNode BlockStmt::getElement(size_t n) const { return getElements()[n]; }
-
-void BlockStmt::setElement(size_t n, ASTNode node) { getElements()[n] = node; }
-
 SourceLoc StmtCondition::getBegLoc() const {
   if (isExpr())
     return expr->getBegLoc();

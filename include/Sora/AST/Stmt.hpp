@@ -11,6 +11,7 @@
 #include "Sora/AST/ASTNode.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <stdint.h>
@@ -168,10 +169,14 @@ public:
   SourceLoc getRightCurlyLoc() const { return rCurlyLoc; }
 
   size_t getNumElements() const { return numElem; }
-  ArrayRef<ASTNode> getElements() const;
-  MutableArrayRef<ASTNode> getElements();
-  ASTNode getElement(size_t n) const;
-  void setElement(size_t n, ASTNode node);
+  ArrayRef<ASTNode> getElements() const {
+    return {getTrailingObjects<ASTNode>(), numElem};
+  }
+  MutableArrayRef<ASTNode> getElements() {
+    return {getTrailingObjects<ASTNode>(), numElem};
+  }
+  ASTNode getElement(size_t n) const { return getElements()[n]; }
+  void setElement(size_t n, ASTNode node) { getElements()[n] = node; }
 
   /// \returns the SourceLoc of the first token of the statement
   SourceLoc getBegLoc() const { return lCurlyLoc; }
