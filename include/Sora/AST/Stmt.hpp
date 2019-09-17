@@ -263,18 +263,11 @@ class IfStmt final : public ConditionalStmt {
   SourceLoc elseLoc;
 
 public:
-  /// \param ifLoc the SourceLoc of the "if" keyword
-  /// \param cond the condition
-  /// \param thenStmt the "then" statement
-  /// \param ifLoc the SourceLoc of the "else" keyword
-  /// \param thenStmt the "else" statement
   IfStmt(SourceLoc ifLoc, StmtCondition cond, Stmt *thenStmt, SourceLoc elseLoc,
          Stmt *elseStmt)
       : ConditionalStmt(StmtKind::If, cond), thenStmt(thenStmt),
         elseStmt(elseStmt), ifLoc(ifLoc), elseLoc(elseLoc) {}
 
-  /// \param ifLoc the SourceLoc of the "if" keyword
-  /// \param thenStmt the "then" statement
   IfStmt(SourceLoc ifLoc, StmtCondition cond, Stmt *thenStmt)
       : IfStmt(ifLoc, cond, thenStmt, SourceLoc(), nullptr) {}
 
@@ -311,9 +304,6 @@ class WhileStmt final : public ConditionalStmt {
   Stmt *body = nullptr;
 
 public:
-  /// \param whileLoc the SourceLoc of the "while" keyword
-  /// \param cond the loop condition
-  /// \param body the body of the while loop
   WhileStmt(SourceLoc whileLoc, StmtCondition cond, Stmt *body)
       : ConditionalStmt(StmtKind::While, cond), whileLoc(whileLoc), body(body) {
   }
