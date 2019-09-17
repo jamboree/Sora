@@ -57,7 +57,7 @@ Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &options) {
   };
   // TODO: Handle command-line options like
   //    -dump-ast, -dump-ast=(raw | checked)
-  return llvm::make_unique<CompilerInstanceCreater>();
+  return std::make_unique<CompilerInstanceCreater>();
 }
 
 /*
