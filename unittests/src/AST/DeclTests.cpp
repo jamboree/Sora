@@ -46,3 +46,37 @@ TEST_F(DeclTest, rtti) {
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
 }
+
+TEST_F(DeclTest, getSourceRange) {
+  const char *str = "Hello, World!";
+  SourceLoc beg = SourceLoc::fromPointer(str);
+  SourceLoc mid = SourceLoc::fromPointer(str + 5);
+  SourceLoc end = SourceLoc::fromPointer(str + 10);
+
+  // VarDecl
+  {
+    Decl *decl = new (*ctxt) VarDecl(beg, Identifier());
+    EXPECT_EQ(beg, decl->getBegLoc());
+    EXPECT_EQ(beg, decl->getEndLoc());
+    EXPECT_EQ(SourceRange(beg, beg), decl->getSourceRange());
+  }
+
+  // ParamDecl: Can't do this one yet, no TypeRepr.
+  /*
+  {
+    Decl *decl = new (*ctxt)
+        ParamDecl(beg, Identifier(), SourceLoc(), TypeLoc());
+    EXPECT_TRUE(isa<ParamDecl>(decl));
+    EXPECT_TRUE(isa<ValueDecl>(decl));
+  }
+  */
+
+  // FuncDecl
+  {
+    Decl *decl = new (*ctxt) FuncDecl(beg, SourceLoc(), Identifier());
+    cast<FuncDecl>(decl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
+    EXPECT_EQ(beg, decl->getBegLoc());
+    EXPECT_EQ(end, decl->getEndLoc());
+    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
+  }
+}
