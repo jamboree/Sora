@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <stdint.h>
@@ -36,10 +37,38 @@ class alignas(ExprAlignement) Expr {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  ExprKind kind;
   llvm::PointerIntPair<Type, 1, bool> typeAndIsImplicit;
+  ExprKind kind;
+  /// Due to padding we have 24/56 "free" (padding) bits here, so let's put them
+  /// to good use by allowing derived classes to use them to store some data.
+  /// To make things simpler, we'll always use 56 bits, even in 32 bits mode.
+  /// NOTE: Derived classes are expected to initialize the bitfield themselves.
+  LLVM_PACKED(union Bits {
+    Bits() : raw() {}
+    // Raw bits (to zero-init the union)
+    char raw[7];
+    // BooleanLiteralExpr bits
+    struct {
+      bool value;
+    } booleanLiteralExpr;
+    /// TupleExpr bits
+    struct {
+      uint32_t numElements;
+    } tupleExpr;
+    /// BinaryExpr bits
+    struct {
+      BinaryOperatorKind opKind;
+    } binaryExpr;
+    /// UnaryExpr bits
+    struct {
+      UnaryOperatorKind opKind;
+    } unaryExpr;
+  });
+  static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
+  Bits bits;
+
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
   void *operator new(size_t, void *mem) noexcept {
@@ -84,6 +113,11 @@ public:
   /// \return the kind of expression this is
   ExprKind getKind() const { return kind; }
 };
+
+/// We should only use 16 bytes (2 pointers) max in 64 bits mode.
+/// One pointer for the type (+ the "packed" isImplicit flag) and
+/// one for the kind + packed bits.
+static_assert(sizeof(Expr) <= 16, "Expr is too big!");
 
 /// Common base class for "unresolved" expressions.
 ///
@@ -240,13 +274,13 @@ public:
 
 /// Represents a boolean literal (true or false)
 class BooleanLiteralExpr final : public AnyLiteralExpr {
-  bool value;
-
 public:
   BooleanLiteralExpr(bool value, SourceLoc loc)
-      : AnyLiteralExpr(ExprKind::BooleanLiteral, loc), value(value) {}
+      : AnyLiteralExpr(ExprKind::BooleanLiteral, loc) {
+    bits.booleanLiteralExpr.value = value;
+  }
 
-  bool getValue() const { return value; }
+  bool getValue() const { return bits.booleanLiteralExpr.value; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::BooleanLiteral;
@@ -349,10 +383,11 @@ class TupleExpr final : public Expr,
 
   TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 
-  size_t numTrailingObjects(OverloadToken<Expr *>) const { return numElements; }
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getNumElements();
+  }
 
   SourceLoc lParenLoc, rParenLoc;
-  uint32_t numElements = 0;
 
 public:
   /// Creates a TupleExpr with one or more element.
@@ -365,7 +400,7 @@ public:
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
-  size_t getNumElements() const { return numElements; }
+  size_t getNumElements() const { return bits.tupleExpr.numElements; }
   MutableArrayRef<Expr *> getElements() {
     return {getTrailingObjects<Expr *>(), getNumElements()};
   }
@@ -378,7 +413,7 @@ public:
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
-  bool isEmpty() const { return numElements == 0; }
+  bool isEmpty() const { return getNumElements() == 0; }
 
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return lParenLoc; }
@@ -470,12 +505,13 @@ public:
 private:
   Expr *lhs;
   Expr *rhs;
-  OpKind op;
   SourceLoc opLoc;
 
 public:
-  BinaryExpr(Expr *lhs, OpKind op, SourceLoc opLoc, Expr *rhs)
-      : Expr(ExprKind::Binary), lhs(lhs), rhs(rhs), op(op), opLoc(opLoc) {}
+  BinaryExpr(Expr *lhs, OpKind opKind, SourceLoc opLoc, Expr *rhs)
+      : Expr(ExprKind::Binary), lhs(lhs), rhs(rhs), opLoc(opLoc) {
+    bits.binaryExpr.opKind = opKind;
+  }
 
   Expr *getLHS() const { return lhs; }
   void setLHS(Expr *lhs) { this->lhs = lhs; }
@@ -484,35 +520,37 @@ public:
   void setRHS(Expr *rhs) { this->rhs = rhs; }
 
   SourceLoc getOpLoc() const { return opLoc; }
-  OpKind getOpKind() const { return op; }
+  OpKind getOpKind() const { return bits.binaryExpr.opKind; }
   /// \returns the spelling of the operator (e.g. "+" for Add)
-  const char *getOpSpelling() const { return getSpelling(op); }
+  const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }
 
   /// \returns true if \p op is + or -
-  bool isAdditiveOp() const { return sora::isAdditiveOp(op); }
+  bool isAdditiveOp() const { return sora::isAdditiveOp(getOpKind()); }
   /// \returns true if \p op is * / or %
-  bool isMultiplicativeOp() const { return sora::isMultiplicativeOp(op); }
+  bool isMultiplicativeOp() const {
+    return sora::isMultiplicativeOp(getOpKind());
+  }
   /// \returns true if \p op is << or >>
-  bool isShiftOp() const { return sora::isShiftOp(op); }
+  bool isShiftOp() const { return sora::isShiftOp(getOpKind()); }
   /// \returns true if \p op is | & or ^
-  bool isBitwiseOp() const { return sora::isBitwiseOp(op); }
+  bool isBitwiseOp() const { return sora::isBitwiseOp(getOpKind()); }
   /// \returns true if \p op is == or !=
-  bool isEqualityOp() const { return sora::isEqualityOp(op); }
+  bool isEqualityOp() const { return sora::isEqualityOp(getOpKind()); }
   /// \returns true if \p op is < <= > or >=
-  bool isRelationalOp() const { return sora::isRelationalOp(op); }
+  bool isRelationalOp() const { return sora::isRelationalOp(getOpKind()); }
   /// \returns true if \p op is || or &&
-  bool isLogicalOp() const { return sora::isLogicalOp(op); }
+  bool isLogicalOp() const { return sora::isLogicalOp(getOpKind()); }
   /// \returns true if \p op is any assignement operator
-  bool isAssignementOp() const { return sora::isAssignementOp(op); }
+  bool isAssignementOp() const { return sora::isAssignementOp(getOpKind()); }
   /// \returns true if \p op is a compound assignement operator
   bool isCompoundAssignementOp() const {
-    return sora::isCompoundAssignementOp(op);
+    return sora::isCompoundAssignementOp(getOpKind());
   }
 
   /// \returns the operator of a compound assignement. e.g. for AddAssign this
   /// returns Add.
   OpKind getOpForCompoundAssignementOp() const {
-    return sora::getOpForCompoundAssignementOp(op);
+    return sora::getOpForCompoundAssignementOp(getOpKind());
   }
 
   /// \returns the SourceLoc of the first token of the expression
@@ -542,20 +580,21 @@ public:
 
 private:
   Expr *subExpr;
-  OpKind op;
   SourceLoc opLoc;
 
 public:
-  UnaryExpr(OpKind op, SourceLoc opLoc, Expr *subExpr)
-      : Expr(ExprKind::Unary), subExpr(subExpr), op(op), opLoc(opLoc) {}
+  UnaryExpr(OpKind opKind, SourceLoc opLoc, Expr *subExpr)
+      : Expr(ExprKind::Unary), subExpr(subExpr), opLoc(opLoc) {
+    bits.unaryExpr.opKind = opKind;
+  }
 
   Expr *getSubExpr() const { return subExpr; }
   void setSubExpr(Expr *expr) { subExpr = expr; }
 
   SourceLoc getOpLoc() const { return opLoc; }
-  OpKind getOpKind() const { return op; }
+  OpKind getOpKind() const { return bits.unaryExpr.opKind; }
   /// \returns the spelling of the operator
-  const char *getOpSpelling() const { return getSpelling(op); }
+  const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }
 
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return opLoc; }

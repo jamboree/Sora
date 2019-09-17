@@ -92,8 +92,8 @@ APInt IntegerLiteralExpr::getRawValue() const {
 
 TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
                      SourceLoc rParenLoc)
-    : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
-      numElements(exprs.size()) {
+    : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
+  bits.tupleExpr.numElements = exprs.size();
   std::uninitialized_copy(exprs.begin(), exprs.end(),
                           getTrailingObjects<Expr *>());
 }
