@@ -28,11 +28,14 @@ TEST(SourceLocTest, compare) {
   auto a = SourceLoc::fromPointer(str);
   auto b = SourceLoc::fromPointer(str + 1);
 
-  EXPECT_EQ(a, a);
-  EXPECT_EQ(b, b);
-
-  EXPECT_NE(a, b);
-  EXPECT_NE(b, a);
+  EXPECT_TRUE(a == a);
+  EXPECT_TRUE(a != b);
+  EXPECT_TRUE(a < b);
+  EXPECT_TRUE(b > a);
+  EXPECT_TRUE(a <= b);
+  EXPECT_TRUE(b >= a);
+  EXPECT_TRUE(a <= a);
+  EXPECT_TRUE(a >= a);
 }
 
 /// Test that a default-constructed SourceRange is considered invalid.
