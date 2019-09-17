@@ -13,6 +13,7 @@
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <stdint.h>
 
@@ -34,8 +35,22 @@ class alignas(StmtAlignement) Stmt {
   void operator delete(void *)noexcept = delete;
 
   StmtKind kind;
+  /// Make use of the padding bits by allowing derived class to store data here.
+  /// NOTE: Derived classes are expected to initialize the bitfield themselves.
+  LLVM_PACKED(union Bits {
+    Bits() : raw() {}
+    // Raw bits (to zero-init the union)
+    char raw[7];
+    // BlockStmt bits
+    struct {
+      uint32_t numElements;
+    } blockStmt;
+  });
+  static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
+  Bits bits;
+
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
   void *operator new(size_t, void *mem) noexcept {
@@ -63,6 +78,9 @@ public:
   /// \return the kind of statement this is
   StmtKind getKind() const { return kind; }
 };
+
+/// Stmt should only be one pointer in size (kind + padding bits)
+static_assert(sizeof(Stmt) <= 8, "Stmt is too large!");
 
 /// Represents a simple "break" statement indicating that we can break out of
 /// the innermost loop.
@@ -149,10 +167,9 @@ public:
 class BlockStmt final : public Stmt,
                         private llvm::TrailingObjects<BlockStmt, ASTNode> {
   friend llvm::TrailingObjects<BlockStmt, ASTNode>;
-  size_t numTrailingObjects(OverloadToken<ASTNode>) { return numElem; }
+  size_t numTrailingObjects(OverloadToken<ASTNode>) { return getNumElements(); }
 
   SourceLoc lCurlyLoc, rCurlyLoc;
-  size_t numElem = 0;
 
   BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes, SourceLoc rCurlyLoc);
 
@@ -168,12 +185,12 @@ public:
   SourceLoc getLeftCurlyLoc() const { return lCurlyLoc; }
   SourceLoc getRightCurlyLoc() const { return rCurlyLoc; }
 
-  size_t getNumElements() const { return numElem; }
+  size_t getNumElements() const { return bits.blockStmt.numElements; }
   ArrayRef<ASTNode> getElements() const {
-    return {getTrailingObjects<ASTNode>(), numElem};
+    return {getTrailingObjects<ASTNode>(), getNumElements()};
   }
   MutableArrayRef<ASTNode> getElements() {
-    return {getTrailingObjects<ASTNode>(), numElem};
+    return {getTrailingObjects<ASTNode>(), getNumElements()};
   }
   ASTNode getElement(size_t n) const { return getElements()[n]; }
   void setElement(size_t n, ASTNode node) { getElements()[n] = node; }
