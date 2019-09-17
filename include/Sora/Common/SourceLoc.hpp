@@ -19,6 +19,10 @@ class SourceManager;
 /// Represents a source location which is generally the first char of a token.
 ///
 /// This is simply a wrapper around a llvm::SMLoc.
+///
+/// Comparison operators (>, >=, <=, <, ==, !=) can be used to compare the
+/// underyling pointers of 2 SourceLocs. Iff the SourceLocs come from the same
+/// buffer, this can be used to determine if a SourceLoc is before another one.
 class SourceLoc {
   friend class SourceManager;
 
@@ -61,6 +65,18 @@ public:
   /// \returns true if this SourceLoc is valid
   explicit operator bool() const { return isValid(); }
 
+  bool operator<(const SourceLoc other) const {
+    return value.getPointer() < other.value.getPointer();
+  }
+  bool operator<=(const SourceLoc other) const {
+    return value.getPointer() <= other.value.getPointer();
+  }
+  bool operator>(const SourceLoc other) const {
+    return value.getPointer() > other.value.getPointer();
+  }
+  bool operator>=(const SourceLoc other) const {
+    return value.getPointer() >= other.value.getPointer();
+  }
   bool operator==(const SourceLoc other) const { return value == other.value; }
   bool operator!=(const SourceLoc other) const { return value != other.value; }
 };
@@ -87,8 +103,9 @@ public:
   SourceRange(SourceLoc begin, SourceLoc end) : begin(begin), end(end) {
     assert(begin.isValid() == end.isValid() &&
            "begin & end should both be valid or invalid");
-    assert((begin.isValid() ? (begin.getPointer() <= end.getPointer()) : true) &&
-           "end > begin!");
+    assert(
+        (begin.isValid() ? (begin.getPointer() <= end.getPointer()) : true) &&
+        "end > begin!");
   }
 
   /// \returns true if this SourceRange is valid
