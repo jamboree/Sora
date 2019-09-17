@@ -132,8 +132,6 @@ Expr *TupleExpr::getElement(size_t n) { return getElements()[n]; }
 
 void TupleExpr::setElement(size_t n, Expr *expr) { getElements()[n] = expr; }
 
-#include <llvm/Support/raw_ostream.h>
-
 SourceLoc TupleExpr::getCommaLocForExpr(Expr *expr) const {
 #ifndef NDEBUG
   bool found = false;
