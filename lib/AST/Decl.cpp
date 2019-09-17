@@ -79,9 +79,12 @@ Type ValueDecl::getValueType() const {
   }
 }
 
-SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
-
-SourceLoc FuncDecl::getEndLoc() const { return body->getEndLoc(); }
+ParamList::ParamList(SourceLoc lParenLoc, ArrayRef<ParamDecl *> params,
+                     SourceLoc rParenloc)
+    : lParenLoc(lParenLoc), rParenloc(rParenloc), numParams(params.size()) {
+  std::uninitialized_copy(params.begin(), params.end(),
+                          getTrailingObjects<ParamDecl *>());
+}
 
 ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
                              ArrayRef<ParamDecl *> params,
@@ -91,3 +94,7 @@ ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
   void *mem = ctxt.allocate(size, alignof(ParamList));
   return new (mem) ParamList(lParenLoc, params, rParenLoc);
 }
+
+SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
+
+SourceLoc FuncDecl::getEndLoc() const { return body->getEndLoc(); }

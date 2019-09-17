@@ -120,6 +120,9 @@ class VarDecl final : public ValueDecl {
   TypeLoc tyLoc;
 
 public:
+  VarDecl(SourceLoc identifierLoc, Identifier identifier)
+      : ValueDecl(DeclKind::Var, identifierLoc, identifier) {}
+
   /// \returns the TypeLoc of the VarDecl.
   /// This may or may not have a valid TypeRepr (it won't have one
   /// if the type was inferred).
@@ -150,6 +153,11 @@ class ParamDecl final : public ValueDecl {
   SourceLoc colonLoc;
 
 public:
+  ParamDecl(SourceLoc identifierLoc, Identifier identifier, SourceLoc colonLoc,
+            TypeLoc typeLoc)
+      : ValueDecl(DeclKind::Param, identifierLoc, identifier), tyLoc(typeLoc),
+        colonLoc(colonLoc) {}
+
   /// \returns the TypeLoc of the ParamDecl's type.
   /// This should always have a valid TypeRepr*.
   /// The type should be valid after semantic analysis.
