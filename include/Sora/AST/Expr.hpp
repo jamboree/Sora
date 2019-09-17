@@ -361,7 +361,9 @@ public:
 
   /// Creates an empty TupleExpr.
   static TupleExpr *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
-                                SourceLoc rParenLoc);
+                                SourceLoc rParenLoc) {
+    return create(ctxt, lParenLoc, {}, rParenLoc);
+  }
 
   size_t getNumElements() const { return numElements; }
   MutableArrayRef<Expr *> getElements();

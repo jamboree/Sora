@@ -107,11 +107,6 @@ TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
   return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc);
 }
 
-TupleExpr *TupleExpr::createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
-                                  SourceLoc rParenLoc) {
-  return create(ctxt, lParenLoc, {}, rParenLoc);
-}
-
 MutableArrayRef<Expr *> TupleExpr::getElements() {
   return {getTrailingObjects<Expr *>(), getNumElements()};
 }
