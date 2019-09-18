@@ -379,13 +379,14 @@ class TupleExpr final : public Expr,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
   friend llvm::TrailingObjects<TupleExpr, Expr *>;
 
-  TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
-
-  size_t numTrailingObjects(OverloadToken<Expr *>) const {
-    return getNumElements();
-  }
-
   SourceLoc lParenLoc, rParenLoc;
+
+  TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc)
+      : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
+    bits.tupleExpr.numElements = exprs.size();
+    std::uninitialized_copy(exprs.begin(), exprs.end(),
+                            getTrailingObjects<Expr *>());
+  }
 
 public:
   /// Creates a TupleExpr with one or more element.

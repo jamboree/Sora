@@ -196,8 +196,6 @@ class ParamList final : private llvm::TrailingObjects<ParamList, ParamDecl *> {
     return mem;
   }
 
-  size_t numTrailingObjects(OverloadToken<ParamDecl *>) { return numParams; }
-
   SourceLoc lParenLoc, rParenloc;
   unsigned numParams = 0;
 

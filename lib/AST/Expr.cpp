@@ -90,14 +90,6 @@ APInt IntegerLiteralExpr::getRawValue() const {
   return result;
 }
 
-TupleExpr::TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs,
-                     SourceLoc rParenLoc)
-    : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
-  bits.tupleExpr.numElements = exprs.size();
-  std::uninitialized_copy(exprs.begin(), exprs.end(),
-                          getTrailingObjects<Expr *>());
-}
-
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
                              ArrayRef<Expr *> exprs, SourceLoc rParenLoc) {
   // Need manual memory allocation here because of trailing objects.

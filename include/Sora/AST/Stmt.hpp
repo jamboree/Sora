@@ -167,7 +167,6 @@ public:
 class BlockStmt final : public Stmt,
                         private llvm::TrailingObjects<BlockStmt, ASTNode> {
   friend llvm::TrailingObjects<BlockStmt, ASTNode>;
-  size_t numTrailingObjects(OverloadToken<ASTNode>) { return getNumElements(); }
 
   SourceLoc lCurlyLoc, rCurlyLoc;
 
