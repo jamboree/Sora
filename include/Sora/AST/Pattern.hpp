@@ -119,6 +119,27 @@ public:
   }
 };
 
+/// Represents a "mut" pattern which indicates that, in the following pattern,
+/// every variable introduced should be mutable.
+class MutPattern final : public Pattern {
+  SourceLoc mutLoc;
+  Pattern *subPattern = nullptr;
+
+public:
+  MutPattern(SourceLoc mutLoc, Pattern *subPattern)
+      : Pattern(PatternKind::Mut), mutLoc(mutLoc), subPattern(subPattern) {}
+
+  SourceLoc getMutLoc() const { return mutLoc; }
+  Pattern *getSubPattern() const { return subPattern; }
+
+  SourceLoc getBegLoc() const { return mutLoc; }
+  SourceLoc getEndLoc() const { return subPattern->getEndLoc(); }
+
+  static bool classof(const Pattern *pattern) {
+    return pattern->getKind() == PatternKind::Mut;
+  }
+};
+
 /// Represents a Tuple pattern, which is a group of 0 or more patterns
 /// in parentheses.
 class TuplePattern final

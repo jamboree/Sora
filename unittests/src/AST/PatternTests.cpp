@@ -53,7 +53,8 @@ TEST_F(PatternTest, getSourceRange) {
 
   // VarPattern
   {
-    Pattern *pattern = new (*ctxt) VarPattern(new (*ctxt) VarDecl(beg, Identifier()));
+    Pattern *pattern =
+        new (*ctxt) VarPattern(new (*ctxt) VarDecl(beg, Identifier()));
     EXPECT_EQ(beg, pattern->getBegLoc());
     EXPECT_EQ(beg, pattern->getLoc());
     EXPECT_EQ(beg, pattern->getEndLoc());
@@ -67,6 +68,16 @@ TEST_F(PatternTest, getSourceRange) {
     EXPECT_EQ(beg, pattern->getLoc());
     EXPECT_EQ(beg, pattern->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), pattern->getSourceRange());
+  }
+
+  // MutPattern
+  {
+    Pattern *pattern =
+        new (*ctxt) MutPattern(beg, new (*ctxt) DiscardPattern(end));
+    EXPECT_EQ(beg, pattern->getBegLoc());
+    EXPECT_EQ(beg, pattern->getLoc());
+    EXPECT_EQ(end, pattern->getEndLoc());
+    EXPECT_EQ(range, pattern->getSourceRange());
   }
 
   // TuplePattern
