@@ -36,7 +36,7 @@ class alignas(StmtAlignement) Stmt {
 
   StmtKind kind;
   /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfield themselves.
+  /// NOTE: Derived classes are expected to initialize the bitfields.
   LLVM_PACKED(union Bits {
     Bits() : raw() {}
     // Raw bits (to zero-init the union)
