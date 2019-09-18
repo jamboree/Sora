@@ -37,8 +37,22 @@ class alignas(DeclAlignement) Decl {
   void operator delete(void *)noexcept = delete;
 
   DeclKind kind;
+  /// Make use of the padding bits by allowing derived class to store data here.
+  /// NOTE: Derived classes are expected to initialize the bitfields.
+  LLVM_PACKED(union Bits {
+    Bits() : raw() {}
+    // Raw bits (to zero-init the union)
+    char raw[7];
+    // VarDecl bits
+    struct {
+      bool isMutable;
+    } varDecl;
+  });
+  static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
+  Bits bits;
+
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
   void *operator new(size_t, void *mem) noexcept {
@@ -66,6 +80,9 @@ public:
   /// \return the kind of declaration this is
   DeclKind getKind() const { return kind; }
 };
+
+/// Decl should only be one pointer in size (kind + padding bits)
+static_assert(sizeof(Decl) <= 8, "Decl is too large!");
 
 /// Base class for declarations that declare a value of some type with a given
 /// name.
@@ -121,8 +138,10 @@ class VarDecl final : public ValueDecl {
   TypeLoc tyLoc;
 
 public:
-  VarDecl(SourceLoc identifierLoc, Identifier identifier)
-      : ValueDecl(DeclKind::Var, identifierLoc, identifier) {}
+  VarDecl(SourceLoc identifierLoc, Identifier identifier, bool isMutable = false)
+      : ValueDecl(DeclKind::Var, identifierLoc, identifier) {
+    bits.varDecl.isMutable = isMutable;
+  }
 
   /// \returns the TypeLoc of the VarDecl.
   /// This may or may not have a valid TypeRepr (it won't have one
@@ -137,6 +156,9 @@ public:
 
   /// \returns the type this value has (the type of the variable)
   Type getValueType() const { return tyLoc.getType(); }
+
+  /// \returns true if the variable is mutable, false otherwise
+  bool isMutable() const { return bits.varDecl.isMutable; }
 
   /// \returns the SourceLoc of the first token of the declaration
   SourceLoc getBegLoc() const { return getIdentifierLoc(); }
