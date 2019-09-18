@@ -6,15 +6,15 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef TYPEREPR
-# define TYPEREPR(KIND)
+# define TYPEREPR(KIND, PARENT)
 #endif
 
 //===----------------------------------------------------------------------===//
 
 TYPEREPR(Identifier,	TypeRepr)
 TYPEREPR(Tuple,			TypeRepr)
-TYPEREPR(Reference,		TypeRepr)
-TYPEREPR(Pointer,		TypeRepr)
+//TYPEREPR(Reference,		TypeRepr)
+//TYPEREPR(Pointer,		TypeRepr)
 
 //===----------------------------------------------------------------------===//
 

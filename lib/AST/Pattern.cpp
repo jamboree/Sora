@@ -16,7 +16,7 @@ using namespace sora;
 /// Check that all patterns are trivially destructible. This is needed
 /// because, as they are allocated in the ASTContext's arenas, their destructors
 /// are never called.
-#define PATTERn(ID, PARENT)                                                    \
+#define PATTERN(ID, PARENT)                                                    \
   static_assert(std::is_trivially_destructible<ID##Pattern>::value,            \
                 #ID "Pattern is not trivially destructible.");
 #include "Sora/AST/PatternNodes.def"
