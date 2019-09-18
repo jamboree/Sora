@@ -5,11 +5,16 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef PATTERN(KIND)
-# define PATTERN(KIND)
+#ifndef PATTERN
+# define PATTERN(KIND, PARENT)
 #endif
 
 //===----------------------------------------------------------------------===//
+
+PATTERN(Var, Pattern)
+PATTERN(Tuple, Pattern)
+PATTERN(Discard, Pattern)
+// PATTERN(Typed, Pattern) // Needs TypeRepr
 
 //===----------------------------------------------------------------------===//
 

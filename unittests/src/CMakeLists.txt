@@ -4,6 +4,7 @@ add_source(unittest_src
   "AST/DeclTests.cpp"
   "AST/ExprTests.cpp"
   "AST/OperatorKindsTests.cpp"
+  "AST/PatternTests.cpp"
   "AST/StmtTests.cpp"
   "Common/DiagnosticConsumerTests.cpp"
   "Common/DiagnosticEngineTests.cpp"

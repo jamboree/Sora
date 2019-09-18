@@ -14,6 +14,7 @@ class Decl;
 class Expr;
 class Stmt;
 class TypeBase;
+class Pattern;
 
 // Declare the FreeLowBits and Alignment variables
 #define DECLARE(CLASS, FREE_BITS_DESIRED)                                      \
@@ -21,6 +22,7 @@ class TypeBase;
   constexpr std::size_t CLASS##Alignement = 1u << FREE_BITS_DESIRED##u
 
 DECLARE(TypeBase, 1);
+DECLARE(Pattern, 1);
 DECLARE(Expr, 3);
 DECLARE(Decl, 3);
 DECLARE(Stmt, 3);
@@ -41,6 +43,7 @@ template <class T> struct PointerLikeTypeTraits;
   }
 
 LLVM_DEFINE_PLTT(TypeBase);
+LLVM_DEFINE_PLTT(Pattern);
 LLVM_DEFINE_PLTT(Expr);
 LLVM_DEFINE_PLTT(Decl);
 LLVM_DEFINE_PLTT(Stmt);
