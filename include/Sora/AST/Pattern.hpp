@@ -65,6 +65,12 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Pattern));
 
+  /// Dumps this statement to \p out
+  void dump(raw_ostream &out, unsigned indent = 2);
+
+  /// \return the kind of patterns this is
+  PatternKind getKind() const { return kind; }
+
   /// \returns the SourceLoc of the first token of the pattern
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the pattern
@@ -74,9 +80,6 @@ public:
   SourceLoc getLoc() const;
   /// \returns the full range of this pattern
   SourceRange getSourceRange() const;
-
-  /// \return the kind of patterns this is
-  PatternKind getKind() const { return kind; }
 };
 
 /// We should only use 8 bytes (1 pointers) max in 64 bits mode because we only

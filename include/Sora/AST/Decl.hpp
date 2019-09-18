@@ -67,6 +67,12 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Decl));
 
+  /// Dumps this declaration to \p out
+  void dump(raw_ostream &out, unsigned indent = 2);
+
+  /// \return the kind of declaration this is
+  DeclKind getKind() const { return kind; }
+
   /// \returns the SourceLoc of the first token of the declaration
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the declaration
@@ -76,9 +82,6 @@ public:
   SourceLoc getLoc() const;
   /// \returns the full range of this declaration
   SourceRange getSourceRange() const;
-
-  /// \return the kind of declaration this is
-  DeclKind getKind() const { return kind; }
 };
 
 /// Decl should only be one pointer in size (kind + padding bits)
@@ -138,7 +141,8 @@ class VarDecl final : public ValueDecl {
   TypeLoc tyLoc;
 
 public:
-  VarDecl(SourceLoc identifierLoc, Identifier identifier, bool isMutable = false)
+  VarDecl(SourceLoc identifierLoc, Identifier identifier,
+          bool isMutable = false)
       : ValueDecl(DeclKind::Var, identifierLoc, identifier) {
     bits.varDecl.isMutable = isMutable;
   }

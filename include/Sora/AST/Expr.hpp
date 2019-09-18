@@ -81,16 +81,6 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Expr));
 
-  /// \returns the SourceLoc of the first token of the expression
-  SourceLoc getBegLoc() const;
-  /// \returns the SourceLoc of the last token of the expression
-  SourceLoc getEndLoc() const;
-  /// \returns the preffered SourceLoc for diagnostics. This is defaults to
-  /// getBegLoc but nodes can override it as they please.
-  SourceLoc getLoc() const;
-  /// \returns the full range of this expression
-  SourceRange getSourceRange() const;
-
   void setImplicit(bool implicit = true) { typeAndIsImplicit.setInt(implicit); }
   bool isImplicit() const { return typeAndIsImplicit.getInt(); }
 
@@ -108,8 +98,21 @@ public:
     return const_cast<Expr *>(this)->ignoreParens();
   }
 
+  /// Dumps this expression to \p out
+  void dump(raw_ostream &out, unsigned indent = 2);
+
   /// \return the kind of expression this is
   ExprKind getKind() const { return kind; }
+
+  /// \returns the SourceLoc of the first token of the expression
+  SourceLoc getBegLoc() const;
+  /// \returns the SourceLoc of the last token of the expression
+  SourceLoc getEndLoc() const;
+  /// \returns the preffered SourceLoc for diagnostics. This is defaults to
+  /// getBegLoc but nodes can override it as they please.
+  SourceLoc getLoc() const;
+  /// \returns the full range of this expression
+  SourceRange getSourceRange() const;
 };
 
 /// We should only use 16 bytes (2 pointers) max in 64 bits mode.

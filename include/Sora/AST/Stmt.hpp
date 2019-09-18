@@ -65,6 +65,12 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Stmt));
 
+  /// Dumps this statement to \p out
+  void dump(raw_ostream &out, unsigned indent = 2);
+
+  /// \return the kind of statement this is
+  StmtKind getKind() const { return kind; }
+
   /// \returns the SourceLoc of the first token of the statement
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the statement
@@ -74,9 +80,6 @@ public:
   SourceLoc getLoc() const;
   /// \returns the full range of this statement
   SourceRange getSourceRange() const;
-
-  /// \return the kind of statement this is
-  StmtKind getKind() const { return kind; }
 };
 
 /// Stmt should only be one pointer in size (kind + padding bits)
