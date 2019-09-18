@@ -7,6 +7,8 @@
 
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/Expr.hpp"
+#include "Sora/AST/Pattern.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
@@ -45,6 +47,13 @@ TEST_F(DeclTest, rtti) {
     EXPECT_TRUE(isa<FuncDecl>(decl));
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
+
+  // LetDecl
+  {
+    Decl *decl = LetDecl::create(*ctxt, SourceLoc(), nullptr);
+    EXPECT_TRUE(isa<LetDecl>(decl));
+    EXPECT_TRUE(isa<PatternBindingDecl>(decl));
+  }
 }
 
 TEST_F(DeclTest, getSourceRange) {
@@ -79,4 +88,37 @@ TEST_F(DeclTest, getSourceRange) {
     EXPECT_EQ(end, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
   }
+
+  // LetDecl
+  {
+    Decl *decl = LetDecl::create(*ctxt, beg, new (*ctxt) DiscardPattern(end));
+    EXPECT_EQ(beg, decl->getBegLoc());
+    EXPECT_EQ(end, decl->getEndLoc());
+    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
+    decl = LetDecl::create(*ctxt, beg, nullptr, SourceLoc(),
+                           new (*ctxt) DiscardExpr(end));
+    EXPECT_EQ(beg, decl->getBegLoc());
+    EXPECT_EQ(end, decl->getEndLoc());
+    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
+  }
+}
+
+/// Add some tests exclusive to PBD & derived classes because it has some
+/// special features.
+TEST_F(DeclTest, PatternBindingDecl) {
+  SourceLoc loc = SourceLoc::fromPointer("");
+
+  Expr *expr = new (*ctxt) DiscardExpr(SourceLoc());
+  PatternBindingDecl *pbd =
+      LetDecl::create(*ctxt, SourceLoc(), nullptr, loc, expr);
+
+  EXPECT_TRUE(pbd->hasInitializer());
+  EXPECT_EQ(pbd->getInitializer(), expr);
+  EXPECT_EQ(pbd->getEqualLoc(), loc);
+
+  pbd = LetDecl::create(*ctxt, SourceLoc(), nullptr, loc);
+
+  EXPECT_FALSE(pbd->hasInitializer());
+  EXPECT_EQ(pbd->getInitializer(), nullptr);
+  EXPECT_EQ(pbd->getEqualLoc(), SourceLoc());
 }

@@ -13,6 +13,7 @@
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <stdint.h>
@@ -260,4 +261,123 @@ public:
     return decl->getKind() == DeclKind::Func;
   }
 };
+
+template <typename Derived>
+using PatternBindingDeclTrailingObjects =
+    llvm::TrailingObjects<Derived, SourceLoc, Expr *>;
+
+/// Common base for declarations that contain a pattern and a potential
+/// initializer expression (with an equal sign in between).
+///
+/// examples:
+/// \verbatim
+///   a = 0
+//    a
+///   a : i32 = 0
+///   (a, b) = (0, 1)
+///   a : i64
+///   mut a
+/// \endverbatim
+///
+/// As an implementation detail, the SourceLoc of the "=" and the Expr*
+/// pointer are trail-allocated in order to optimize storage for declarations
+/// that don't have an initializer. This means that all derived classes
+/// must privately inherit from PatternBindingDeclTrailingObjects and
+/// use static factory methods. The derived class don't need to implement
+/// numTrailingObjects or interact with their trailing objects, but they
+/// do need to friend both PatternBindingDeclTrailingObjects and
+/// PatternBindingDecl.
+class PatternBindingDecl
+    : public Decl,
+      private llvm::trailing_objects_internal::TrailingObjectsBase {
+  /// The Pattern* + a flag indicating if we have an initializer or not.
+  llvm::PointerIntPair<Pattern *, 1, bool> patternAndHasInit;
+
+  template <typename Type> Type *getDerivedTrailingObjects();
+
+  template <typename Type> const Type *getDerivedTrailingObjects() const {
+    return const_cast<PatternBindingDecl *>(this)
+        ->getDerivedTrailingObjects<Type>();
+  }
+
+protected:
+  size_t numTrailingObjects(OverloadToken<SourceLoc>) const {
+    return hasInitializer() ? 1 : 0;
+  }
+
+  /// Creates A PBD.
+  /// If the PBD has an initializer, \p init must not be nullptr.
+  /// Please note that if init is nullptr, \p equalLoc will not be stored.
+  PatternBindingDecl(DeclKind kind, Pattern *pattern,
+                     SourceLoc equalLoc = SourceLoc(), Expr *init = nullptr)
+      : Decl(kind), patternAndHasInit(pattern, init != nullptr) {
+    if (hasInitializer()) {
+      *getDerivedTrailingObjects<SourceLoc>() = equalLoc;
+      *getDerivedTrailingObjects<Expr *>() = init;
+    }
+  }
+
+public:
+  /// \returns true if we have an initializer
+  bool hasInitializer() const { return patternAndHasInit.getInt(); }
+
+  /// \returns the Pattern
+  Pattern *getPattern() const { return patternAndHasInit.getPointer(); }
+
+  /// \returns the SourceLoc of the equal sign if we have an initializer,
+  /// SourceLoc() if we don't.
+  SourceLoc getEqualLoc() const {
+    return hasInitializer() ? *getDerivedTrailingObjects<SourceLoc>()
+                            : SourceLoc();
+  }
+
+  /// \returns the initializer if present, nullptr otherwise.
+  Expr *getInitializer() const {
+    return hasInitializer() ? *getDerivedTrailingObjects<Expr *>() : nullptr;
+  }
+
+  static bool classof(const Decl *decl) {
+    return decl->getKind() >= DeclKind::First_PatternBinding &&
+           decl->getKind() <= DeclKind::Last_PatternBinding;
+  }
+}; // namespace sora
+
+/// Represents a "let" declaration.
+/// A "let" declaration consists of the "let" keyword, a pattern and
+/// an optional initializer.
+class LetDecl final : public PatternBindingDecl,
+                      private PatternBindingDeclTrailingObjects<LetDecl> {
+  friend PatternBindingDeclTrailingObjects<LetDecl>;
+  friend PatternBindingDecl;
+
+  SourceLoc letLoc;
+
+  LetDecl(SourceLoc letLoc, Pattern *pattern, SourceLoc equalLoc, Expr *init)
+      : PatternBindingDecl(DeclKind::Let, pattern, equalLoc, init),
+        letLoc(letLoc) {}
+
+public:
+  /// Creates a "let" declaration.
+  /// If it has an initializer, \p init must not be nullptr.
+  /// If it doesn't have one, both equalLoc and init can be left empty.
+  /// Please note that if init is nullptr, \p equalLoc will not be stored.
+  static LetDecl *create(ASTContext &ctxt, SourceLoc letLoc, Pattern *pattern,
+                         SourceLoc equalLoc = SourceLoc(),
+                         Expr *init = nullptr);
+
+  SourceLoc getLetLoc() const { return letLoc; }
+
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
+
+  static bool classof(const Decl *decl) {
+    return decl->getKind() == DeclKind::Let;
+  }
+};
+
+template <typename Type> Type *PatternBindingDecl::getDerivedTrailingObjects() {
+  if (auto let = dyn_cast<LetDecl>(this))
+    return let->getTrailingObjects<Type>();
+  llvm_unreachable("Unhandled PatternBindingDecl?");
+}
 } // namespace sora

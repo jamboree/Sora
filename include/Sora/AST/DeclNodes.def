@@ -30,11 +30,10 @@ ABSTRACT_DECL(Value, Decl)
   VALUE_DECL(Func, ValueDecl)
   DECL_RANGE(Value, Var, Func)
 
-/*
+
 ABSTRACT_DECL(PatternBinding, Decl)
   DECL(Let, Decl)
   DECL_RANGE(PatternBinding, Let, Let)
-*/
 
 //===----------------------------------------------------------------------===//
 

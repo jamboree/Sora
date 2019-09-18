@@ -8,6 +8,8 @@
 #include "Sora/AST/Decl.hpp"
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Expr.hpp"
+#include "Sora/AST/Pattern.hpp"
 #include "Sora/AST/Stmt.hpp"
 
 using namespace sora;
@@ -98,3 +100,19 @@ ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
 SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
 
 SourceLoc FuncDecl::getEndLoc() const { return body->getEndLoc(); }
+
+SourceLoc LetDecl::getBegLoc() const { return letLoc; }
+
+SourceLoc LetDecl::getEndLoc() const {
+  if (hasInitializer())
+    return getInitializer()->getEndLoc();
+  return getPattern()->getEndLoc();
+}
+
+LetDecl *LetDecl::create(ASTContext &ctxt, SourceLoc letLoc, Pattern *pattern,
+                         SourceLoc equalLoc, Expr *init) {
+  // Need manual memory allocation here because of trailing objects.
+  auto size = totalSizeToAlloc<SourceLoc, Expr *>(init ? 1 : 0, init ? 1 : 0);
+  void *mem = ctxt.allocate(size, alignof(LetDecl));
+  return new (mem) LetDecl(letLoc, pattern, equalLoc, init);
+}
