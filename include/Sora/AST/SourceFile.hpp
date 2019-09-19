@@ -20,14 +20,13 @@ class Decl;
 class alignas(SourceFileAlignement) SourceFile final {
   Identifier identifier;
   SmallVector<Decl *, 4> members;
-  ASTContext &ctxt;
 
 public:
-  /// \param ctxt the ASTContext in which members of this source file are
+  /// \param astContext the ASTContext in which members of this source file are
   ///             allocated.
   /// \param identifier the identifier (name) of this source file
-  SourceFile(ASTContext &ctxt, Identifier identifier)
-      : identifier(identifier), ctxt(ctxt) {}
+  SourceFile(ASTContext &astContext, Identifier identifier)
+      : identifier(identifier), astContext(astContext) {}
 
   /// \returns the identifier (name) of this source file
   Identifier getIdentifier() const { return identifier; }
@@ -35,7 +34,7 @@ public:
   ArrayRef<Decl *> getMembers() const { return members; }
   /// Adds a member to this source file
   void addMember(Decl *decl) { return members.push_back(decl); }
-  /// \returns the ASTContext in which members of this SourceFile are allocated.
-  ASTContext &getASTContext() const { return ctxt; }
+
+  ASTContext &astContext;
 };
 } // namespace sora
