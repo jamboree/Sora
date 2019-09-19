@@ -66,7 +66,7 @@ public:
                      unsigned align = alignof(Pattern));
 
   /// Dumps this statement to \p out
-  void dump(raw_ostream &out, unsigned indent = 2);
+  void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);
 
   /// \return the kind of patterns this is
   PatternKind getKind() const { return kind; }

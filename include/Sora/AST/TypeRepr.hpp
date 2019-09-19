@@ -71,6 +71,9 @@ public:
   /// \return the kind of TypeRepr this is
   TypeReprKind getKind() const { return kind; }
 
+  /// Dumps this TypeRepr to \p out
+  void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);
+
   /// \returns the SourceLoc of the first token of the TypeRepr
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the TypeRepr
