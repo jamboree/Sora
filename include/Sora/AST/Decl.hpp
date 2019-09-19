@@ -277,6 +277,8 @@ public:
   /// \returns the type this value has (the type of the function)
   Type getValueType() const { return type; }
 
+  SourceLoc getFuncLoc() const { return funcLoc; }
+
   /// \returns the SourceLoc of the first token of the declaration
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the declaration
