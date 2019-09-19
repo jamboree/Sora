@@ -252,6 +252,9 @@ public:
   iterator begin() const { return getParams().begin(); }
   iterator end() const { return getParams().end(); }
 
+  SourceLoc getLParenLoc() const { return lParenLoc; }
+  SourceLoc getRParenLoc() const { return rParenloc; }
+
   SourceLoc getBegLoc() const { return lParenLoc; }
   SourceLoc getEndLoc() const { return rParenloc; }
   SourceRange getSourceRange() const { return {lParenLoc, rParenloc}; }
@@ -260,7 +263,7 @@ public:
 /// "func" declarations - function declarations
 class FuncDecl final : public ValueDecl {
   SourceLoc funcLoc;
-  ParamList *params = nullptr;
+  ParamList *paramList = nullptr;
   BlockStmt *body = nullptr;
   Type type;
 
@@ -271,8 +274,8 @@ public:
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
 
-  ParamList *getParams() const { return params; }
-  void setParams(ParamList *params) { this->params = params; }
+  ParamList *getParamList() const { return paramList; }
+  void setParamList(ParamList *params) { this->paramList = params; }
 
   /// \returns the type this value has (the type of the function)
   Type getValueType() const { return type; }
