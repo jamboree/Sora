@@ -15,6 +15,7 @@ class Expr;
 class Stmt;
 class TypeBase;
 class TypeRepr;
+class SourceFile;
 class Pattern;
 
 // Declare the FreeLowBits and Alignment variables
@@ -27,6 +28,7 @@ DECLARE(TypeRepr, 1);
 DECLARE(Pattern, 1);
 DECLARE(Expr, 3);
 DECLARE(Decl, 3);
+DECLARE(SourceFile, 3);
 DECLARE(Stmt, 3);
 #undef DECLARE
 } // namespace sora
@@ -49,6 +51,7 @@ LLVM_DEFINE_PLTT(TypeRepr);
 LLVM_DEFINE_PLTT(Pattern);
 LLVM_DEFINE_PLTT(Expr);
 LLVM_DEFINE_PLTT(Decl);
+LLVM_DEFINE_PLTT(SourceFile);
 LLVM_DEFINE_PLTT(Stmt);
 
 #undef LLVM_DEFINE_PLTT

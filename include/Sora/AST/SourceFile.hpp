@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -16,7 +17,7 @@ namespace sora {
 class Decl;
 
 /// Represents a single source file, and keeps track of its name and members.
-class SourceFile final {
+class alignas(SourceFileAlignement) SourceFile final {
   Identifier identifier;
   SmallVector<Decl *, 4> members;
   ASTContext &ctxt;
