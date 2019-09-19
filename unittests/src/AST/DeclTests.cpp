@@ -29,28 +29,28 @@ protected:
 TEST_F(DeclTest, rtti) {
   // VarDecl
   {
-    Decl *decl = new (*ctxt) VarDecl({}, {});
+    Decl *decl = new (*ctxt) VarDecl(nullptr, {}, {});
     EXPECT_TRUE(isa<VarDecl>(decl));
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
 
   // ParamDecl
   {
-    Decl *decl = new (*ctxt) ParamDecl({}, {}, {}, TypeLoc());
+    Decl *decl = new (*ctxt) ParamDecl(nullptr, {}, {}, {}, TypeLoc());
     EXPECT_TRUE(isa<ParamDecl>(decl));
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
 
   // FuncDecl
   {
-    Decl *decl = new (*ctxt) FuncDecl({}, {}, {});
+    Decl *decl = new (*ctxt) FuncDecl(nullptr, {}, {}, {});
     EXPECT_TRUE(isa<FuncDecl>(decl));
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
 
   // LetDecl
   {
-    Decl *decl = LetDecl::create(*ctxt, {}, nullptr);
+    Decl *decl = LetDecl::create(*ctxt, nullptr, {}, nullptr);
     EXPECT_TRUE(isa<LetDecl>(decl));
     EXPECT_TRUE(isa<PatternBindingDecl>(decl));
   }
@@ -64,7 +64,7 @@ TEST_F(DeclTest, getSourceRange) {
 
   // VarDecl
   {
-    Decl *decl = new (*ctxt) VarDecl(beg, {});
+    Decl *decl = new (*ctxt) VarDecl(nullptr, beg, {});
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(beg, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, beg), decl->getSourceRange());
@@ -72,8 +72,9 @@ TEST_F(DeclTest, getSourceRange) {
 
   // ParamDecl
   {
-    Decl *decl = new (*ctxt) ParamDecl(
-        beg, {}, {}, TypeLoc(Type(), new (*ctxt) IdentifierTypeRepr(end, {})));
+    Decl *decl = new (*ctxt)
+        ParamDecl(nullptr, beg, {}, {},
+                  TypeLoc(Type(), new (*ctxt) IdentifierTypeRepr(end, {})));
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
@@ -81,7 +82,7 @@ TEST_F(DeclTest, getSourceRange) {
 
   // FuncDecl
   {
-    Decl *decl = new (*ctxt) FuncDecl(beg, {}, {});
+    Decl *decl = new (*ctxt) FuncDecl(nullptr, beg, {}, {});
     cast<FuncDecl>(decl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
@@ -90,12 +91,13 @@ TEST_F(DeclTest, getSourceRange) {
 
   // LetDecl
   {
-    Decl *decl = LetDecl::create(*ctxt, beg, new (*ctxt) DiscardPattern(end));
+    Decl *decl =
+        LetDecl::create(*ctxt, nullptr, beg, new (*ctxt) DiscardPattern(end));
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
-    decl =
-        LetDecl::create(*ctxt, beg, nullptr, {}, new (*ctxt) DiscardExpr(end));
+    decl = LetDecl::create(*ctxt, nullptr, beg, nullptr, {},
+                           new (*ctxt) DiscardExpr(end));
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
@@ -108,13 +110,14 @@ TEST_F(DeclTest, PatternBindingDecl) {
   SourceLoc loc = SourceLoc::fromPointer("");
 
   Expr *expr = new (*ctxt) DiscardExpr({});
-  PatternBindingDecl *pbd = LetDecl::create(*ctxt, {}, nullptr, loc, expr);
+  PatternBindingDecl *pbd =
+      LetDecl::create(*ctxt, nullptr, {}, nullptr, loc, expr);
 
   EXPECT_TRUE(pbd->hasInitializer());
   EXPECT_EQ(pbd->getInitializer(), expr);
   EXPECT_EQ(pbd->getEqualLoc(), loc);
 
-  pbd = LetDecl::create(*ctxt, {}, nullptr, loc);
+  pbd = LetDecl::create(*ctxt, nullptr, {}, nullptr, loc);
 
   EXPECT_FALSE(pbd->hasInitializer());
   EXPECT_EQ(pbd->getInitializer(), nullptr);

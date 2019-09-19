@@ -59,7 +59,8 @@ TEST_F(PatternTest, getSourceRange) {
 
   // VarPattern
   {
-    Pattern *pattern = new (*ctxt) VarPattern(new (*ctxt) VarDecl(beg, {}));
+    Pattern *pattern =
+        new (*ctxt) VarPattern(new (*ctxt) VarDecl(nullptr, beg, {}));
     EXPECT_EQ(beg, pattern->getBegLoc());
     EXPECT_EQ(beg, pattern->getLoc());
     EXPECT_EQ(beg, pattern->getEndLoc());

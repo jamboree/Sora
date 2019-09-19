@@ -14,6 +14,7 @@
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <stdint.h>
@@ -30,12 +31,20 @@ enum class DeclKind : uint8_t {
 #include "Sora/AST/DeclNodes.def"
 };
 
+/// The type of the parent of a declaration
+using DeclParent = llvm::PointerUnion<Decl *, SourceFile *>;
+
 /// Base class for every Declaration node.
+///
+/// Declarations all have parents, forming a linked-list between declarations.
+/// The last element of the list should always be the SourceFile in which the
+/// declarations belong.
 class alignas(DeclAlignement) Decl {
   // Disable vanilla new/delete for declarations
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
+  DeclParent parent;
   DeclKind kind;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfields.
@@ -60,12 +69,14 @@ protected:
     return mem;
   }
 
-  Decl(DeclKind kind) : kind(kind) {}
+  Decl(DeclKind kind, DeclParent parent) : kind(kind) {}
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Decl));
+
+  DeclParent getParent() const { return parent; }
 
   /// Dumps this declaration to \p out
   /// TODO: Remove srcMgr once we get access to ASTContext from all decls
@@ -86,8 +97,8 @@ public:
   SourceRange getSourceRange() const;
 };
 
-/// Decl should only be one pointer in size (kind + padding bits)
-static_assert(sizeof(Decl) <= 8, "Decl is too large!");
+/// Decl should be 2 pointers in size: parent + kind + padding bits
+static_assert(sizeof(Decl) <= 16, "Decl is too large!");
 
 /// Base class for declarations that declare a value of some type with a given
 /// name.
@@ -103,8 +114,10 @@ class ValueDecl : public Decl {
   Identifier identifier;
 
 protected:
-  ValueDecl(DeclKind kind, SourceLoc identifierLoc, Identifier identifier)
-      : Decl(kind), identifierLoc(identifierLoc), identifier(identifier) {}
+  ValueDecl(DeclKind kind, DeclParent parent, SourceLoc identifierLoc,
+            Identifier identifier)
+      : Decl(kind, parent), identifierLoc(identifierLoc),
+        identifier(identifier) {}
 
 public:
   /// \returns the identifier (name) of this decl
@@ -143,9 +156,9 @@ class VarDecl final : public ValueDecl {
   TypeLoc tyLoc;
 
 public:
-  VarDecl(SourceLoc identifierLoc, Identifier identifier,
+  VarDecl(DeclParent parent, SourceLoc identifierLoc, Identifier identifier,
           bool isMutable = false)
-      : ValueDecl(DeclKind::Var, identifierLoc, identifier) {
+      : ValueDecl(DeclKind::Var, parent, identifierLoc, identifier) {
     bits.varDecl.isMutable = isMutable;
   }
 
@@ -182,10 +195,10 @@ class ParamDecl final : public ValueDecl {
   SourceLoc colonLoc;
 
 public:
-  ParamDecl(SourceLoc identifierLoc, Identifier identifier, SourceLoc colonLoc,
-            TypeLoc typeLoc)
-      : ValueDecl(DeclKind::Param, identifierLoc, identifier), tyLoc(typeLoc),
-        colonLoc(colonLoc) {}
+  ParamDecl(DeclParent parent, SourceLoc identifierLoc, Identifier identifier,
+            SourceLoc colonLoc, TypeLoc typeLoc)
+      : ValueDecl(DeclKind::Param, parent, identifierLoc, identifier),
+        tyLoc(typeLoc), colonLoc(colonLoc) {}
 
   /// \returns the TypeLoc of the ParamDecl's type.
   /// This should always have a valid TypeRepr*.
@@ -268,8 +281,9 @@ class FuncDecl final : public ValueDecl {
   Type type;
 
 public:
-  FuncDecl(SourceLoc funcLoc, SourceLoc identLoc, Identifier ident)
-      : ValueDecl(DeclKind::Func, identLoc, ident), funcLoc(funcLoc) {}
+  FuncDecl(DeclParent parent, SourceLoc funcLoc, SourceLoc identLoc,
+           Identifier ident)
+      : ValueDecl(DeclKind::Func, parent, identLoc, ident), funcLoc(funcLoc) {}
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
@@ -339,9 +353,9 @@ protected:
   /// Creates A PBD.
   /// If the PBD has an initializer, \p init must not be nullptr.
   /// Please note that if init is nullptr, \p equalLoc will not be stored.
-  PatternBindingDecl(DeclKind kind, Pattern *pattern,
+  PatternBindingDecl(DeclKind kind, DeclParent parent, Pattern *pattern,
                      SourceLoc equalLoc = SourceLoc(), Expr *init = nullptr)
-      : Decl(kind), patternAndHasInit(pattern, init != nullptr) {
+      : Decl(kind, parent), patternAndHasInit(pattern, init != nullptr) {
     if (hasInitializer()) {
       *getDerivedTrailingObjects<SourceLoc>() = equalLoc;
       *getDerivedTrailingObjects<Expr *>() = init;
@@ -383,8 +397,9 @@ class LetDecl final : public PatternBindingDecl,
 
   SourceLoc letLoc;
 
-  LetDecl(SourceLoc letLoc, Pattern *pattern, SourceLoc equalLoc, Expr *init)
-      : PatternBindingDecl(DeclKind::Let, pattern, equalLoc, init),
+  LetDecl(DeclParent parent, SourceLoc letLoc, Pattern *pattern,
+          SourceLoc equalLoc, Expr *init)
+      : PatternBindingDecl(DeclKind::Let, parent, pattern, equalLoc, init),
         letLoc(letLoc) {}
 
 public:
@@ -392,7 +407,7 @@ public:
   /// If it has an initializer, \p init must not be nullptr.
   /// If it doesn't have one, both equalLoc and init can be left empty.
   /// Please note that if init is nullptr, \p equalLoc will not be stored.
-  static LetDecl *create(ASTContext &ctxt, SourceLoc letLoc, Pattern *pattern,
+  static LetDecl *create(ASTContext &ctxt, DeclParent parent, SourceLoc letLoc, Pattern *pattern,
                          SourceLoc equalLoc = SourceLoc(),
                          Expr *init = nullptr);
 
