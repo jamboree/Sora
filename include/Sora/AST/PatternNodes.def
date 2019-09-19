@@ -15,7 +15,7 @@ PATTERN(Var, Pattern)
 PATTERN(Discard, Pattern)
 PATTERN(Mut, Pattern)
 PATTERN(Tuple, Pattern)
-// PATTERN(Typed, Pattern) // Needs TypeRepr
+PATTERN(Typed, Pattern)
 
 //===----------------------------------------------------------------------===//
 

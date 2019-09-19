@@ -8,6 +8,7 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Pattern.hpp"
+#include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "gtest/gtest.h"
@@ -32,15 +33,20 @@ TEST_F(PatternTest, rtti) {
 
   // DiscardPattern
   {
-    Pattern *pattern = new (*ctxt) DiscardPattern(SourceLoc());
+    Pattern *pattern = new (*ctxt) DiscardPattern({});
     EXPECT_TRUE(isa<DiscardPattern>(pattern));
   }
 
   // TuplePattern
   {
-    Pattern *pattern =
-        TuplePattern::createEmpty(*ctxt, SourceLoc(), SourceLoc());
+    Pattern *pattern = TuplePattern::createEmpty(*ctxt, {}, {});
     EXPECT_TRUE(isa<TuplePattern>(pattern));
+  }
+
+  // TypedPattern
+  {
+    Pattern *pattern = new (*ctxt) TypedPattern(nullptr, {}, nullptr);
+    EXPECT_TRUE(isa<TypedPattern>(pattern));
   }
 }
 
@@ -53,8 +59,7 @@ TEST_F(PatternTest, getSourceRange) {
 
   // VarPattern
   {
-    Pattern *pattern =
-        new (*ctxt) VarPattern(new (*ctxt) VarDecl(beg, Identifier()));
+    Pattern *pattern = new (*ctxt) VarPattern(new (*ctxt) VarDecl(beg, {}));
     EXPECT_EQ(beg, pattern->getBegLoc());
     EXPECT_EQ(beg, pattern->getLoc());
     EXPECT_EQ(beg, pattern->getEndLoc());
@@ -83,6 +88,17 @@ TEST_F(PatternTest, getSourceRange) {
   // TuplePattern
   {
     Pattern *pattern = TuplePattern::createEmpty(*ctxt, beg, end);
+    EXPECT_EQ(beg, pattern->getBegLoc());
+    EXPECT_EQ(beg, pattern->getLoc());
+    EXPECT_EQ(end, pattern->getEndLoc());
+    EXPECT_EQ(range, pattern->getSourceRange());
+  }
+
+  // TuplePattern
+  {
+    Pattern *pattern =
+        new (*ctxt) TypedPattern(new (*ctxt) DiscardPattern(beg), SourceLoc(),
+                                 new (*ctxt) IdentifierTypeRepr(end, {}));
     EXPECT_EQ(beg, pattern->getBegLoc());
     EXPECT_EQ(beg, pattern->getLoc());
     EXPECT_EQ(end, pattern->getEndLoc());

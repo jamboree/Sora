@@ -9,6 +9,7 @@
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/TypeRepr.hpp"
 #include <type_traits>
 
 using namespace sora;
@@ -86,3 +87,7 @@ TuplePattern *TuplePattern::create(ASTContext &ctxt, SourceLoc lParenLoc,
   void *mem = ctxt.allocate(size, alignof(TuplePattern));
   return new (mem) TuplePattern(lParenLoc, patterns, rParenLoc);
 }
+
+SourceLoc TypedPattern::getBegLoc() const { return subPattern->getBegLoc(); }
+
+SourceLoc TypedPattern::getEndLoc() const { return typeRepr->getEndLoc(); }

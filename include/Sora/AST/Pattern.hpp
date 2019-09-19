@@ -191,4 +191,33 @@ public:
     return pattern->getKind() == PatternKind::Tuple;
   }
 };
+
+/// Represents a "typed" pattern, which is a pattern followed by a type
+/// annotation
+///
+/// \verbatim
+///   a : i32
+///   (a, b) : (i32, i32)
+/// \endverbatim
+class TypedPattern final : public Pattern {
+  SourceLoc colonLoc;
+  Pattern *subPattern;
+  TypeRepr *typeRepr;
+
+public:
+  TypedPattern(Pattern *subPattern, SourceLoc colonLoc, TypeRepr *typeRepr)
+      : Pattern(PatternKind::Typed), colonLoc(colonLoc), subPattern(subPattern),
+        typeRepr(typeRepr) {}
+
+  Pattern *getSubPattern() const { return subPattern; }
+  TypeRepr *getTypeRepr() const { return typeRepr; }
+  SourceLoc getColonLoc() const { return colonLoc; }
+
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
+
+  static bool classof(const Pattern *pattern) {
+    return pattern->getKind() == PatternKind::Typed;
+  }
+};
 } // namespace sora
