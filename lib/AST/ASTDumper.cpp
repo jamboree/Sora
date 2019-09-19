@@ -99,6 +99,8 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   /// PrintBase methods indent the output stream and print basic information
   /// about a class.
 
+  /// Dumps basic information about a Decl.
+  /// For ValueDecls, this dumps their type, identifier and identifier location.
   void dumpCommon(Decl *decl) {
     out.indent(curIndent);
     out << getKindStr(decl->getKind());
@@ -121,6 +123,10 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   void dumpCommon(Expr *expr) {
     out.indent(curIndent);
     out << getKindStr(expr->getKind());
+    if (expr->isImplicit())
+      out << " implicit";
+    out << ' ';
+    dumpType(expr->getType(), "type");
   }
 
   void dumpCommon(Stmt *stmt) {
