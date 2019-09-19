@@ -97,7 +97,7 @@ TEST_F(PatternTest, getSourceRange) {
   // TuplePattern
   {
     Pattern *pattern =
-        new (*ctxt) TypedPattern(new (*ctxt) DiscardPattern(beg), SourceLoc(),
+        new (*ctxt) TypedPattern(new (*ctxt) DiscardPattern(beg), {},
                                  new (*ctxt) IdentifierTypeRepr(end, {}));
     EXPECT_EQ(beg, pattern->getBegLoc());
     EXPECT_EQ(beg, pattern->getLoc());

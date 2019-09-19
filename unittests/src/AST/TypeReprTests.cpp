@@ -26,20 +26,20 @@ TEST_F(TypeReprTest, rtti) {
   // IdentifierTypeRepr
   {
     TypeRepr *tyRepr =
-        new (*ctxt) IdentifierTypeRepr(SourceLoc(), Identifier());
+        new (*ctxt) IdentifierTypeRepr({}, {});
     EXPECT_TRUE(isa<IdentifierTypeRepr>(tyRepr));
   }
 
   // TupleTypeRepr
   {
     TypeRepr *tyRepr =
-        TupleTypeRepr::createEmpty(*ctxt, SourceLoc(), SourceLoc());
+        TupleTypeRepr::createEmpty(*ctxt, {}, {});
     EXPECT_TRUE(isa<TupleTypeRepr>(tyRepr));
   }
 
   // PointerTypeRepr
   {
-    TypeRepr *tyRepr = new (*ctxt) PointerTypeRepr(SourceLoc(), nullptr);
+    TypeRepr *tyRepr = new (*ctxt) PointerTypeRepr({}, nullptr);
     EXPECT_TRUE(isa<PointerTypeRepr>(tyRepr));
   }
 }
@@ -52,7 +52,7 @@ TEST_F(TypeReprTest, getSourceRange) {
 
   // IdentifierTypeRepr
   {
-    TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(beg, Identifier());
+    TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
     EXPECT_EQ(beg, tyRepr->getBegLoc());
     EXPECT_EQ(beg, tyRepr->getLoc());
     EXPECT_EQ(beg, tyRepr->getEndLoc());
@@ -71,7 +71,7 @@ TEST_F(TypeReprTest, getSourceRange) {
   // TupleTypeRepr
   {
     TypeRepr *tyRepr = new (*ctxt)
-        PointerTypeRepr(beg, new (*ctxt) IdentifierTypeRepr(end, Identifier()));
+        PointerTypeRepr(beg, new (*ctxt) IdentifierTypeRepr(end, {}));
     EXPECT_EQ(beg, tyRepr->getBegLoc());
     EXPECT_EQ(beg, tyRepr->getLoc());
     EXPECT_EQ(end, tyRepr->getEndLoc());

@@ -26,37 +26,37 @@ protected:
 TEST_F(StmtTest, rtti) {
   // ContinueStmt
   {
-    Stmt *stmt = new (*ctxt) ContinueStmt(SourceLoc());
+    Stmt *stmt = new (*ctxt) ContinueStmt({});
     EXPECT_TRUE(isa<ContinueStmt>(stmt));
   }
 
   // BreakStmt
   {
-    Stmt *stmt = new (*ctxt) BreakStmt(SourceLoc());
+    Stmt *stmt = new (*ctxt) BreakStmt({});
     EXPECT_TRUE(isa<BreakStmt>(stmt));
   }
 
   // ReturnStmt
   {
-    Stmt *stmt = new (*ctxt) ReturnStmt(SourceLoc());
+    Stmt *stmt = new (*ctxt) ReturnStmt({});
     EXPECT_TRUE(isa<ReturnStmt>(stmt));
   }
 
   // BlockStmt
   {
-    Stmt *stmt = BlockStmt::createEmpty(*ctxt, SourceLoc(), SourceLoc());
+    Stmt *stmt = BlockStmt::createEmpty(*ctxt, {}, {});
     EXPECT_TRUE(isa<BlockStmt>(stmt));
   }
 
   // IfStmt
   {
-    Stmt *stmt = new (*ctxt) IfStmt(SourceLoc(), nullptr, nullptr);
+    Stmt *stmt = new (*ctxt) IfStmt({}, nullptr, nullptr);
     EXPECT_TRUE(isa<IfStmt>(stmt));
   }
 
   // WhileStmt
   {
-    Stmt *stmt = new (*ctxt) WhileStmt(SourceLoc(), nullptr, nullptr);
+    Stmt *stmt = new (*ctxt) WhileStmt({}, nullptr, nullptr);
     EXPECT_TRUE(isa<WhileStmt>(stmt));
   }
 }
