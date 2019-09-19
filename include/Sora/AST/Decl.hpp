@@ -77,17 +77,15 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Decl));
 
-  /// Walks the parent tree up until the SourceFile to retrieve it.
+  /// Fetches the parent source file using the parents.
   /// This requires a well-formed parent chain.
   SourceFile &getSourceFile() const;
 
-  /// Walks the parent tree up until the SourceFile to retrieve the
-  /// ASTContext.
+  /// Fetches the ASTContext using the parents.
   /// This requires a well-formed parent chain.
   ASTContext &getASTContext() const;
 
-  /// Walks the parent tree up until the SourceFile to retrieve the
-  /// DiagnosticEngine.
+  /// Fetches the DiagnosticEngine using the parents.
   /// This requires a well-formed parent chain.
   DiagnosticEngine &getDiagnosticEngine() const;
 

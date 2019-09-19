@@ -16,14 +16,14 @@
 namespace sora {
 class Decl;
 
-/// Represents a single source file, and keeps track of its name and members.
+/// Represents a source file.
 class alignas(SourceFileAlignement) SourceFile final {
   Identifier identifier;
   SmallVector<Decl *, 4> members;
 
 public:
-  /// \param astContext the ASTContext in which members of this source file are
-  ///             allocated.
+  /// \param astContext the ASTContext in which the members of this source file
+  /// are allocated.
   /// \param identifier the identifier (name) of this source file
   SourceFile(ASTContext &astContext, Identifier identifier)
       : identifier(identifier), astContext(astContext) {}
@@ -34,7 +34,8 @@ public:
   ArrayRef<Decl *> getMembers() const { return members; }
   /// Adds a member to this source file
   void addMember(Decl *decl) { return members.push_back(decl); }
-
+  /// The ASTContext in which the members of this source file
+  /// are allocated.
   ASTContext &astContext;
 };
 } // namespace sora
