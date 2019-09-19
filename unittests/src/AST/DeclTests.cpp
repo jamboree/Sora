@@ -9,6 +9,7 @@
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/Pattern.hpp"
+#include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/DiagnosticEngine.hpp"
@@ -122,4 +123,28 @@ TEST_F(DeclTest, PatternBindingDecl) {
   EXPECT_FALSE(pbd->hasInitializer());
   EXPECT_EQ(pbd->getInitializer(), nullptr);
   EXPECT_EQ(pbd->getEqualLoc(), SourceLoc());
+}
+
+/// Tests Decl::getSourceFile and related features (getParent, getASTContext,
+/// getDiagnosticEngine)
+TEST_F(DeclTest, getSourceFile) {
+  SourceFile sf(*ctxt, Identifier());
+  // Let's create a simple tree:
+  // SourceFile
+  //    FuncDecl
+  //      ParamDecl
+  FuncDecl *fn = new (*ctxt) FuncDecl(&sf, {}, {}, {});
+  ParamDecl *param = new (*ctxt) ParamDecl(fn, {}, {}, {}, {});
+  fn->setParamList(ParamList::create(*ctxt, {}, param, {}));
+
+  // Now, let's try to retrieve our ASTContext, SourceFile and DiagnosticEngine
+  // from the param and fn.
+  EXPECT_EQ(ctxt.get(), &param->getASTContext());
+  EXPECT_EQ(ctxt.get(), &fn->getASTContext());
+
+  EXPECT_EQ(&diagEng, &param->getDiagnosticEngine());
+  EXPECT_EQ(&diagEng, &fn->getDiagnosticEngine());
+
+  EXPECT_EQ(&sf, &param->getSourceFile());
+  EXPECT_EQ(&sf, &fn->getSourceFile());
 }

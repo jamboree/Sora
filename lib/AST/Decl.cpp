@@ -10,6 +10,7 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/Pattern.hpp"
+#include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 
 using namespace sora;
@@ -24,6 +25,33 @@ using namespace sora;
 
 void *Decl::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);
+}
+
+SourceFile &Decl::getSourceFile() const {
+  const Decl *cur = this;
+  // Keep going while we have a valid parent.
+  while (DeclParent parent = cur->getParent()) {
+    // If we have a SourceFile as parent, we can stop.
+    if (SourceFile * sf = parent.dyn_cast<SourceFile *>())
+      return *sf;
+    // If we don't have a SourceFile as parent, it has to be a Decl.
+    cur = parent.get<Decl *>();
+  }
+  llvm_unreachable("ill-formed declaration parent chain");
+}
+
+ASTContext &Decl::getASTContext() const {
+  return getSourceFile().astContext;
+}
+
+DiagnosticEngine &Decl::getDiagnosticEngine() const {
+  return getASTContext().diagEngine;
+}
+
+bool Decl::isLocal() const {
+  if (Decl *decl = getParent().dyn_cast<Decl *>())
+    return isa<FuncDecl>(decl);
+  return false;
 }
 
 SourceLoc Decl::getBegLoc() const {

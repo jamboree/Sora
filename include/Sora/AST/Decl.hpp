@@ -21,6 +21,7 @@
 
 namespace sora {
 class ASTContext;
+class DiagnosticEngine;
 class PatternBindingDecl;
 class BlockStmt;
 
@@ -69,13 +70,32 @@ protected:
     return mem;
   }
 
-  Decl(DeclKind kind, DeclParent parent) : kind(kind) {}
+  Decl(DeclKind kind, DeclParent parent) : kind(kind), parent(parent) {}
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Decl));
 
+  /// Walks the parent tree up until the SourceFile to retrieve it.
+  /// This requires a well-formed parent chain.
+  SourceFile &getSourceFile() const;
+
+  /// Walks the parent tree up until the SourceFile to retrieve the
+  /// ASTContext.
+  /// This requires a well-formed parent chain.
+  ASTContext &getASTContext() const;
+
+  /// Walks the parent tree up until the SourceFile to retrieve the
+  /// DiagnosticEngine.
+  /// This requires a well-formed parent chain.
+  DiagnosticEngine &getDiagnosticEngine() const;
+
+  /// \returns true if this is a local declaration. A local decl is a decl that
+  /// lives inside a FuncDecl.
+  bool isLocal() const;
+
+  /// \returns the parent of this Decl
   DeclParent getParent() const { return parent; }
 
   /// Dumps this declaration to \p out
@@ -245,12 +265,12 @@ public:
   using iterator = ArrayRef<ParamDecl *>::iterator;
 
   /// Creates a parameter list
-  ParamList *create(ASTContext &ctxt, SourceLoc lParenLoc,
-                    ArrayRef<ParamDecl *> params, SourceLoc rParenLoc);
+  static ParamList *create(ASTContext &ctxt, SourceLoc lParenLoc,
+                           ArrayRef<ParamDecl *> params, SourceLoc rParenLoc);
 
   /// Creates a empty parameter list
-  ParamList *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
-                         SourceLoc rParenLoc) {
+  static ParamList *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
+                                SourceLoc rParenLoc) {
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
@@ -407,8 +427,8 @@ public:
   /// If it has an initializer, \p init must not be nullptr.
   /// If it doesn't have one, both equalLoc and init can be left empty.
   /// Please note that if init is nullptr, \p equalLoc will not be stored.
-  static LetDecl *create(ASTContext &ctxt, DeclParent parent, SourceLoc letLoc, Pattern *pattern,
-                         SourceLoc equalLoc = SourceLoc(),
+  static LetDecl *create(ASTContext &ctxt, DeclParent parent, SourceLoc letLoc,
+                         Pattern *pattern, SourceLoc equalLoc = SourceLoc(),
                          Expr *init = nullptr);
 
   SourceLoc getLetLoc() const { return letLoc; }
