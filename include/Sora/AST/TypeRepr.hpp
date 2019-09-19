@@ -163,4 +163,40 @@ public:
     return typeRepr->getKind() == TypeReprKind::Tuple;
   }
 };
+
+/// Represent a pointer or reference type.
+///
+/// \verbatim
+/// &T
+/// &mut T
+/// *T
+/// *mut T
+/// \endverbatim
+class PointerTypeRepr final : public TypeRepr {
+  SourceLoc signLoc, mutLoc;
+  TypeRepr *subTyRepr;
+
+public:
+  PointerTypeRepr(SourceLoc signLoc, SourceLoc mutLoc, TypeRepr *subTyRepr)
+      : TypeRepr(TypeReprKind::Pointer), signLoc(signLoc), mutLoc(mutLoc),
+        subTyRepr(subTyRepr) {}
+
+  PointerTypeRepr(SourceLoc signLoc, TypeRepr *subTyRepr)
+      : PointerTypeRepr(signLoc, SourceLoc(), subTyRepr) {}
+
+  TypeRepr *getSubTypeRepr() const { return subTyRepr; }
+  /// \returns the SourceLoc of the & or * sign.
+  SourceLoc getSignLoc() const { return signLoc; }
+
+  bool hasMut() const { return mutLoc.isValid(); }
+
+  SourceLoc getMutLoc() const { return mutLoc; }
+
+  SourceLoc getBegLoc() const { return signLoc; }
+  SourceLoc getEndLoc() const { return subTyRepr->getEndLoc(); }
+
+  static bool classof(const TypeRepr *typeRepr) {
+    return typeRepr->getKind() == TypeReprKind::Pointer;
+  }
+};
 } // namespace sora
