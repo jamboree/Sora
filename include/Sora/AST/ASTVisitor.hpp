@@ -102,8 +102,9 @@ public:
     }
   };
 
-  void visit(ParamList *paramList) {
-    return static_cast<Derived *>(this)->visitParamList();
+  void visit(ParamList *paramList, Args... args) {
+    return static_cast<Derived *>(this)->visitParamList(paramList, 
+      ::std::forward<Args>(args)...);
   }
 
   void visitParamList(ParamList *paramList) {}
