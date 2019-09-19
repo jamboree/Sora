@@ -136,6 +136,7 @@ public:
   Pattern *getSubPattern() const { return subPattern; }
 
   SourceLoc getBegLoc() const { return mutLoc; }
+  SourceLoc getLoc() const { return subPattern->getLoc(); }
   SourceLoc getEndLoc() const { return subPattern->getEndLoc(); }
 
   static bool classof(const Pattern *pattern) {
@@ -214,6 +215,7 @@ public:
   SourceLoc getColonLoc() const { return colonLoc; }
 
   SourceLoc getBegLoc() const;
+  SourceLoc getLoc() const { return subPattern->getLoc(); }
   SourceLoc getEndLoc() const;
 
   static bool classof(const Pattern *pattern) {
