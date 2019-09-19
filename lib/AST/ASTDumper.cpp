@@ -99,27 +99,41 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   /// PrintBase methods indent the output stream and print basic information
   /// about a class.
 
-  void printCommon(Decl *decl) {
+  void dumpCommon(Decl *decl) {
     out.indent(curIndent);
     out << getKindStr(decl->getKind());
+
+    if (ValueDecl *vd = dyn_cast<ValueDecl>(decl)) {
+      out << ' ';
+      dumpType(vd->getValueType(), "type");
+      out << ' ';
+      dumpIdent(vd->getIdentifier(), "identifier");
+      out << ' ';
+      dumpLoc(vd->getIdentifierLoc(), "identifierLoc");
+    }
   }
 
-  void printCommon(Expr *expr) {
+  void dumpCommon(ParamList *paramList) {
+    out.indent(curIndent);
+    out << "ParamList";
+  }
+
+  void dumpCommon(Expr *expr) {
     out.indent(curIndent);
     out << getKindStr(expr->getKind());
   }
 
-  void printCommon(Stmt *stmt) {
+  void dumpCommon(Stmt *stmt) {
     out.indent(curIndent);
     out << getKindStr(stmt->getKind());
   }
 
-  void printCommon(TypeRepr *tyRepr) {
+  void dumpCommon(TypeRepr *tyRepr) {
     out.indent(curIndent);
     out << getKindStr(tyRepr->getKind());
   }
 
-  void printCommon(Pattern *pattern) {
+  void dumpCommon(Pattern *pattern) {
     out.indent(curIndent);
     out << getKindStr(pattern->getKind());
   }
@@ -127,17 +141,25 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   /// For null nodes.
   void printNoNode() {
     out.indent(curIndent);
-    out << "<no node>\n";
+    out << "<null node>\n";
   }
 
-  void printLoc(SourceLoc loc, StringRef name) {
+  void dumpLoc(SourceLoc loc, StringRef name) {
     out << name << '=';
     loc.print(out, srcMgr, false);
   }
 
-  void printRange(SourceRange range, StringRef name) {
+  void dumpRange(SourceRange range, StringRef name) {
     out << name << '=';
     range.print(out, srcMgr, false);
+  }
+
+  void dumpIdent(Identifier ident, StringRef name) {
+    out << name << "=" << (ident ? ident.str() : "<null identifier>");
+  }
+
+  void dumpType(Type type, StringRef name) {
+    out << name << "=" << (type ? "?TODO?" : "<null type>");
   }
 
 public:
@@ -159,21 +181,23 @@ public:
   //===--- Stmt -----------------------------------------------------------===//
 
   void visitContinueStmt(ContinueStmt *stmt) {
-    printCommon(stmt);
+    dumpCommon(stmt);
     out << ' ';
-    printLoc(stmt->getLoc(), "loc");
+    dumpLoc(stmt->getLoc(), "loc");
+    out << '\n';
   }
 
   void visitBreakStmt(BreakStmt *stmt) {
-    printCommon(stmt);
+    dumpCommon(stmt);
     out << ' ';
-    printLoc(stmt->getLoc(), "loc");
+    dumpLoc(stmt->getLoc(), "loc");
+    out << '\n';
   }
 
   void visitReturnStmt(ReturnStmt *stmt) {
-    printCommon(stmt);
+    dumpCommon(stmt);
     out << ' ';
-    printLoc(stmt->getLoc(), "loc");
+    dumpLoc(stmt->getLoc(), "loc");
     out << '\n';
     if (!stmt->hasResult())
       return;
@@ -185,35 +209,38 @@ public:
   }
 
   void visitBlockStmt(BlockStmt *stmt) {
-    printCommon(stmt);
+    dumpCommon(stmt);
     out << " numElement=" << stmt->getNumElements();
     out << ' ';
-    printLoc(stmt->getLeftCurlyLoc(), "leftCurly");
+    dumpLoc(stmt->getLeftCurlyLoc(), "leftCurlyLoc");
     out << ' ';
-    printLoc(stmt->getRightCurlyLoc(), "rightCurly");
+    dumpLoc(stmt->getRightCurlyLoc(), "rightCurlyLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
     for (auto elem : stmt->getElements())
       visit(elem);
   }
 
   void visitIfStmt(IfStmt *stmt) {
-    // Print node
-    printCommon(stmt);
+    dumpCommon(stmt);
     out << ' ';
-    printLoc(stmt->getIfLoc(), "ifLoc");
+    dumpLoc(stmt->getIfLoc(), "ifLoc");
     if (SourceLoc loc = stmt->getElseLoc())
-      printLoc(loc, "elseLoc");
-    // Print children
+      dumpLoc(loc, "elseLoc");
+    out << '\n';
+
     auto indent = increaseIndent();
     visit(stmt->getThen());
     visitIf(stmt->getElse());
   }
 
   void visitWhileStmt(WhileStmt *stmt) {
-    // Print node
-    printCommon(stmt);
+    dumpCommon(stmt);
     out << ' ';
-    printLoc(stmt->getWhileLoc(), "whileLoc");
-    // Print children
+    dumpLoc(stmt->getWhileLoc(), "whileLoc");
+    out << '\n';
+
     auto indent = increaseIndent();
     visit(stmt->getBody());
   }
@@ -222,32 +249,155 @@ public:
 
   // TODO
   void visitExpr(Expr *expr) {
-    printCommon(expr);
+    dumpCommon(expr);
     out << " TODO\n";
   }
 
   //===--- Decl -----------------------------------------------------------===//
 
-  // TODO
-  void visitDecl(Decl *decl) {
-    printCommon(decl);
-    out << " TODO\n";
+  void visitVarDecl(VarDecl *decl) {
+    dumpCommon(decl);
+    out << '\n';
+
+    if (TypeRepr *tyRepr = decl->getTypeLoc().getTypeRepr()) {
+      auto indent = increaseIndent();
+      visit(tyRepr);
+    }
+  }
+
+  void visitParamDecl(ParamDecl *decl) {
+    dumpCommon(decl);
+    out << ' ';
+    dumpLoc(decl->getColonLoc(), "colonLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(decl->getTypeLoc().getTypeRepr());
+  }
+
+  void visitParamList(ParamList *list) {
+    dumpCommon(list);
+    out << " numElements=" << list->getNumParams() << ' ';
+    dumpLoc(list->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(list->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    for (auto elem : list->getParams())
+      visit(elem);
+  }
+
+  void visitFuncDecl(FuncDecl *decl) {
+    dumpCommon(decl);
+    out << ' ';
+    dumpLoc(decl->getFuncLoc(), "fnLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(decl->getParamList());
+  }
+
+  void visitLetDecl(LetDecl *decl) {
+    dumpCommon(decl);
+    out << ' ';
+    dumpLoc(decl->getLetLoc(), "letLoc");
+    if (decl->hasInitializer()) {
+      out << ' ';
+      dumpLoc(decl->getEqualLoc(), "equalLoc");
+    }
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(decl->getPattern());
+    visitIf(decl->getInitializer());
   }
 
   //===--- Pattern --------------------------------------------------------===//
 
-  // TODO
-  void visitPattern(Pattern *pattern) {
-    printCommon(pattern);
-    out << " TODO\n";
+  void visitVarPattern(VarPattern *pattern) {
+    dumpCommon(pattern);
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getVarDecl());
+  }
+
+  void visitDiscardPattern(DiscardPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getLoc(), "loc");
+    out << '\n';
+  }
+
+  void visitMutPattern(MutPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getMutLoc(), "mutLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getSubPattern());
+  }
+
+  void visitTuplePattern(TuplePattern *pattern) {
+    dumpCommon(pattern);
+    out << " numElements=" << pattern->getNumElements() << ' ';
+    dumpLoc(pattern->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(pattern->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    for (auto elem : pattern->getElements())
+      visit(elem);
+  }
+
+  void visitTypedPattern(TypedPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getColonLoc(), "colonLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getSubPattern());
+    visit(pattern->getTypeRepr());
   }
 
   //===--- TypeRepr -------------------------------------------------------===//
 
-  // TODO
-  void visitTypeRepr(TypeRepr *tyRepr) {
-    printCommon(tyRepr);
-    out << " TODO\n";
+  void visitIdentifierTypeRepr(IdentifierTypeRepr *tyRepr) {
+    dumpCommon(tyRepr);
+    out << ' ';
+    dumpLoc(tyRepr->getLoc(), "loc");
+    out << '\n';
+  }
+
+  void visitTupleTypeRepr(TupleTypeRepr *tyRepr) {
+    dumpCommon(tyRepr);
+    out << " numElements=" << tyRepr->getNumElements() << ' ';
+    dumpLoc(tyRepr->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(tyRepr->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    for (auto elem : tyRepr->getElements())
+      visit(elem);
+  }
+
+  void visitPointerTypeRepr(PointerTypeRepr *tyRepr) {
+    dumpCommon(tyRepr);
+    out << (tyRepr->hasMut() ? " (immutable " : " (mutable ")
+        << (tyRepr->isReference() ? "reference) " : "pointer) ");
+    dumpLoc(tyRepr->getSignLoc(), "signLoc");
+    if (tyRepr->hasMut()) {
+      out << ' ';
+      dumpLoc(tyRepr->getMutLoc(), "mutLoc");
+    }
+
+    auto indent = increaseIndent();
+    visit(tyRepr);
   }
 };
 } // namespace
