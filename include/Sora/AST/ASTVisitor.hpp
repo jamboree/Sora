@@ -12,13 +12,15 @@
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/Pattern.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/AST/TypeRepr.hpp"
 #include "llvm/Support/ErrorHandling.h"
 #include <utility>
 
 namespace sora {
 template <typename Derived, typename ExprRtrTy = void,
           typename DeclRtrTy = void, typename StmtRtrTy = void,
-          typename PatternRtrTy = void, typename... Args>
+          typename PatternRtrTy = void, typename TypeReprRtrTy = void,
+          typename... Args>
 class ASTVisitor {
 public:
   using this_type = ASTVisitor;
@@ -80,8 +82,21 @@ public:
 #define PATTERN(ID, PARENT)                                                    \
   case PatternKind::ID:                                                        \
     return static_cast<Derived *>(this)->visit##ID##Pattern(                   \
-        static_cast<ID##Pattern *>(stmt), ::std::forward<Args>(args)...);
+        static_cast<ID##Pattern *>(pattern), ::std::forward<Args>(args)...);
 #include "Sora/AST/PatternNodes.def"
+    default:
+      llvm_unreachable("Unknown node");
+    }
+  };
+
+  TypeReprRtrTy visit(TypeRepr *tyRepr, Args... args) {
+    assert(tyRepr && "Cannot be used on a null pointer");
+    switch (tyRepr->getKind()) {
+#define TYPEREPR(ID, PARENT)                                                   \
+  case TypeReprKind::ID:                                                       \
+    return static_cast<Derived *>(this)->visit##ID##TypeRepr(                  \
+        static_cast<ID##TypeRepr *>(tyRepr), ::std::forward<Args>(args)...);
+#include "Sora/AST/TypeReprNodes.def"
     default:
       llvm_unreachable("Unknown node");
     }
@@ -113,27 +128,35 @@ public:
 #include "Sora/AST/ExprNodes.def"
 #define PATTERN(ID, PARENT) VISIT_METHOD(PatternRtrTy, ID##Pattern, PARENT)
 #include "Sora/AST/PatternNodes.def"
+#define TYPEREPR(ID, PARENT) VISIT_METHOD(TypeReprRtrTy, ID##TypeRepr, PARENT)
+#include "Sora/AST/TypeReprNodes.def"
 #undef VISIT_METHOD
 };
 
 /// Typealias for simple AST visitors with a unique return type.
 template <typename Derived, typename RtrTy = void, typename... Args>
 using SimpleASTVisitor =
-    ASTVisitor<Derived, RtrTy, RtrTy, RtrTy, RtrTy, Args...>;
+    ASTVisitor<Derived, RtrTy, RtrTy, RtrTy, RtrTy, void, Args...>;
 
 /// Typealias for visitors that are only interested in expressions
 template <typename Derived, typename RtrTy = void, typename... Args>
-using ExprVisitor = ASTVisitor<Derived, RtrTy, void, void, void, Args...>;
+using ExprVisitor = ASTVisitor<Derived, RtrTy, void, void, void, void, Args...>;
 
 /// Typealias for visitors that are only interested in declarations
 template <typename Derived, typename RtrTy = void, typename... Args>
-using DeclVisitor = ASTVisitor<Derived, void, RtrTy, void, void, Args...>;
+using DeclVisitor = ASTVisitor<Derived, void, RtrTy, void, void, void, Args...>;
 
 /// Typealias for visitors that are only interested in statements
 template <typename Derived, typename RtrTy = void, typename... Args>
-using StmtVisitor = ASTVisitor<Derived, void, void, RtrTy, void, Args...>;
+using StmtVisitor = ASTVisitor<Derived, void, void, RtrTy, void, void, Args...>;
 
 /// Typealias for visitors that are only interested in patterns
 template <typename Derived, typename RtrTy = void, typename... Args>
-using PatternVisitor = ASTVisitor<Derived, void, void, void, RtrTy, Args...>;
+using PatternVisitor =
+    ASTVisitor<Derived, void, void, void, RtrTy, void, Args...>;
+
+/// Typealias for visitors that are only interested in TypeReprs
+template <typename Derived, typename RtrTy = void, typename... Args>
+using TypeReprVisitor =
+    ASTVisitor<Derived, void, void, void, void, RtrTy, Args...>;
 } // namespace sora
