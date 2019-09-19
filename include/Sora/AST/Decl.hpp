@@ -199,6 +199,8 @@ public:
   /// \returns the type this value has (the type of the parameter)
   Type getValueType() const { return tyLoc.getType(); }
 
+  SourceLoc getColonLoc() const { return colonLoc; }
+
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;
 
