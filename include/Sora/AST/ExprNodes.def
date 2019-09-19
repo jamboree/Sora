@@ -20,7 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 ABSTRACT_EXPR(Unresolved, Expr)
-	EXPR(UnresolvedDeclRef, Unresolved)
+	EXPR(UnresolvedDeclRef, UnresolvedExpr)
 	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedDeclRef)
 
 
@@ -31,10 +31,10 @@ ABSTRACT_EXPR(Unresolved, Expr)
 EXPR(Discard, Expr)
 
 ABSTRACT_EXPR(AnyLiteral, Expr)
-  EXPR(IntegerLiteral, AnyLiteral)
-  EXPR(FloatLiteral, AnyLiteral)
-	EXPR(BooleanLiteral, AnyLiteral)
-	EXPR(NullLiteral, AnyLiteral)
+  EXPR(IntegerLiteral, AnyLiteralExpr)
+  EXPR(FloatLiteral, AnyLiteralExpr)
+	EXPR(BooleanLiteral, AnyLiteralExpr)
+	EXPR(NullLiteral, AnyLiteralExpr)
 	EXPR_RANGE(AnyLiteral, IntegerLiteral, NullLiteral)
 
 EXPR(Error, Expr)
