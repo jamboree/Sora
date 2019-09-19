@@ -197,13 +197,8 @@ public:
   /// \returns the type this value has (the type of the parameter)
   Type getValueType() const { return tyLoc.getType(); }
 
-  /// \returns the SourceLoc of the first token of the declaration
-  SourceLoc getBegLoc() const { return getIdentifierLoc(); }
-  /// \returns the SourceLoc of the last token of the declaration
-  SourceLoc getEndLoc() const {
-    /// When TypeReprs are up and running, use tyLoc.getEndLoc()
-    return SourceLoc();
-  }
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
 
   static bool classof(const Decl *decl) {
     return decl->getKind() == DeclKind::Param;

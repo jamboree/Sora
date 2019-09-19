@@ -97,6 +97,10 @@ ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
   return new (mem) ParamList(lParenLoc, params, rParenLoc);
 }
 
+SourceLoc ParamDecl::getBegLoc() const { return getIdentifierLoc(); }
+
+SourceLoc ParamDecl::getEndLoc() const { return tyLoc.getEndLoc(); }
+
 SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
 
 SourceLoc FuncDecl::getEndLoc() const { return body->getEndLoc(); }

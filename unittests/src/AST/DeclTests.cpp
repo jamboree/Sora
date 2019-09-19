@@ -10,6 +10,7 @@
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/Pattern.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "gtest/gtest.h"
@@ -35,8 +36,7 @@ TEST_F(DeclTest, rtti) {
 
   // ParamDecl
   {
-    Decl *decl = new (*ctxt)
-        ParamDecl({}, {}, {}, TypeLoc());
+    Decl *decl = new (*ctxt) ParamDecl({}, {}, {}, TypeLoc());
     EXPECT_TRUE(isa<ParamDecl>(decl));
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
@@ -70,15 +70,14 @@ TEST_F(DeclTest, getSourceRange) {
     EXPECT_EQ(SourceRange(beg, beg), decl->getSourceRange());
   }
 
-  // ParamDecl: Can't do this one yet, no TypeRepr.
-  /*
+  // ParamDecl
   {
-    Decl *decl = new (*ctxt)
-        ParamDecl(beg, {}, {}, TypeLoc());
-    EXPECT_TRUE(isa<ParamDecl>(decl));
-    EXPECT_TRUE(isa<ValueDecl>(decl));
+    Decl *decl = new (*ctxt) ParamDecl(
+        beg, {}, {}, TypeLoc(Type(), new (*ctxt) IdentifierTypeRepr(end, {})));
+    EXPECT_EQ(beg, decl->getBegLoc());
+    EXPECT_EQ(end, decl->getEndLoc());
+    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
   }
-  */
 
   // FuncDecl
   {
@@ -95,8 +94,8 @@ TEST_F(DeclTest, getSourceRange) {
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
-    decl = LetDecl::create(*ctxt, beg, nullptr, {},
-                           new (*ctxt) DiscardExpr(end));
+    decl =
+        LetDecl::create(*ctxt, beg, nullptr, {}, new (*ctxt) DiscardExpr(end));
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
     EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
@@ -109,8 +108,7 @@ TEST_F(DeclTest, PatternBindingDecl) {
   SourceLoc loc = SourceLoc::fromPointer("");
 
   Expr *expr = new (*ctxt) DiscardExpr({});
-  PatternBindingDecl *pbd =
-      LetDecl::create(*ctxt, {}, nullptr, loc, expr);
+  PatternBindingDecl *pbd = LetDecl::create(*ctxt, {}, nullptr, loc, expr);
 
   EXPECT_TRUE(pbd->hasInitializer());
   EXPECT_EQ(pbd->getInitializer(), expr);
