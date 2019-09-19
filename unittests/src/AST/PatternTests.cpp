@@ -80,7 +80,7 @@ TEST_F(PatternTest, getSourceRange) {
     Pattern *pattern =
         new (*ctxt) MutPattern(beg, new (*ctxt) DiscardPattern(end));
     EXPECT_EQ(beg, pattern->getBegLoc());
-    EXPECT_EQ(beg, pattern->getLoc());
+    EXPECT_EQ(end, pattern->getLoc());
     EXPECT_EQ(end, pattern->getEndLoc());
     EXPECT_EQ(range, pattern->getSourceRange());
   }
