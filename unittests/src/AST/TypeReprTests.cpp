@@ -39,7 +39,7 @@ TEST_F(TypeReprTest, rtti) {
 
   // PointerTypeRepr
   {
-    TypeRepr *tyRepr = new (*ctxt) PointerTypeRepr({}, nullptr);
+    TypeRepr *tyRepr = new (*ctxt) PointerTypeRepr({}, true, nullptr);
     EXPECT_TRUE(isa<PointerTypeRepr>(tyRepr));
   }
 }
@@ -71,7 +71,7 @@ TEST_F(TypeReprTest, getSourceRange) {
   // TupleTypeRepr
   {
     TypeRepr *tyRepr = new (*ctxt)
-        PointerTypeRepr(beg, new (*ctxt) IdentifierTypeRepr(end, {}));
+        PointerTypeRepr(beg, true, new (*ctxt) IdentifierTypeRepr(end, {}));
     EXPECT_EQ(beg, tyRepr->getBegLoc());
     EXPECT_EQ(beg, tyRepr->getLoc());
     EXPECT_EQ(end, tyRepr->getEndLoc());

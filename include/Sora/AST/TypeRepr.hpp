@@ -48,6 +48,10 @@ class alignas(TypeReprAlignement) TypeRepr {
     struct {
       uint32_t numElements;
     } tupleTypeRepr;
+    // PointerTypeRepr
+    struct {
+      bool isReference;
+    } pointerTypeRepr;
   });
   static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
@@ -180,18 +184,22 @@ class PointerTypeRepr final : public TypeRepr {
   TypeRepr *subTyRepr;
 
 public:
-  PointerTypeRepr(SourceLoc signLoc, SourceLoc mutLoc, TypeRepr *subTyRepr)
+  PointerTypeRepr(SourceLoc signLoc, bool isReference, SourceLoc mutLoc,
+                  TypeRepr *subTyRepr)
       : TypeRepr(TypeReprKind::Pointer), signLoc(signLoc), mutLoc(mutLoc),
-        subTyRepr(subTyRepr) {}
+        subTyRepr(subTyRepr) {
+    bits.pointerTypeRepr.isReference = isReference;
+  }
 
-  PointerTypeRepr(SourceLoc signLoc, TypeRepr *subTyRepr)
-      : PointerTypeRepr(signLoc, SourceLoc(), subTyRepr) {}
+  PointerTypeRepr(SourceLoc signLoc, bool isReference, TypeRepr *subTyRepr)
+      : PointerTypeRepr(signLoc, isReference, SourceLoc(), subTyRepr) {}
 
   TypeRepr *getSubTypeRepr() const { return subTyRepr; }
   /// \returns the SourceLoc of the & or * sign.
   SourceLoc getSignLoc() const { return signLoc; }
 
   bool hasMut() const { return mutLoc.isValid(); }
+  bool isReference() const { return bits.pointerTypeRepr.isReference; }
 
   SourceLoc getMutLoc() const { return mutLoc; }
 
