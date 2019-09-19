@@ -19,17 +19,13 @@
 
 //===----------------------------------------------------------------------===//
 
-TYPE(Error,		  Type)
 TYPE(Integer,		Type)
 TYPE(Float,		  Type)
 TYPE(Void,			Type)
-
-TYPE(Reference,	Type)
 TYPE(Pointer,	  Type)
-
 TYPE(Tuple,		  Type)
-
 TYPE(LValue,	  Type)
+TYPE(Error,		  Type)
 
 //===----------------------------------------------------------------------===//
 
