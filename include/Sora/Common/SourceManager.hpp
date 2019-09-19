@@ -9,6 +9,7 @@
 
 #include "llvm/Support/SourceMgr.h"
 #include <memory>
+#include <utility>
 
 namespace sora {
 
@@ -52,6 +53,25 @@ public:
 
   /// \returns the string of the buffer with id \p id
   StringRef getBufferStr(BufferID id) const;
+
+  /// \returns the BufferID of the buffer that contains \p loc
+  BufferID findBufferContainingLoc(SourceLoc loc) const {
+    return llvmSourceMgr.FindBufferContainingLoc(loc.value);
+  }
+
+  /// \returns the line and column represented by \p loc.
+  /// If \p id is valid, \p loc must come from that source buffer.
+  std::pair<unsigned, unsigned>
+  getLineAndColumn(SourceLoc loc, BufferID id = BufferID()) const {
+    assert(loc && "loc cannot be invalid");
+    return llvmSourceMgr.getLineAndColumn(loc.value, id.value);
+  }
+
+  /// \returns the identifier of the MemoryBuffer with \p id
+  StringRef getBufferIdentifier(BufferID id) const {
+    assert(id && "id cannot be invalid!");
+    return llvmSourceMgr.getMemoryBuffer(id.value)->getBufferIdentifier();
+  }
 };
 
 } // namespace sora

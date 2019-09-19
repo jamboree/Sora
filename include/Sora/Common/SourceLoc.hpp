@@ -65,6 +65,10 @@ public:
   /// \returns true if this SourceLoc is valid
   explicit operator bool() const { return isValid(); }
 
+  /// Prints this SourceLoc to \p out
+  void print(raw_ostream &out, const SourceManager &srcMgr,
+             bool printFileName = true);
+
   bool operator<(const SourceLoc other) const {
     return value.getPointer() < other.value.getPointer();
   }
@@ -115,6 +119,12 @@ public:
   /// \returns true if this SourceRange is valid
   explicit operator bool() const { return isValid(); }
 
+  /// Prints this SourceRange to \p out
+  /// The filename of the first loc will be printed if \p printFileName is set
+  /// to true. The filename is never printed for the second loc.
+  void print(raw_ostream &out, const SourceManager &srcMgr,
+             bool printFileName = true);
+
   bool operator==(const SourceRange &other) const {
     return (begin == other.begin) && (end == other.end);
   }
@@ -149,6 +159,10 @@ public:
   bool empty() const { return byteLength == 0; }
   /// \returns true if this CharSourceRange is valid
   explicit operator bool() const { return isValid(); }
+
+  /// Prints this CharSourceRange to \p out
+  void print(raw_ostream &out, const SourceManager &srcMgr,
+             bool printFileName = true, bool printText = true);
 
   /// \returns this CharSourceRange as a llvm::SMRange
   llvm::SMRange getSMRange() const {

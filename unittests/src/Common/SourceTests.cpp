@@ -7,8 +7,9 @@
 
 #include "Sora/Common/SourceLoc.hpp"
 #include "Sora/Common/SourceManager.hpp"
-
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include <string>
 
 using namespace sora;
 
@@ -19,6 +20,41 @@ TEST(BufferIDTest, isNull) { EXPECT_TRUE(BufferID().isNull()); }
 TEST(SourceLocTest, isValid) {
   EXPECT_TRUE(SourceLoc().isInvalid());
   EXPECT_FALSE(SourceLoc().isValid());
+}
+
+/// Tests that a default-constructed SourceLoc is considered invalid.
+TEST(SourceLocTest, print) {
+  SourceManager srcMgr;
+  {
+    const char *str = "a";
+    srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(str));
+    std::string output;
+    llvm::raw_string_ostream rso(output);
+    SourceLoc::fromPointer(str).print(rso, srcMgr, true);
+    EXPECT_EQ(rso.str(), "<unknown>:1:1");
+  }
+  {
+    const char *str = "b";
+    srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(str, "Test"));
+    std::string output;
+    llvm::raw_string_ostream rso(output);
+    SourceLoc::fromPointer(str).print(rso, srcMgr, true);
+    EXPECT_EQ(rso.str(), "Test:1:1");
+  }
+  {
+    const char *str = "c";
+    srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(str));
+    std::string output;
+    llvm::raw_string_ostream rso(output);
+    SourceLoc::fromPointer(str).print(rso, srcMgr, false);
+    EXPECT_EQ(rso.str(), "line:1:1");
+  }
+  {
+    std::string output;
+    llvm::raw_string_ostream rso(output);
+    SourceLoc().print(rso, srcMgr, false);
+    EXPECT_EQ(rso.str(), "<invalid>");
+  }
 }
 
 /// Test for operator== and operator!= for SourceLoc
@@ -42,6 +78,23 @@ TEST(SourceLocTest, compare) {
 TEST(SourceRangeTest, isValid) {
   EXPECT_TRUE(SourceRange().isInvalid());
   EXPECT_FALSE(SourceRange().isValid());
+}
+
+TEST(SourceRangeTest, print) {
+  SourceManager srcMgr;
+
+  const char *str = "a b";
+  srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(str));
+  std::string output;
+  llvm::raw_string_ostream rso(output);
+  SourceRange range(SourceLoc::fromPointer(str),
+                    SourceLoc::fromPointer(str + 2));
+  range.print(rso, srcMgr, true);
+  EXPECT_EQ(rso.str(), "[<unknown>:1:1, line:1:3]");
+
+  output.clear();
+  range.print(rso, srcMgr, false);
+  EXPECT_EQ(rso.str(), "[line:1:1, line:1:3]");
 }
 
 /// Test for operator== and operator!= for SourceRange
@@ -91,4 +144,20 @@ TEST(CharSourceRangeTest, str) {
   EXPECT_TRUE(aRange.str() == "a");
   EXPECT_TRUE(bRange.str() == "b");
   EXPECT_TRUE(completeRange.str() == "ab");
+}
+
+TEST(CharSourceRange, print) {
+  SourceManager srcMgr;
+
+  const char *str = "Hello, World!";
+  srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(str, "X"));
+  std::string output;
+  llvm::raw_string_ostream rso(output);
+  CharSourceRange range(SourceLoc::fromPointer(str), strlen(str));
+  range.print(rso, srcMgr, true, false);
+  EXPECT_EQ(rso.str(), "[X:1:1, line:1:14)");
+
+  output.clear();
+  range.print(rso, srcMgr, true, true);
+  EXPECT_EQ(rso.str(), "[X:1:1, line:1:14)=\"Hello, World!\"");
 }
