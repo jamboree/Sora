@@ -252,16 +252,27 @@ public:
 };
 } // namespace
 
-void Decl::dump(raw_ostream &out, unsigned indent) {}
+void Decl::dump(raw_ostream &out, const SourceManager &srcMgr,
+                unsigned indent) {
+  Dumper(out, srcMgr, indent).visit(this);
+}
 
 void Expr::dump(raw_ostream &out, const SourceManager &srcMgr,
-                unsigned indent) {}
+                unsigned indent) {
+  Dumper(out, srcMgr, indent).visit(this);
+}
 
 void Pattern::dump(raw_ostream &out, const SourceManager &srcMgr,
-                   unsigned indent) {}
+                   unsigned indent) {
+  Dumper(out, srcMgr, indent).visit(this);
+}
 
 void TypeRepr::dump(raw_ostream &out, const SourceManager &srcMgr,
-                    unsigned indent) {}
+                    unsigned indent) {
+  Dumper(out, srcMgr, indent).visit(this);
+}
 
 void Stmt::dump(raw_ostream &out, const SourceManager &srcMgr,
-                unsigned indent) {}
+                unsigned indent) {
+  Dumper(out, srcMgr, indent).visit(this);
+}
