@@ -17,6 +17,8 @@
 namespace sora {
 class TypeBase;
 class TypeRepr;
+class SourceLoc;
+class SourceRange;
 
 /// Wrapper around a TypeBase* used to disable direct pointer comparison, as it
 /// can cause bugs when canonical types are involved.
@@ -72,23 +74,22 @@ public:
 /// variable declarations.
 class TypeLoc {
   Type type;
-  TypeRepr *repr = nullptr;
+  TypeRepr *tyRepr = nullptr;
 
 public:
   TypeLoc() = default;
   TypeLoc(Type type) : type(type) {}
-  TypeLoc(Type type, TypeRepr *repr) : type(type), repr(repr) {}
+  TypeLoc(Type type, TypeRepr *tyRepr) : type(type), tyRepr(tyRepr) {}
 
-  /// TODO (all of these are only valid if hasLocation() returns true)
-  /// SourceRange getSourceRange() const
-  /// SourceRange getBegLoc() const
-  /// SourceRange getLoc() const
-  /// SourceRange getEndLoc() const
+  SourceRange getSourceRange() const;
+  SourceLoc getBegLoc() const;
+  SourceLoc getLoc() const;
+  SourceLoc getEndLoc() const;
 
-  bool hasLocation() { return repr != nullptr; }
+  bool hasLocation() { return tyRepr != nullptr; }
   bool hasType() { return !type.isNull(); }
 
-  TypeRepr *getTypeRepr() const { return repr; }
+  TypeRepr *getTypeRepr() const { return tyRepr; }
 
   Type getType() const { return type; }
   void setType(Type type) { this->type = type; }
