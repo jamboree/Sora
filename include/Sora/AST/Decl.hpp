@@ -91,6 +91,16 @@ public:
   /// \returns the DeclContext in which this Decl is contained
   DeclContext *getDeclContext() const { return declContext; }
 
+  /// If this Decl is also a DeclContext, returns it as a DeclContext*, else
+  /// returns nullptr.
+  DeclContext *getAsDeclContext() { return dyn_cast<DeclContext>(this); }
+
+  /// If this Decl is also a DeclContext, returns it as a DeclContext*, else
+  /// returns nullptr.
+  const DeclContext *getAsDeclContext() const {
+    return dyn_cast<DeclContext>(this);
+  }
+
   /// Dumps this declaration to \p out
   /// TODO: Remove srcMgr once we get access to ASTContext from all decls
   /// through DeclContexts.
