@@ -70,6 +70,11 @@ public:
   /// otherwise.
   BufferID loadFile(StringRef filepath);
 
+  /// \returns true if the file located at \p filePath is already loaded.
+  ///         If \p isAbsolute is set to true, the path will not be converted to
+  ///         an absolute path before the check if performed.
+  bool isLoaded(StringRef filePath, bool isAbsolute = false);
+
   /// Runs this CompilerInstance.
   ///
   /// This can only be called once per CompilerInstance.

@@ -11,6 +11,7 @@
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace sora;
 using namespace llvm::opt;
@@ -110,6 +111,17 @@ BufferID CompilerInstance::loadFile(StringRef filepath) {
   }
   diagnose(diag::couldnt_load_input_file, filepath);
   return BufferID();
+}
+
+bool CompilerInstance::isLoaded(StringRef filePath, bool isAbsolute) {
+  SmallVector<char, 16> path(filePath.begin(), filePath.end());
+  if (!isAbsolute) {
+    auto errc = llvm::sys::fs::make_absolute(path);
+    // TODO: handle the error_code properly
+    assert(!errc && "make_absolute failed");
+  }
+  // TODO
+  return false;
 }
 
 bool CompilerInstance::run(Step stopAfter) {
