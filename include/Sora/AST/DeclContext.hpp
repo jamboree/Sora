@@ -54,6 +54,9 @@ public:
   /// \returns the parent of this DeclContext
   DeclContext *getParent() const { return parentAndKind.getPointer(); }
 
+  /// \returns true if this DeclContext has a parent
+  bool hasParent() const { return getParent(); }
+
   /// \returns the kind of this DeclContext
   DeclContextKind getDeclContextKind() const { return parentAndKind.getInt(); }
 
