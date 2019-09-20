@@ -44,13 +44,27 @@ public:
   struct {
     /// If "true", dumps the AST after parsing.
     /// Honored by doParsing()
-    bool dumpRawAST = false;
+    bool dumpParse = false;
     /// If "true", dumps the AST after semantic analysis.
     /// Honored by doSema()
-    bool dumpCheckedAST = false;
+    bool dumpAST = false;
+    /// If "true", the compiler will stop after the parsing step.
+    /// Honored by run()
+    bool parseOnly = false;
   } options;
 
-  /// Loads an file into the SourceManager
+  /// Handles command-line options
+  void handleOptions(llvm::opt::InputArgList &argList);
+
+  /// Loads each input file in \p argList
+  /// \returns false if an error occured while loading a file.
+  bool loadInputs(llvm::opt::InputArgList &argList);
+
+  /// Dumps the state of this CompilerInstance
+  void dump(raw_ostream &out) const;
+
+  /// Loads an file into the SourceManager. If the file can't be loaded, a
+  /// diagnostic is emitted.
   /// \param the absolute path of the file
   /// \returns a valid BufferID if the file was loaded successfully, false
   /// otherwise.
@@ -67,6 +81,14 @@ public:
 
   /// \returns the set of input buffers
   ArrayRef<BufferID> getInputBuffers() const;
+
+  /// Utility function to emit CompilerInstance diagnostics.
+  template <typename... Args>
+  InFlightDiagnostic
+  diagnose(TypedDiag<Args...> diag,
+           typename detail::PassArgument<Args>::type... args) {
+    return diagEng.diagnose<Args...>(SourceLoc(), diag, args...);
+  }
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
