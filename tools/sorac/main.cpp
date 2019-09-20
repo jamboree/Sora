@@ -43,5 +43,6 @@ int main(int argc, char **argv) {
   auto compilerInstance = driver.tryCreateCompilerInstance(inputArgs);
   if (!compilerInstance)
     return EXIT_FAILURE;
+  compilerInstance->dump(llvm::outs());
   return compilerInstance->run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
