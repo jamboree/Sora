@@ -28,29 +28,25 @@ void *Decl::operator new(size_t size, ASTContext &ctxt, unsigned align) {
 }
 
 SourceFile &Decl::getSourceFile() const {
-  const Decl *cur = this;
-  // Keep going while we have a valid parent.
-  while (DeclParent parent = cur->getParent()) {
-    // If we have a SourceFile as parent, we can stop.
-    if (SourceFile * sf = parent.dyn_cast<SourceFile *>())
+  DeclContext *cur = getDeclContext();
+  while (cur) {
+    if (auto sf = dyn_cast<SourceFile>(cur))
       return *sf;
-    // If we don't have a SourceFile as parent, it has to be a Decl.
-    cur = parent.get<Decl *>();
+    cur = cur->getParent();
   }
   llvm_unreachable("ill-formed declaration parent chain");
 }
 
-ASTContext &Decl::getASTContext() const {
-  return getSourceFile().astContext;
-}
+ASTContext &Decl::getASTContext() const { return getSourceFile().astContext; }
 
 DiagnosticEngine &Decl::getDiagnosticEngine() const {
   return getASTContext().diagEngine;
 }
 
 bool Decl::isLocal() const {
-  if (Decl *decl = getParent().dyn_cast<Decl *>())
-    return isa<FuncDecl>(decl);
+  /// FIXME: Not ideal to return false when no DeclContexti is present.
+  if (auto dc = getDeclContext())
+    return dc->isLocalContext();
   return false;
 }
 
@@ -141,10 +137,11 @@ SourceLoc LetDecl::getEndLoc() const {
   return getPattern()->getEndLoc();
 }
 
-LetDecl *LetDecl::create(ASTContext &ctxt, DeclParent parent, SourceLoc letLoc,
-                         Pattern *pattern, SourceLoc equalLoc, Expr *init) {
+LetDecl *LetDecl::create(ASTContext &ctxt, DeclContext *declContext,
+                         SourceLoc letLoc, Pattern *pattern, SourceLoc equalLoc,
+                         Expr *init) {
   // Need manual memory allocation here because of trailing objects.
   auto size = totalSizeToAlloc<SourceLoc, Expr *>(init ? 1 : 0, init ? 1 : 0);
   void *mem = ctxt.allocate(size, alignof(LetDecl));
-  return new (mem) LetDecl(parent, letLoc, pattern, equalLoc, init);
+  return new (mem) LetDecl(declContext, letLoc, pattern, equalLoc, init);
 }

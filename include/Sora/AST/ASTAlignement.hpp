@@ -11,25 +11,27 @@
 
 namespace sora {
 class Decl;
+class DeclContext;
 class Expr;
+class Pattern;
+class SourceFile;
 class Stmt;
 class TypeBase;
 class TypeRepr;
-class SourceFile;
-class Pattern;
 
 // Declare the FreeLowBits and Alignment variables
 #define DECLARE(CLASS, FREE_BITS_DESIRED)                                      \
   constexpr std::size_t CLASS##FreeLowBits = FREE_BITS_DESIRED##u;             \
   constexpr std::size_t CLASS##Alignement = 1u << FREE_BITS_DESIRED##u
 
-DECLARE(TypeBase, 1);
-DECLARE(TypeRepr, 1);
-DECLARE(Pattern, 1);
-DECLARE(Expr, 3);
 DECLARE(Decl, 3);
+DECLARE(DeclContext, 3);
+DECLARE(Expr, 3);
+DECLARE(Pattern, 1);
 DECLARE(SourceFile, 3);
 DECLARE(Stmt, 3);
+DECLARE(TypeBase, 1);
+DECLARE(TypeRepr, 1);
 #undef DECLARE
 } // namespace sora
 
@@ -46,13 +48,13 @@ template <class T> struct PointerLikeTypeTraits;
     }                                                                          \
   }
 
-LLVM_DEFINE_PLTT(TypeBase);
-LLVM_DEFINE_PLTT(TypeRepr);
-LLVM_DEFINE_PLTT(Pattern);
 LLVM_DEFINE_PLTT(Expr);
 LLVM_DEFINE_PLTT(Decl);
+LLVM_DEFINE_PLTT(Pattern);
 LLVM_DEFINE_PLTT(SourceFile);
 LLVM_DEFINE_PLTT(Stmt);
+LLVM_DEFINE_PLTT(TypeBase);
+LLVM_DEFINE_PLTT(TypeRepr);
 
 #undef LLVM_DEFINE_PLTT
 
