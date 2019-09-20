@@ -44,10 +44,7 @@ public:
 
   /// If this is a declaration, returns this DeclContext as a Decl*, else,
   /// returns nullptr.
-  Decl *getAsDecl() {
-    // TODO
-    llvm_unreachable("unimplemented");
-  }
+  Decl *getAsDecl();
   /// If this is a declaration, returns this DeclContext as a Decl*, else,
   /// returns nullptr.
   const Decl *getAsDecl() const {

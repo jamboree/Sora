@@ -145,3 +145,12 @@ LetDecl *LetDecl::create(ASTContext &ctxt, DeclContext *declContext,
   void *mem = ctxt.allocate(size, alignof(LetDecl));
   return new (mem) LetDecl(declContext, letLoc, pattern, equalLoc, init);
 }
+
+Decl *DeclContext::getAsDecl() {
+  switch (getDeclContextKind()) {
+  case DeclContextKind::FuncDecl:
+    return cast<FuncDecl>(this);
+  default:
+    return nullptr;
+  }
+}
