@@ -51,6 +51,15 @@ public:
     return const_cast<DeclContext *>(this)->getAsDecl();
   }
 
+  /// If this is a source file, returns this DeclContext as a SourceFile*, else,
+  /// returns nullptr.
+  SourceFile *getAsSourceFile();
+  /// If this is a source file, returns this DeclContext as a SourceFile*, else,
+  /// returns nullptr.
+  const SourceFile *getAsSourceFile() const {
+    return const_cast<DeclContext *>(this)->getAsSourceFile();
+  }
+
   /// \returns the parent of this DeclContext
   DeclContext *getParent() const { return parentAndKind.getPointer(); }
 

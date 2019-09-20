@@ -36,9 +36,16 @@ TEST_F(DeclContextTest, isLocalContext) {
   EXPECT_FALSE(dc->isLocalContext());
 }
 
-TEST_F(DeclContextTest, getAsDecl) {
+TEST_F(DeclContextTest, raii) {
+  EXPECT_TRUE(isa<DeclContext>(&sf));
+  EXPECT_TRUE(isa<DeclContext>(func));
+}
+
+TEST_F(DeclContextTest, getAs) {
   DeclContext *dc = func;
-  EXPECT_EQ(dc->getAsDecl(), (Decl*)func);
+  EXPECT_EQ(dc->getAsDecl(), (Decl *)func);
+  EXPECT_EQ(dc->getAsSourceFile(), nullptr);
   dc = &sf;
   EXPECT_EQ(dc->getAsDecl(), nullptr);
+  EXPECT_EQ(dc->getAsSourceFile(), &sf);
 }
