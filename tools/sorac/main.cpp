@@ -7,8 +7,10 @@
 
 #include "Sora/Common/DiagnosticsCommon.hpp"
 #include "Sora/Common/InitLLVM.hpp"
+#include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Driver/Driver.hpp"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 
 using namespace sora;
@@ -22,10 +24,15 @@ int main(int argc, char **argv) {
   Driver driver(diags);
   // Parse the arguments
   bool hadError;
-  InputArgList inputArgs =
-      driver.parseArgs(ArrayRef<const char*>(argv, argv + argc), hadError);
-  // Stop here if an error occured during the parsing of the arguments
-  // (because the arguments cannot be trusted)
+  ArrayRef<const char *> rawArgs = ArrayRef<const char *>(argv, argv + argc);
+  // Remove the first argument from the array, as it's the executable's path
+  // and we aren't interested in it. Plus, the Driver will consider it as an
+  // input if we don't remove it.
+  rawArgs = rawArgs.slice(1);
+  // Ask the driver to parse the argument
+  InputArgList inputArgs = driver.parseArgs(rawArgs, hadError);
+  /// Stop here if an error occured during the parsing of the arguments (because
+  /// the arguments cannot be trusted)
   if (hadError)
     return EXIT_FAILURE;
   // Handle immediate arguments and return if we don't have anything else
@@ -34,7 +41,7 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   // Try to create the CompilerInstance
   auto compilerInstance = driver.tryCreateCompilerInstance(inputArgs);
-  if (!compilerInstance)  
+  if (!compilerInstance)
     return EXIT_FAILURE;
   return compilerInstance->run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
