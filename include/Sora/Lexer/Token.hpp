@@ -52,7 +52,7 @@ public:
   StringRef str() const;
 
   /// \returns the SourceLoc pointing at the beginning of the Token.
-  SourceLoc getBegLoc() const { return charRange.getBegin(); }
+  SourceLoc getLoc() const { return charRange.getBegin(); }
 
   /// \returns the kind of this token
   TokenKind getKind() const { return kind; }
