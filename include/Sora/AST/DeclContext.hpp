@@ -30,7 +30,13 @@ enum class DeclContextKind : uint8_t {
 /// Declarations keep track of their parent DeclContext, and they can
 /// use them to gather information and access the root SourceFile.
 class alignas(DeclContextAlignement) DeclContext {
-  llvm::PointerIntPair<DeclContext *, 3, DeclContextKind> parentAndKind;
+  llvm::PointerIntPair<DeclContext *, DeclContextFreeLowBits, DeclContextKind>
+      parentAndKind;
+
+  static_assert(
+      unsigned(DeclContextKind::Last_DeclContext) <=
+          (1 << DeclContextFreeLowBits),
+      "Too many DeclContextKind exceeds bits available in DeclContext*");
 
 protected:
   DeclContext(DeclContextKind kind, DeclContext *parent)
