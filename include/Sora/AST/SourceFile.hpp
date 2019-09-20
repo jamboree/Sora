@@ -11,6 +11,7 @@
 #include "Sora/AST/DeclContext.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "Sora/Common/SourceManager.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -21,14 +22,16 @@ class Decl;
 class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
   Identifier identifier;
   SmallVector<Decl *, 4> members;
+  BufferID bufferID;
 
 public:
   /// \param astContext the ASTContext in which the members of this source file
   /// are allocated.
   /// \param identifier the identifier (name) of this source file
-  SourceFile(ASTContext &astContext, DeclContext *parent, Identifier identifier)
+  SourceFile(BufferID bufferID, ASTContext &astContext, DeclContext *parent,
+             Identifier identifier)
       : DeclContext(DeclContextKind::SourceFile, parent),
-        identifier(identifier), astContext(astContext) {}
+        identifier(identifier), bufferID(bufferID), astContext(astContext) {}
 
   /// \returns the identifier (name) of this source file
   Identifier getIdentifier() const { return identifier; }
@@ -36,6 +39,8 @@ public:
   ArrayRef<Decl *> getMembers() const { return members; }
   /// Adds a member to this source file
   void addMember(Decl *decl) { return members.push_back(decl); }
+  /// \returns the buffer id of this SourceFile
+  BufferID getBufferID() const { return bufferID; }
 
   static bool classof(const DeclContext *dc) {
     return dc->getDeclContextKind() == DeclContextKind::SourceFile;

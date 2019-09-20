@@ -128,7 +128,7 @@ TEST_F(DeclTest, PatternBindingDecl) {
 /// Tests Decl::getSourceFile and related features (getParent, getASTContext,
 /// getDiagnosticEngine)
 TEST_F(DeclTest, getSourceFile) {
-  SourceFile sf(*ctxt, nullptr, Identifier());
+  SourceFile sf({}, *ctxt, nullptr, Identifier());
   // Let's create a simple tree:
   // SourceFile
   //    FuncDecl

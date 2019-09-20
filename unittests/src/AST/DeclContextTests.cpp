@@ -25,7 +25,7 @@ protected:
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
   FuncDecl *func = nullptr;
-  SourceFile sf{*ctxt, nullptr, {}};
+  SourceFile sf{{}, *ctxt, nullptr, {}};
 };
 } // namespace
 
