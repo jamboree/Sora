@@ -70,7 +70,7 @@ protected:
     return mem;
   }
 
-  Decl(DeclKind kind, DeclParent parent) : kind(kind), parent(parent) {}
+  Decl(DeclKind kind, DeclParent parent) : parent(parent), kind(kind) {}
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.

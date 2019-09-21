@@ -53,7 +53,6 @@ TEST_F(PatternTest, rtti) {
 TEST_F(PatternTest, getSourceRange) {
   const char *str = "Hello, World!";
   SourceLoc beg = SourceLoc::fromPointer(str);
-  SourceLoc mid = SourceLoc::fromPointer(str + 5);
   SourceLoc end = SourceLoc::fromPointer(str + 10);
   SourceRange range(beg, end);
 

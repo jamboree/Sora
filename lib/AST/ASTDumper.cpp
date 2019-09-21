@@ -170,7 +170,7 @@ class Dumper : public SimpleASTVisitor<Dumper> {
 
 public:
   Dumper(raw_ostream &out, const SourceManager &srcMgr, unsigned indentSize)
-      : out(out), curIndent(0), indentSize(indentSize), srcMgr(srcMgr) {}
+      : out(out), srcMgr(srcMgr), curIndent(0), indentSize(indentSize) {}
 
   /// Override the visit method so it calls printNoNode() when the node is null.
   template <typename T> void visit(T node) {
