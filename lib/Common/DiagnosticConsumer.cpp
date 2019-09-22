@@ -31,8 +31,6 @@ llvm::SourceMgr::DiagKind getDKasLLVM(DiagnosticKind kind) {
 }
 } // namespace
 
-PrintingDiagnosticConsumer::PrintingDiagnosticConsumer() : out(llvm::outs()) {}
-
 void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
                                         const Diagnostic &diagnostic) {
   // Get the SMRanges

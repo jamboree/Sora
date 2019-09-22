@@ -72,12 +72,10 @@ public:
   virtual void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) = 0;
 };
 
-/// A DiagnosticConsumer that prints pretty-printed diagnostics to a raw_ostream
+/// A DiagnosticConsumer that pretty-prints diagnostics to a raw_ostream.
+/// FIXME: This is for the Driver, perhaps it'd be better to move it to Driver/?
 class PrintingDiagnosticConsumer : public DiagnosticConsumer {
 public:
-  /// default constructor that uses llvm::outs()
-  PrintingDiagnosticConsumer();
-  /// constructor for custom output streams
   PrintingDiagnosticConsumer(raw_ostream &out) : out(out) {}
 
   /// the output stream
