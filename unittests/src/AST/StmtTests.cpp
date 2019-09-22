@@ -126,7 +126,8 @@ TEST_F(StmtTest, getSourceRange) {
 
   // WhileStmt
   {
-    Stmt *stmt = new (*ctxt) WhileStmt(beg, nullptr, new (*ctxt) ContinueStmt(end));
+    Stmt *stmt =
+        new (*ctxt) WhileStmt(beg, nullptr, new (*ctxt) ContinueStmt(end));
     EXPECT_EQ(stmt->getLoc(), beg);
     EXPECT_EQ(stmt->getBegLoc(), beg);
     EXPECT_EQ(stmt->getEndLoc(), end);

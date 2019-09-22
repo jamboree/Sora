@@ -10,8 +10,8 @@
 
 #pragma once
 
+#include "llvm/ADT/None.h"        // can't forward declare at all
 #include "llvm/Support/Casting.h" // can't forward declare easily
-#include "llvm/ADT/None.h" // can't forward declare at all
 
 namespace llvm {
 class raw_ostream;
@@ -34,16 +34,16 @@ using llvm::dyn_cast_or_null;
 using llvm::isa;
 
 // Other
+using llvm::ArrayRef;
+using llvm::MutableArrayRef;
+using llvm::None;
+using llvm::Optional;
 using llvm::raw_ostream;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
 using llvm::StringRef;
-using llvm::None;
-using llvm::Optional;
-using llvm::ArrayRef;
-using llvm::MutableArrayRef;
 
 // APInt & APFloat
-using llvm::APInt;
 using llvm::APFloat;
+using llvm::APInt;
 } // namespace sora

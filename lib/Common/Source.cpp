@@ -53,7 +53,8 @@ void SourceLoc::print(raw_ostream &out, const SourceManager &srcMgr,
   if (printFileName) {
     auto name = srcMgr.getBufferIdentifier(buffer);
     out << (name.empty() ? "<unknown>" : name);
-  } else
+  }
+  else
     out << "line";
 
   auto lc = srcMgr.getLineAndColumn(*this, buffer);

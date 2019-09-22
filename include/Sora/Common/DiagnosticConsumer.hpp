@@ -14,20 +14,15 @@
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <stdint.h>
 #include <string>
-#include <functional>
 
 namespace sora {
 class SourceManager;
 
 /// Kinds (severities) of diagnostics.
-enum class DiagnosticKind : uint8_t {
-  Remark,
-  Note,
-  Warning,
-  Error
-};
+enum class DiagnosticKind : uint8_t { Remark, Note, Warning, Error };
 
 /// A Diagnostic "Fix-It", a remplacement of a piece of text with another.
 class FixIt {
@@ -93,17 +88,18 @@ public:
 
 /// A DiagnosticConsumer that forwards diagnostic handling to a function
 class ForwardingDiagnosticConsumer : public DiagnosticConsumer {
-  public:
-    using HandlerFunction = std::function<void(SourceManager&, const Diagnostic&)>;
+public:
+  using HandlerFunction =
+      std::function<void(SourceManager &, const Diagnostic &)>;
 
-    ForwardingDiagnosticConsumer(HandlerFunction func) : func(func) {}
+  ForwardingDiagnosticConsumer(HandlerFunction func) : func(func) {}
 
-    /// Handles a diagnostic.
-    void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override {
-      func(srcMgr, diagnostic);
-    }
+  /// Handles a diagnostic.
+  void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override {
+    func(srcMgr, diagnostic);
+  }
 
-  private:
-    HandlerFunction func;
+private:
+  HandlerFunction func;
 };
 } // namespace sora

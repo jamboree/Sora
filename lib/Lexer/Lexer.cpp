@@ -171,7 +171,8 @@ void Lexer::lexNumberLiteral() {
     ++curPtr;
     consumeInteger();
     pushToken(TokenKind::FloatingPointLiteral);
-  } else
+  }
+  else
     pushToken(TokenKind::IntegerLiteral);
 }
 

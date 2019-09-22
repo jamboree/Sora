@@ -92,15 +92,15 @@ TEST_F(ExprTest, rtti) {
 
   // BinaryExpr
   {
-    Expr *expr = new (*ctxt)
-        BinaryExpr(nullptr, BinaryOperatorKind::Add, {}, nullptr);
+    Expr *expr =
+        new (*ctxt) BinaryExpr(nullptr, BinaryOperatorKind::Add, {}, nullptr);
     EXPECT_TRUE(isa<BinaryExpr>(expr));
   }
 
   // UnaryExpr
   {
-    Expr *expr = new (*ctxt)
-        UnaryExpr(UnaryOperatorKind::AddressOf, {}, nullptr);
+    Expr *expr =
+        new (*ctxt) UnaryExpr(UnaryOperatorKind::AddressOf, {}, nullptr);
     EXPECT_TRUE(isa<UnaryExpr>(expr));
   }
 }

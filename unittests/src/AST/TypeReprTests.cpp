@@ -25,15 +25,13 @@ protected:
 TEST_F(TypeReprTest, rtti) {
   // IdentifierTypeRepr
   {
-    TypeRepr *tyRepr =
-        new (*ctxt) IdentifierTypeRepr({}, {});
+    TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr({}, {});
     EXPECT_TRUE(isa<IdentifierTypeRepr>(tyRepr));
   }
 
   // TupleTypeRepr
   {
-    TypeRepr *tyRepr =
-        TupleTypeRepr::createEmpty(*ctxt, {}, {});
+    TypeRepr *tyRepr = TupleTypeRepr::createEmpty(*ctxt, {}, {});
     EXPECT_TRUE(isa<TupleTypeRepr>(tyRepr));
   }
 

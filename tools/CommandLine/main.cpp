@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   // Parse the arguments
   bool hadError;
   InputArgList inputArgs =
-      driver.parseArgs(ArrayRef<const char*>(argv, argv + argc), hadError);
+      driver.parseArgs(ArrayRef<const char *>(argv, argv + argc), hadError);
   // Stop here if an error occured during the parsing of the arguments
   // (because the arguments cannot be trusted)
   if (hadError)
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   // Try to create the CompilerInstance
   auto compilerInstance = driver.tryCreateCompilerInstance(inputArgs);
-  if (!compilerInstance)  
+  if (!compilerInstance)
     return EXIT_FAILURE;
   return compilerInstance->run() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

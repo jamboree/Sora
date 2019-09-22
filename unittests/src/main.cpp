@@ -5,8 +5,8 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "Sora/Common/InitLLVM.hpp"
+#include "gtest/gtest.h"
 #include <cstdio>
 
 int main(int argc, char **argv) {

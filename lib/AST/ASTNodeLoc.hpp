@@ -31,8 +31,7 @@ template <typename Base, typename Derived> struct ASTNodeLoc {
       detail::isOverriden<Base>(&Derived::getBegLoc);
   static constexpr bool hasGetEnd =
       detail::isOverriden<Base>(&Derived::getEndLoc);
-  static constexpr bool hasGetLoc =
-      detail::isOverriden<Base>(&Derived::getLoc);
+  static constexpr bool hasGetLoc = detail::isOverriden<Base>(&Derived::getLoc);
 
   /// Nodes must override (getSourceRange) or (getBegLoc & getEndLoc) or both
   static_assert(hasGetRange || (hasGetBeg && hasGetEnd),

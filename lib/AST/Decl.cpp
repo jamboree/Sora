@@ -32,7 +32,7 @@ SourceFile &Decl::getSourceFile() const {
   // Keep going while we have a valid parent.
   while (DeclParent parent = cur->getParent()) {
     // If we have a SourceFile as parent, we can stop.
-    if (SourceFile * sf = parent.dyn_cast<SourceFile *>())
+    if (SourceFile *sf = parent.dyn_cast<SourceFile *>())
       return *sf;
     // If we don't have a SourceFile as parent, it has to be a Decl.
     cur = parent.get<Decl *>();
@@ -40,9 +40,7 @@ SourceFile &Decl::getSourceFile() const {
   llvm_unreachable("ill-formed declaration parent chain");
 }
 
-ASTContext &Decl::getASTContext() const {
-  return getSourceFile().astContext;
-}
+ASTContext &Decl::getASTContext() const { return getSourceFile().astContext; }
 
 DiagnosticEngine &Decl::getDiagnosticEngine() const {
   return getASTContext().diagEngine;
