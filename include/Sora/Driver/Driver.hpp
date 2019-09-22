@@ -121,13 +121,10 @@ private:
 /// creation of CompilerInstances.
 class Driver {
 public:
-  /// \param driverDiags the DiagnosticEngine that should be used by the Driver
-  /// to report errors. This will never be used with valid SourceLocs, so you
-  /// can pass a DiagnosticEngine constructed with an empty SourceManager.
-  /// Please note that the DiagnosticEngine/SourceManager combo that will be
-  /// used by the various components of the compiler (e.g. Parser, Sema, etc.)
-  /// will be created by the Driver itself when compiling files.
-  Driver(DiagnosticEngine &driverDiags);
+  /// \param out the stream where the driver will print diagnostics
+  /// NOTE: This will not be used to print compilation-related diagnostics
+  /// (those are always printed to llvm::outs()).
+  Driver(raw_ostream &out);
 
   /// Parses the arguments \p args.
   /// This also diagnoses unknown/ill-formed arguments.
@@ -165,7 +162,10 @@ public:
 
 private:
   /// Driver Diagnostics
-  DiagnosticEngine &driverDiags;
+  /// FIXME: It'd be great if the DiagnosticEngine could work without a
+  /// SourceManager, so we don't have to create one for nothing.
+  SourceManager driverDiagsSrcMgr;
+  DiagnosticEngine driverDiags;
   /// The option table
   std::unique_ptr<llvm::opt::OptTable> optTable;
 };

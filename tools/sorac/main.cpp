@@ -19,9 +19,7 @@ using namespace llvm::opt;
 int main(int argc, char **argv) {
   PROGRAM_START(argc, argv);
   // Create the driver
-  SourceManager srcMgr;
-  DiagnosticEngine diags(srcMgr, llvm::outs());
-  Driver driver(diags);
+  Driver driver(llvm::outs());
   // Parse the arguments
   bool hadError;
   ArrayRef<const char *> rawArgs = ArrayRef<const char *>(argv, argv + argc);

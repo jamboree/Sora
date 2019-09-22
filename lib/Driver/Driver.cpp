@@ -16,11 +16,11 @@
 using namespace sora;
 using namespace llvm::opt;
 
-Driver::Driver(DiagnosticEngine &driverDiags)
-    : driverDiags(driverDiags), optTable(createSoraOptTable()) {}
+Driver::Driver(raw_ostream &out)
+    : driverDiags(driverDiagsSrcMgr, out), optTable(createSoraOptTable()) {}
 
 InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
-  hadError = false;
+  hadError = false; 
   unsigned missingArgIndex = 0, missingArgCount = 0;
   // Parse the arguments, set the argList.
   llvm::opt::InputArgList argList =
