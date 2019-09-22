@@ -50,6 +50,10 @@ bool Decl::isLocal() const {
   return false;
 }
 
+void Decl::dump(raw_ostream &out, unsigned indent) {
+  dump(out, getASTContext().srcMgr, indent);
+}
+
 SourceLoc Decl::getBegLoc() const {
   switch (getKind()) {
   default:
