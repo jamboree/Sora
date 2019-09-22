@@ -20,6 +20,7 @@
 
 namespace sora {
 class ASTContext;
+class ASTWalker;
 class VarDecl;
 
 /// Kinds of Patterns
@@ -64,6 +65,11 @@ public:
   // Publicly allow allocation of patterns using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Pattern));
+
+  /// Traverse this Pattern using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   /// Dumps this statement to \p out
   void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);

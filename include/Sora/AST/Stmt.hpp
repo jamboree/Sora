@@ -18,8 +18,9 @@
 #include <stdint.h>
 
 namespace sora {
-class Expr;
 class ASTContext;
+class ASTWalker;
+class Expr;
 
 /// Kinds of Statements
 enum class StmtKind : uint8_t {
@@ -64,6 +65,11 @@ public:
   // Publicly allow allocation of statements using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Stmt));
+
+  /// Traverse this Stmt using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   /// Dumps this statement to \p out
   void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);

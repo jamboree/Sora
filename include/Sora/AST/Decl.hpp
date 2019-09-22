@@ -21,6 +21,7 @@
 
 namespace sora {
 class ASTContext;
+class ASTWalker;
 class DiagnosticEngine;
 class PatternBindingDecl;
 class BlockStmt;
@@ -95,6 +96,11 @@ public:
 
   /// \returns the parent of this Decl
   DeclParent getParent() const { return parent; }
+
+  /// Traverse this Decl using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   /// Dumps this declaration to \p out
   /// TODO: Remove srcMgr once we get access to ASTContext from all decls

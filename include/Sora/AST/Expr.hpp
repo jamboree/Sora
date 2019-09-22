@@ -23,6 +23,7 @@
 
 namespace sora {
 class ASTContext;
+class ASTWalker;
 
 /// Kinds of Expressions
 enum class ExprKind : uint8_t {
@@ -97,6 +98,11 @@ public:
   const Expr *ignoreParens() const {
     return const_cast<Expr *>(this)->ignoreParens();
   }
+
+  /// Traverse this Expr using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   /// Dumps this expression to \p out
   void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);

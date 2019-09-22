@@ -25,6 +25,7 @@
 
 namespace sora {
 class ASTContext;
+class ASTWalker;
 
 enum class TypeReprKind : uint8_t {
 #define TYPEREPR(KIND, PARENT) KIND,
@@ -74,6 +75,11 @@ public:
 
   /// \return the kind of TypeRepr this is
   TypeReprKind getKind() const { return kind; }
+
+  /// Traverse this TypeRepr using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   /// Dumps this TypeRepr to \p out
   void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);

@@ -12,6 +12,7 @@
 #include "llvm/ADT/PointerUnion.h"
 
 namespace sora {
+class ASTWalker;
 class SourceRange;
 class SourceLoc;
 class Expr;
@@ -30,5 +31,10 @@ struct ASTNode : public llvm::PointerUnion3<Expr *, Stmt *, Decl *> {
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the end of the node
   SourceLoc getEndLoc() const;
+
+  /// Traverse this ASTNode using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 };
 } // namespace sora
