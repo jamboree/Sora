@@ -86,8 +86,8 @@ public:
   SourceLoc getLoc() const;
   SourceLoc getEndLoc() const;
 
-  bool hasLocation() { return tyRepr != nullptr; }
-  bool hasType() { return !type.isNull(); }
+  bool hasLocation() const { return tyRepr != nullptr; }
+  bool hasType() const { return !type.isNull(); }
 
   TypeRepr *getTypeRepr() const { return tyRepr; }
 
