@@ -28,11 +28,9 @@ void *Decl::operator new(size_t size, ASTContext &ctxt, unsigned align) {
 }
 
 SourceFile &Decl::getSourceFile() const {
-  const Decl *cur = this;
-  // Keep going while we have a valid parent.
-  while (DeclParent parent = cur->getParent()) {
-    // If we have a SourceFile as parent, we can stop.
-    if (SourceFile *sf = parent.dyn_cast<SourceFile *>())
+  DeclContext *cur = getDeclContext();
+  while (cur) {
+    if (auto sf = dyn_cast<SourceFile>(cur))
       return *sf;
     cur = cur->getParent();
   }
@@ -137,4 +135,13 @@ SourceLoc LetDecl::getEndLoc() const {
   if (hasInitializer())
     return getInitializer()->getEndLoc();
   return getPattern()->getEndLoc();
+}
+
+Decl *DeclContext::getAsDecl() {
+  switch (getDeclContextKind()) {
+  case DeclContextKind::FuncDecl:
+    return cast<FuncDecl>(this);
+  default:
+    return nullptr;
+  }
 }

@@ -18,7 +18,9 @@ using namespace sora;
 namespace {
 class DeclContextTest : public ::testing::Test {
 protected:
-  DeclContextTest() { func = new (*ctxt) FuncDecl(&sf, {}, {}, {}); }
+  DeclContextTest() {
+    func = new (*ctxt) FuncDecl(&sf, {}, {}, {}, nullptr, {});
+  }
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};

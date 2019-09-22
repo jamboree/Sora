@@ -66,7 +66,7 @@ protected:
   }
 
   Decl(DeclKind kind, DeclContext *declContext)
-      : kind(kind), declContext(declContext) {}
+      : declContext(declContext), kind(kind) {}
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.
@@ -101,6 +101,11 @@ public:
   const DeclContext *getAsDeclContext() const {
     return dyn_cast<DeclContext>(this);
   }
+
+  /// Traverse this Decl using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   /// Dumps this declaration to \p out
   /// TODO: Remove srcMgr once we get access to ASTContext from all decls
@@ -316,9 +321,10 @@ class FuncDecl final : public ValueDecl, public DeclContext {
 
 public:
   FuncDecl(DeclContext *declContext, SourceLoc funcLoc, SourceLoc identLoc,
-           Identifier ident)
+           Identifier ident, ParamList *params, TypeLoc returnTypeLoc)
       : ValueDecl(DeclKind::Func, declContext, identLoc, ident),
-        DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc) {}
+        DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc),
+        paramList(params), returnTypeLoc(returnTypeLoc) {}
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
@@ -374,7 +380,8 @@ protected:
   /// Please note that if init is nullptr, \p equalLoc will not be stored.
   PatternBindingDecl(DeclKind kind, DeclContext *declContext, Pattern *pattern,
                      SourceLoc equalLoc = SourceLoc(), Expr *init = nullptr)
-      : Decl(kind, parent), pattern(pattern), equalLoc(equalLoc), init(init) {}
+      : Decl(kind, declContext), pattern(pattern), equalLoc(equalLoc),
+        init(init) {}
 
 public:
   Expr *getInitializer() const { return init; }
@@ -398,9 +405,9 @@ class LetDecl final : public PatternBindingDecl {
   SourceLoc letLoc;
 
 public:
-  LetDecl(DeclParent parent, SourceLoc letLoc, Pattern *pattern,
+  LetDecl(DeclContext *declContext, SourceLoc letLoc, Pattern *pattern,
           SourceLoc equalLoc = SourceLoc(), Expr *init = nullptr)
-      : PatternBindingDecl(DeclKind::Let, parent, pattern, equalLoc, init),
+      : PatternBindingDecl(DeclKind::Let, declContext, pattern, equalLoc, init),
         letLoc(letLoc) {}
 
   SourceLoc getLetLoc() const { return letLoc; }
