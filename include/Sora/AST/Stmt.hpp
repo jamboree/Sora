@@ -12,8 +12,8 @@
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <stdint.h>
 
@@ -243,8 +243,8 @@ protected:
   ConditionalStmt(StmtKind kind, StmtCondition cond) : Stmt(kind), cond(cond) {}
 
 public:
-  StmtCondition getCond() const { return cond; }
-  void setCond(StmtCondition cond) { this->cond = cond; }
+  StmtCondition &getCond() { return cond; }
+  const StmtCondition &getCond() const { return cond; }
 
   static bool classof(const Stmt *stmt) {
     return (stmt->getKind() >= StmtKind::First_Conditional) &&
