@@ -140,11 +140,3 @@ SourceLoc LetDecl::getEndLoc() const {
     return getInitializer()->getEndLoc();
   return getPattern()->getEndLoc();
 }
-
-LetDecl *LetDecl::create(ASTContext &ctxt, DeclParent parent, SourceLoc letLoc,
-                         Pattern *pattern, SourceLoc equalLoc, Expr *init) {
-  // Need manual memory allocation here because of trailing objects.
-  auto size = totalSizeToAlloc<SourceLoc, Expr *>(init ? 1 : 0, init ? 1 : 0);
-  void *mem = ctxt.allocate(size, alignof(LetDecl));
-  return new (mem) LetDecl(parent, letLoc, pattern, equalLoc, init);
-}
