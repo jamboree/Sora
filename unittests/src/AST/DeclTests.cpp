@@ -122,7 +122,7 @@ TEST_F(DeclTest, PatternBindingDecl) {
 
   EXPECT_FALSE(pbd->hasInitializer());
   EXPECT_EQ(pbd->getInitializer(), nullptr);
-  EXPECT_EQ(pbd->getEqualLoc(), SourceLoc());
+  EXPECT_EQ(pbd->getEqualLoc(), loc);
 }
 
 /// Tests Decl::getSourceFile and related features (getParent, getASTContext,
