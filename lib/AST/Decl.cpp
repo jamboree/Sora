@@ -34,8 +34,7 @@ SourceFile &Decl::getSourceFile() const {
     // If we have a SourceFile as parent, we can stop.
     if (SourceFile *sf = parent.dyn_cast<SourceFile *>())
       return *sf;
-    // If we don't have a SourceFile as parent, it has to be a Decl.
-    cur = parent.get<Decl *>();
+    cur = cur->getParent();
   }
   llvm_unreachable("ill-formed declaration parent chain");
 }
@@ -47,8 +46,9 @@ DiagnosticEngine &Decl::getDiagnosticEngine() const {
 }
 
 bool Decl::isLocal() const {
-  if (Decl *decl = getParent().dyn_cast<Decl *>())
-    return isa<FuncDecl>(decl);
+  /// FIXME: Not ideal to return false when no DeclContexti is present.
+  if (auto dc = getDeclContext())
+    return dc->isLocalContext();
   return false;
 }
 

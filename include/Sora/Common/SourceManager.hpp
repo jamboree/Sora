@@ -24,6 +24,9 @@ public:
   /// Creates a null BufferID
   BufferID() = default;
 
+  /// \returns the raw value of the BufferID;
+  unsigned getRawValue() const { return value; }
+
   /// \returns true if this is a null buffer id
   bool isNull() { return value == 0; }
   /// \returns true if this buffer id isn't null.

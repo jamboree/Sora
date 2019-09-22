@@ -51,7 +51,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)  # tablegen'd stuff
 # find the libraries that we want to use
 llvm_map_components_to_libnames(llvm_libs support option)
 
-add_subdirectory(tools/CommandLine)
+add_subdirectory(tools/sorac)
 
 # enable -Wall on clang-cl
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" AND "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")

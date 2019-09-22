@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
+#include "Sora/AST/DeclContext.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
@@ -33,20 +34,13 @@ enum class DeclKind : uint8_t {
 #include "Sora/AST/DeclNodes.def"
 };
 
-/// The type of the parent of a declaration
-using DeclParent = llvm::PointerUnion<Decl *, SourceFile *>;
-
 /// Base class for every Declaration node.
-///
-/// Declarations all have parents, forming a linked-list between declarations.
-/// The last element of the list should always be the SourceFile in which the
-/// declarations belong.
 class alignas(DeclAlignement) Decl {
   // Disable vanilla new/delete for declarations
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  DeclParent parent;
+  DeclContext *declContext;
   DeclKind kind;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfields.
@@ -71,7 +65,8 @@ protected:
     return mem;
   }
 
-  Decl(DeclKind kind, DeclParent parent) : parent(parent), kind(kind) {}
+  Decl(DeclKind kind, DeclContext *declContext)
+      : kind(kind), declContext(declContext) {}
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.
@@ -94,13 +89,18 @@ public:
   /// lives inside a FuncDecl.
   bool isLocal() const;
 
-  /// \returns the parent of this Decl
-  DeclParent getParent() const { return parent; }
+  /// \returns the DeclContext in which this Decl is contained
+  DeclContext *getDeclContext() const { return declContext; }
 
-  /// Traverse this Decl using \p walker.
-  /// \returns true if the walk completed successfully, false if it ended
-  /// prematurely.
-  bool walk(ASTWalker &walker);
+  /// If this Decl is also a DeclContext, returns it as a DeclContext*, else
+  /// returns nullptr.
+  DeclContext *getAsDeclContext() { return dyn_cast<DeclContext>(this); }
+
+  /// If this Decl is also a DeclContext, returns it as a DeclContext*, else
+  /// returns nullptr.
+  const DeclContext *getAsDeclContext() const {
+    return dyn_cast<DeclContext>(this);
+  }
 
   /// Dumps this declaration to \p out
   /// TODO: Remove srcMgr once we get access to ASTContext from all decls
@@ -124,23 +124,32 @@ public:
 /// Decl should be 2 pointers in size: parent + kind + padding bits
 static_assert(sizeof(Decl) <= 16, "Decl is too large!");
 
-/// Base class for declarations that declare a value of some type with a given
-/// name.
+inline bool DeclContext::classof(const Decl *decl) {
+  switch (decl->getKind()) {
+  default:
+    return false;
+  case DeclKind::Func:
+    return true;
+  }
+}
+
+/// Base class for declarations that declare a value of some type with a
+/// given name.
 ///
-/// As an implementation detail, the type is not stored in the ValueDecl, but
-/// inside the derived classes. This works in the same way as "getBegLoc" for
-/// instance. This is done so we don't waste space storing a copy of the type in
-/// this class. e.g. VarDecl needs to store a TypeLoc, and we don't want to
-/// store the type in the TypeLoc AND in the ValueDecl, it'd waste space for
-/// nothing.
+/// As an implementation detail, the type is not stored in the ValueDecl,
+/// but inside the derived classes. This works in the same way as
+/// "getBegLoc" for instance. This is done so we don't waste space storing a
+/// copy of the type in this class. e.g. VarDecl needs to store a TypeLoc,
+/// and we don't want to store the type in the TypeLoc AND in the ValueDecl,
+/// it'd waste space for nothing.
 class ValueDecl : public Decl {
   SourceLoc identifierLoc;
   Identifier identifier;
 
 protected:
-  ValueDecl(DeclKind kind, DeclParent parent, SourceLoc identifierLoc,
+  ValueDecl(DeclKind kind, DeclContext *declContext, SourceLoc identifierLoc,
             Identifier identifier)
-      : Decl(kind, parent), identifierLoc(identifierLoc),
+      : Decl(kind, declContext), identifierLoc(identifierLoc),
         identifier(identifier) {}
 
 public:
@@ -165,14 +174,13 @@ public:
 /// Represents a *single* variable declaration.
 ///
 /// This DOES NOT represent something such as "let x" entirely, it only
-/// represents the "x". "let x" as a whole would be represented by LetDecl.
-/// This also means that getBegLoc/getEndLoc/getRange will only return
-/// the loc of the identifier, ignoring the TypeLoc entirely.
+/// represents the "x". "let x" as a whole would be represented by
+/// LetDecl. This also means that getBegLoc/getEndLoc/getRange will only
+/// return the loc of the identifier, ignoring the TypeLoc entirely.
 ///
 /// Please note that the TypeLoc won't have a TypeRepr* if the type wasn't
-/// explicitely written down. However, the TypeLoc should always have a valid
-/// Type after semantic analysis.
-/// \verbatim
+/// explicitely written down. However, the TypeLoc should always have a
+/// valid Type after semantic analysis. \verbatim
 ///   let x : i32 // has valid TypeRepr*
 ///   let (y, x) : (i32, i32) // has valid TypeRepr* (of the
 /// \endverbatim
@@ -180,9 +188,9 @@ class VarDecl final : public ValueDecl {
   TypeLoc tyLoc;
 
 public:
-  VarDecl(DeclParent parent, SourceLoc identifierLoc, Identifier identifier,
-          bool isMutable = false)
-      : ValueDecl(DeclKind::Var, parent, identifierLoc, identifier) {
+  VarDecl(DeclContext *declContext, SourceLoc identifierLoc,
+          Identifier identifier, bool isMutable = false)
+      : ValueDecl(DeclKind::Var, declContext, identifierLoc, identifier) {
     bits.varDecl.isMutable = isMutable;
   }
 
@@ -219,9 +227,9 @@ class ParamDecl final : public ValueDecl {
   SourceLoc colonLoc;
 
 public:
-  ParamDecl(DeclParent parent, SourceLoc identifierLoc, Identifier identifier,
-            SourceLoc colonLoc, TypeLoc typeLoc)
-      : ValueDecl(DeclKind::Param, parent, identifierLoc, identifier),
+  ParamDecl(DeclContext *declContext, SourceLoc identifierLoc,
+            Identifier identifier, SourceLoc colonLoc, TypeLoc typeLoc)
+      : ValueDecl(DeclKind::Param, declContext, identifierLoc, identifier),
         tyLoc(typeLoc), colonLoc(colonLoc) {}
 
   /// \returns the TypeLoc of the ParamDecl's type.
@@ -247,8 +255,9 @@ public:
 };
 
 /// Represents a list of Parameter Declarations.
-/// This list cannot be changed once created (you can't add/remove parameter or
-/// change the pointer's value, but you can change the ParamDecl themselves)
+/// This list cannot be changed once created (you can't add/remove
+/// parameter or change the pointer's value, but you can change the
+/// ParamDecl themselves)
 class ParamList final : private llvm::TrailingObjects<ParamList, ParamDecl *> {
   friend llvm::TrailingObjects<ParamList, ParamDecl *>;
 
@@ -298,7 +307,7 @@ public:
 };
 
 /// "func" declarations - function declarations
-class FuncDecl final : public ValueDecl {
+class FuncDecl final : public ValueDecl, public DeclContext {
   SourceLoc funcLoc;
   ParamList *paramList = nullptr;
   BlockStmt *body = nullptr;
@@ -306,10 +315,10 @@ class FuncDecl final : public ValueDecl {
   TypeLoc returnTypeLoc;
 
 public:
-  FuncDecl(DeclParent parent, SourceLoc funcLoc, SourceLoc identLoc,
-           Identifier ident, ParamList *params, TypeLoc returnTypeLoc)
-      : ValueDecl(DeclKind::Func, parent, identLoc, ident), funcLoc(funcLoc),
-        paramList(params), returnTypeLoc(returnTypeLoc) {}
+  FuncDecl(DeclContext *declContext, SourceLoc funcLoc, SourceLoc identLoc,
+           Identifier ident)
+      : ValueDecl(DeclKind::Func, declContext, identLoc, ident),
+        DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc) {}
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
@@ -336,6 +345,10 @@ public:
   static bool classof(const Decl *decl) {
     return decl->getKind() == DeclKind::Func;
   }
+
+  static bool classof(const DeclContext *dc) {
+    return dc->getDeclContextKind() == DeclContextKind::FuncDecl;
+  }
 };
 
 /// Common base for declarations that contain a pattern and a potential
@@ -359,7 +372,7 @@ protected:
   /// Creates A PBD.
   /// If the PBD has an initializer, \p init must not be nullptr.
   /// Please note that if init is nullptr, \p equalLoc will not be stored.
-  PatternBindingDecl(DeclKind kind, DeclParent parent, Pattern *pattern,
+  PatternBindingDecl(DeclKind kind, DeclContext *declContext, Pattern *pattern,
                      SourceLoc equalLoc = SourceLoc(), Expr *init = nullptr)
       : Decl(kind, parent), pattern(pattern), equalLoc(equalLoc), init(init) {}
 

@@ -8,6 +8,7 @@ add_source(ast_src
   "Identifier.cpp"
   "OperatorKinds.cpp"
   "Pattern.cpp"
+  "SourceFile.cpp"
   "Stmt.cpp"
   "TypeRepr.cpp"
   "Types.cpp"

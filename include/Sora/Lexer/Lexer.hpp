@@ -47,9 +47,9 @@ public:
   /// it is called.
   Token lex();
 
-  /// \returns the next token to be returned by "lex" without consuming
-  /// it or changing the state of the lexer.
-  Token peek() const { return nextToken; }
+  /// \returns a view of the next token that will be returned by "lex" without
+  /// consuming it or changing the state of the lexer.
+  const Token &peek() const { return nextToken; }
 
   /// The SourceManager instance
   SourceManager &srcMgr;

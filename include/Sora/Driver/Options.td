@@ -8,3 +8,9 @@ def help : Flag<["-", "--"], "help">,
   HelpText<"Display available options">;
 def h : Flag<["-"], "h">, 
   Alias<help>;
+
+// Parsing-related options
+def dump_parse : Flag<["-"], "dump-parse">,
+  HelpText<"Performs parsing and dumps the resulting AST">;
+def parse_only : Flag<["-"], "parse-only">,
+  HelpText<"Stops compilation after parsing">;

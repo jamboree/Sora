@@ -11,6 +11,7 @@
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace sora;
 using namespace llvm::opt;
@@ -29,7 +30,7 @@ InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
     hadError = true;
     diagnose(diag::unknown_arg, arg->getAsString(argList));
   }
-  // Diagnose missing arguments
+  // Diagnose missing arguments values
   if (missingArgCount) {
     diagnose(diag::missing_argv, argList.getArgString(missingArgIndex),
              missingArgCount);
@@ -38,9 +39,9 @@ InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
   return argList;
 }
 
-bool Driver::handleImmediateArgs(InputArgList &options) {
+bool Driver::handleImmediateArgs(InputArgList &argList) {
   // handle -h/-help
-  if (options.hasArg(opt::OPT_help)) {
+  if (argList.hasArg(opt::OPT_help)) {
     optTable->PrintHelp(llvm::outs(), "sorac [options] <inputs>",
                         "Sora Compiler");
     return false;
@@ -49,39 +50,78 @@ bool Driver::handleImmediateArgs(InputArgList &options) {
 }
 
 std::unique_ptr<CompilerInstance>
-Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &options) {
+Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &argList) {
   // To make make_unique work with the private constructor, we must
   // use a small trick.
-  struct CompilerInstanceCreater : public CompilerInstance {
+  struct CompilerInstanceCreator : public CompilerInstance {
     using CompilerInstance::CompilerInstance;
   };
-  // TODO: Handle command-line options like
-  //    -dump-ast, -dump-ast=(raw | checked)
-  return std::make_unique<CompilerInstanceCreater>();
+  auto CI = std::make_unique<CompilerInstanceCreator>();
+  CI->handleOptions(argList);
+  CI->loadInputs(argList);
+  return std::move(CI);
 }
 
-/*
-  TODO:
-    - unit-test options stuff
-    - class CompilerInstance (friend class Driver)
-      - bool run() // return true if success, false otherwise.
-          - doParse
-          - doSema
-          - doIRGen
-          - doIROpt
-          - doLLVMIRGen
-          - doLLVMIROpt
-          - doLLVMCodeGen
-*/
+void CompilerInstance::handleOptions(InputArgList &argList) {
+  options.dumpAST = false; /*TODO*/
+  options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
+  options.parseOnly = argList.hasArg(opt::OPT_parse_only);
+}
+
+bool CompilerInstance::loadInputs(llvm::opt::InputArgList &argList) {
+  bool result = true;
+  for (const Arg *arg : argList.filtered(opt::OPT_INPUT)) {
+    result &= !loadFile(arg->getValue()).isNull();
+    arg->claim();
+  }
+  return result;
+}
+
+void CompilerInstance::dump(raw_ostream &out) const {
+#define DUMP_BOOL(EXPR)                                                        \
+  out << #EXPR << ": " << ((EXPR) ? "true" : "false") << '\n';
+  /// Dump state
+  DUMP_BOOL(ran);
+  out << "inputBuffers: " << inputBuffers.size() << '\n';
+  for (auto buffer : inputBuffers) {
+    out << "  Buffer #" << buffer.getRawValue() << " (";
+    if (buffer) {
+      StringRef name = srcMgr.getBufferIdentifier(buffer);
+      if (name.empty())
+        out << "<unnamed>";
+      else
+        out << name;
+    } else
+      out << "invalid";
+    out << ")\n";
+  }
+  /// Dump options
+  DUMP_BOOL(options.dumpParse);
+  DUMP_BOOL(options.dumpAST);
+  DUMP_BOOL(options.parseOnly);
+#undef DUMP_BOOL
+}
 
 BufferID CompilerInstance::loadFile(StringRef filepath) {
   if (auto result = llvm::MemoryBuffer::getFile(filepath)) {
-    if (auto buffer = srcMgr.giveBuffer(std::move(*result))) {
-      inputBuffers.push_back(buffer);
-      return buffer;
-    }
+    auto buffer = srcMgr.giveBuffer(std::move(*result));
+    assert(buffer && "invalid buffer id returned by giveBuffer");
+    inputBuffers.push_back(buffer);
+    return buffer;
   }
+  diagnose(diag::couldnt_load_input_file, filepath);
   return BufferID();
+}
+
+bool CompilerInstance::isLoaded(StringRef filePath, bool isAbsolute) {
+  SmallVector<char, 16> path(filePath.begin(), filePath.end());
+  if (!isAbsolute) {
+    auto errc = llvm::sys::fs::make_absolute(path);
+    // TODO: handle the error_code properly
+    assert(!errc && "make_absolute failed");
+  }
+  // TODO
+  return false;
 }
 
 bool CompilerInstance::run(Step stopAfter) {
@@ -115,7 +155,7 @@ bool CompilerInstance::doParsing() {
   // Create the root of the AST we'll create.
   createASTContext();
   // TODO
-  if (options.dumpRawAST) {
+  if (options.dumpParse) {
     // TODO: Dump Raw AST
   }
   return true;
@@ -123,7 +163,7 @@ bool CompilerInstance::doParsing() {
 
 bool CompilerInstance::doSema() {
   // TODO
-  if (options.dumpCheckedAST) {
+  if (options.dumpAST) {
     // TODO: Dump Raw AST
   }
   return true;
