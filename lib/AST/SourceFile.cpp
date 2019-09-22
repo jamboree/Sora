@@ -6,9 +6,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/SourceFile.hpp"
+#include "Sora/AST/Decl.hpp"
 
 using namespace sora;
 
 SourceFile *DeclContext::getAsSourceFile() {
   return dyn_cast<SourceFile>(this);
+}
+
+bool SourceFile::walk(ASTWalker &walker) {
+  for (Decl *decl : members) {
+    if (!decl->walk(walker))
+      return false;
+  }
+  return true;
 }

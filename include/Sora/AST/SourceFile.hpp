@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace sora {
+class ASTWalker;
 class Decl;
 
 /// Represents a source file.
@@ -41,6 +42,11 @@ public:
   void addMember(Decl *decl) { return members.push_back(decl); }
   /// \returns the buffer id of this SourceFile
   BufferID getBufferID() const { return bufferID; }
+
+  /// Traverse this SourceFile using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
 
   static bool classof(const DeclContext *dc) {
     return dc->getDeclContextKind() == DeclContextKind::SourceFile;
