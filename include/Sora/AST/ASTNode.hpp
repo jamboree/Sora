@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
-#include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/PointerUnion.h"
 
 namespace sora {

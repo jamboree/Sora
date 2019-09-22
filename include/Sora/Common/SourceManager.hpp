@@ -7,12 +7,12 @@
 
 #pragma once
 
+#include "Sora/Common/SourceLoc.hpp"
 #include "llvm/Support/SourceMgr.h"
 #include <memory>
 #include <utility>
 
 namespace sora {
-
 /// Wrapper around an unsigned integer, used to represent a Buffer ID.
 class BufferID {
   unsigned value = 0;

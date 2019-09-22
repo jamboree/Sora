@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Sora/Common/LLVM.hpp"
-#include "Sora/Common/SourceLoc.hpp"
 
 namespace sora {
 /// Represents a unique'd language identifier.
@@ -44,25 +43,6 @@ public:
   bool operator==(StringRef rhs) const;
   bool operator!=(StringRef rhs) const;
   bool operator<(StringRef rhs) const;
-};
-
-/// A simple Identifier-SourceLoc pair.
-class IdentifierLoc {
-  Identifier ident;
-  SourceLoc loc;
-
-public:
-  IdentifierLoc(Identifier ident, SourceLoc loc = SourceLoc())
-      : ident(ident), loc(loc) {}
-
-  /// \returns the SourceLoc
-  SourceLoc getLoc() const { return loc; }
-
-  /// \returns the Identifier
-  Identifier getIdentifier() const { return ident; }
-
-  /// \returns whether the SourceLoc is valid
-  bool hasLoc() const { return (bool)loc; }
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &out, Identifier ident);
