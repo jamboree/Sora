@@ -297,17 +297,22 @@ class FuncDecl final : public ValueDecl {
   ParamList *paramList = nullptr;
   BlockStmt *body = nullptr;
   Type type;
+  TypeLoc returnTypeLoc;
 
 public:
   FuncDecl(DeclParent parent, SourceLoc funcLoc, SourceLoc identLoc,
-           Identifier ident)
-      : ValueDecl(DeclKind::Func, parent, identLoc, ident), funcLoc(funcLoc) {}
+           Identifier ident, ParamList *params, TypeLoc returnTypeLoc)
+      : ValueDecl(DeclKind::Func, parent, identLoc, ident), funcLoc(funcLoc),
+        paramList(params), returnTypeLoc(returnTypeLoc) {}
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
 
   ParamList *getParamList() const { return paramList; }
   void setParamList(ParamList *params) { this->paramList = params; }
+
+  TypeLoc &getReturnTypeLoc() { return returnTypeLoc; }
+  const TypeLoc &getReturnTypeLoc() const { return returnTypeLoc; }
 
   /// \returns the type this value has (the type of the function)
   Type getValueType() const { return type; }

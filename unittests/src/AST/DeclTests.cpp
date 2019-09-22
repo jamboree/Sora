@@ -44,7 +44,7 @@ TEST_F(DeclTest, rtti) {
 
   // FuncDecl
   {
-    Decl *decl = new (*ctxt) FuncDecl(nullptr, {}, {}, {});
+    Decl *decl = new (*ctxt) FuncDecl(nullptr, {}, {}, {}, nullptr, {});
     EXPECT_TRUE(isa<FuncDecl>(decl));
     EXPECT_TRUE(isa<ValueDecl>(decl));
   }
@@ -83,7 +83,7 @@ TEST_F(DeclTest, getSourceRange) {
 
   // FuncDecl
   {
-    Decl *decl = new (*ctxt) FuncDecl(nullptr, beg, {}, {});
+    Decl *decl = new (*ctxt) FuncDecl(nullptr, beg, {}, {}, nullptr, {});
     cast<FuncDecl>(decl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
     EXPECT_EQ(beg, decl->getBegLoc());
     EXPECT_EQ(end, decl->getEndLoc());
@@ -133,7 +133,7 @@ TEST_F(DeclTest, getSourceFile) {
   // SourceFile
   //    FuncDecl
   //      ParamDecl
-  FuncDecl *fn = new (*ctxt) FuncDecl(&sf, {}, {}, {});
+  FuncDecl *fn = new (*ctxt) FuncDecl(&sf, {}, {}, {}, nullptr, {});
   ParamDecl *param = new (*ctxt) ParamDecl(fn, {}, {}, {}, {});
   fn->setParamList(ParamList::create(*ctxt, {}, param, {}));
 
