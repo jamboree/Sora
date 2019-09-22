@@ -112,7 +112,10 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
   //===- Pattern ----------------------------------------------------------===//
 
-  void visitVarPattern(VarPattern *pattern) { doIt(pattern->getVarDecl()); }
+  void visitVarPattern(VarPattern *pattern) {
+    // Visit the VarDecl, and make sure it's not ignored.
+    doIt(pattern->getVarDecl(), /*ignoreVarDecl*/ false);
+  }
 
   TRIVIAL_VISIT(DiscardPattern)
 
@@ -201,8 +204,16 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       llvm_unreachable("unhandled ASTNode kind!");
   }
 
-  void doIt(Decl *decl) {
+  // NOTE: By default, VarDecls are ignored because they're visited as part
+  // of their parent pattern (see \p ignoreVarDecl and visitVarPattern), so
+  // don't set ignoreVarDecl to false unless you're using this inside
+  // visitVarPattern.
+  // FIXME: This isn't an ideal solution.
+  void doIt(Decl *decl, bool ignoreVarDecls = true) {
     if (!decl || stopped)
+      return;
+
+    if (ignoreVarDecls && isa<VarDecl>(decl))
       return;
 
     // Call walker.walkToDeclPre and handle the result.
@@ -355,7 +366,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
 void ASTWalker::anchor() {}
 
-// Walk implementations 
+// Walk implementations
 
 bool ASTNode::walk(ASTWalker &walker) { return Traversal(walker).walk(*this); }
 bool Decl::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
