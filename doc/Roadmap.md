@@ -20,7 +20,7 @@ The first goal will be to implement a *heavily* simplified version of the langua
 - Run simple programs (factorials, fibonnaci, etc.) correctly
 Additional requirements
 - Support various command-line options like `-check-semantics-only`, `-parse-only`, `-dump-ast`, `-dump-parse`, `-dump-ir`, `-emit-llvm` etc.
-- Have a modular, codebase that's easy to work with
+- Have a modular, clean codebase that's easy to work on
 
 Here's a non-exhaustive list of features that will be present in the initial implementation.
 - Types:
@@ -33,7 +33,8 @@ Here's a non-exhaustive list of features that will be present in the initial imp
 - Every statement except the `for` statement 
 - Every expression except subscripts, array literals, char literals and string literals.
 - Functions
-  - No function types nor first-class functions either.
+  - Normal functions
+  - No function types or first-class functions.
 - Variables & Patterns (note: Sora will only support local variables at first, not because of complexity reasons, but because I want to try to do without them and see how it goes)
   - This includes basic pattern matching in variable declarations. e.g. `let (a, b) = (0, 1)`
 - Basic C FFI
