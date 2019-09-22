@@ -32,7 +32,7 @@ ABSTRACT_DECL(Value, Decl)
 
 
 ABSTRACT_DECL(PatternBinding, Decl)
-  DECL(Let, Decl)
+  DECL(Let, PatternBindingDecl)
   DECL_RANGE(PatternBinding, Let, Let)
 
 //===----------------------------------------------------------------------===//
