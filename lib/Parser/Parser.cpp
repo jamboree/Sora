@@ -48,7 +48,7 @@ bool Parser::isStartOfStmt() const {
 void Parser::skip() {
   auto kind = tok.getKind();
   consume();
-  switch (tok.getKind()) {
+  switch (kind) {
   case TokenKind::LCurly:
     skipUntil(TokenKind::RCurly);
     consumeIf(TokenKind::RCurly);
