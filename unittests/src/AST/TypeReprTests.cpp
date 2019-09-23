@@ -14,65 +14,58 @@
 using namespace sora;
 
 namespace {
+const char *str = "Hello, World!";
 class TypeReprTest : public ::testing::Test {
 protected:
+  TypeReprTest() {
+    // Setup SourceLocs
+    SourceLoc beg = SourceLoc::fromPointer(str);
+    SourceLoc end = SourceLoc::fromPointer(str + 10);
+    // Setup nodes
+    identifierTypeRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
+    tupleTypeRepr = TupleTypeRepr::createEmpty(*ctxt, beg, end);
+    pointerTypeRepr = new (*ctxt)
+        PointerTypeRepr(beg, true, new (*ctxt) IdentifierTypeRepr(end, {}));
+  }
+
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
+
+  SourceLoc beg, end;
+
+  TypeRepr *identifierTypeRepr;
+  TypeRepr *tupleTypeRepr;
+  TypeRepr *pointerTypeRepr;
 };
 } // namespace
 
 TEST_F(TypeReprTest, rtti) {
-  // IdentifierTypeRepr
-  {
-    TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr({}, {});
-    EXPECT_TRUE(isa<IdentifierTypeRepr>(tyRepr));
-  }
-
-  // TupleTypeRepr
-  {
-    TypeRepr *tyRepr = TupleTypeRepr::createEmpty(*ctxt, {}, {});
-    EXPECT_TRUE(isa<TupleTypeRepr>(tyRepr));
-  }
-
-  // PointerTypeRepr
-  {
-    TypeRepr *tyRepr = new (*ctxt) PointerTypeRepr({}, true, nullptr);
-    EXPECT_TRUE(isa<PointerTypeRepr>(tyRepr));
-  }
+  EXPECT_TRUE(isa<IdentifierTypeRepr>(identifierTypeRepr));
+  EXPECT_TRUE(isa<TupleTypeRepr>(tupleTypeRepr));
+  EXPECT_TRUE(isa<PointerTypeRepr>(pointerTypeRepr));
 }
 
 TEST_F(TypeReprTest, getSourceRange) {
-  const char *str = "Hello, World!";
   SourceLoc beg = SourceLoc::fromPointer(str);
   SourceLoc end = SourceLoc::fromPointer(str + 10);
-  SourceRange range(beg, end);
 
   // IdentifierTypeRepr
-  {
-    TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
-    EXPECT_EQ(beg, tyRepr->getBegLoc());
-    EXPECT_EQ(beg, tyRepr->getLoc());
-    EXPECT_EQ(beg, tyRepr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), tyRepr->getSourceRange());
-  }
+  EXPECT_EQ(beg, identifierTypeRepr->getBegLoc());
+  EXPECT_EQ(beg, identifierTypeRepr->getLoc());
+  EXPECT_EQ(beg, identifierTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), identifierTypeRepr->getSourceRange());
 
   // TupleTypeRepr
-  {
-    TypeRepr *tyRepr = TupleTypeRepr::createEmpty(*ctxt, beg, end);
-    EXPECT_EQ(beg, tyRepr->getBegLoc());
-    EXPECT_EQ(beg, tyRepr->getLoc());
-    EXPECT_EQ(end, tyRepr->getEndLoc());
-    EXPECT_EQ(range, tyRepr->getSourceRange());
-  }
 
-  // TupleTypeRepr
-  {
-    TypeRepr *tyRepr = new (*ctxt)
-        PointerTypeRepr(beg, true, new (*ctxt) IdentifierTypeRepr(end, {}));
-    EXPECT_EQ(beg, tyRepr->getBegLoc());
-    EXPECT_EQ(beg, tyRepr->getLoc());
-    EXPECT_EQ(end, tyRepr->getEndLoc());
-    EXPECT_EQ(range, tyRepr->getSourceRange());
-  }
+  EXPECT_EQ(beg, tupleTypeRepr->getBegLoc());
+  EXPECT_EQ(beg, tupleTypeRepr->getLoc());
+  EXPECT_EQ(end, tupleTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), tupleTypeRepr->getSourceRange());
+
+  // PointerTypeRepr
+  EXPECT_EQ(beg, pointerTypeRepr->getBegLoc());
+  EXPECT_EQ(beg, pointerTypeRepr->getLoc());
+  EXPECT_EQ(end, pointerTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), pointerTypeRepr->getSourceRange());
 }
