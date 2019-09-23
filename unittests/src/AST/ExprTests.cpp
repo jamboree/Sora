@@ -14,224 +14,156 @@
 using namespace sora;
 
 namespace {
+const char *str = "Hello, World!";
+
 class ExprTest : public ::testing::Test {
 protected:
+  ExprTest() {
+    // Setup locs
+    beg = SourceLoc::fromPointer(str);
+    mid = SourceLoc::fromPointer(str + 5);
+    end = SourceLoc::fromPointer(str + 10);
+    // Setup nodes
+    unresolvedDeclRefExpr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
+    discardExpr = new (*ctxt) DiscardExpr(beg);
+    integerLiteralExpr = new (*ctxt) IntegerLiteralExpr("0", beg);
+    floatLiteralExpr = new (*ctxt) FloatLiteralExpr("0", beg);
+    booleanLiteralExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
+    nullLiteralExpr = new (*ctxt) NullLiteralExpr(beg);
+    errorExpr = new (*ctxt) ErrorExpr({beg, end});
+    tupleIndexingExpr =
+        new (*ctxt) TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), mid,
+                                      new (*ctxt) IntegerLiteralExpr("0", end));
+    tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
+    parenExpr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
+    callExpr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
+                                    TupleExpr::createEmpty(*ctxt, beg, end));
+    binaryExpr = new (*ctxt)
+        BinaryExpr(new (*ctxt) DiscardExpr(beg), BinaryOperatorKind::Add, mid,
+                   new (*ctxt) DiscardExpr(end));
+    unaryExpr = new (*ctxt) UnaryExpr(UnaryOperatorKind::AddressOf, beg,
+                                      new (*ctxt) DiscardExpr(end));
+  }
+
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
+
+  SourceLoc beg, mid, end;
+
+  Expr *unresolvedDeclRefExpr;
+  Expr *discardExpr;
+  Expr *integerLiteralExpr;
+  Expr *floatLiteralExpr;
+  Expr *booleanLiteralExpr;
+  Expr *nullLiteralExpr;
+  Expr *errorExpr;
+  Expr *tupleIndexingExpr;
+  Expr *tupleExpr;
+  Expr *parenExpr;
+  Expr *callExpr;
+  Expr *binaryExpr;
+  Expr *unaryExpr;
 };
 } // namespace
 
 TEST_F(ExprTest, rtti) {
-  // UnresolvedDeclRefExpr
-  {
-    Expr *expr = new (*ctxt) UnresolvedDeclRefExpr({}, {});
-    EXPECT_TRUE(isa<UnresolvedDeclRefExpr>(expr));
-    EXPECT_TRUE(isa<UnresolvedExpr>(expr));
-  }
-
-  // DiscardExpr
-  {
-    Expr *expr = new (*ctxt) DiscardExpr({});
-    EXPECT_TRUE(isa<DiscardExpr>(expr));
-  }
-
-  // IntegerLiteralExpr
-  {
-    Expr *expr = new (*ctxt) IntegerLiteralExpr("0", {});
-    EXPECT_TRUE(isa<IntegerLiteralExpr>(expr));
-  }
-
-  // FloatLiteralExpr
-  {
-    Expr *expr = new (*ctxt) FloatLiteralExpr("0", {});
-    EXPECT_TRUE(isa<FloatLiteralExpr>(expr));
-  }
-
-  // BooleanLiteralExpr
-  {
-    Expr *expr = new (*ctxt) BooleanLiteralExpr(false, {});
-    EXPECT_TRUE(isa<BooleanLiteralExpr>(expr));
-  }
-
-  // NullLiteralExpr
-  {
-    Expr *expr = new (*ctxt) NullLiteralExpr({});
-    EXPECT_TRUE(isa<NullLiteralExpr>(expr));
-  }
-
-  // ErrorExpr
-  {
-    Expr *expr = new (*ctxt) ErrorExpr(SourceRange());
-    EXPECT_TRUE(isa<ErrorExpr>(expr));
-  }
-
-  // TupleIndexingExpr
-  {
-    Expr *expr = new (*ctxt) TupleIndexingExpr(nullptr, {}, nullptr);
-    EXPECT_TRUE(isa<TupleIndexingExpr>(expr));
-  }
-
-  // TupleExpr
-  {
-    Expr *expr = TupleExpr::createEmpty(*ctxt, {}, {});
-    EXPECT_TRUE(isa<TupleExpr>(expr));
-  }
-
-  // ParenExpr
-  {
-    Expr *expr = new (*ctxt) ParenExpr({}, nullptr, {});
-    EXPECT_TRUE(isa<ParenExpr>(expr));
-  }
-
-  // CallExpr
-  {
-    Expr *expr = new (*ctxt) CallExpr(nullptr, nullptr);
-    EXPECT_TRUE(isa<CallExpr>(expr));
-  }
-
-  // BinaryExpr
-  {
-    Expr *expr =
-        new (*ctxt) BinaryExpr(nullptr, BinaryOperatorKind::Add, {}, nullptr);
-    EXPECT_TRUE(isa<BinaryExpr>(expr));
-  }
-
-  // UnaryExpr
-  {
-    Expr *expr =
-        new (*ctxt) UnaryExpr(UnaryOperatorKind::AddressOf, {}, nullptr);
-    EXPECT_TRUE(isa<UnaryExpr>(expr));
-  }
+  EXPECT_TRUE(isa<UnresolvedDeclRefExpr>(unresolvedDeclRefExpr));
+  EXPECT_TRUE(isa<UnresolvedExpr>(unresolvedDeclRefExpr));
+  EXPECT_TRUE(isa<DiscardExpr>(discardExpr));
+  EXPECT_TRUE(isa<IntegerLiteralExpr>(integerLiteralExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(integerLiteralExpr));
+  EXPECT_TRUE(isa<FloatLiteralExpr>(floatLiteralExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(floatLiteralExpr));
+  EXPECT_TRUE(isa<BooleanLiteralExpr>(booleanLiteralExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(booleanLiteralExpr));
+  EXPECT_TRUE(isa<NullLiteralExpr>(nullLiteralExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(nullLiteralExpr));
+  EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
+  EXPECT_TRUE(isa<TupleIndexingExpr>(tupleIndexingExpr));
+  EXPECT_TRUE(isa<TupleExpr>(tupleExpr));
+  EXPECT_TRUE(isa<ParenExpr>(parenExpr));
+  EXPECT_TRUE(isa<CallExpr>(callExpr));
+  EXPECT_TRUE(isa<BinaryExpr>(binaryExpr));
+  EXPECT_TRUE(isa<UnaryExpr>(unaryExpr));
 }
 
 TEST_F(ExprTest, getSourceRange) {
-  const char *str = "Hello, World!";
-  SourceLoc beg = SourceLoc::fromPointer(str);
-  SourceLoc mid = SourceLoc::fromPointer(str + 5);
-  SourceLoc end = SourceLoc::fromPointer(str + 10);
-  SourceRange range(beg, end);
-
   // UnresolvedDeclRefExpr
-  {
-    Expr *expr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(beg, expr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, unresolvedDeclRefExpr->getBegLoc());
+  EXPECT_EQ(beg, unresolvedDeclRefExpr->getLoc());
+  EXPECT_EQ(beg, unresolvedDeclRefExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), unresolvedDeclRefExpr->getSourceRange());
 
   // DiscardExpr
-  {
-    Expr *expr = new (*ctxt) DiscardExpr(beg);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(beg, expr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, discardExpr->getBegLoc());
+  EXPECT_EQ(beg, discardExpr->getLoc());
+  EXPECT_EQ(beg, discardExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), discardExpr->getSourceRange());
 
   // IntegerLiteralExpr
-  {
-    Expr *expr = new (*ctxt) IntegerLiteralExpr("0", beg);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(beg, expr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, integerLiteralExpr->getBegLoc());
+  EXPECT_EQ(beg, integerLiteralExpr->getLoc());
+  EXPECT_EQ(beg, integerLiteralExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), integerLiteralExpr->getSourceRange());
 
   // FloatLiteralExpr
-  {
-    Expr *expr = new (*ctxt) FloatLiteralExpr("0", beg);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(beg, expr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, floatLiteralExpr->getBegLoc());
+  EXPECT_EQ(beg, floatLiteralExpr->getLoc());
+  EXPECT_EQ(beg, floatLiteralExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), floatLiteralExpr->getSourceRange());
 
   // BooleanLiteralExpr
-  {
-    Expr *expr = new (*ctxt) BooleanLiteralExpr("0", beg);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(beg, expr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, booleanLiteralExpr->getBegLoc());
+  EXPECT_EQ(beg, booleanLiteralExpr->getLoc());
+  EXPECT_EQ(beg, booleanLiteralExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), booleanLiteralExpr->getSourceRange());
 
   // NullLiteralExpr
-  {
-    Expr *expr = new (*ctxt) NullLiteralExpr(beg);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(beg, expr->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, nullLiteralExpr->getBegLoc());
+  EXPECT_EQ(beg, nullLiteralExpr->getLoc());
+  EXPECT_EQ(beg, nullLiteralExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), nullLiteralExpr->getSourceRange());
 
   // ErrorExpr
-  {
-    Expr *expr = new (*ctxt) ErrorExpr(range);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, errorExpr->getBegLoc());
+  EXPECT_EQ(beg, errorExpr->getLoc());
+  EXPECT_EQ(end, errorExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), errorExpr->getSourceRange());
 
   // TupleIndexingExpr
-  {
-    Expr *expr =
-        new (*ctxt) TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), mid,
-                                      new (*ctxt) IntegerLiteralExpr("0", end));
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(mid, expr->getLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, tupleIndexingExpr->getBegLoc());
+  EXPECT_EQ(end, tupleIndexingExpr->getEndLoc());
+  EXPECT_EQ(mid, tupleIndexingExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), tupleIndexingExpr->getSourceRange());
 
   // TupleExpr
-  {
-    Expr *expr = TupleExpr::createEmpty(*ctxt, beg, end);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, tupleExpr->getBegLoc());
+  EXPECT_EQ(beg, tupleExpr->getLoc());
+  EXPECT_EQ(end, tupleExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), tupleExpr->getSourceRange());
 
   // ParenExpr
-  {
-    Expr *expr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(mid, expr->getLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, parenExpr->getBegLoc());
+  EXPECT_EQ(end, parenExpr->getEndLoc());
+  EXPECT_EQ(mid, parenExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), parenExpr->getSourceRange());
 
   // CallExpr
-  {
-    Expr *expr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
-                                      TupleExpr::createEmpty(*ctxt, beg, end));
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(beg, expr->getLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, callExpr->getBegLoc());
+  EXPECT_EQ(beg, callExpr->getLoc());
+  EXPECT_EQ(end, callExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), callExpr->getSourceRange());
 
   // BinaryExpr
-  {
-    Expr *expr = new (*ctxt)
-        BinaryExpr(new (*ctxt) DiscardExpr(beg), BinaryOperatorKind::Add, mid,
-                   new (*ctxt) DiscardExpr(end));
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(mid, expr->getLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, binaryExpr->getBegLoc());
+  EXPECT_EQ(end, binaryExpr->getEndLoc());
+  EXPECT_EQ(mid, binaryExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), binaryExpr->getSourceRange());
 
   // UnaryExpr
-  {
-    Expr *expr = new (*ctxt) UnaryExpr(UnaryOperatorKind::AddressOf, beg,
-                                       new (*ctxt) DiscardExpr(end));
-    EXPECT_EQ(beg, expr->getBegLoc());
-    EXPECT_EQ(end, expr->getEndLoc());
-    EXPECT_EQ(end, expr->getLoc());
-    EXPECT_EQ(range, expr->getSourceRange());
-  }
+  EXPECT_EQ(beg, unaryExpr->getBegLoc());
+  EXPECT_EQ(end, unaryExpr->getEndLoc());
+  EXPECT_EQ(end, unaryExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), unaryExpr->getSourceRange());
 }
