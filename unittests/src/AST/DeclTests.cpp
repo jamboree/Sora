@@ -19,110 +19,88 @@
 using namespace sora;
 
 namespace {
+const char *str = "Hello, World!";
+
 class DeclTest : public ::testing::Test {
 protected:
+  DeclTest() {
+    // Setup SourceLocs
+    beg = SourceLoc::fromPointer(str);
+    mid = SourceLoc::fromPointer(str + 5);
+    end = SourceLoc::fromPointer(str + 10);
+    // Setup nodes
+    varDecl = new (*ctxt) VarDecl(nullptr, beg, {});
+    TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(end, {});
+    paramDecl = new (*ctxt) ParamDecl(nullptr, beg, {}, {}, {{}, tyRepr});
+    funcDecl = new (*ctxt) FuncDecl(nullptr, beg, {}, {}, nullptr, {});
+    funcDecl->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
+    Pattern *pat = new (*ctxt) DiscardPattern(mid);
+    Expr *init = new (*ctxt) DiscardExpr(end);
+    letDecl = new (*ctxt) LetDecl(nullptr, beg, pat, {}, init);
+  }
+
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
+
+  SourceLoc beg, mid, end;
+
+  VarDecl *varDecl;
+  ParamDecl *paramDecl;
+  FuncDecl *funcDecl;
+  LetDecl *letDecl;
 };
 } // namespace
 
 TEST_F(DeclTest, rtti) {
   // VarDecl
-  {
-    Decl *decl = new (*ctxt) VarDecl(nullptr, {}, {});
-    EXPECT_TRUE(isa<VarDecl>(decl));
-    EXPECT_TRUE(isa<ValueDecl>(decl));
-  }
+  EXPECT_TRUE(isa<VarDecl>((Decl*)varDecl));
+  EXPECT_TRUE(isa<ValueDecl>((Decl *)varDecl));
 
   // ParamDecl
-  {
-    Decl *decl = new (*ctxt) ParamDecl(nullptr, {}, {}, {}, TypeLoc());
-    EXPECT_TRUE(isa<ParamDecl>(decl));
-    EXPECT_TRUE(isa<ValueDecl>(decl));
-  }
+  EXPECT_TRUE(isa<ParamDecl>((Decl *)paramDecl));
+  EXPECT_TRUE(isa<ValueDecl>((Decl *)paramDecl));
 
   // FuncDecl
-  {
-    Decl *decl = new (*ctxt) FuncDecl(nullptr, {}, {}, {}, nullptr, {});
-    EXPECT_TRUE(isa<FuncDecl>(decl));
-    EXPECT_TRUE(isa<ValueDecl>(decl));
-  }
+  EXPECT_TRUE(isa<FuncDecl>((Decl *)funcDecl));
+  EXPECT_TRUE(isa<ValueDecl>((Decl *)funcDecl));
 
   // LetDecl
-  {
-    Decl *decl = new (*ctxt) LetDecl(nullptr, {}, nullptr);
-    EXPECT_TRUE(isa<LetDecl>(decl));
-    EXPECT_TRUE(isa<PatternBindingDecl>(decl));
-  }
+  EXPECT_TRUE(isa<LetDecl>((Decl *)letDecl));
+  EXPECT_TRUE(isa<PatternBindingDecl>((Decl *)letDecl));
 }
 
 TEST_F(DeclTest, getSourceRange) {
-  const char *str = "Hello, World!";
-  SourceLoc beg = SourceLoc::fromPointer(str);
-  SourceLoc mid = SourceLoc::fromPointer(str + 5);
-  SourceLoc end = SourceLoc::fromPointer(str + 10);
-
+  Decl *cur;
   // VarDecl
-  {
-    Decl *decl = new (*ctxt) VarDecl(nullptr, beg, {});
-    EXPECT_EQ(beg, decl->getBegLoc());
-    EXPECT_EQ(beg, decl->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, beg), decl->getSourceRange());
-  }
+  cur = varDecl;
+  EXPECT_EQ(beg, cur->getBegLoc());
+  EXPECT_EQ(beg, cur->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), cur->getSourceRange());
 
   // ParamDecl
-  {
-    Decl *decl = new (*ctxt)
-        ParamDecl(nullptr, beg, {}, {},
-                  TypeLoc(Type(), new (*ctxt) IdentifierTypeRepr(end, {})));
-    EXPECT_EQ(beg, decl->getBegLoc());
-    EXPECT_EQ(end, decl->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
-  }
+  cur = paramDecl;
+  EXPECT_EQ(beg, cur->getBegLoc());
+  EXPECT_EQ(end, cur->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), cur->getSourceRange());
 
   // FuncDecl
-  {
-    Decl *decl = new (*ctxt) FuncDecl(nullptr, beg, {}, {}, nullptr, {});
-    cast<FuncDecl>(decl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
-    EXPECT_EQ(beg, decl->getBegLoc());
-    EXPECT_EQ(end, decl->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
-  }
+  cur = funcDecl;
+  EXPECT_EQ(beg, cur->getBegLoc());
+  EXPECT_EQ(end, cur->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), cur->getSourceRange());
 
   // LetDecl
-  {
-    Decl *decl =
-        new (*ctxt) LetDecl(nullptr, beg, new (*ctxt) DiscardPattern(end));
-    EXPECT_EQ(beg, decl->getBegLoc());
-    EXPECT_EQ(end, decl->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
-    decl = new (*ctxt)
-        LetDecl(nullptr, beg, nullptr, {}, new (*ctxt) DiscardExpr(end));
-    EXPECT_EQ(beg, decl->getBegLoc());
-    EXPECT_EQ(end, decl->getEndLoc());
-    EXPECT_EQ(SourceRange(beg, end), decl->getSourceRange());
-  }
-}
-
-/// Add some tests exclusive to PBD & derived classes because it has some
-/// special features.
-TEST_F(DeclTest, PatternBindingDecl) {
-  SourceLoc loc = SourceLoc::fromPointer("");
-
-  Expr *expr = new (*ctxt) DiscardExpr({});
-  PatternBindingDecl *pbd =
-      new (*ctxt) LetDecl(nullptr, {}, nullptr, loc, expr);
-
-  EXPECT_TRUE(pbd->hasInitializer());
-  EXPECT_EQ(pbd->getInitializer(), expr);
-  EXPECT_EQ(pbd->getEqualLoc(), loc);
-
-  pbd = new (*ctxt) LetDecl(nullptr, {}, nullptr, loc);
-
-  EXPECT_FALSE(pbd->hasInitializer());
-  EXPECT_EQ(pbd->getInitializer(), nullptr);
-  EXPECT_EQ(pbd->getEqualLoc(), loc);
+  cur = letDecl;
+  EXPECT_EQ(beg, cur->getBegLoc());
+  EXPECT_EQ(end, cur->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), cur->getSourceRange());
+  Expr *letInit = letDecl->getInitializer();
+  letDecl->setInitializer(nullptr);
+  EXPECT_EQ(beg, cur->getBegLoc());
+  EXPECT_EQ(mid, cur->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, mid), cur->getSourceRange());
+  letDecl->setInitializer(letInit);
 }
 
 /// Tests Decl::getSourceFile and related features (getParent, getASTContext,
