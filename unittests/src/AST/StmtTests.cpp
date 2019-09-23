@@ -15,122 +15,103 @@
 using namespace sora;
 
 namespace {
+const char *str = "Hello, World!";
+
 class StmtTest : public ::testing::Test {
 protected:
+  StmtTest() {
+    // Setup SourceLocs
+    beg = SourceLoc::fromPointer(str);
+    mid = SourceLoc::fromPointer(str + 5);
+    end = SourceLoc::fromPointer(str + 10);
+    // Setup Nodes
+    continueStmt = new (*ctxt) ContinueStmt(beg);
+    breakStmt = new (*ctxt) BreakStmt(beg);
+    returnStmt = new (*ctxt) ReturnStmt(beg);
+    blockStmt = BlockStmt::createEmpty(*ctxt, beg, end);
+    ifStmt = new (*ctxt) IfStmt(beg, nullptr, new (*ctxt) ContinueStmt(mid));
+    whileStmt =
+        new (*ctxt) WhileStmt(beg, nullptr, new (*ctxt) ContinueStmt(end));
+  }
+
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
+
+  SourceLoc beg, mid, end;
+
+  ContinueStmt *continueStmt;
+  BreakStmt *breakStmt;
+  ReturnStmt *returnStmt;
+  BlockStmt *blockStmt;
+  IfStmt *ifStmt;
+  WhileStmt *whileStmt;
 };
 } // namespace
 
 TEST_F(StmtTest, rtti) {
-  // ContinueStmt
-  {
-    Stmt *stmt = new (*ctxt) ContinueStmt({});
-    EXPECT_TRUE(isa<ContinueStmt>(stmt));
-  }
-
-  // BreakStmt
-  {
-    Stmt *stmt = new (*ctxt) BreakStmt({});
-    EXPECT_TRUE(isa<BreakStmt>(stmt));
-  }
-
-  // ReturnStmt
-  {
-    Stmt *stmt = new (*ctxt) ReturnStmt({});
-    EXPECT_TRUE(isa<ReturnStmt>(stmt));
-  }
-
-  // BlockStmt
-  {
-    Stmt *stmt = BlockStmt::createEmpty(*ctxt, {}, {});
-    EXPECT_TRUE(isa<BlockStmt>(stmt));
-  }
-
-  // IfStmt
-  {
-    Stmt *stmt = new (*ctxt) IfStmt({}, nullptr, nullptr);
-    EXPECT_TRUE(isa<IfStmt>(stmt));
-  }
-
-  // WhileStmt
-  {
-    Stmt *stmt = new (*ctxt) WhileStmt({}, nullptr, nullptr);
-    EXPECT_TRUE(isa<WhileStmt>(stmt));
-  }
+  EXPECT_TRUE(isa<ContinueStmt>((Stmt *)continueStmt));
+  EXPECT_TRUE(isa<BreakStmt>((Stmt *)breakStmt));
+  EXPECT_TRUE(isa<ReturnStmt>((Stmt *)returnStmt));
+  EXPECT_TRUE(isa<BlockStmt>((Stmt *)blockStmt));
+  EXPECT_TRUE(isa<IfStmt>((Stmt *)ifStmt));
+  EXPECT_TRUE(isa<WhileStmt>((Stmt *)whileStmt));
 }
 
 TEST_F(StmtTest, getSourceRange) {
-  const char *str = "Hello, World!";
-  SourceLoc beg = SourceLoc::fromPointer(str);
-  SourceLoc mid = SourceLoc::fromPointer(str + 5);
-  SourceLoc end = SourceLoc::fromPointer(str + 10);
-  SourceRange range(beg, end);
+  Stmt *cur = nullptr;
 
   // ContinueStmt
-  {
-    Stmt *stmt = new (*ctxt) ContinueStmt(beg);
-    EXPECT_EQ(stmt->getLoc(), beg);
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), beg);
-    EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, beg));
-    EXPECT_EQ(cast<ContinueStmt>(stmt)->getLoc(), beg);
-  }
+  cur = continueStmt;
+  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), beg);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, beg));
+  EXPECT_EQ(cur->getLoc(), beg);
 
   // BreakStmt
-  {
-    Stmt *stmt = new (*ctxt) BreakStmt(beg);
-    EXPECT_EQ(stmt->getLoc(), beg);
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), beg);
-    EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, beg));
-    EXPECT_EQ(cast<BreakStmt>(stmt)->getLoc(), beg);
-  }
+  cur = breakStmt;
+  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), beg);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, beg));
+  EXPECT_EQ(cur->getLoc(), beg);
 
   // ReturnStmt
-  {
-    Stmt *stmt = new (*ctxt) ReturnStmt(beg);
-    EXPECT_EQ(stmt->getLoc(), beg);
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), beg);
-    EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, beg));
-    cast<ReturnStmt>(stmt)->setResult(new (*ctxt) DiscardExpr(end));
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), end);
-    EXPECT_EQ(stmt->getSourceRange(), range);
-  }
+  cur = returnStmt;
+  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), beg);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, beg));
+  returnStmt->setResult(new (*ctxt) DiscardExpr(end));
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), end);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
+  returnStmt->setResult(nullptr);
 
   // BlockStmt
-  {
-    Stmt *stmt = BlockStmt::createEmpty(*ctxt, beg, end);
-    EXPECT_EQ(stmt->getLoc(), beg);
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), end);
-    EXPECT_EQ(stmt->getSourceRange(), range);
-  }
+  cur = blockStmt;
+  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), end);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
 
   // IfStmt
-  {
-    Stmt *stmt =
-        new (*ctxt) IfStmt(beg, nullptr, new (*ctxt) ContinueStmt(mid));
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), mid);
-    EXPECT_EQ(stmt->getSourceRange(), SourceRange(beg, mid));
-    cast<IfStmt>(stmt)->setElse(new (*ctxt) ContinueStmt(end));
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), end);
-    EXPECT_EQ(stmt->getSourceRange(), range);
-  }
+  cur = ifStmt;
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), mid);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, mid));
+  ifStmt->setElse(new (*ctxt) ContinueStmt(end));
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), end);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
+  ifStmt->setElse(nullptr);
 
   // WhileStmt
-  {
-    Stmt *stmt =
-        new (*ctxt) WhileStmt(beg, nullptr, new (*ctxt) ContinueStmt(end));
-    EXPECT_EQ(stmt->getLoc(), beg);
-    EXPECT_EQ(stmt->getBegLoc(), beg);
-    EXPECT_EQ(stmt->getEndLoc(), end);
-    EXPECT_EQ(stmt->getSourceRange(), range);
-  }
+  cur = whileStmt;
+  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(cur->getBegLoc(), beg);
+  EXPECT_EQ(cur->getEndLoc(), end);
+  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
 }
