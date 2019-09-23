@@ -6,7 +6,7 @@ TODOs:
  - Enum, Union?
  - Binary/Hex literals
 
-### Foreword
+### Note
 This is currently a work in progress. 
 
 ### The grammar
