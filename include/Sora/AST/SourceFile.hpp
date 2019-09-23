@@ -17,12 +17,12 @@
 
 namespace sora {
 class ASTWalker;
-class FuncDecl;
+class Decl;
 
 /// Represents a source file.
 class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
   Identifier identifier;
-  SmallVector<FuncDecl *, 4> functions;
+  SmallVector<Decl *, 4> members;
   BufferID bufferID;
 
 public:
@@ -36,10 +36,10 @@ public:
 
   /// \returns the identifier (name) of this source file
   Identifier getIdentifier() const { return identifier; }
-  /// \returns the functions (members) of this source file
-  ArrayRef<FuncDecl *> getFunctions() const { return functions; }
-  /// Adds a function to this source file
-  void addFunction(FuncDecl *fn) { return functions.push_back(fn); }
+  /// \returns the members of this source file
+  ArrayRef<Decl *> getMembers() const { return members; }
+  /// Adds a member to this source file
+  void addMember(Decl *decl) { return members.push_back(decl); }
   /// \returns the buffer id of this SourceFile
   BufferID getBufferID() const { return bufferID; }
 

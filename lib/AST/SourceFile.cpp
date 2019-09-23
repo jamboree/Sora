@@ -15,8 +15,8 @@ SourceFile *DeclContext::getAsSourceFile() {
 }
 
 bool SourceFile::walk(ASTWalker &walker) {
-  for (FuncDecl *function : functions) {
-    if (!function->walk(walker))
+  for (Decl *decl : members) {
+    if (!decl->walk(walker))
       return false;
   }
   return true;
