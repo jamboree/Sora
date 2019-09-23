@@ -99,9 +99,10 @@ public:
   }
 
   /// Traverse this Expr using \p walker.
-  /// \returns true if the walk completed successfully, false if it ended
-  /// prematurely.
-  bool walk(ASTWalker &walker);
+  /// \returns a pair, the first element indicates whether the walk completed
+  /// successfully (true = success), and the second element, if non-null, is the
+  /// Expr that should replace this Expr in the tree.
+  std::pair<bool, Expr *> walk(ASTWalker &walker);
 
   /// Dumps this expression to \p out
   void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);

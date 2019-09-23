@@ -35,6 +35,11 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
     return !stopped;
   }
 
+  std::pair<bool, Expr *> walk(Expr *expr) {
+    Expr *replacement = doIt(expr);
+    return {!stopped, replacement};
+  }
+
   //===- Visit Methods ----------------------------------------------------===//
   // - For each children of the node we're visiting
   //  - Call doIt
@@ -370,7 +375,9 @@ void ASTWalker::anchor() {}
 
 bool ASTNode::walk(ASTWalker &walker) { return Traversal(walker).walk(*this); }
 bool Decl::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
-bool Expr::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
+std::pair<bool, Expr *> Expr::walk(ASTWalker &walker) {
+  return Traversal(walker).walk(this);
+}
 bool Pattern::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
 bool Stmt::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
 bool TypeRepr::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
