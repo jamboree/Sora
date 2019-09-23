@@ -1,6 +1,6 @@
 # Sora Roadmap
 
-## Foreword
+## Introduction
 
 Every project I do is to learn something, and Sora is no exception. Learning how to implement and work with SSA/CFG IRs is my goal for this project.
 
