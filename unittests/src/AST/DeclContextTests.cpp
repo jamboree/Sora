@@ -38,7 +38,7 @@ TEST_F(DeclContextTest, isLocalContext) {
   EXPECT_FALSE(dc->isLocalContext());
 }
 
-TEST_F(DeclContextTest, raii) {
+TEST_F(DeclContextTest, rtti) {
   EXPECT_TRUE(isa<DeclContext>(&sf));
   EXPECT_TRUE(isa<DeclContext>(func));
 }

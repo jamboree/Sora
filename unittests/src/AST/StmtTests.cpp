@@ -40,78 +40,70 @@ protected:
 
   SourceLoc beg, mid, end;
 
-  ContinueStmt *continueStmt;
-  BreakStmt *breakStmt;
-  ReturnStmt *returnStmt;
-  BlockStmt *blockStmt;
-  IfStmt *ifStmt;
-  WhileStmt *whileStmt;
+  Stmt *continueStmt;
+  Stmt *breakStmt;
+  Stmt *returnStmt;
+  Stmt *blockStmt;
+  Stmt *ifStmt;
+  Stmt *whileStmt;
 };
 } // namespace
 
 TEST_F(StmtTest, rtti) {
-  EXPECT_TRUE(isa<ContinueStmt>((Stmt *)continueStmt));
-  EXPECT_TRUE(isa<BreakStmt>((Stmt *)breakStmt));
-  EXPECT_TRUE(isa<ReturnStmt>((Stmt *)returnStmt));
-  EXPECT_TRUE(isa<BlockStmt>((Stmt *)blockStmt));
-  EXPECT_TRUE(isa<IfStmt>((Stmt *)ifStmt));
-  EXPECT_TRUE(isa<WhileStmt>((Stmt *)whileStmt));
+  EXPECT_TRUE(isa<ContinueStmt>(continueStmt));
+  EXPECT_TRUE(isa<BreakStmt>(breakStmt));
+  EXPECT_TRUE(isa<ReturnStmt>(returnStmt));
+  EXPECT_TRUE(isa<BlockStmt>(blockStmt));
+  EXPECT_TRUE(isa<IfStmt>(ifStmt));
+  EXPECT_TRUE(isa<WhileStmt>(whileStmt));
 }
 
 TEST_F(StmtTest, getSourceRange) {
-  Stmt *cur = nullptr;
-
   // ContinueStmt
-  cur = continueStmt;
-  EXPECT_EQ(cur->getLoc(), beg);
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), beg);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, beg));
-  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(continueStmt->getLoc(), beg);
+  EXPECT_EQ(continueStmt->getBegLoc(), beg);
+  EXPECT_EQ(continueStmt->getEndLoc(), beg);
+  EXPECT_EQ(continueStmt->getSourceRange(), SourceRange(beg, beg));
+  EXPECT_EQ(continueStmt->getLoc(), beg);
 
   // BreakStmt
-  cur = breakStmt;
-  EXPECT_EQ(cur->getLoc(), beg);
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), beg);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, beg));
-  EXPECT_EQ(cur->getLoc(), beg);
+  EXPECT_EQ(breakStmt->getLoc(), beg);
+  EXPECT_EQ(breakStmt->getBegLoc(), beg);
+  EXPECT_EQ(breakStmt->getEndLoc(), beg);
+  EXPECT_EQ(breakStmt->getSourceRange(), SourceRange(beg, beg));
+  EXPECT_EQ(breakStmt->getLoc(), beg);
 
   // ReturnStmt
-  cur = returnStmt;
-  EXPECT_EQ(cur->getLoc(), beg);
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), beg);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, beg));
-  returnStmt->setResult(new (*ctxt) DiscardExpr(end));
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), end);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
-  returnStmt->setResult(nullptr);
+  EXPECT_EQ(returnStmt->getLoc(), beg);
+  EXPECT_EQ(returnStmt->getBegLoc(), beg);
+  EXPECT_EQ(returnStmt->getEndLoc(), beg);
+  EXPECT_EQ(returnStmt->getSourceRange(), SourceRange(beg, beg));
+  cast<ReturnStmt>(returnStmt)->setResult(new (*ctxt) DiscardExpr(end));
+  EXPECT_EQ(returnStmt->getBegLoc(), beg);
+  EXPECT_EQ(returnStmt->getEndLoc(), end);
+  EXPECT_EQ(returnStmt->getSourceRange(), SourceRange(beg, end));
+  cast<ReturnStmt>(returnStmt)->setResult(nullptr);
 
   // BlockStmt
-  cur = blockStmt;
-  EXPECT_EQ(cur->getLoc(), beg);
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), end);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
+  EXPECT_EQ(blockStmt->getLoc(), beg);
+  EXPECT_EQ(blockStmt->getBegLoc(), beg);
+  EXPECT_EQ(blockStmt->getEndLoc(), end);
+  EXPECT_EQ(blockStmt->getSourceRange(), SourceRange(beg, end));
 
   // IfStmt
-  cur = ifStmt;
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), mid);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, mid));
-  ifStmt->setElse(new (*ctxt) ContinueStmt(end));
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), end);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
-  ifStmt->setElse(nullptr);
+  EXPECT_EQ(ifStmt->getBegLoc(), beg);
+  EXPECT_EQ(ifStmt->getLoc(), beg);
+  EXPECT_EQ(ifStmt->getEndLoc(), mid);
+  EXPECT_EQ(ifStmt->getSourceRange(), SourceRange(beg, mid));
+  cast<IfStmt>(ifStmt)->setElse(new (*ctxt) ContinueStmt(end));
+  EXPECT_EQ(ifStmt->getBegLoc(), beg);
+  EXPECT_EQ(ifStmt->getEndLoc(), end);
+  EXPECT_EQ(ifStmt->getSourceRange(), SourceRange(beg, end));
+  cast<IfStmt>(ifStmt)->setElse(nullptr);
 
   // WhileStmt
-  cur = whileStmt;
-  EXPECT_EQ(cur->getLoc(), beg);
-  EXPECT_EQ(cur->getBegLoc(), beg);
-  EXPECT_EQ(cur->getEndLoc(), end);
-  EXPECT_EQ(cur->getSourceRange(), SourceRange(beg, end));
+  EXPECT_EQ(whileStmt->getLoc(), beg);
+  EXPECT_EQ(whileStmt->getBegLoc(), beg);
+  EXPECT_EQ(whileStmt->getEndLoc(), end);
+  EXPECT_EQ(whileStmt->getSourceRange(), SourceRange(beg, end));
 }

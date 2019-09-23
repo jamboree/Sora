@@ -33,7 +33,7 @@ protected:
     TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(end, {});
     paramDecl = new (*ctxt) ParamDecl(nullptr, beg, {}, {}, {{}, tyRepr});
     funcDecl = new (*ctxt) FuncDecl(nullptr, beg, {}, {}, nullptr, {});
-    funcDecl->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
+    cast<FuncDecl>(funcDecl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
     Pattern *pat = new (*ctxt) DiscardPattern(mid);
     Expr *init = new (*ctxt) DiscardExpr(end);
     letDecl = new (*ctxt) LetDecl(nullptr, beg, pat, {}, init);
@@ -45,62 +45,50 @@ protected:
 
   SourceLoc beg, mid, end;
 
-  VarDecl *varDecl;
-  ParamDecl *paramDecl;
-  FuncDecl *funcDecl;
-  LetDecl *letDecl;
+  Decl *varDecl;
+  Decl *paramDecl;
+  Decl *funcDecl;
+  Decl *letDecl;
 };
 } // namespace
 
 TEST_F(DeclTest, rtti) {
-  // VarDecl
-  EXPECT_TRUE(isa<VarDecl>((Decl*)varDecl));
-  EXPECT_TRUE(isa<ValueDecl>((Decl *)varDecl));
-
-  // ParamDecl
-  EXPECT_TRUE(isa<ParamDecl>((Decl *)paramDecl));
-  EXPECT_TRUE(isa<ValueDecl>((Decl *)paramDecl));
-
-  // FuncDecl
-  EXPECT_TRUE(isa<FuncDecl>((Decl *)funcDecl));
-  EXPECT_TRUE(isa<ValueDecl>((Decl *)funcDecl));
-
-  // LetDecl
-  EXPECT_TRUE(isa<LetDecl>((Decl *)letDecl));
-  EXPECT_TRUE(isa<PatternBindingDecl>((Decl *)letDecl));
+  EXPECT_TRUE(isa<VarDecl>(varDecl));
+  EXPECT_TRUE(isa<ValueDecl>(varDecl));
+  EXPECT_TRUE(isa<ParamDecl>(paramDecl));
+  EXPECT_TRUE(isa<ValueDecl>(paramDecl));
+  EXPECT_TRUE(isa<FuncDecl>(funcDecl));
+  EXPECT_TRUE(isa<ValueDecl>(funcDecl));
+  EXPECT_TRUE(isa<LetDecl>(letDecl));
+  EXPECT_TRUE(isa<PatternBindingDecl>(letDecl));
 }
 
 TEST_F(DeclTest, getSourceRange) {
-  Decl *cur;
   // VarDecl
-  cur = varDecl;
-  EXPECT_EQ(beg, cur->getBegLoc());
-  EXPECT_EQ(beg, cur->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), cur->getSourceRange());
+  EXPECT_EQ(beg, varDecl->getBegLoc());
+  EXPECT_EQ(beg, varDecl->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), varDecl->getSourceRange());
 
   // ParamDecl
-  cur = paramDecl;
-  EXPECT_EQ(beg, cur->getBegLoc());
-  EXPECT_EQ(end, cur->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, end), cur->getSourceRange());
+  EXPECT_EQ(beg, paramDecl->getBegLoc());
+  EXPECT_EQ(end, paramDecl->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), paramDecl->getSourceRange());
 
   // FuncDecl
-  cur = funcDecl;
-  EXPECT_EQ(beg, cur->getBegLoc());
-  EXPECT_EQ(end, cur->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, end), cur->getSourceRange());
+  EXPECT_EQ(beg, funcDecl->getBegLoc());
+  EXPECT_EQ(end, funcDecl->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), funcDecl->getSourceRange());
 
   // LetDecl
-  cur = letDecl;
-  EXPECT_EQ(beg, cur->getBegLoc());
-  EXPECT_EQ(end, cur->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, end), cur->getSourceRange());
-  Expr *letInit = letDecl->getInitializer();
-  letDecl->setInitializer(nullptr);
-  EXPECT_EQ(beg, cur->getBegLoc());
-  EXPECT_EQ(mid, cur->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, mid), cur->getSourceRange());
-  letDecl->setInitializer(letInit);
+  EXPECT_EQ(beg, letDecl->getBegLoc());
+  EXPECT_EQ(end, letDecl->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), letDecl->getSourceRange());
+  Expr *letInit = cast<LetDecl>(letDecl)->getInitializer();
+  cast<LetDecl>(letDecl)->setInitializer(nullptr);
+  EXPECT_EQ(beg, letDecl->getBegLoc());
+  EXPECT_EQ(mid, letDecl->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, mid), letDecl->getSourceRange());
+  cast<LetDecl>(letDecl)->setInitializer(letInit);
 }
 
 /// Tests Decl::getSourceFile and related features (getParent, getASTContext,
