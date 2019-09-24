@@ -29,7 +29,7 @@ bool tryConsume(StringRef &str, StringRef expected) {
 /// Attempts to consume a number from the input
 Optional<unsigned> tryConsumeNumber(StringRef &str) {
   size_t k = 0;
-  while (isdigit(str[k]))
+  while ((k < str.size()) && isdigit(str[k]))
     ++k;
   // No digit
   if (k == 0)
@@ -85,19 +85,22 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
   };
 
   assert(buffer && "invalid buffer");
-  StringRef str = srcMgr.getBufferStr(buffer);
-  assert(str && "empty/invalid file?");
+  StringRef file = srcMgr.getBufferStr(buffer);
 
-  /// FIXME: Is this correct?
-  unsigned lastLine = srcMgr.findLineNumber(SourceLoc::fromPointer(str.end()));
+  unsigned lastLine = srcMgr.findLineNumber(SourceLoc::fromPointer(file.end()));
 
-  for (size_t matchPos = str.find(prefix); matchPos != StringRef::npos;
-       matchPos = str.find(prefix)) {
-    // Consume the prefix
-    str = str.substr(matchPos + prefixLen);
+  for (size_t matchPos = file.find(prefix); matchPos != StringRef::npos;
+       matchPos = file.find(prefix, matchPos + 1)) {
+    // Create a string that starts at the beginning of the line
+    StringRef str = file.substr(matchPos);
 
-    auto getCurLoc = [&]() { return SourceLoc::fromPointer(str.data()); };
+    auto getCurLoc = [&]() {
+      return SourceLoc::fromPointer(str.data());
+    };
     SourceLoc matchBegLoc = getCurLoc();
+
+    // Consume the prefix
+    str = str.substr(prefixLen);
 
     // (number "-") ?
     unsigned diagCount = 1;
@@ -107,7 +110,8 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
         continue;
       }
       diagCount = *result;
-      if (diagCount > 1) {
+      llvm::outs() << "diagCount: " << diagCount << '\n';
+      if (diagCount <= 1) {
         error(matchBegLoc, "expected diagnostic count must be greater than 1");
         continue;
       }
@@ -124,11 +128,12 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
     else if (tryConsume(str, "error"))
       kind = DiagnosticKind::Error;
     else {
-      llvm::outs() << "failed to find kind: " << str;
+      error(getCurLoc(),
+            "expected number, 'remark', 'note', 'warning' or 'error'");
       continue;
     }
 
-    unsigned offset = 0;
+    int offset = 0;
     // offset = '@' ('+' | '-') number
     if (tryConsume(str, "@")) {
       // Factor is set to 1 for positive offsets, -1 for negative ones.
@@ -139,7 +144,7 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
         factor = -1;
       else {
         // no + or -, diagnose and ignore this "expect-" line.
-        error(getCurLoc(), "expected + or -");
+        error(getCurLoc(), "expected '+' or '-'");
         continue;
       }
 
@@ -154,7 +159,7 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
     }
 
     if (!tryConsume(str, ":")) {
-      error(getCurLoc(), "expected ':'");
+      error(getCurLoc(), "expected ':' or '@'");
       continue;
     }
 
@@ -193,8 +198,6 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
       error(matchBegLoc, str.str());
     }
 
-    // Add the diagnostic string to the list of expected diagnostics.
-    llvm::outs() << "expecting '" << diagStr << "'\n";
     expectedDiagnostics[diagStr].push_back({kind, buffer, line});
   }
   return parsingSuccessful;

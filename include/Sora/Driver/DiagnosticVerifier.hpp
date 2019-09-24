@@ -70,7 +70,7 @@ public:
   /// diagnostics.
   DiagnosticVerifier(raw_ostream &out, SourceManager &srcMgr,
                      std::unique_ptr<DiagnosticConsumer> consumer)
-      : out(out), srcMgr(srcMgr), consumer(std::move(consumer)) {}
+      : consumer(std::move(consumer)), srcMgr(srcMgr), out(out) {}
 
   /// Parses all of the "expect" lines in \p buff
   /// This prints error when error occurs.
