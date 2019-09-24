@@ -31,6 +31,10 @@ public:
   bool isNull() { return value == 0; }
   /// \returns true if this buffer id isn't null.
   explicit operator bool() { return !isNull(); }
+
+  // Comparison operators
+  bool operator==(const BufferID &other) const { return value == other.value; }
+  bool operator!=(const BufferID &other) const { return value == other.value; }
 };
 
 /// Manages & owns source buffers
