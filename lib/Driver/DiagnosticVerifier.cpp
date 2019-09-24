@@ -179,7 +179,7 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
 
     // Check that we don't have a negative offset that'd overflow. (e.g. line is
     // 5, but offset is -6)
-    if ((offset < 0) && (line < -offset)) {
+    if ((offset < 0) && (line < (unsigned)-offset)) {
       error(matchBegLoc,
             "cannot expect a diagnostic at a negative line number");
       continue;
