@@ -51,9 +51,12 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
       continue;
 
     unsigned offset = 0;
-    // parse + - or : 
-    return false;
+    // parse + -
+    // parse :
+    // parse str
+    // add to set of expected diag
   }
+  return false;
 }
 
 void DiagnosticVerifier::handle(SourceManager &srcMgr,
@@ -61,4 +64,5 @@ void DiagnosticVerifier::handle(SourceManager &srcMgr,
   assert((&(this->srcMgr) == &srcMgr) &&
          "The SourceManager used by the DiagnosticEngine is different from the "
          "one used by the DiagnosticVerifier!");
+  // check if expected, else set flag to false
 }
