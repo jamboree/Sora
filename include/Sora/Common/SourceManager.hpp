@@ -64,10 +64,21 @@ public:
 
   /// \returns the line and column represented by \p loc.
   /// If \p id is valid, \p loc must come from that source buffer.
+  /// If \p id is invalid, the SourceManager will search for the correct source
+  /// buffer.
   std::pair<unsigned, unsigned>
   getLineAndColumn(SourceLoc loc, BufferID id = BufferID()) const {
     assert(loc && "loc cannot be invalid");
     return llvmSourceMgr.getLineAndColumn(loc.value, id.value);
+  }
+
+  /// \returns the line number for the specified location
+  /// If \p id is valid, \p loc must come from that source buffer.
+  /// If \p id is invalid, the SourceManager will search for the correct source
+  /// buffer.
+  unsigned findLineNumber(SourceLoc loc, BufferID id = BufferID()) {
+    assert(loc && "loc cannot be invalid");
+    return llvmSourceMgr.FindLineNumber(loc.value, id.value);
   }
 
   /// \returns the identifier of the MemoryBuffer with \p id
