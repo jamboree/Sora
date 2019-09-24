@@ -43,7 +43,7 @@ InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
 bool Driver::handleImmediateArgs(InputArgList &argList) {
   // handle -h/-help
   if (argList.hasArg(opt::OPT_help)) {
-    optTable->PrintHelp(llvm::outs(), "sorac [options] <inputs>",
+    optTable->PrintHelp(llvm::outs(), "sorac (options | inputs)",
                         "Sora Compiler");
     return false;
   }
