@@ -6,12 +6,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Driver/DiagnosticVerifier.hpp"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace sora;
+
+using DiagKind = llvm::SourceMgr::DiagKind;
+
 namespace {
-constexpr char prefix[] = "expect-";
-constexpr size_t prefixLen = sizeof(prefix) - 1;
 
 /// Attempts to remove \p expected from \p str, and returns true if it was
 /// correctly removed.
@@ -22,22 +25,95 @@ bool tryConsume(StringRef &str, StringRef expected) {
   }
   return false;
 }
+
+/// Attempts to consume a number from the input
+Optional<unsigned> tryConsumeNumber(StringRef &str) {
+  size_t k = 0;
+  while (isdigit(str[k]))
+    ++k;
+  // No digit
+  if (k == 0)
+    return None;
+  // Got digits, k is the position of the first char that isn't a digit.
+  StringRef numberStr = str.substr(0, k);
+  // Remove the number from str
+  str = str.substr(k);
+  // Parse the number & return it.
+  unsigned result;
+  if (numberStr.getAsInteger(10, result))
+    llvm_unreachable(
+        "StringRef::getAsInteger() failed parsing a string with only digits?");
+  return result;
+}
 } // namespace
 
+std::string
+DiagnosticVerifier::getNoteUnemitted(StringRef message,
+                                     ExpectedDiagnosticData &data) const {
+  std::string str;
+  llvm::raw_string_ostream rso(str);
+  switch (data.kind) {
+  case DiagnosticKind::Remark:
+    rso << "remark";
+    break;
+  case DiagnosticKind::Note:
+    rso << "note";
+    break;
+  case DiagnosticKind::Warning:
+    rso << "warning";
+    break;
+  case DiagnosticKind::Error:
+    rso << "error";
+    break;
+  default:
+    llvm_unreachable("unknown DiagnosticKind");
+  }
+  rso << " '" << message << "' expected at line " << data.line << " of '"
+      << srcMgr.getBufferIdentifier(data.buffer) << "' was not emitted";
+  return rso.str();
+}
+
 bool DiagnosticVerifier::parseFile(BufferID buffer) {
+  constexpr char prefix[] = "expect-";
+  constexpr size_t prefixLen = sizeof(prefix) - 1;
+
+  bool parsingSuccessful = true;
+  auto error = [&](SourceLoc loc, StringRef message) {
+    srcMgr.llvmSourceMgr.PrintMessage(out, loc.getSMLoc(), DiagKind::DK_Error,
+                                      message);
+    parsingSuccessful = false;
+  };
+
   assert(buffer && "invalid buffer");
-  StringRef file = srcMgr.getBufferStr(buffer);
-  assert(file && "empty/invalid file?");
+  StringRef str = srcMgr.getBufferStr(buffer);
+  assert(str && "empty/invalid file?");
 
-  for (size_t match = file.find(prefix); match != StringRef::npos;
-       match = file.find(prefix, match + 1)) {
-    // Extract the string and remove the prefix.
-    StringRef str = file.substr(match + prefixLen);
+  /// FIXME: Is this correct?
+  unsigned lastLine = srcMgr.findLineNumber(SourceLoc::fromPointer(str.end()));
+
+  for (size_t matchPos = str.find(prefix); matchPos != StringRef::npos;
+       matchPos = str.find(prefix)) {
+    // Consume the prefix
+    str = str.substr(matchPos + prefixLen);
+
     auto getCurLoc = [&]() { return SourceLoc::fromPointer(str.data()); };
-
     SourceLoc matchBegLoc = getCurLoc();
 
-    // Get the kind of the diagnostic & consume it
+    // (number "-") ?
+    unsigned diagCount = 1;
+    if (auto result = tryConsumeNumber(str)) {
+      if (!tryConsume(str, "-")) {
+        error(getCurLoc(), "expected '-'");
+        continue;
+      }
+      diagCount = *result;
+      if (diagCount > 1) {
+        error(matchBegLoc, "expected diagnostic count must be greater than 1");
+        continue;
+      }
+    }
+
+    // kind = "remark" | "note" | "warning" | "error"
     DiagnosticKind kind;
     if (tryConsume(str, "remark"))
       kind = DiagnosticKind::Remark;
@@ -47,16 +123,81 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
       kind = DiagnosticKind::Warning;
     else if (tryConsume(str, "error"))
       kind = DiagnosticKind::Error;
-    else
+    else {
+      llvm::outs() << "failed to find kind: " << str;
       continue;
+    }
 
     unsigned offset = 0;
-    // parse + -
-    // parse :
-    // parse str
-    // add to set of expected diag
+    // offset = '@' ('+' | '-') number
+    if (tryConsume(str, "@")) {
+      // Factor is set to 1 for positive offsets, -1 for negative ones.
+      int factor = 0;
+      if (tryConsume(str, "+"))
+        factor = 1;
+      else if (tryConsume(str, "-"))
+        factor = -1;
+      else {
+        // no + or -, diagnose and ignore this "expect-" line.
+        error(getCurLoc(), "expected + or -");
+        continue;
+      }
+
+      SourceLoc numBegLoc = getCurLoc();
+      if (auto result = tryConsumeNumber(str)) {
+        if (*result == 0) {
+          error(numBegLoc, "offset number can't be zero");
+          continue;
+        }
+        offset = *result * factor;
+      }
+    }
+
+    if (!tryConsume(str, ":")) {
+      error(getCurLoc(), "expected ':'");
+      continue;
+    }
+
+    // The rest of the string up until the newline or the end of the file is our
+    // diagnostic string.
+    StringRef diagStr = str;
+    size_t end = diagStr.find("\n");
+    if (end != StringRef::npos) {
+      if (str[end - 1] == '\r')
+        --end;
+      diagStr = diagStr.substr(0, end);
+    }
+    diagStr = diagStr.trim();
+
+    // Calculate the line number
+    unsigned line = srcMgr.findLineNumber(matchBegLoc);
+
+    // Check that we don't have a negative offset that'd overflow. (e.g. line is
+    // 5, but offset is -6)
+    if ((offset < 0) && (line < -offset)) {
+      error(matchBegLoc,
+            "cannot expect a diagnostic at a negative line number");
+      continue;
+    }
+    line += offset;
+
+    // Check if the line number is valid
+    if (line == 0) {
+      error(matchBegLoc, "cannot expect a diagnostic at line 0");
+      continue;
+    }
+    if (line > lastLine) {
+      auto str = llvm::formatv("diagnostic is expected at line {0} but the "
+                               "file's last line is line {1}",
+                               line, lastLine);
+      error(matchBegLoc, str.str());
+    }
+
+    // Add the diagnostic string to the list of expected diagnostics.
+    llvm::outs() << "expecting '" << diagStr << "'\n";
+    expectedDiagnostics[diagStr].push_back({kind, buffer, line});
   }
-  return false;
+  return parsingSuccessful;
 }
 
 void DiagnosticVerifier::handle(SourceManager &srcMgr,
@@ -64,5 +205,61 @@ void DiagnosticVerifier::handle(SourceManager &srcMgr,
   assert((&(this->srcMgr) == &srcMgr) &&
          "The SourceManager used by the DiagnosticEngine is different from the "
          "one used by the DiagnosticVerifier!");
-  // check if expected, else set flag to false
+  assert(consumer && "no consumer!");
+  auto fail = [&]() {
+    unexpectedDiagsEmitted = true;
+    consumer->handle(srcMgr, diagnostic);
+  };
+
+  // Did we expect this diagnostic?
+  auto entry = expectedDiagnostics.find(diagnostic.message);
+  if (entry == expectedDiagnostics.end() || entry->second.empty())
+    return fail();
+
+  // Look for the correct one in the buffer
+  ExpectedDiagnosticDataSet &expectedDiags = entry->second;
+  for (auto it = expectedDiags.begin(); it != expectedDiags.end(); ++it) {
+    // Compare kinds
+    if (it->kind != diagnostic.kind)
+      continue;
+    // Compare locs
+    auto locBuff = srcMgr.findBufferContainingLoc(diagnostic.loc);
+    if (it->buffer != locBuff)
+      continue;
+    // Compare lines
+    if (it->line != srcMgr.findLineNumber(diagnostic.loc))
+      continue;
+
+    // It's a match, delete this entry from the set of expected diagnostics and
+    // return.
+    expectedDiags.erase(it);
+    if (expectedDiags.size() == 0)
+      expectedDiagnostics.erase(entry);
+    return;
+  }
+  return fail();
+}
+
+bool DiagnosticVerifier::finish() const {
+  std::vector<std::string> unemittedDiagNotes;
+  for (auto &entry : expectedDiagnostics) {
+    auto &set = entry.second;
+    if (set.empty())
+      continue;
+
+    for (auto unemitted : set)
+      unemittedDiagNotes.push_back(getNoteUnemitted(entry.first(), unemitted));
+  }
+  if (unemittedDiagNotes.empty())
+    return !unexpectedDiagsEmitted;
+
+  std::string err = llvm::formatv(
+      "verification failed: {0} diagnostics were expected but not emitted",
+      unemittedDiagNotes.size());
+  srcMgr.llvmSourceMgr.PrintMessage(out, llvm::SMLoc(), DiagKind::DK_Error,
+                                    err);
+  for (auto &note : unemittedDiagNotes)
+    srcMgr.llvmSourceMgr.PrintMessage(out, llvm::SMLoc(), DiagKind::DK_Note,
+                                      note);
+  return false;
 }

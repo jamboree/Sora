@@ -9,6 +9,7 @@
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/DiagnosticsDriver.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Driver/DiagnosticVerifier.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,7 +21,7 @@ Driver::Driver(raw_ostream &out)
     : driverDiags(driverDiagsSrcMgr, out), optTable(createSoraOptTable()) {}
 
 InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
-  hadError = false; 
+  hadError = false;
   unsigned missingArgIndex = 0, missingArgCount = 0;
   // Parse the arguments, set the argList.
   llvm::opt::InputArgList argList =
@@ -66,6 +67,7 @@ void CompilerInstance::handleOptions(InputArgList &argList) {
   options.dumpAST = false; /*TODO*/
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
   options.parseOnly = argList.hasArg(opt::OPT_parse_only);
+  options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
 }
 
 bool CompilerInstance::loadInputs(llvm::opt::InputArgList &argList) {
@@ -91,7 +93,8 @@ void CompilerInstance::dump(raw_ostream &out) const {
         out << "<unnamed>";
       else
         out << name;
-    } else
+    }
+    else
       out << "invalid";
     out << ")\n";
   }
@@ -99,6 +102,7 @@ void CompilerInstance::dump(raw_ostream &out) const {
   DUMP_BOOL(options.dumpParse);
   DUMP_BOOL(options.dumpAST);
   DUMP_BOOL(options.parseOnly);
+  DUMP_BOOL(options.verifyModeEnabled);
 #undef DUMP_BOOL
 }
 
@@ -133,22 +137,54 @@ bool CompilerInstance::run(Step stopAfter) {
     return false;
   }
 
+  // In verify mode, install the Diagnostic Verifier
+  DiagnosticVerifier *verifier = installDiagnosticVerifierIfNeeded();
+  if (verifier) {
+    bool verifParsingOk = true;
+    // Parse the input files if verify mode has been enabled
+    for (auto inputBuffer : inputBuffers)
+      verifParsingOk &= verifier->parseFile(inputBuffer);
+    // If an error occured during DV parsing, stop now.
+    if (!verifParsingOk)
+      return false;
+  }
+
   bool success = true;
+
   // Helper function, returns true if we can continue, false otherwise.
   auto canContinue = [&](Step currentStep) {
     return success && stopAfter != currentStep;
   };
+
+  // Helper function to finish processing. Returns true on success, false on
+  // failure. Always call this before returning from this function past this
+  // point.
+  auto finish = [&]() {
+    if (verifier)
+      return verifier->finish() && success;
+    return success;
+  };
+
   // Perform parsing
   success = doParsing();
   if (canContinue(Step::Parsing))
-    return success;
-  // Perform Sema
-  //  TODO
-  return success;
+    return finish();
+  // TODO: Perform Sema/IRGen/etc.
+  return finish();
 }
 
 ArrayRef<BufferID> CompilerInstance::getInputBuffers() const {
   return inputBuffers;
+}
+
+DiagnosticVerifier *CompilerInstance::installDiagnosticVerifierIfNeeded() {
+  if (!options.verifyModeEnabled)
+    return nullptr;
+  auto verifier = std::make_unique<DiagnosticVerifier>(llvm::outs(), srcMgr,
+                                                       diagEng.takeConsumer());
+  auto ptr = verifier.get();
+  diagEng.setConsumer(std::move(verifier));
+  return ptr;
 }
 
 void CompilerInstance::createASTContext() {

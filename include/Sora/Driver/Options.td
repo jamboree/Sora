@@ -14,3 +14,7 @@ def dump_parse : Flag<["-"], "dump-parse">,
   HelpText<"Performs parsing and dumps the resulting AST">;
 def parse_only : Flag<["-"], "parse-only">,
   HelpText<"Stops compilation after parsing">;
+
+// Diagnostic Verification
+def verify : Flag<["-"], "verify">,
+  HelpText<"Enables diagnostic verification">;

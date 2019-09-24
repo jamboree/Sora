@@ -20,6 +20,8 @@
 #include <memory>
 
 namespace sora {
+class DiagnosticVerifier;
+
 /// Represents an instance of the compiler. This owns the main singletons
 /// (SourceManager, ASTContext, DiagnosticEngine, etc.) and orchestrates
 /// the compilation process.
@@ -51,6 +53,9 @@ public:
     /// If "true", the compiler will stop after the parsing step.
     /// Honored by run()
     bool parseOnly = false;
+    /// Whether verify mode is enabled.
+    /// Honored by run()
+    bool verifyModeEnabled = true;
   } options;
 
   /// Handles command-line options
@@ -100,6 +105,10 @@ public:
   std::unique_ptr<ASTContext> astContext = nullptr;
 
 private:
+  /// Installs the DiagnosticVerifier if verification mode is enabled.
+  /// \returns the installed DV, or nullptr if no DV was installed.
+  DiagnosticVerifier *installDiagnosticVerifierIfNeeded();
+
   /// Creates the ASTContext (if needed)
   void createASTContext();
 
