@@ -34,6 +34,7 @@ ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)"
   (StringRef, unsigned))
 // Input files loading
 ERROR(couldnt_load_input_file, "could not load input file '%0'", (StringRef))
+ERROR(no_input_files, "no input files", ())
 
 //===----------------------------------------------------------------------===//
 

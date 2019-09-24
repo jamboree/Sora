@@ -127,6 +127,12 @@ bool CompilerInstance::isLoaded(StringRef filePath, bool isAbsolute) {
 bool CompilerInstance::run(Step stopAfter) {
   assert(!ran && "already ran this CompilerInstance!");
   ran = true;
+  // Check if we have input files
+  if (inputBuffers.empty()) {
+    diagnose(diag::no_input_files);
+    return false;
+  }
+
   bool success = true;
   // Helper function, returns true if we can continue, false otherwise.
   auto canContinue = [&](Step currentStep) {
