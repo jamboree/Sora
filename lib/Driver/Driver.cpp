@@ -114,6 +114,7 @@ BufferID CompilerInstance::loadFile(StringRef filepath) {
     return buffer;
   }
   diagnose(diag::couldnt_load_input_file, filepath);
+  hadFileLoadError = true;
   return BufferID();
 }
 
@@ -133,7 +134,8 @@ bool CompilerInstance::run(Step stopAfter) {
   ran = true;
   // Check if we have input files
   if (inputBuffers.empty()) {
-    diagnose(diag::no_input_files);
+    if (!hadFileLoadError)
+      diagnose(diag::no_input_files);
     return false;
   }
 

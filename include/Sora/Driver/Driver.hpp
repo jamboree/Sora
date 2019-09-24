@@ -105,6 +105,8 @@ public:
   std::unique_ptr<ASTContext> astContext = nullptr;
 
 private:
+  bool hadFileLoadError = false;
+
   /// Installs the DiagnosticVerifier if verification mode is enabled.
   /// \returns the installed DV, or nullptr if no DV was installed.
   DiagnosticVerifier *installDiagnosticVerifierIfNeeded();
