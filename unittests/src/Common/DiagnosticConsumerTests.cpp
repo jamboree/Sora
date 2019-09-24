@@ -43,9 +43,21 @@ TEST(PrintingDiagnosticConsumerTest, handle) {
 
   stream.str();
 
-  ASSERT_NE(output.size(), 0) << "No Output.";
   EXPECT_EQ(output, "some_file.sora:1:5: error: I'm not lazy!\n"
                     "The Lazy Brown Fox Jumps Over The Lazy Dog\n"
                     "    ^~~~\n"
                     "    Hyperactive\n");
+}
+
+TEST(PrintingDiagnosticConsumerTest, handleSimple) {
+  SourceManager srcMgr;
+  
+  std::string output;
+  llvm::raw_string_ostream stream(output);
+
+  Diagnostic diag("I'm not lazy!", DiagnosticKind::Error, {});
+
+  PrintingDiagnosticConsumer pdc(stream);
+  pdc.handle(srcMgr, diag);
+  EXPECT_EQ(stream.str(), "error: I'm not lazy!\n");
 }

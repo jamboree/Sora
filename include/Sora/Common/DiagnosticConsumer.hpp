@@ -73,8 +73,11 @@ public:
 };
 
 /// A DiagnosticConsumer that pretty-prints diagnostics to a raw_ostream.
-/// FIXME: This is for the Driver, perhaps it'd be better to move it to Driver/?
 class PrintingDiagnosticConsumer : public DiagnosticConsumer {
+  /// Handles a "simple" diagnostic. A simple diagnostic is a diagnostic that
+  /// does not have a location, additional ranges or fixits.
+  void handleSimpleDiagnostic(const Diagnostic &diagnostic, bool showColors);
+
 public:
   PrintingDiagnosticConsumer(raw_ostream &out) : out(out) {}
 

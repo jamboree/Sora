@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace sora;
 
@@ -31,8 +32,40 @@ llvm::SourceMgr::DiagKind getDKasLLVM(DiagnosticKind kind) {
 }
 } // namespace
 
+/// \returns true if \p diag is a "simple" diagnostic that does not have
+/// a source location, fixits or ranges.
+static bool isSimple(const Diagnostic &diag) {
+  return !diag.loc && diag.fixits.empty() && diag.ranges.empty();
+}
+
+void PrintingDiagnosticConsumer::handleSimpleDiagnostic(
+    const Diagnostic &diagnostic, bool showColors) {
+  switch (diagnostic.kind) {
+  case DiagnosticKind::Remark:
+    llvm::WithColor::error(out, "", !showColors);
+    break;
+  case DiagnosticKind::Note:
+    llvm::WithColor::error(out, "", !showColors);
+    break;
+  case DiagnosticKind::Warning:
+    llvm::WithColor::error(out, "", !showColors);
+    break;
+  case DiagnosticKind::Error:
+    llvm::WithColor::error(out, "", !showColors);
+    break;
+  default:
+    llvm_unreachable("unknown DiagnosticKind");
+  }
+  llvm::WithColor(out, raw_ostream::SAVEDCOLOR, true, false, !showColors)
+      << diagnostic.message << "\n";
+}
+
 void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
                                         const Diagnostic &diagnostic) {
+  bool showColors = out.has_colors();
+  // Simple diagnostics are handled differently.
+  if (isSimple(diagnostic))
+    return handleSimpleDiagnostic(diagnostic, showColors);
   // Get the SMRanges
   SmallVector<llvm::SMRange, 2> ranges;
   for (auto range : diagnostic.ranges)
@@ -50,5 +83,5 @@ void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
       fixits                        // fix-its
   );
   // Emit the message
-  srcMgr.llvmSourceMgr.PrintMessage(out, msg, /*showColors*/ true);
+  srcMgr.llvmSourceMgr.PrintMessage(out, msg, showColors);
 }
