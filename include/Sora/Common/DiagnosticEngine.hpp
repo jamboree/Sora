@@ -246,10 +246,14 @@ public:
   /// \returns a observing pointer to the current diagnostic consumer
   DiagnosticConsumer *getConsumer() { return consumer.get(); }
 
-  /// Replaces the current diagnostic consumer with \p newConsumer, destroying
-  /// the old one in the process.
-  void replaceConsumer(std::unique_ptr<DiagnosticConsumer> newConsumer) {
+  /// Replaces the current diagnostic consumer with \p newConsumer
+  void setConsumer(std::unique_ptr<DiagnosticConsumer> newConsumer) {
     consumer = std::move(newConsumer);
+  }
+
+  /// Steals the DiagnosticConsumer from this DiagnosticEngine
+  std::unique_ptr<DiagnosticConsumer> takeConsumer() {
+    return std::move(consumer);
   }
 
   /// \returns true if at least one error was emitted

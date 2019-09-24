@@ -32,7 +32,7 @@ public:
 
   void
   installForwardingHandler(ForwardingDiagnosticConsumer::HandlerFunction func) {
-    diagEngine.replaceConsumer(
+    diagEngine.setConsumer(
         std::make_unique<ForwardingDiagnosticConsumer>(func));
   }
 
