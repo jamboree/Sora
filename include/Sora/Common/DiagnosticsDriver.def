@@ -35,6 +35,9 @@ ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)"
 // Input files loading
 ERROR(couldnt_load_input_file, "could not load input file '%0'", (StringRef))
 ERROR(no_input_files, "no input files", ())
+ERROR(only_one_file_accepted, 
+  "currently, the compiler only accepts a single input file"
+  " (number of files given: %0)", ())
 
 //===----------------------------------------------------------------------===//
 

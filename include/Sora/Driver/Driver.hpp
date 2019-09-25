@@ -21,6 +21,7 @@
 
 namespace sora {
 class DiagnosticVerifier;
+class SourceFile;
 
 /// Represents an instance of the compiler. This owns the main singletons
 /// (SourceManager, ASTContext, DiagnosticEngine, etc.) and orchestrates
@@ -115,8 +116,12 @@ private:
 
   /// Whether this CompilerInstance was ran at least once.
   bool ran = false;
-  /// The BufferIDs of the input files
-  SmallVector<BufferID, 4> inputBuffers;
+
+  /// The BufferIDs of the input files.
+  /// NOTE: Currently, the compiler only supports one inputBuffer.
+  SmallVector<BufferID, 1> inputBuffers;
+  SourceFile *sourceFile = nullptr;
+
 
   /// Performs the parsing step
   /// \returns true if parsing was successful, false otherwise.

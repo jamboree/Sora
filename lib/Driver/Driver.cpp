@@ -6,11 +6,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Driver/Driver.hpp"
+#include "Sora/AST/SourceFile.hpp"
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/DiagnosticsDriver.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Driver/DiagnosticVerifier.hpp"
 #include "Sora/Driver/Options.hpp"
+#include "Sora/Parser/Parser.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -136,6 +138,11 @@ bool CompilerInstance::run(Step stopAfter) {
   if (inputBuffers.empty()) {
     if (!hadFileLoadError)
       diagnose(diag::no_input_files);
+    return false;
+  }
+  // Currently, we only accept a single input file.
+  if (inputBuffers.size() != 1) {
+    diagnose(diag::only_one_file_accepted);
     return false;
   }
 
