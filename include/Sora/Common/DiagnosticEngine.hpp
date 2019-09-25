@@ -128,9 +128,17 @@ public:
   RawDiagnostic(TypedDiag<> diag, SourceLoc loc) : id(diag.id), loc(loc) {}
 
   /// Adds a FixIt object to this Diagnostic.
-  void addFixit(const FixIt &fixit) { fixits.push_back(fixit); }
+  void addFixit(const FixIt &fixit) {
+    assert(loc && "Cannot add a FixIt to a diagnostic if it does not "
+                  "have a SourceLoc!");
+    fixits.push_back(fixit);
+  }
   /// Adds a CharSourceRange object to this Diagnostic.
-  void addRange(const CharSourceRange &range) { ranges.push_back(range); }
+  void addRange(const CharSourceRange &range) {
+    assert(loc && "Cannot add a SourceRange to a diagnostic if it does not "
+                  "have a SourceLoc!");
+    ranges.push_back(range);
+  }
 
   /// \returns The argument providers for this Diagnostic.
   ArrayRef<DiagnosticArgumentProvider> getArgProviders() const {
