@@ -61,7 +61,8 @@ private:
   void stopLexing() {
     assert(nextToken.isNot(TokenKind::EndOfFile) && "already EOF");
     nextToken = Token(TokenKind::EndOfFile,
-                      CharSourceRange(SourceLoc::fromPointer(endPtr)));
+                      CharSourceRange(SourceLoc::fromPointer(endPtr)),
+                      tokenIsAtStartOfLine);
     curPtr = endPtr;
   }
 
