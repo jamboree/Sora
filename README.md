@@ -34,7 +34,7 @@ Note: For the actual language features roadmap see [doc/roadmap](doc/Roadmap.md)
   - :white_check_mark: Source Manager
 - :white_check_mark: Lexer
 - :hourglass: AST
-- :x: Parser
+- :hourglass: Parser
 - :x: Semantic Analysis (Sema)
 - :x: IR
 - :x: IR Generation (IRGen)
