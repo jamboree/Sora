@@ -7,6 +7,7 @@
 
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/DiagnosticsCommon.hpp"
+#include "Sora/Common/SourceManager.hpp"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
@@ -89,6 +90,10 @@ void DiagnosticEngine::initBitfields() {
   errorOccured = false;
   warningsAreErrors = false;
   ignoreAll = false;
+}
+
+SourceLoc DiagnosticEngine::getLocForDiag(BufferID buffer) const {
+  return srcMgr.getBufferCharSourceRange(buffer).getBegin();
 }
 
 Optional<DiagnosticKind> DiagnosticEngine::getDiagnosticKind(DiagID id) {

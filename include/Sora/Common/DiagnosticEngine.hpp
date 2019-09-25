@@ -23,6 +23,7 @@
 namespace sora {
 class DiagnosticEngine;
 class SourceManager;
+class BufferID;
 
 /// The unique identifier of a diagnostic
 enum class DiagID : uint32_t;
@@ -220,6 +221,10 @@ class DiagnosticEngine {
   /// Initializes the bitfields above
   void initBitfields();
 
+  /// \returns the SourceLoc that should be used to emit a diagnostic about
+  /// \p buffer. For now, this is always the beginning of the file.
+  SourceLoc getLocForDiag(BufferID buffer) const;
+
 public:
   /// Creates a DiagnosticEngine using a pre-existing consumer
   DiagnosticEngine(SourceManager &srcMgr,
@@ -238,6 +243,14 @@ public:
   // The DiagnosticEngine is non-copyable.
   DiagnosticEngine(const DiagnosticEngine &) = delete;
   DiagnosticEngine &operator=(const DiagnosticEngine &) = delete;
+
+  /// Emits a \p diag at \p loc with \p args
+  template <typename... Args>
+  InFlightDiagnostic
+  diagnose(BufferID buffer, TypedDiag<Args...> diag,
+           typename detail::PassArgument<Args>::type... args) {
+    return diagnose(getLocForDiag(buffer), diag, std::forward(args)...);
+  }
 
   /// Emits a \p diag at \p loc with \p args
   template <typename... Args>
