@@ -32,12 +32,6 @@ llvm::SourceMgr::DiagKind getDKasLLVM(DiagnosticKind kind) {
 }
 } // namespace
 
-/// \returns true if \p diag is a "simple" diagnostic that does not have
-/// a source location, fixits or ranges.
-static bool isSimple(const Diagnostic &diag) {
-  return !diag.loc && diag.fixits.empty() && diag.ranges.empty();
-}
-
 void PrintingDiagnosticConsumer::handleSimpleDiagnostic(
     const Diagnostic &diagnostic, bool showColors) {
   switch (diagnostic.kind) {
@@ -64,7 +58,7 @@ void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
                                         const Diagnostic &diagnostic) {
   bool showColors = out.has_colors();
   // Simple diagnostics are handled differently.
-  if (isSimple(diagnostic))
+  if (!diagnostic.loc)
     return handleSimpleDiagnostic(diagnostic, showColors);
   // Get the SMRanges
   SmallVector<llvm::SMRange, 2> ranges;

@@ -74,8 +74,7 @@ public:
 
 /// A DiagnosticConsumer that pretty-prints diagnostics to a raw_ostream.
 class PrintingDiagnosticConsumer : public DiagnosticConsumer {
-  /// Handles a "simple" diagnostic. A simple diagnostic is a diagnostic that
-  /// does not have a location, additional ranges or fixits.
+  /// Handles a "simple" diagnostic that does not have source location.
   void handleSimpleDiagnostic(const Diagnostic &diagnostic, bool showColors);
 
 public:
