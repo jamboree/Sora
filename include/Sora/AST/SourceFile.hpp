@@ -22,14 +22,12 @@ class Decl;
 
 /// Represents a source file.
 class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
-  Identifier identifier;
   SmallVector<Decl *, 4> members;
   BufferID bufferID;
 
-  SourceFile(ASTContext &astContext, BufferID bufferID, DeclContext *parent,
-             Identifier identifier)
-      : DeclContext(DeclContextKind::SourceFile, parent),
-        identifier(identifier), bufferID(bufferID), astContext(astContext) {}
+  SourceFile(ASTContext &astContext, BufferID bufferID, DeclContext *parent)
+      : DeclContext(DeclContextKind::SourceFile, parent), bufferID(bufferID),
+        astContext(astContext) {}
 
   SourceFile(const SourceFile &) = delete;
   SourceFile &operator=(const SourceFile &) = delete;
@@ -40,12 +38,9 @@ public:
   /// SourceFile's memory)
   /// \param bufferID the BufferID of this SourceFile in the SourceManager
   /// \param parent the parent DeclContext of this SourceFile. Can be nullptr.
-  /// \param identifier the identifier (name) of this source file
   static SourceFile *create(ASTContext &ctxt, BufferID bufferID,
-                            DeclContext *parent, Identifier identifier);
+                            DeclContext *parent);
 
-  /// \returns the identifier (name) of this source file
-  Identifier getIdentifier() const { return identifier; }
   /// \returns the members of this source file
   ArrayRef<Decl *> getMembers() const { return members; }
   /// Adds a member to this source file

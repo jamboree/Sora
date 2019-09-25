@@ -12,10 +12,10 @@
 using namespace sora;
 
 SourceFile *SourceFile::create(ASTContext &ctxt, BufferID bufferID,
-                               DeclContext *parent, Identifier identifier) {
+                               DeclContext *parent) {
   // Allocate the memory for this SF in the ASTContext & create it.
   void *mem = ctxt.allocate<SourceFile>();
-  auto *sf = new (mem) SourceFile(ctxt, bufferID, parent, identifier);
+  auto *sf = new (mem) SourceFile(ctxt, bufferID, parent);
   // Register a cleanup for the SF since it contains non trivially-destructible
   // objects.
   ctxt.addDestructorCleanup(*sf);

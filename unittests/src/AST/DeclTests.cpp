@@ -94,7 +94,7 @@ TEST_F(DeclTest, getSourceRange) {
 /// Tests Decl::getSourceFile and related features (getParent, getASTContext,
 /// getDiagnosticEngine)
 TEST_F(DeclTest, getSourceFile) {
-  SourceFile *sf = SourceFile::create(*ctxt, {}, nullptr, {});
+  SourceFile *sf = SourceFile::create(*ctxt, {}, nullptr);
   // Let's create a simple tree:
   // SourceFile
   //    FuncDecl

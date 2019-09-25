@@ -19,7 +19,7 @@ namespace {
 class DeclContextTest : public ::testing::Test {
 protected:
   DeclContextTest()
-      : sf(SourceFile::create(*ctxt, {}, nullptr, {})),
+      : sf(SourceFile::create(*ctxt, {}, nullptr)),
         func(new (*ctxt) FuncDecl(sf, {}, {}, {}, nullptr, {})) {}
 
   SourceManager srcMgr;
