@@ -205,10 +205,6 @@ public:
   /// \p text)
   /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &fixitReplace(CharSourceRange range, StringRef text);
-
-  /// Adds a replacement fix-it (replace the character range \p range by
-  /// \p text)
-  // void fixitReplace(CharSourceRange range, StringRef text);
 };
 
 /// The DiagnosticEngine, the heart of the Diagnostic System.
