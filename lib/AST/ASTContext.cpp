@@ -6,6 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/Common/LLVM.hpp"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
@@ -16,13 +18,22 @@ using namespace sora;
 
 /// the ASTContext's implementation
 struct ASTContext::Impl {
-  /// for ASTAllocatorKind::Permanent
+  /// for AllocatorKind::Permanent
   llvm::BumpPtrAllocator permanentAllocator;
-  /// for ASTAllocatorKind::UnresolvedNodes
-  llvm::BumpPtrAllocator unresolvedAllocator;
+  /// for AllocatorKind::UnresolvedExpr
+  llvm::BumpPtrAllocator unresolvedExprAllocator;
 
   /// FIXME: Is using MallocAllocator the right thing to do here?
   llvm::StringSet<> identifierTable;
+
+  /// The set of cleanups that must be ran when the ASTContext is destroyed.
+  SmallVector<std::function<void()>, 4> cleanups;
+
+  /// Custom destructor that runs the cleanups.
+  ~Impl() {
+    for (auto &cleanup : cleanups)
+      cleanup();
+  }
 };
 
 ASTContext::ASTContext(SourceManager &srcMgr, DiagnosticEngine &diagEngine)
@@ -72,15 +83,23 @@ std::unique_ptr<ASTContext> ASTContext::create(SourceManager &srcMgr,
 
 ASTContext::~ASTContext() { getImpl().~Impl(); }
 
-llvm::BumpPtrAllocator &ASTContext::getAllocator(ASTAllocatorKind kind) {
+llvm::BumpPtrAllocator &ASTContext::getAllocator(AllocatorKind kind) {
   switch (kind) {
   default:
     llvm_unreachable("unknown allocator kind");
-  case ASTAllocatorKind::Permanent:
+  case AllocatorKind::Permanent:
     return getImpl().permanentAllocator;
-  case ASTAllocatorKind::UnresolvedNodes:
-    return getImpl().unresolvedAllocator;
+  case AllocatorKind::UnresolvedExpr:
+    return getImpl().unresolvedExprAllocator;
   }
+}
+
+void ASTContext::freeUnresolvedExprs() {
+  getImpl().unresolvedExprAllocator.Reset();
+}
+
+void ASTContext::addCleanup(std::function<void()> cleanup) {
+  getImpl().cleanups.push_back(cleanup);
 }
 
 Identifier ASTContext::getIdentifier(StringRef str) {

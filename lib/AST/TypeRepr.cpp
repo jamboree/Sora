@@ -21,7 +21,7 @@ using namespace sora;
 #include "Sora/AST/TypeReprNodes.def"
 
 void *TypeRepr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
-  return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);
+  return ctxt.allocate(size, align, AllocatorKind::Permanent);
 }
 
 SourceLoc TypeRepr::getBegLoc() const {

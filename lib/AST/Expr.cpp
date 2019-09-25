@@ -66,7 +66,7 @@ SourceRange Expr::getSourceRange() const {
 }
 
 void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
-  return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);
+  return ctxt.allocate(size, align, AllocatorKind::Permanent);
 }
 
 Expr *Expr::ignoreParens() {
@@ -77,7 +77,7 @@ Expr *Expr::ignoreParens() {
 
 void *UnresolvedExpr::operator new(size_t size, ASTContext &ctxt,
                                    unsigned align) {
-  return ctxt.allocate(size, align, ASTAllocatorKind::UnresolvedNodes);
+  return ctxt.allocate(size, align, AllocatorKind::UnresolvedExpr);
 }
 
 APInt IntegerLiteralExpr::getRawValue() const {

@@ -128,7 +128,7 @@ static_assert(sizeof(Expr) <= 16, "Expr is too big!");
 
 /// Common base class for "unresolved" expressions.
 ///
-/// Unresolved expressions are expressions that the parser can't
+/// UnresolvedExpr expressions are expressions that the parser can't
 /// resolve. (For instance, the use of an identifier. The parser doesn't know
 /// what it resolves to). Theses are allocated in their own memory pool and are
 /// replaced by

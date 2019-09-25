@@ -24,7 +24,7 @@ using namespace sora;
 #include "Sora/AST/DeclNodes.def"
 
 void *Decl::operator new(size_t size, ASTContext &ctxt, unsigned align) {
-  return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);
+  return ctxt.allocate(size, align, AllocatorKind::Permanent);
 }
 
 SourceFile &Decl::getSourceFile() const {

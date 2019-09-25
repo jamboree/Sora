@@ -40,3 +40,22 @@ TEST_F(ASTContextTest, getIdentifier_emptyAndNullStrings) {
   EXPECT_EQ(ctxt->getIdentifier(StringRef()).c_str(), nullptr);
   EXPECT_EQ(ctxt->getIdentifier(StringRef("")).c_str(), nullptr);
 }
+
+TEST_F(ASTContextTest, cleanup) {
+  bool cleanupRan = false;
+  ctxt->addCleanup([&]() { cleanupRan = true; });
+
+  bool dtorRan = false;
+  struct Foo {
+    bool &val;
+    Foo(bool &val) : val(val) {}
+    ~Foo() { val = true; }
+  };
+  Foo foo(dtorRan);
+  ctxt->addDestructorCleanup(foo);
+
+  ctxt.reset();
+
+  EXPECT_TRUE(cleanupRan) << "Cleanup did not run";
+  EXPECT_TRUE(dtorRan) << "Destructor cleanup did not run";
+}

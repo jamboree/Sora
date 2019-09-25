@@ -23,7 +23,7 @@ using namespace sora;
 #include "Sora/AST/PatternNodes.def"
 
 void *Pattern::operator new(size_t size, ASTContext &ctxt, unsigned align) {
-  return ctxt.allocate(size, align, ASTAllocatorKind::Permanent);
+  return ctxt.allocate(size, align, AllocatorKind::Permanent);
 }
 
 SourceLoc Pattern::getBegLoc() const {

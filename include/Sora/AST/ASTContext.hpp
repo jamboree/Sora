@@ -9,6 +9,7 @@
 
 #include "Sora/AST/Identifier.hpp"
 #include "llvm/Support/Allocator.h"
+#include <functional>
 #include <memory>
 #include <stdint.h>
 
@@ -16,13 +17,16 @@ namespace sora {
 class SourceManager;
 class DiagnosticEngine;
 
-enum class ASTAllocatorKind : uint8_t {
+enum class AllocatorKind : uint8_t {
   /// The "permanent" AST allocator that holds long-lived objects such as types,
   /// resolved AST nodes, etc.
+  /// This is freed when the ASTContext is deallocated.
   Permanent,
-  /// The AST allocator for unresolved AST nodes.
-  /// This is usually freed right after semantic analysis.
-  UnresolvedNodes
+  /// The AST allocator for expressions that inherit from UnresolvedExpr.
+  /// This can be freed using "freeUnresolvedExprs()" once the AST has been
+  /// fully type-checked, else, it's simply freed when the ASTContext is
+  /// deallocated.
+  UnresolvedExpr
 };
 
 /// The ASTContext is a large object designed as the core of the AST.
@@ -36,6 +40,9 @@ class ASTContext final {
   ASTContext &operator=(const ASTContext &) = delete;
 
   ASTContext(SourceManager &srcMgr, DiagnosticEngine &diagEngine);
+
+  llvm::BumpPtrAllocator &
+  getAllocator(AllocatorKind kind = AllocatorKind::Permanent);
 
 public:
   /// Members for ASTContext.cpp
@@ -55,7 +62,7 @@ public:
   /// \returns a pointer to the allocated memory (aligned to \p align) or
   /// nullptr if \p size == 0
   void *allocate(size_t size, size_t align,
-                 ASTAllocatorKind allocator = ASTAllocatorKind::Permanent) {
+                 AllocatorKind allocator = AllocatorKind::Permanent) {
     return size ? getAllocator(allocator).Allocate(size, align) : nullptr;
   }
 
@@ -64,19 +71,22 @@ public:
   /// This does not construct the object. You'll need to use placement
   /// new for that.
   template <typename Ty>
-  void *allocate(ASTAllocatorKind allocator = ASTAllocatorKind::Permanent) {
+  void *allocate(AllocatorKind allocator = AllocatorKind::Permanent) {
     return allocate(sizeof(Ty), alignof(Ty), allocator);
   }
 
-  /// Fetch an allocator. This can be used to allocate or free memory.
-  /// ASTContext allocators are "bump pointer allocators", or "arena"
-  /// allocators if you will. You can only free *everything* at once
-  /// (deallocate is useless).
-  ///
-  /// \param kind the kind of allocator desired (default = Permanent)
-  /// \returns a reference the allocator corresponding to \p kind
-  llvm::BumpPtrAllocator &
-  getAllocator(ASTAllocatorKind kind = ASTAllocatorKind::Permanent);
+  /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
+  void freeUnresolvedExprs();
+
+  /// Adds a cleanup function that'll be run when the ASTContext's memory is
+  /// freed.
+  void addCleanup(std::function<void()> cleanup);
+
+  /// Adds a destructor cleanup function that'll be run when the ASTContext's
+  /// memory is freed.
+  template <typename Ty> void addDestructorCleanup(Ty &obj) {
+    addCleanup([&obj]() { obj.~Ty(); });
+  }
 
   /// Interns an identifier string
   /// \returns an identifier object for \p str
