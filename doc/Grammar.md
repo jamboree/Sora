@@ -47,7 +47,7 @@ type-declaration = "type" identifier "=" type
 
 function-declaration = "func" identifier parameter-declaration-list ("->" type)? block-statement // note: if the return type isn't present, the function returns void.
 parameter-declaration-list = '(' parameter-declaration (',' parameter-declaration)* ')'
-parameter-declaration = "mut"? identifier type-annotation
+parameter-declaration = identifier type-annotation
 
 let-declaration = "let" pattern-initializer
 
