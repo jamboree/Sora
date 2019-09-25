@@ -140,7 +140,7 @@ class CharSourceRange {
 public:
   CharSourceRange() = default;
 
-  CharSourceRange(SourceLoc begin, unsigned byteLength)
+  explicit CharSourceRange(SourceLoc begin, unsigned byteLength = 0)
       : begin(begin), byteLength(byteLength) {}
 
   /// Creates a CharSourceRange from 2 SourceLocs by calculating the distance
@@ -179,7 +179,8 @@ public:
   /// managed by the SourceManager.
   static CharSourceRange fromPointers(const char *start, const char *end) {
     assert(end >= start && "start > end!");
-    return {SourceLoc::fromPointer(start), (unsigned)std::distance(start, end)};
+    return CharSourceRange(SourceLoc::fromPointer(start),
+                           (unsigned)std::distance(start, end));
   }
 
   /// \returns the range of characters as a read-only string.
