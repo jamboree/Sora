@@ -38,14 +38,14 @@ public:
 
   /// Parses everything in the SourceFile until the whole file has been
   /// consumed.
-  void parseAll();
+  void parseSourceFile();
 
   /// The ASTContext
   ASTContext &ctxt;
   /// The Diagnostic Engine
   DiagnosticEngine &diagEng;
   /// The SourceFile that this parser is working on
-  SourceFile &file;
+  SourceFile &sourceFile;
   /// The current DeclContext
   DeclContext *declContext = nullptr;
 
@@ -119,6 +119,14 @@ private:
   diagnose(SourceLoc loc, TypedDiag<Args...> diag,
            typename detail::PassArgument<Args>::type... args) {
     return diagEng.diagnose<Args...>(loc, diag, args...);
+  }
+
+  /// Emits a diagnostic at the beginning of \p buffer
+  template <typename... Args>
+  InFlightDiagnostic
+  diagnose(BufferID buffer, TypedDiag<Args...> diag,
+           typename detail::PassArgument<Args>::type... args) {
+    return diagEng.diagnose<Args...>(buffer, diag, args...);
   }
 
   /// Emits a "expected" diagnostic.

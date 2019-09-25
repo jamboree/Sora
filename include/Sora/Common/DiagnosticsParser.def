@@ -35,6 +35,7 @@ ERROR(expected_lparen_in_fn_arg_list,
 ERROR(expected_fn_ret_ty, "expected function return type", ())
 ERROR(expected_lcurly_fn_body, 
   "expected '{' in body of function declaration", ())
+ERROR(expected_fn_decl, "expected a function declaration", ())
 
 //===----------------------------------------------------------------------===//
 

@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Parser/Parser.hpp"
@@ -19,6 +20,28 @@ bool Parser::isStartOfDecl() const {
     return true;
   default:
     return false;
+  }
+}
+
+/*
+source-file = top-level-declaration+
+top-level-declaration = function-declaration
+                      | type-declaration
+                      | struct-declaration
+*/
+void Parser::parseSourceFile() {
+  while (!isEOF()) {
+    if (tok.isNot(TokenKind::FuncKw)) {
+      diagnose(tok, diag::expected_fn_decl);
+      skipUntil(TokenKind::FuncKw);
+      continue;
+    }
+    auto result = parseFuncDecl();
+    if (result) {
+      sourceFile.addMember(result.get());
+      continue;
+    }
+    skipUntil(TokenKind::FuncKw);
   }
 }
 

@@ -16,8 +16,11 @@
 using namespace sora;
 
 Parser::Parser(ASTContext &ctxt, SourceFile &file)
-    : ctxt(ctxt), diagEng(ctxt.diagEngine), file(file),
-      lexer(ctxt.srcMgr, diagEng), declContext(&file) {}
+    : ctxt(ctxt), diagEng(ctxt.diagEngine), sourceFile(file),
+      lexer(ctxt.srcMgr, diagEng), declContext(&file) {
+  lexer.init(sourceFile.getBufferID());
+  tok = lexer.lex();
+}
 
 const Token &Parser::peek() const { return lexer.peek(); }
 
