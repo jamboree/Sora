@@ -186,6 +186,7 @@ public:
   bool isActive() const { return diagEngine; }
 
   /// Highlights the range of characters covered by \p range
+  /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &highlightChars(CharSourceRange range);
 
   /// Highlights the token at \p loc
@@ -197,10 +198,12 @@ public:
   // InFlightDiagnostic& highlight(SourceRange loc)
 
   /// Adds a insertion fix-it (insert \p text at \p loc)
+  /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &fixitInsert(SourceLoc loc, StringRef text);
 
   /// Adds a replacement fix-it (replace the character range \p range by
   /// \p text)
+  /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &fixitReplace(CharSourceRange range, StringRef text);
 
   /// Adds a replacement fix-it (replace the character range \p range by
