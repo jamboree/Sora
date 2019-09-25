@@ -48,7 +48,7 @@ public:
                 << "' got '" << to_string(token.getKind()) << "'";
       return false;
     }
-    if (token.isStartOfLine() != startOfLine) {
+    if (token.isAtStartOfLine() != startOfLine) {
       errStream << "token not at start of line";
       return false;
     }

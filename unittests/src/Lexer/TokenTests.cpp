@@ -28,7 +28,7 @@ TEST(TokenTest, is_isNot) {
 }
 
 TEST(TokenTest, startOfLine) {
-  EXPECT_TRUE(Token(TokenKind::Amp, CharSourceRange(), true).isStartOfLine());
+  EXPECT_TRUE(Token(TokenKind::Amp, CharSourceRange(), true).isAtStartOfLine());
 }
 
 TEST(TokenTest, str) {

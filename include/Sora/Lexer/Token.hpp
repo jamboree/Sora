@@ -64,7 +64,7 @@ public:
   CharSourceRange getCharRange() const { return charRange; }
 
   /// \returns "true" if the token is at the start of a line, false otherwise.
-  bool isStartOfLine() const { return startOfLine; }
+  bool isAtStartOfLine() const { return startOfLine; }
 
   /// Dumps information about the token to llvm::outs()
   void dump() const;
