@@ -11,11 +11,14 @@
 #include "Sora/Common/DiagnosticsParser.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 #include "Sora/Parser/ParserResult.hpp"
+#include "llvm/Support/SaveAndRestore.h"
 #include <functional>
 
 namespace sora {
 class ASTContext;
+class BlockStmt;
 class Decl;
+class DeclContext;
 class FuncDecl;
 class Identifier;
 class Lexer;
@@ -43,6 +46,12 @@ public:
   DiagnosticEngine &diagEng;
   /// The SourceFile that this parser is working on
   SourceFile &file;
+  /// The current DeclContext
+  DeclContext *declContext = nullptr;
+
+  llvm::SaveAndRestore<DeclContext*> setDeclContextRAII(DeclContext* newDC) {
+    return {declContext, newDC};
+  }
 
 private:
   /// Our lexer instance
@@ -76,6 +85,10 @@ private:
 
   /// \returns true if the parser is positioned at the start of a statement.
   bool isStartOfStmt() const;
+
+  /// Parses a block-statement
+  /// The parser must be positioned on the first "{"
+  ParserResult<BlockStmt> parseBlockStmt();
 
   //===- Expression Parsing -----------------------------------------------===//
 
@@ -115,7 +128,7 @@ private:
   template <typename... Args>
   InFlightDiagnostic
   diagnoseExpected(TypedDiag<Args...> diag,
-           typename detail::PassArgument<Args>::type... args) {
+                   typename detail::PassArgument<Args>::type... args) {
     SourceLoc loc;
     if (tok.isAtStartOfLine() && prevTokPastTheEnd)
       loc = prevTokPastTheEnd;

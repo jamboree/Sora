@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Parser/Parser.hpp"
+#include "Sora/AST/Stmt.hpp"
 
 using namespace sora;
 
@@ -21,3 +22,5 @@ bool Parser::isStartOfStmt() const {
     return false;
   }
 }
+
+ParserResult<BlockStmt> Parser::parseBlockStmt() { return nullptr; }

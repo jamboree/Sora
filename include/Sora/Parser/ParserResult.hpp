@@ -18,7 +18,7 @@ public:
   /// Constructor for error parser results
   ParserResult(std::nullptr_t) : resultAndIsError(nullptr, false) {}
   /// Constructor for successful parser results. \p result cannot be nullptr.
-  ParserResult(T *result) : resultAndIsError(result, true) {
+  explicit ParserResult(T *result) : resultAndIsError(result, true) {
     assert(result && "Successful Parser Results can't be nullptr!");
   }
 
@@ -46,14 +46,15 @@ public:
   explicit operator bool() const { return isSuccess(); }
 };
 
-/// Creates a valid parser result
-template <typename T> ParserResult<T> makeParserResult(T *result) {
+/// Creates a successful parser result
+template <typename T>
+static inline ParserResult<T> makeParserResult(T *result) {
   return ParserResult<T>(result);
 }
 
 /// Creates a parser error result
 template <typename T>
-ParserResult<T> makeParserErrorResult(T *result = nullptr) {
+static inline ParserResult<T> makeParserErrorResult(T *result) {
   if (!result)
     return ParserResult<T>(nullptr);
   ParserResult<T> pr(result);

@@ -10,13 +10,14 @@
 
 #include "Sora/Parser/Parser.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/SourceFile.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 
 using namespace sora;
 
 Parser::Parser(ASTContext &ctxt, SourceFile &file)
     : ctxt(ctxt), diagEng(ctxt.diagEngine), file(file),
-      lexer(ctxt.srcMgr, diagEng) {}
+      lexer(ctxt.srcMgr, diagEng), declContext(&file) {}
 
 const Token &Parser::peek() const { return lexer.peek(); }
 

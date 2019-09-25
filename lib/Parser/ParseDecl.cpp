@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Parser/Parser.hpp"
 
@@ -21,13 +22,9 @@ bool Parser::isStartOfDecl() const {
   }
 }
 
-ParserResult<ParamDecl> Parser::parseParamDecl() {
-  return makeParserErrorResult<ParamDecl>();
-}
+ParserResult<ParamDecl> Parser::parseParamDecl() { return nullptr; }
 
-ParserResult<ParamList> Parser::parseParamDeclList() {
-  return makeParserErrorResult<ParamList>();
-}
+ParserResult<ParamList> Parser::parseParamDeclList() { return nullptr; }
 
 /*
 function-declaration = "func" identifier parameter-declaration-list
@@ -35,7 +32,7 @@ function-declaration = "func" identifier parameter-declaration-list
 */
 ParserResult<FuncDecl> Parser::parseFuncDecl() {
   assert(tok.is(TokenKind::FuncKw) && "Not a func!");
-  consumeToken();
+  SourceLoc fnLoc = consumeToken();
 
   // identifier
   Identifier identifier;
@@ -60,7 +57,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
     return nullptr;
   }
 
-  // "->" type
+  // ("->" type)?
   TypeLoc retTL;
   if (consumeIf(TokenKind::Arrow)) {
     auto result =
@@ -71,7 +68,23 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
       return nullptr;
   }
 
-  // TODO: Body parsing.
+  auto node = new (ctxt)
+      FuncDecl(declContext, fnLoc, identifierLoc, identifier, paramList, retTL);
 
-  return makeParserErrorResult<FuncDecl>();
+  // block-statement
+  if (consumeIf(TokenKind::LCurly)) {
+    // Set the DeclContext for the parsing of the body.
+    auto bodyDC = setDeclContextRAII(node);
+    // Parse the body
+    if (auto result = parseBlockStmt())
+      node->setBody(result.get());
+    else
+      return nullptr;
+  }
+  else {
+    diagnoseExpected(diag::expected_lcurly_fn_body);
+    return nullptr;
+  }
+
+  return makeParserResult(node);
 }
