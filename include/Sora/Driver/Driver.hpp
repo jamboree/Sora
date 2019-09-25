@@ -48,9 +48,6 @@ public:
     /// If "true", dumps the AST after parsing.
     /// Honored by doParsing()
     bool dumpParse = false;
-    /// If "true", dumps the AST after semantic analysis.
-    /// Honored by doSema()
-    bool dumpAST = false;
     /// If "true", the compiler will stop after the parsing step.
     /// Honored by run()
     bool parseOnly = false;
@@ -102,7 +99,7 @@ public:
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
-  std::unique_ptr<ASTContext> astContext = nullptr;
+  std::unique_ptr<ASTContext> astContext;
 
 private:
   bool hadFileLoadError = false;
@@ -118,18 +115,13 @@ private:
   bool ran = false;
 
   /// The BufferIDs of the input files.
-  /// NOTE: Currently, the compiler only supports one inputBuffer.
   SmallVector<BufferID, 1> inputBuffers;
-  SourceFile *sourceFile = nullptr;
 
+  SourceFile *createSourceFile(BufferID buffer);
 
-  /// Performs the parsing step
+  /// Performs the parsing step on \p file
   /// \returns true if parsing was successful, false otherwise.
-  bool doParsing();
-
-  /// Performs the semantic analysis step
-  /// \returns true if sema was successful, false otherwise.
-  bool doSema();
+  bool doParsing(SourceFile &file);
 };
 
 /// This is a high-level compiler driver. It handles command-line options and

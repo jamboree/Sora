@@ -66,7 +66,6 @@ Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &argList) {
 }
 
 void CompilerInstance::handleOptions(InputArgList &argList) {
-  options.dumpAST = false; /*TODO*/
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
   options.parseOnly = argList.hasArg(opt::OPT_parse_only);
   options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
@@ -102,7 +101,6 @@ void CompilerInstance::dump(raw_ostream &out) const {
   }
   /// Dump options
   DUMP_BOOL(options.dumpParse);
-  DUMP_BOOL(options.dumpAST);
   DUMP_BOOL(options.parseOnly);
   DUMP_BOOL(options.verifyModeEnabled);
 #undef DUMP_BOOL
@@ -174,8 +172,14 @@ bool CompilerInstance::run(Step stopAfter) {
     return success;
   };
 
+  // Create the ASTContext
+  createASTContext();
+
+  // Create the source file
+  SourceFile *sf = createSourceFile(inputBuffers[0]);
+
   // Perform parsing
-  success = doParsing();
+  success = doParsing(*sf);
   if (canContinue(Step::Parsing))
     return finish();
   // TODO: Perform Sema/IRGen/etc.
@@ -201,21 +205,17 @@ void CompilerInstance::createASTContext() {
     astContext = ASTContext::create(srcMgr, diagEng);
 }
 
-bool CompilerInstance::doParsing() {
-  assert(!astContext && "ASTContext already created?");
-  // Create the root of the AST we'll create.
-  createASTContext();
-  // TODO
-  if (options.dumpParse) {
-    // TODO: Dump Raw AST
-  }
-  return true;
+SourceFile *CompilerInstance::createSourceFile(BufferID buffer) {
+  assert(astContext && "No ASTContext?");
+  return SourceFile::create(*astContext, buffer, nullptr);
 }
 
-bool CompilerInstance::doSema() {
-  // TODO
-  if (options.dumpAST) {
-    // TODO: Dump Raw AST
+bool CompilerInstance::doParsing(SourceFile &file) {
+  assert(astContext && "No ASTContext?");
+  Parser parser(*astContext, file);
+  parser.parseSourceFile();
+  if (options.dumpParse) {
+    // TODO
   }
   return true;
 }
