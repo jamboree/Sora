@@ -34,7 +34,7 @@ public:
 
   // Comparison operators
   bool operator==(const BufferID &other) const { return value == other.value; }
-  bool operator!=(const BufferID &other) const { return value == other.value; }
+  bool operator!=(const BufferID &other) const { return value != other.value; }
 };
 
 /// Manages & owns source buffers
