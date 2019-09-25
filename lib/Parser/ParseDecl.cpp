@@ -47,7 +47,13 @@ void Parser::parseSourceFile() {
 
 ParserResult<ParamDecl> Parser::parseParamDecl() { return nullptr; }
 
-ParserResult<ParamList> Parser::parseParamDeclList() { return nullptr; }
+ParserResult<ParamList> Parser::parseParamDeclList() {
+  assert(tok.is(TokenKind::LParen) && "not a param list!");
+  SourceLoc lParenLoc = consumeToken();
+  // TODO
+  skip();
+  return makeParserResult(ParamList::createEmpty(ctxt, lParenLoc, lParenLoc));
+}
 
 /*
 function-declaration = "func" identifier parameter-declaration-list
