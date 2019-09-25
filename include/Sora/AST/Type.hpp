@@ -78,8 +78,8 @@ class TypeLoc {
 
 public:
   TypeLoc() = default;
-  TypeLoc(Type type) : type(type) {}
-  TypeLoc(Type type, TypeRepr *tyRepr) : type(type), tyRepr(tyRepr) {}
+  TypeLoc(Type type) : TypeLoc(nullptr, type) {}
+  TypeLoc(TypeRepr *tyRepr, Type type = Type()) : type(type), tyRepr(tyRepr) {}
 
   SourceRange getSourceRange() const;
   SourceLoc getBegLoc() const;
