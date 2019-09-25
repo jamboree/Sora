@@ -18,23 +18,23 @@ using namespace sora;
 namespace {
 class DeclContextTest : public ::testing::Test {
 protected:
-  DeclContextTest() {
-    func = new (*ctxt) FuncDecl(&sf, {}, {}, {}, nullptr, {});
-  }
+  DeclContextTest()
+      : sf(SourceFile::create(*ctxt, {}, nullptr, {})),
+        func(new (*ctxt) FuncDecl(sf, {}, {}, {}, nullptr, {})) {}
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
-  FuncDecl *func = nullptr;
-  SourceFile sf{{}, *ctxt, nullptr, {}};
+  SourceFile *sf;
+  FuncDecl *func;
 };
 } // namespace
 
 TEST_F(DeclContextTest, isLocalContext) {
   DeclContext *dc = func;
   EXPECT_TRUE(dc->isLocalContext());
-  dc = &sf;
+  dc = sf;
   EXPECT_FALSE(dc->isLocalContext());
 }
 
@@ -47,7 +47,7 @@ TEST_F(DeclContextTest, getAs) {
   DeclContext *dc = func;
   EXPECT_EQ(dc->getAsDecl(), (Decl *)func);
   EXPECT_EQ(dc->getAsSourceFile(), nullptr);
-  dc = &sf;
+  dc = sf;
   EXPECT_EQ(dc->getAsDecl(), nullptr);
-  EXPECT_EQ(dc->getAsSourceFile(), &sf);
+  EXPECT_EQ(dc->getAsSourceFile(), sf);
 }

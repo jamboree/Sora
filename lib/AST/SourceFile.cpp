@@ -6,9 +6,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/SourceFile.hpp"
+#include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"
 
 using namespace sora;
+
+SourceFile *SourceFile::create(ASTContext &ctxt, BufferID bufferID,
+                               DeclContext *parent, Identifier identifier) {
+  // Allocate the memory for this SF in the ASTContext & create it.
+  void *mem = ctxt.allocate<SourceFile>();
+  auto *sf = new (mem) SourceFile(ctxt, bufferID, parent, identifier);
+  // Register a cleanup for the SF since it contains non trivially-destructible
+  // objects.
+  ctxt.addDestructorCleanup(*sf);
+  return sf;
+}
 
 SourceFile *DeclContext::getAsSourceFile() {
   return dyn_cast<SourceFile>(this);

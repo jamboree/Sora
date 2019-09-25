@@ -17,6 +17,7 @@
 
 namespace sora {
 class ASTWalker;
+class ASTContext;
 class Decl;
 
 /// Represents a source file.
@@ -25,14 +26,23 @@ class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
   SmallVector<Decl *, 4> members;
   BufferID bufferID;
 
-public:
-  /// \param astContext the ASTContext in which the members of this source file
-  /// are allocated.
-  /// \param identifier the identifier (name) of this source file
-  SourceFile(BufferID bufferID, ASTContext &astContext, DeclContext *parent,
+  SourceFile(ASTContext &astContext, BufferID bufferID, DeclContext *parent,
              Identifier identifier)
       : DeclContext(DeclContextKind::SourceFile, parent),
         identifier(identifier), bufferID(bufferID), astContext(astContext) {}
+
+  SourceFile(const SourceFile &) = delete;
+  SourceFile &operator=(const SourceFile &) = delete;
+
+public:
+  /// \param ctxt the ASTContext in which the members of this source file
+  /// are allocated (and also the one that'll be used to allocate this
+  /// SourceFile's memory)
+  /// \param bufferID the BufferID of this SourceFile in the SourceManager
+  /// \param parent the parent DeclContext of this SourceFile. Can be nullptr.
+  /// \param identifier the identifier (name) of this source file
+  static SourceFile *create(ASTContext &ctxt, BufferID bufferID,
+                            DeclContext *parent, Identifier identifier);
 
   /// \returns the identifier (name) of this source file
   Identifier getIdentifier() const { return identifier; }

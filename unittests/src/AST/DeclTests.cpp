@@ -94,12 +94,12 @@ TEST_F(DeclTest, getSourceRange) {
 /// Tests Decl::getSourceFile and related features (getParent, getASTContext,
 /// getDiagnosticEngine)
 TEST_F(DeclTest, getSourceFile) {
-  SourceFile sf({}, *ctxt, nullptr, Identifier());
+  SourceFile *sf = SourceFile::create(*ctxt, {}, nullptr, {});
   // Let's create a simple tree:
   // SourceFile
   //    FuncDecl
   //      ParamDecl
-  FuncDecl *fn = new (*ctxt) FuncDecl(&sf, {}, {}, {}, nullptr, {});
+  FuncDecl *fn = new (*ctxt) FuncDecl(sf, {}, {}, {}, nullptr, {});
   ParamDecl *param = new (*ctxt) ParamDecl(fn, {}, {}, {}, {});
   fn->setParamList(ParamList::create(*ctxt, {}, param, {}));
 
@@ -111,6 +111,6 @@ TEST_F(DeclTest, getSourceFile) {
   EXPECT_EQ(&diagEng, &param->getDiagnosticEngine());
   EXPECT_EQ(&diagEng, &fn->getDiagnosticEngine());
 
-  EXPECT_EQ(&sf, &param->getSourceFile());
-  EXPECT_EQ(&sf, &fn->getSourceFile());
+  EXPECT_EQ(sf, &param->getSourceFile());
+  EXPECT_EQ(sf, &fn->getSourceFile());
 }
