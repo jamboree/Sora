@@ -22,7 +22,6 @@ Sora does not require semicolon, and doesn't allow semicolons. Statements are se
 
 ### Grammar
 
-Misc.
 ```
 // Lexical Structure
 line-break = '\r'? '\n'
@@ -32,14 +31,15 @@ line-comment = "//" line-comment-item* line-break
 block-comment-item = any character except "*/"
 block-comment = "/*" block-comment-item* "*/"
 
-unit-declaration = global-declaration+
-global-declaration = function-declaration | type-declaration | struct-declaration
-
 identifier-head = (uppercase or lowercase letter | "_")
 identifier-body = (identifier-head | digit)
 identifier = identifier-head identifier-body*
 
 // Declarations
+
+source-file = global-declaration+
+global-declaration = function-declaration | type-declaration | struct-declaration
+
 struct-declaration = "struct" identifier '{' struct-member-declaration+ '}'
 struct-member-declaration = pattern-initializer
 
