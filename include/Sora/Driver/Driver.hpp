@@ -94,10 +94,9 @@ public:
 
   /// Utility function to emit CompilerInstance diagnostics.
   template <typename... Args>
-  InFlightDiagnostic
-  diagnose(TypedDiag<Args...> diag,
-           typename detail::PassArgument<Args>::type... args) {
-    return diagEng.diagnose<Args...>(SourceLoc(), diag, args...);
+  void diagnose(TypedDiag<Args...> diag,
+                typename detail::PassArgument<Args>::type... args) {
+    diagEng.diagnose<Args...>(SourceLoc(), diag, args...);
   }
 
   SourceManager srcMgr;
@@ -159,10 +158,9 @@ public:
 
   /// Utility function to emit driver diagnostics.
   template <typename... Args>
-  InFlightDiagnostic
-  diagnose(TypedDiag<Args...> diag,
-           typename detail::PassArgument<Args>::type... args) {
-    return driverDiags.diagnose<Args...>(SourceLoc(), diag, args...);
+  void diagnose(TypedDiag<Args...> diag,
+                typename detail::PassArgument<Args>::type... args) {
+    driverDiags.diagnose<Args...>(SourceLoc(), diag, args...);
   }
 
   /// \returns the option table
