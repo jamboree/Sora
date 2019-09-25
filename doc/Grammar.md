@@ -37,8 +37,8 @@ identifier = identifier-head identifier-body*
 
 // Declarations
 
-source-file = global-declaration+
-global-declaration = function-declaration | type-declaration | struct-declaration
+source-file = top-level-declaration+
+top-level-declaration = function-declaration | type-declaration | struct-declaration
 
 struct-declaration = "struct" identifier '{' struct-member-declaration+ '}'
 struct-member-declaration = pattern-initializer
