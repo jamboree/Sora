@@ -1,0 +1,5 @@
+// RUN: %sorac -verify %s
+func // expect-error: expected identifier in function declaration
+func foo // expect-error: expected '(' in function declaration argument list
+func foo() // expect-error: expected '{' in body of function declaration
+func foo() -> // expect-error: expected function return type
