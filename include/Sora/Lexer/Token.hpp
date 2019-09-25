@@ -45,6 +45,9 @@ public:
   /// \returns true if kind != \p kind
   bool isNot(TokenKind kind) const { return this->kind != kind; }
 
+  /// \returns true if kind == TokenKind::Identifier
+  bool isIdentifier() const { return kind == TokenKind::Identifier; }
+
   /// \returns true if kind != Invalid
   explicit operator bool() const { return !is(TokenKind::Invalid); }
 
