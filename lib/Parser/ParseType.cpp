@@ -22,7 +22,6 @@ tuple-type = '(' type (',' type)* ')'
 reference-or-pointer-type = ('&' | '*') "mut"? type
 */
 ParserResult<TypeRepr> Parser::parseType(std::function<void()> onNoType) {
-  assert(isStartOfType() && "not a type!");
   onNoType();
   return nullptr;
 }
