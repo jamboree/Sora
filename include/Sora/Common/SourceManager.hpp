@@ -85,6 +85,12 @@ public:
     return llvmSourceMgr.FindLineNumber(loc.value, id.value);
   }
 
+  /// \returns the CharSourceRange that covers the entirety of \p buffer
+  CharSourceRange getBufferCharSourceRange(BufferID buffer) {
+    auto str = getBufferStr(buffer);
+    return CharSourceRange(SourceLoc::fromPointer(str.data()), str.size());
+  }
+
   /// \returns the identifier of the MemoryBuffer with \p id
   StringRef getBufferIdentifier(BufferID id) const {
     assert(id && "id cannot be invalid!");
