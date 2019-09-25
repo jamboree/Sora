@@ -13,19 +13,60 @@
 
 namespace sora {
 class ASTContext;
+class SourceFile;
 class Lexer;
 
 /// Sora Language Parser
 class Parser final {
 public:
-  Parser(Lexer &lexer, ASTContext &ctxt, DiagnosticEngine &diagEng)
-      : lexer(lexer), ctxt(ctxt), diagEng(diagEng) {}
+  /// \param ctxt the ASTContext that owns the SourceFile. This is where we'll
+  /// allocate memory for the AST. We'll also use its DiagnosticEngine to emit
+  /// diagnostic and its SourceManager to retrieve the SourceFile's contents.
+  /// \param sf the SourceFile that this parser will be working on
+  Parser(ASTContext &ctxt, SourceFile &file);
 
-  Lexer &lexer;
+  /// Parses everything in the SourceFile until the whole file has been
+  /// consumed.
+  void parseAll();
+
+  /// The ASTContext
   ASTContext &ctxt;
+  /// The Diagnostic Engine
   DiagnosticEngine &diagEng;
+  /// The SourceFile that this parser is working on
+  SourceFile &file;
 
 private:
+  /// Our lexer instance
+  Lexer lexer;
+
+  /// The current token being considered by the parser
+  Token tok;
+
+  //===- Declaration Parsing ----------------------------------------------===//
+
+  /// \returns true if the parser is positioned at the start of a declaration.
+  bool isStartOfDecl() const;
+
+  //===- Statement Parsing ------------------------------------------------===//
+
+  /// \returns true if the parser is positioned at the start of a statement.
+  bool isStartOfStmt() const;
+
+  //===- Expression Parsing -----------------------------------------------===//
+
+  // TODO
+
+  //===- Type Parsing -----------------------------------------------------===//
+
+  // TODO
+
+  //===- Pattern Parsing --------------------------------------------------===//
+
+  // TODO
+
+  //===- Diagnostic Emission ----------------------------------------------===//
+
   /// Emits a diagnostic at \p tok's location.
   template <typename... Args>
   InFlightDiagnostic
@@ -42,8 +83,7 @@ private:
     return diagEng.diagnose<Args...>(loc, diag, args...);
   }
 
-  /// The current token being considered by the parser
-  Token tok;
+  //===- Token Consumption & Peeking --------------------------------------===//
 
   /// Peeks the next token
   const Token &peek() const;
@@ -69,13 +109,7 @@ private:
     return SourceLoc();
   }
 
-  /// \returns true if the parser is positioned at the start of a declaration.
-  bool isStartOfDecl() const;
-  /// \returns true if the parser is positioned at the start of a statement.
-  bool isStartOfStmt() const;
-
-  /// \returns true if the parser has reached EOF
-  bool isEOF() const { return tok.is(TokenKind::EndOfFile); }
+  //===- Recovery ---------------------------------------------------------===//
 
   /// Skips the current token, matching parentheses.
   /// (e.g. if the current token is {, this skips until past the next })
@@ -91,5 +125,10 @@ private:
   /// Skips to the next Decl, Stmt or }
   /// \returns true if the current token begins a declaration.
   bool skipUntilDeclStmtRCurly();
+
+  //===- Miscellaneous ----------------------------------------------------===//
+
+  /// \returns true if the parser has reached EOF
+  bool isEOF() const { return tok.is(TokenKind::EndOfFile); }
 };
 } // namespace sora

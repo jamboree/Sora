@@ -9,9 +9,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Parser/Parser.hpp"
+#include "Sora/AST/ASTContext.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 
 using namespace sora;
+
+Parser::Parser(ASTContext &ctxt, SourceFile &file)
+    : ctxt(ctxt), diagEng(ctxt.diagEngine), file(file),
+      lexer(ctxt.srcMgr, diagEng) {}
 
 const Token &Parser::peek() const { return lexer.peek(); }
 
@@ -20,29 +25,6 @@ SourceLoc Parser::consume() {
   SourceLoc loc = tok.getLoc();
   tok = lexer.lex();
   return loc;
-}
-
-bool Parser::isStartOfDecl() const {
-  switch (tok.getKind()) {
-  case TokenKind::LetKw:
-  case TokenKind::FuncKw:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool Parser::isStartOfStmt() const {
-  switch (tok.getKind()) {
-  case TokenKind::IfKw:
-  case TokenKind::ReturnKw:
-  case TokenKind::WhileKw:
-  case TokenKind::ContinueKw:
-  case TokenKind::BreakKw:
-    return true;
-  default:
-    return false;
-  }
 }
 
 void Parser::skip() {
