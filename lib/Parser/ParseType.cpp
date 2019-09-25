@@ -5,6 +5,23 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
+#include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Parser/Parser.hpp"
 
 using namespace sora;
+
+/*
+type = identifier
+     | tuple-type
+     | array-type
+     | reference-or-pointer-type
+ 
+array-type = '[' type (';' expr)? ']'
+tuple-type = '(' type (',' type)* ')'
+reference-or-pointer-type = ('&' | '*') "mut"? type
+*/
+ParserResult<TypeRepr> Parser::parseType(std::function<void()> onNoType) {
+  assert(isStartOfType() && "not a type!");
+  onNoType();
+  return makeParserErrorResult<TypeRepr>();
+}

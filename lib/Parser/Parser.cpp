@@ -20,16 +20,25 @@ Parser::Parser(ASTContext &ctxt, SourceFile &file)
 
 const Token &Parser::peek() const { return lexer.peek(); }
 
-SourceLoc Parser::consume() {
+SourceLoc Parser::consumeToken() {
   assert(tok.getKind() != TokenKind::EndOfFile && "Consuming EOF!");
   SourceLoc loc = tok.getLoc();
+  prevTokPastTheEnd = tok.getCharRange().getEnd();
   tok = lexer.lex();
+  return loc;
+}
+
+SourceLoc Parser::consumeIdentifier(Identifier &identifier) {
+  assert(tok.isIdentifier());
+  identifier = ctxt.getIdentifier(tok.str());
+  SourceLoc loc = tok.getLoc();
+  consumeToken();
   return loc;
 }
 
 void Parser::skip() {
   auto kind = tok.getKind();
-  consume();
+  consumeToken();
   switch (kind) {
   case TokenKind::LCurly:
     skipUntil(TokenKind::RCurly);

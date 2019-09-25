@@ -28,7 +28,11 @@
 
 //===----------------------------------------------------------------------===//
 
-
+ERROR(expected_ident_in_fn, 
+  "expected identifier in function declaration", ())
+ERROR(expected_lparen_in_fn_arg_list, 
+  "expected '(' in function declaration argument list", ())
+ERROR(expected_fn_ret_ty, "expected function return type", ())
 
 //===----------------------------------------------------------------------===//
 

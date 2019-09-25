@@ -22,24 +22,25 @@ public:
     assert(result && "Successful Parser Results can't be nullptr!");
   }
 
-  /// Sets result to nullptr
+  /// Sets the "error" flag to nullptr.
   void setIsError() { resultAndIsError.setInt(false); }
   /// \returns true if this represents a parsing error
-  void isError() const { return !isSuccess(); }
+  bool isError() const { return !isSuccess(); }
   /// \returns true if this represents a parsing success
-  void isSuccess() const { return resultAndIsError.getInt(); }
+  bool isSuccess() const { return resultAndIsError.getInt(); }
 
   /// \returns true if this ParserResult has a null result
   bool isNull() const { return getOrNull() == nullptr; }
 
   /// \returns the result (can't be nullptr)
   T *get() const {
-    assert(result && "result can't be nullptr!");
-    return result;
+    T *ptr = getOrNull();
+    assert(ptr && "result can't be nullptr!");
+    return ptr;
   }
 
   /// \returns the result or nullptr (if error)
-  T *getOrNull() const { return result; }
+  T *getOrNull() const { return resultAndIsError.getPointer(); }
 
   /// \returns isSuccess()
   explicit operator bool() const { return isSuccess(); }
@@ -54,7 +55,7 @@ template <typename T> ParserResult<T> makeParserResult(T *result) {
 template <typename T>
 ParserResult<T> makeParserErrorResult(T *result = nullptr) {
   if (!result)
-    return ParserResult<T>();
+    return ParserResult<T>(nullptr);
   ParserResult<T> pr(result);
   pr.setIsError();
   return pr;
