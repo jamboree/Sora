@@ -83,6 +83,9 @@ bool isTrivia(char ch) {
 /// \returns true if \p ch is a UTF8 byte
 bool isUTF8(char ch) { return ((unsigned char)ch & 0x80); }
 
+/// \returns true if \p ch is a digit
+bool isdigit(char ch) { return ch >= '0' && ch <= '9'; }
+
 /// \returns true if \p ch is the first byte of a UTF8 continuation codepoint.
 bool isBeginningOfContinuationCodePoint(char ch) {
   // Continuation codepoints begin with 10
@@ -182,7 +185,8 @@ void Lexer::lexIdentifierBody() {
   // NOTE: Currently, only ASCII is allowed in identifiers, so we
   // can use ++curPtr safely, however if in the future UTF8 is
   // allowed in identifiers, we'll need advanceUTF8.
-  while (isValidIdentifierHead(*curPtr) || isdigit(*curPtr))
+  while (!isUTF8(*curPtr) &&
+         (isValidIdentifierHead(*curPtr) || isdigit(*curPtr)))
     ++curPtr;
   StringRef tokStr = getTokStr();
 #define KEYWORD(KIND, TEXT)                                                    \
