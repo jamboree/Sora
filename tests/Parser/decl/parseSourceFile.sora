@@ -1,2 +1,2 @@
-// RUN: %sorac -verify %s
+// RUN: %sorac-parse -verify %s
 foo // expect-error: expected a function declaration
