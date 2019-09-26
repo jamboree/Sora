@@ -42,13 +42,16 @@ public:
                             DeclContext *parent);
 
   /// \returns the number of members in this source file
-  size_t getNumMembers() { return members.size(); }
+  size_t getNumMembers() const { return members.size(); }
   /// \returns the members of this source file
   ArrayRef<Decl *> getMembers() const { return members; }
   /// Adds a member to this source file
   void addMember(Decl *decl) { return members.push_back(decl); }
   /// \returns the buffer id of this SourceFile
   BufferID getBufferID() const { return bufferID; }
+
+  /// Dumps this source file to \p out
+  void dump(raw_ostream &out, unsigned indent = 2) const;
 
   /// Traverse this SourceFile using \p walker.
   /// \returns true if the walk completed successfully, false if it ended

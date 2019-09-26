@@ -10,6 +10,7 @@
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/Pattern.hpp"
+#include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/LLVM.hpp"
@@ -187,6 +188,16 @@ public:
   template <typename T> void visitIf(T node) {
     if (node)
       ASTVisitor::visit(node);
+  }
+
+  //===--- SourceFile -----------------------------------------------------===//
+
+  void visitSourceFile(const SourceFile &sf) {
+    out.indent(curIndent);
+    out << "SourceFile numMembers=" << sf.getNumMembers() << "\n";
+    auto indent = increaseIndent();
+    for (Decl *member : sf.getMembers())
+      visit(member);
   }
 
   //===--- Stmt -----------------------------------------------------------===//
@@ -443,6 +454,10 @@ void Pattern::dump(raw_ostream &out, const SourceManager &srcMgr,
 void TypeRepr::dump(raw_ostream &out, const SourceManager &srcMgr,
                     unsigned indent) const {
   Dumper(out, srcMgr, indent).visit(const_cast<TypeRepr *>(this));
+}
+
+void SourceFile::dump(raw_ostream &out, unsigned indent) const {
+  Dumper(out, astContext.srcMgr, indent).visitSourceFile(*this);
 }
 
 void Stmt::dump(raw_ostream &out, const SourceManager &srcMgr,
