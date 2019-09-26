@@ -176,19 +176,15 @@ This allows Sora to provides strong, yet simple immutability guarantees *in the 
 
 | Precedence | Operators                                                                         | Associativity |
 |------------|-----------------------------------------------------------------------------------|---------------|
-| 1          | Function call: `()`   Array Subscript: `[]`   Member access: `.`, `->`            | left-to-right |
+| 1          | Function call: `()`<br> Array Subscript: `[]`<br>Member access: `.`, `->`         | left-to-right |
 | 2          | Prefix Unary Operators: `+`, `-`, `!`, `*`, `&`, `~`                              | right-to-left |
 | 3          | Multiplication `*`, Division `/` and Remainder `%`                                | left-to-right |
-| 4          | Addition `+` and Substraction `-`                                                 | left-to-right |
-| 5          | Bitwise left shift `<<` and right shift `>>`                                      | left-to-right |
-| 6          | Relational "ordering" operators: `<`, `<=`, `>` and `>=`                          | left-to-right |
-| 7          | Relational "equality" operators: `==` and `!=`                                    | left-to-right |
-| 8          | Bitwise AND: `&`                                                                  | left-to-right |
-| 9          | Bitwise XOR: `^`                                                                  | left-to-right |
-| 10         | Bitwise OR: <code>&#124;</code>                                                   | left-to-right |
-| 11         | Logical AND: `&&`                                                                 | left-to-right |
-| 12         | Logical OR: <code>&#124;&#124;</code>                                             | left-to-right |
-| 13         | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, <code>&#124;=</code>, `^=`, `<<=` and `>>=` | right-to-left |
+| 4          | Bitwise left shift `<<` and right shift `>>`                                      | left-to-right |
+| 5          | Bitwise AND `&`, XOR `^` and OR <code>&#124;</code>                               | left-to-right |
+| 6          | Addition `+` and Substraction `-`                                                 | left-to-right |
+| 7          | Relational operators: `==`, `!=`, `<`, `<=`, `>` and `>=`                         | left-to-right |
+| 8          | Logical AND `&&` and OR <code>&#124;&#124;</code>                                 | left-to-right |
+| 9          | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, <code>&#124;=</code>, `^=`, `<<=` and `>>=` | right-to-left |
 
 #### Binary Operators
 ```
