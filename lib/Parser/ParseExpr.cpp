@@ -11,6 +11,12 @@
 using namespace sora;
 
 ParserResult<Expr> Parser::parseExpr(const std::function<void()> &onNoExpr) {
-  // !TODO!
-  return makeParserResult(new (ctxt) ErrorExpr(SourceRange()));
+  // TODO
+  // This is just to make some tests work.
+  if (tok.is(TokenKind::IntegerLiteral)) {
+    auto loc = consumeToken();
+    return makeParserResult(new (ctxt) ErrorExpr(loc));
+  }
+  onNoExpr();
+  return nullptr;
 }
