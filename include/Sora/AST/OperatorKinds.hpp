@@ -35,7 +35,7 @@ inline bool isAdditiveOp(BinaryOperatorKind op) {
 }
 /// \returns true if \p op is * / or %
 inline bool isMultiplicativeOp(BinaryOperatorKind op) {
-  return (op >= BinaryOperatorKind::Mul) && (op <= BinaryOperatorKind::Mod);
+  return (op >= BinaryOperatorKind::Mul) && (op <= BinaryOperatorKind::Rem);
 }
 /// \returns true if \p op is << or >>
 inline bool isShiftOp(BinaryOperatorKind op) {

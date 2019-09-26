@@ -18,7 +18,7 @@ TEST(BinaryOperatorKindTest, getOpForCompoundAssignementOp) {
   CHECK(Op::SubAssign, Op::Sub);
   CHECK(Op::MulAssign, Op::Mul);
   CHECK(Op::DivAssign, Op::Div);
-  CHECK(Op::ModAssign, Op::Mod);
+  CHECK(Op::RemAssign, Op::Rem);
   CHECK(Op::ShlAssign, Op::Shl);
   CHECK(Op::ShrAssign, Op::Shr);
   CHECK(Op::AndAssign, Op::And);
@@ -46,7 +46,7 @@ TEST(BinaryOperatorKindTest, classificationAndSpelling) {
   OP(Op::Sub, "-", 1, 0, 0, 0, 0, 0, 0, 0, 0);
   OP(Op::Mul, "*", 0, 1, 0, 0, 0, 0, 0, 0, 0);
   OP(Op::Div, "/", 0, 1, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Mod, "%", 0, 1, 0, 0, 0, 0, 0, 0, 0);
+  OP(Op::Rem, "%", 0, 1, 0, 0, 0, 0, 0, 0, 0);
   OP(Op::Shl, "<<", 0, 0, 1, 0, 0, 0, 0, 0, 0);
   OP(Op::Shr, ">>", 0, 0, 1, 0, 0, 0, 0, 0, 0);
   OP(Op::And, "&", 0, 0, 0, 1, 0, 0, 0, 0, 0);
@@ -65,7 +65,7 @@ TEST(BinaryOperatorKindTest, classificationAndSpelling) {
   OP(Op::SubAssign, "-=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::MulAssign, "*=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::DivAssign, "/=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::ModAssign, "%=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(Op::RemAssign, "%=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::ShlAssign, "<<=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::ShrAssign, ">>=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::AndAssign, "&=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
