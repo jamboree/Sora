@@ -26,8 +26,10 @@ Parser::parseType(const std::function<void()> &onNoType) {
   }
   case TokenKind::LParen:
     return parseTupleType();
-  case TokenKind::LSquare:
-    return parseArrayType();
+  // NOTE: ArrayTypes have been disabled as they're not a feature
+  // of the initial implementation of Sora.k
+  // case TokenKind::LSquare:
+  //  return parseArrayType();
   case TokenKind::Star:
   case TokenKind::Amp:
     return parseReferenceOrPointerType();
