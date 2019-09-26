@@ -152,6 +152,12 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       doIt(elem);
   }
 
+  void visitArrayTypeRepr(ArrayTypeRepr *tyRepr) {
+    doIt(tyRepr->getSubTypeRepr());
+    if (Expr *sizeExpr = doIt(tyRepr->getSizeExpr()))
+      tyRepr->setSizeExpr(sizeExpr);
+  }
+
   void visitPointerTypeRepr(PointerTypeRepr *tyRepr) {
     doIt(tyRepr->getSubTypeRepr());
   }

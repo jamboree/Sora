@@ -392,6 +392,19 @@ public:
       visit(elem);
   }
 
+  void visitArrayTypeRepr(ArrayTypeRepr *tyRepr) {
+    dumpCommon(tyRepr);
+    out << ' ';
+    dumpLoc(tyRepr->getRSquareLoc(), "lSquareLoc");
+    out << ' ';
+    dumpLoc(tyRepr->getLSquareLoc(), "rSquareLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(tyRepr->getSubTypeRepr());
+    visit(tyRepr->getSizeExpr());
+  }
+
   void visitPointerTypeRepr(PointerTypeRepr *tyRepr) {
     dumpCommon(tyRepr);
     out << (tyRepr->hasMut() ? " (immutable " : " (mutable ")

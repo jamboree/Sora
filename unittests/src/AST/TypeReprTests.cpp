@@ -24,6 +24,7 @@ protected:
     // Setup nodes
     identifierTypeRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
     tupleTypeRepr = TupleTypeRepr::createEmpty(*ctxt, beg, end);
+    arrayTypeRepr = new (*ctxt) ArrayTypeRepr(beg, nullptr, nullptr, end);
     pointerTypeRepr = new (*ctxt)
         PointerTypeRepr(beg, true, new (*ctxt) IdentifierTypeRepr(end, {}));
   }
@@ -36,6 +37,7 @@ protected:
 
   TypeRepr *identifierTypeRepr;
   TypeRepr *tupleTypeRepr;
+  TypeRepr *arrayTypeRepr;
   TypeRepr *pointerTypeRepr;
 };
 } // namespace
@@ -43,6 +45,7 @@ protected:
 TEST_F(TypeReprTest, rtti) {
   EXPECT_TRUE(isa<IdentifierTypeRepr>(identifierTypeRepr));
   EXPECT_TRUE(isa<TupleTypeRepr>(tupleTypeRepr));
+  EXPECT_TRUE(isa<ArrayTypeRepr>(arrayTypeRepr));
   EXPECT_TRUE(isa<PointerTypeRepr>(pointerTypeRepr));
 }
 
@@ -57,11 +60,16 @@ TEST_F(TypeReprTest, getSourceRange) {
   EXPECT_EQ(SourceRange(beg, beg), identifierTypeRepr->getSourceRange());
 
   // TupleTypeRepr
-
   EXPECT_EQ(beg, tupleTypeRepr->getBegLoc());
   EXPECT_EQ(beg, tupleTypeRepr->getLoc());
   EXPECT_EQ(end, tupleTypeRepr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), tupleTypeRepr->getSourceRange());
+
+  // ArrayTypeRepr
+  EXPECT_EQ(beg, arrayTypeRepr->getBegLoc());
+  EXPECT_EQ(beg, arrayTypeRepr->getLoc());
+  EXPECT_EQ(end, arrayTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), arrayTypeRepr->getSourceRange());
 
   // PointerTypeRepr
   EXPECT_EQ(beg, pointerTypeRepr->getBegLoc());

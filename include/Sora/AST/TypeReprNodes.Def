@@ -13,6 +13,7 @@
 
 TYPEREPR(Identifier, TypeRepr)
 TYPEREPR(Tuple, TypeRepr)
+TYPEREPR(Array, TypeRepr)
 TYPEREPR(Pointer, TypeRepr)
 
 //===----------------------------------------------------------------------===//
