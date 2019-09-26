@@ -243,6 +243,7 @@ public:
 
     auto indent = increaseIndent();
     visit(decl->getParamList());
+    visit(decl->getBody());
   }
 
   void visitLetDecl(LetDecl *decl) {
