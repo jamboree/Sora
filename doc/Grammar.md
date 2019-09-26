@@ -18,7 +18,7 @@ This is a normal BNF grammar, maybe there's a few changes here and there but sin
  - "" or '' are used for terminal strings. ('' for single characters, "" for multiple characters)
 
 ### Statement separation
-Sora does not require semicolon, and doesn't allow semicolons. Statements are separated by newlines.
+Sora does not require semicolon, and doesn't allow semicolons. Consecutive statements are separated by line breaks.
 
 ### Grammar
 
@@ -112,8 +112,8 @@ assignement-operator = '=' | "+=" | "-=" | "/=" | "*=" | "%="
 prefix-operator = '+' | '-' | '!' | '*' | '&' | '~'
 
 expression = assignement-expression
-assignement-expression = conditional-expression (assignement-operator expression)?
-conditional-expression = binary-expression ('?' expression ':' expression)
+assignement-expression = conditional-expression (assignement-operator assignement-expression)?
+conditional-expression = binary-expression ('?' conditional-expression ':' conditional-expression)? 
 binary-expression = prefix-expression (binary-operator prefix-expression)*
 prefix-expression = prefix-operator prefix-expression
                   | postfix-expression
