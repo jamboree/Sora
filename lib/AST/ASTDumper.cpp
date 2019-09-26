@@ -189,6 +189,124 @@ public:
     if (node)
       ASTVisitor::visit(node);
   }
+  //===--- Decl -----------------------------------------------------------===//
+
+  void visitVarDecl(VarDecl *decl) {
+    dumpCommon(decl);
+    out << '\n';
+
+    if (TypeRepr *tyRepr = decl->getTypeLoc().getTypeRepr()) {
+      auto indent = increaseIndent();
+      visit(tyRepr);
+    }
+  }
+
+  void visitParamDecl(ParamDecl *decl) {
+    dumpCommon(decl);
+    out << ' ';
+    dumpLoc(decl->getColonLoc(), "colonLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(decl->getTypeLoc().getTypeRepr());
+  }
+
+  void visitParamList(ParamList *list) {
+    dumpCommon(list);
+    out << " numElements=" << list->getNumParams() << ' ';
+    dumpLoc(list->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(list->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    for (auto elem : list->getParams())
+      visit(elem);
+  }
+
+  void visitFuncDecl(FuncDecl *decl) {
+    dumpCommon(decl);
+    out << ' ';
+    dumpLoc(decl->getFuncLoc(), "fnLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(decl->getParamList());
+  }
+
+  void visitLetDecl(LetDecl *decl) {
+    dumpCommon(decl);
+    out << ' ';
+    dumpLoc(decl->getLetLoc(), "letLoc");
+    if (decl->hasInitializer()) {
+      out << ' ';
+      dumpLoc(decl->getEqualLoc(), "equalLoc");
+    }
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(decl->getPattern());
+    visitIf(decl->getInitializer());
+  }
+
+  //===--- Expr -----------------------------------------------------------===//
+
+  // TODO
+  void visitExpr(Expr *expr) {
+    dumpCommon(expr);
+    out << " TODO\n";
+  }
+
+  //===--- Pattern --------------------------------------------------------===//
+
+  void visitVarPattern(VarPattern *pattern) {
+    dumpCommon(pattern);
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getVarDecl());
+  }
+
+  void visitDiscardPattern(DiscardPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getLoc(), "loc");
+    out << '\n';
+  }
+
+  void visitMutPattern(MutPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getMutLoc(), "mutLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getSubPattern());
+  }
+
+  void visitTuplePattern(TuplePattern *pattern) {
+    dumpCommon(pattern);
+    out << " numElements=" << pattern->getNumElements() << ' ';
+    dumpLoc(pattern->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(pattern->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    for (auto elem : pattern->getElements())
+      visit(elem);
+  }
+
+  void visitTypedPattern(TypedPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getColonLoc(), "colonLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getSubPattern());
+    visit(pattern->getTypeRepr());
+  }
 
   //===--- SourceFile -----------------------------------------------------===//
 
@@ -265,125 +383,6 @@ public:
 
     auto indent = increaseIndent();
     visit(stmt->getBody());
-  }
-
-  //===--- Expr -----------------------------------------------------------===//
-
-  // TODO
-  void visitExpr(Expr *expr) {
-    dumpCommon(expr);
-    out << " TODO\n";
-  }
-
-  //===--- Decl -----------------------------------------------------------===//
-
-  void visitVarDecl(VarDecl *decl) {
-    dumpCommon(decl);
-    out << '\n';
-
-    if (TypeRepr *tyRepr = decl->getTypeLoc().getTypeRepr()) {
-      auto indent = increaseIndent();
-      visit(tyRepr);
-    }
-  }
-
-  void visitParamDecl(ParamDecl *decl) {
-    dumpCommon(decl);
-    out << ' ';
-    dumpLoc(decl->getColonLoc(), "colonLoc");
-    out << '\n';
-
-    auto indent = increaseIndent();
-    visit(decl->getTypeLoc().getTypeRepr());
-  }
-
-  void visitParamList(ParamList *list) {
-    dumpCommon(list);
-    out << " numElements=" << list->getNumParams() << ' ';
-    dumpLoc(list->getLParenLoc(), "lParenLoc");
-    out << ' ';
-    dumpLoc(list->getRParenLoc(), "rParenLoc");
-    out << '\n';
-
-    auto indent = increaseIndent();
-    for (auto elem : list->getParams())
-      visit(elem);
-  }
-
-  void visitFuncDecl(FuncDecl *decl) {
-    dumpCommon(decl);
-    out << ' ';
-    dumpLoc(decl->getFuncLoc(), "fnLoc");
-    out << '\n';
-
-    auto indent = increaseIndent();
-    visit(decl->getParamList());
-  }
-
-  void visitLetDecl(LetDecl *decl) {
-    dumpCommon(decl);
-    out << ' ';
-    dumpLoc(decl->getLetLoc(), "letLoc");
-    if (decl->hasInitializer()) {
-      out << ' ';
-      dumpLoc(decl->getEqualLoc(), "equalLoc");
-    }
-    out << '\n';
-
-    auto indent = increaseIndent();
-    visit(decl->getPattern());
-    visitIf(decl->getInitializer());
-  }
-
-  //===--- Pattern --------------------------------------------------------===//
-
-  void visitVarPattern(VarPattern *pattern) {
-    dumpCommon(pattern);
-    out << '\n';
-
-    auto indent = increaseIndent();
-    visit(pattern->getVarDecl());
-  }
-
-  void visitDiscardPattern(DiscardPattern *pattern) {
-    dumpCommon(pattern);
-    out << ' ';
-    dumpLoc(pattern->getLoc(), "loc");
-    out << '\n';
-  }
-
-  void visitMutPattern(MutPattern *pattern) {
-    dumpCommon(pattern);
-    out << ' ';
-    dumpLoc(pattern->getMutLoc(), "mutLoc");
-    out << '\n';
-
-    auto indent = increaseIndent();
-    visit(pattern->getSubPattern());
-  }
-
-  void visitTuplePattern(TuplePattern *pattern) {
-    dumpCommon(pattern);
-    out << " numElements=" << pattern->getNumElements() << ' ';
-    dumpLoc(pattern->getLParenLoc(), "lParenLoc");
-    out << ' ';
-    dumpLoc(pattern->getRParenLoc(), "rParenLoc");
-    out << '\n';
-
-    auto indent = increaseIndent();
-    for (auto elem : pattern->getElements())
-      visit(elem);
-  }
-
-  void visitTypedPattern(TypedPattern *pattern) {
-    dumpCommon(pattern);
-    out << ' ';
-    dumpLoc(pattern->getColonLoc(), "colonLoc");
-    out << '\n';
-
-    auto indent = increaseIndent();
-    visit(pattern->getSubPattern());
-    visit(pattern->getTypeRepr());
   }
 
   //===--- TypeRepr -------------------------------------------------------===//
