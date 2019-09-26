@@ -13,7 +13,6 @@ using namespace sora;
 /*
 type = identifier
      | tuple-type
-     | array-type
      | reference-or-pointer-type
 */
 ParserResult<TypeRepr>
@@ -26,10 +25,6 @@ Parser::parseType(const std::function<void()> &onNoType) {
   }
   case TokenKind::LParen:
     return parseTupleType();
-  // NOTE: ArrayTypes have been disabled as they're not a feature
-  // of the initial implementation of Sora.k
-  // case TokenKind::LSquare:
-  //  return parseArrayType();
   case TokenKind::Star:
   case TokenKind::Amp:
     return parseReferenceOrPointerType();
@@ -88,6 +83,7 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
 array-type = '[' type (';' expr)? ']'
 */
 ParserResult<TypeRepr> Parser::parseArrayType() {
+  llvm_unreachable("Currently, ArrayTypes are not supported by Sora");
   assert(tok.is(TokenKind::LSquare) && "not an array type");
   // '['
   SourceLoc lSquareLoc = consumeToken();

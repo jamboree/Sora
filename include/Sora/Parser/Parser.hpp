@@ -108,6 +108,7 @@ private:
 
   /// Parses an array type.
   /// The parser must be positioned on the "["
+  /// NOTE: ArrayTypes are currenlty unsupported by Sora. Do not call this.
   ParserResult<TypeRepr> parseArrayType();
 
   /// Parses a reference or pointer type.
