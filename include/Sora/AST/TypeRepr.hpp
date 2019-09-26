@@ -190,6 +190,11 @@ class PointerTypeRepr final : public TypeRepr {
   TypeRepr *subTyRepr;
 
 public:
+  /// \param signLoc the SourceLoc of the & or *
+  /// \param isReference true for reference, false for pointers.
+  /// \param mutLoc the SourceLoc of the "mut" keyword. If invalid, the
+  /// PointerTypeRepr is considered immutable.
+  /// \param subTyRepr the child type repr.
   PointerTypeRepr(SourceLoc signLoc, bool isReference, SourceLoc mutLoc,
                   TypeRepr *subTyRepr)
       : TypeRepr(TypeReprKind::Pointer), signLoc(signLoc), mutLoc(mutLoc),
@@ -197,6 +202,9 @@ public:
     bits.pointerTypeRepr.isReference = isReference;
   }
 
+  /// \param signLoc the SourceLoc of the & or *
+  /// \param isReference true for reference, false for pointers.
+  /// \param subTyRepr the child type repr.
   PointerTypeRepr(SourceLoc signLoc, bool isReference, TypeRepr *subTyRepr)
       : PointerTypeRepr(signLoc, isReference, SourceLoc(), subTyRepr) {}
 
