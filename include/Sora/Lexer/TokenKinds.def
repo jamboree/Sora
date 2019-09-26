@@ -70,6 +70,7 @@ TOKEN(PlusEqual)      // +=
 TOKEN(RCurly)         // }
 TOKEN(RParen)         // )
 TOKEN(RSquare)        // ]
+TOKEN(Semicolon)      // ;
 TOKEN(Slash)          // /
 TOKEN(SlashEqual)     // /=
 TOKEN(Star)           // *

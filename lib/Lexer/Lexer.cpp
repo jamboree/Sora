@@ -329,6 +329,9 @@ void Lexer::lexImpl() {
   case ',':
     pushToken(TokenKind::Comma);
     break;
+  case ';':
+    pushToken(TokenKind::Semicolon);
+    break;
   case '.':
     pushToken(TokenKind::Dot);
     break;
