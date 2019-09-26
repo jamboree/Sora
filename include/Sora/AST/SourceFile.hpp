@@ -41,6 +41,8 @@ public:
   static SourceFile *create(ASTContext &ctxt, BufferID bufferID,
                             DeclContext *parent);
 
+  /// \returns the number of members in this source file
+  size_t getNumMembers() { return members.size(); }
   /// \returns the members of this source file
   ArrayRef<Decl *> getMembers() const { return members; }
   /// Adds a member to this source file
