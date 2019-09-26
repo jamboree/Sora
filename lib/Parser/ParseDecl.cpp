@@ -100,7 +100,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
       FuncDecl(declContext, fnLoc, identifierLoc, identifier, paramList, retTL);
 
   // block-statement
-  if (consumeIf(TokenKind::LCurly)) {
+  if (tok.is(TokenKind::LCurly)) {
     // Set the DeclContext for the parsing of the body.
     auto bodyDC = setDeclContextRAII(node);
     // Parse the body
