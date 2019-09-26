@@ -182,6 +182,7 @@ public:
 ///
 /// \verbatim
 /// [T, 5]
+/// [T] // only valid in slices
 /// \endverbatim
 class ArrayTypeRepr final : public TypeRepr {
   TypeRepr *subTyRepr;
@@ -189,6 +190,9 @@ class ArrayTypeRepr final : public TypeRepr {
   SourceLoc lSquareLoc, rSquareLoc;
 
 public:
+  ArrayTypeRepr(SourceLoc lSquareLoc, TypeRepr *subTyRepr, SourceLoc rSquareLoc)
+      : ArrayTypeRepr(lSquareLoc, subTyRepr, nullptr, rSquareLoc) {}
+
   ArrayTypeRepr(SourceLoc lSquareLoc, TypeRepr *subTyRepr, Expr *sizeExpr,
                 SourceLoc rSquareLoc)
       : TypeRepr(TypeReprKind::Array), subTyRepr(subTyRepr), sizeExpr(sizeExpr),
@@ -196,6 +200,7 @@ public:
 
   TypeRepr *getSubTypeRepr() const { return subTyRepr; }
 
+  bool hasSizeExpr() const { return (bool)sizeExpr; }
   Expr *getSizeExpr() const { return sizeExpr; }
   void setSizeExpr(Expr *expr) { sizeExpr = expr; }
 
@@ -223,11 +228,8 @@ class PointerTypeRepr final : public TypeRepr {
   TypeRepr *subTyRepr;
 
 public:
-  /// \param signLoc the SourceLoc of the & or *
-  /// \param isReference true for reference, false for pointers.
   /// \param mutLoc the SourceLoc of the "mut" keyword. If invalid, the
   /// PointerTypeRepr is considered immutable.
-  /// \param subTyRepr the child type repr.
   PointerTypeRepr(SourceLoc signLoc, bool isReference, SourceLoc mutLoc,
                   TypeRepr *subTyRepr)
       : TypeRepr(TypeReprKind::Pointer), signLoc(signLoc), mutLoc(mutLoc),
@@ -235,9 +237,6 @@ public:
     bits.pointerTypeRepr.isReference = isReference;
   }
 
-  /// \param signLoc the SourceLoc of the & or *
-  /// \param isReference true for reference, false for pointers.
-  /// \param subTyRepr the child type repr.
   PointerTypeRepr(SourceLoc signLoc, bool isReference, TypeRepr *subTyRepr)
       : PointerTypeRepr(signLoc, isReference, SourceLoc(), subTyRepr) {}
 
