@@ -425,27 +425,29 @@ public:
 };
 } // namespace
 
+
+
 void Decl::dump(raw_ostream &out, const SourceManager &srcMgr,
-                unsigned indent) {
-  Dumper(out, srcMgr, indent).visit(this);
+                unsigned indent) const {
+  Dumper(out, srcMgr, indent).visit(const_cast<Decl*>(this));
 }
 
 void Expr::dump(raw_ostream &out, const SourceManager &srcMgr,
-                unsigned indent) {
-  Dumper(out, srcMgr, indent).visit(this);
+                unsigned indent) const {
+  Dumper(out, srcMgr, indent).visit(const_cast<Expr *>(this));
 }
 
 void Pattern::dump(raw_ostream &out, const SourceManager &srcMgr,
-                   unsigned indent) {
-  Dumper(out, srcMgr, indent).visit(this);
+                   unsigned indent) const {
+  Dumper(out, srcMgr, indent).visit(const_cast<Pattern *>(this));
 }
 
 void TypeRepr::dump(raw_ostream &out, const SourceManager &srcMgr,
-                    unsigned indent) {
-  Dumper(out, srcMgr, indent).visit(this);
+                    unsigned indent) const {
+  Dumper(out, srcMgr, indent).visit(const_cast<TypeRepr *>(this));
 }
 
 void Stmt::dump(raw_ostream &out, const SourceManager &srcMgr,
-                unsigned indent) {
-  Dumper(out, srcMgr, indent).visit(this);
+                unsigned indent) const {
+  Dumper(out, srcMgr, indent).visit(const_cast<Stmt *>(this));
 }

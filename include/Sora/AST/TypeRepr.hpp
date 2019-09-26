@@ -83,7 +83,8 @@ public:
   bool walk(ASTWalker &walker);
 
   /// Dumps this TypeRepr to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);
+  void dump(raw_ostream &out, const SourceManager &srcMgr,
+            unsigned indent = 2) const;
 
   /// \returns the SourceLoc of the first token of the TypeRepr
   SourceLoc getBegLoc() const;

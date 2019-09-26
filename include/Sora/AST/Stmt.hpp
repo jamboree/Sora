@@ -72,7 +72,8 @@ public:
   bool walk(ASTWalker &walker);
 
   /// Dumps this statement to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);
+  void dump(raw_ostream &out, const SourceManager &srcMgr,
+            unsigned indent = 2) const;
 
   /// \return the kind of statement this is
   StmtKind getKind() const { return kind; }

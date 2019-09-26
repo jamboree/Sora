@@ -108,10 +108,11 @@ public:
   bool walk(ASTWalker &walker);
 
   /// Dumps this declaration to \p out
-  void dump(raw_ostream &out, unsigned indent = 2);
+  void dump(raw_ostream &out, unsigned indent = 2) const;
 
   /// Dumps this declaration to \p out
-  void dump(raw_ostream &out, const SourceManager& srcMgr, unsigned indent = 2);
+  void dump(raw_ostream &out, const SourceManager &srcMgr,
+            unsigned indent = 2) const;
 
   /// \return the kind of declaration this is
   DeclKind getKind() const { return kind; }

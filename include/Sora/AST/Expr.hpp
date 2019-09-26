@@ -105,7 +105,8 @@ public:
   std::pair<bool, Expr *> walk(ASTWalker &walker);
 
   /// Dumps this expression to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr, unsigned indent = 2);
+  void dump(raw_ostream &out, const SourceManager &srcMgr,
+            unsigned indent = 2) const;
 
   /// \return the kind of expression this is
   ExprKind getKind() const { return kind; }

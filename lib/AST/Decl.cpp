@@ -50,7 +50,7 @@ bool Decl::isLocal() const {
   return false;
 }
 
-void Decl::dump(raw_ostream &out, unsigned indent) {
+void Decl::dump(raw_ostream &out, unsigned indent) const {
   dump(out, getASTContext().srcMgr, indent);
 }
 
