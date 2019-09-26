@@ -173,6 +173,23 @@ There's 2 kinds of member access in Sora.
 This allows Sora to provides strong, yet simple immutability guarantees *in the common case*.
 
 ### Operators
+
+| Precedence | Operators                                                                         | Associativity |
+|------------|-----------------------------------------------------------------------------------|---------------|
+| 1          | Function call: `()`   Array Subscript: `[]`   Member access: `.`, `->`            | left-to-right |
+| 2          | Prefix Unary Operators: `+`, `-`, `!`, `*`, `&`, `~`                              | right-to-left |
+| 3          | Multiplication `*`, Division `/` and Remainder `%`                                | left-to-right |
+| 4          | Addition `+` and Substraction `-`                                                 | left-to-right |
+| 5          | Bitwise left shift `<<` and right shift `>>`                                      | left-to-right |
+| 6          | Relational "ordering" operators: `<`, `<=`, `>` and `>=`                          | left-to-right |
+| 7          | Relational "equality" operators: `==` and `!=`                                    | left-to-right |
+| 8          | Bitwise AND: `&`                                                                  | left-to-right |
+| 9          | Bitwise XOR: `^`                                                                  | left-to-right |
+| 10         | Bitwise OR: `|`                                                                   | left-to-right |
+| 11         | Logical AND: `&&`                                                                 | left-to-right |
+| 12         | Logical OR: `||`                                                                  | left-to-right |
+| 13         | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, `|=`, `^=`, `<<=` and `>>=` | right-to-left |
+
 #### Binary Operators
 ```
 binary-operator = '+' | '-' | '/' | '*' | '%'
@@ -180,13 +197,13 @@ binary-operator = '+' | '-' | '/' | '*' | '%'
                 | "==" | "!=" | '<' | '>' | "<=" | ">="
                 | "||" | "&&"
 ```
-TODO: Add more information + precedence
+TODO: Add content (describe each operator)
 #### Assignement Operators
 ```
 assignement-operator = '=' | "+=" | "-=" | "/=" | "*=" | "%="
                      | ">>=" | "<<=" | "&=" | "|=" | "^=" 
 ```
-TODO: Add more information
+TODO: Add content (describe each operator)
 #### Prefix Unary Operators
 `prefix-operator = '+' | '-' | '!' | '*' | '&'`
 
