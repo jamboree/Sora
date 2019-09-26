@@ -30,6 +30,9 @@ static_assert(TokenKind(0) == TokenKind::Invalid,
 /// as they are produced and aren't stored in an array), the Token
 /// object is not intended to be space efficient.
 class Token {
+  bool isAny() { return false; }
+  bool isAny(TokenKind kind) const { return is(kind); }
+
 public:
   /// Constructs an invalid Token
   Token() = default;
@@ -42,8 +45,17 @@ public:
 
   /// \returns true if kind == \p kind
   bool is(TokenKind kind) const { return this->kind == kind; }
-  /// \returns true if kind != \p kind
-  bool isNot(TokenKind kind) const { return this->kind != kind; }
+  /// \returns true if this token's kind is any of the list of kinds.
+  template <typename... Kinds>
+  bool isAny(TokenKind k1, TokenKind k2, Kinds... kN) const {
+    if (is(k1))
+      return true;
+    return isAny(k2, kN...);
+  }
+  /// \returns true if this token's kind is not in the list.
+  template <typename... Kinds> bool isNot(TokenKind kind, Kinds... kN) const {
+    return !isAny(kind, kN...);
+  }
 
   /// \returns true if kind == TokenKind::Identifier
   bool isIdentifier() const { return kind == TokenKind::Identifier; }

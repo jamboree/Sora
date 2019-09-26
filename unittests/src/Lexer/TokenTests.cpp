@@ -23,8 +23,20 @@ TEST(TokenTest, invalidKind) {
 TEST(TokenTest, is_isNot) {
   Token tok(TokenKind::Amp, CharSourceRange());
   EXPECT_TRUE(tok.is(TokenKind::Amp));
+
+  EXPECT_TRUE(tok.isAny(TokenKind::Amp, TokenKind::AmpAmp));
+  EXPECT_TRUE(tok.isAny(TokenKind::LParen, TokenKind::AmpAmp, TokenKind::Amp));
+  EXPECT_TRUE(tok.isAny(TokenKind::LParen, TokenKind::AmpAmp, TokenKind::Star,
+                        TokenKind::Amp));
+
   EXPECT_TRUE(tok.isNot(TokenKind::AmpAmp));
+  EXPECT_TRUE(tok.isNot(TokenKind::AmpAmp, TokenKind::Arrow));
+  EXPECT_TRUE(
+      tok.isNot(TokenKind::AmpAmp, TokenKind::Arrow, TokenKind::BreakKw));
+
   EXPECT_FALSE(tok.isNot(TokenKind::Amp));
+  EXPECT_FALSE(tok.isNot(TokenKind::Star, TokenKind::Amp));
+  EXPECT_FALSE(tok.isNot(TokenKind::Star, TokenKind::Amp, TokenKind::Arrow));
 }
 
 TEST(TokenTest, startOfLine) {
