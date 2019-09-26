@@ -15,12 +15,12 @@
 #include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
 
 namespace {
-
 const char *getKindStr(DeclKind kind) {
   switch (kind) {
   default:
@@ -76,11 +76,17 @@ const char *getKindStr(TypeReprKind kind) {
   }
 }
 
+using Colors = llvm::raw_ostream::Colors;
+
+constexpr Colors nodeKindColor = Colors::WHITE;
+constexpr Colors locColor = Colors::SAVEDCOLOR;
+
 class Dumper : public SimpleASTVisitor<Dumper> {
   raw_ostream &out;
   const SourceManager &srcMgr;
   unsigned curIndent;
   const unsigned indentSize;
+  bool enableColors = false;
 
   /// RAII class that increases/decreases indentation when it's
   /// constructed/destroyed.
@@ -98,14 +104,15 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   /// destroyed)
   IncreaseIndentRAII increaseIndent() { return IncreaseIndentRAII(*this); }
 
-  /// PrintBase methods indent the output stream and print basic information
-  /// about a class.
+  llvm::WithColor withColor(Colors color) {
+    return llvm::WithColor(out, color, !enableColors);
+  }
 
   /// Dumps basic information about a Decl.
   /// For ValueDecls, this dumps their type, identifier and identifier location.
   void dumpCommon(Decl *decl) {
     out.indent(curIndent);
-    out << getKindStr(decl->getKind());
+    withColor(nodeKindColor) << getKindStr(decl->getKind());
 
     if (ValueDecl *vd = dyn_cast<ValueDecl>(decl)) {
       out << ' ';
@@ -119,45 +126,47 @@ class Dumper : public SimpleASTVisitor<Dumper> {
 
   void dumpCommon(ParamList *paramList) {
     out.indent(curIndent);
-    out << "ParamList";
+    withColor(nodeKindColor) << "ParamList";
   }
 
   void dumpCommon(Expr *expr) {
     out.indent(curIndent);
-    out << getKindStr(expr->getKind());
+    withColor(nodeKindColor) << getKindStr(expr->getKind());
     if (expr->isImplicit())
       out << " implicit";
     out << ' ';
     dumpType(expr->getType(), "type");
   }
 
+  void dumpCommon(Pattern *pattern) {
+    out.indent(curIndent);
+    withColor(nodeKindColor) << getKindStr(pattern->getKind());
+  }
+
   void dumpCommon(Stmt *stmt) {
     out.indent(curIndent);
-    out << getKindStr(stmt->getKind());
+    withColor(nodeKindColor) << getKindStr(stmt->getKind());
   }
 
   void dumpCommon(TypeRepr *tyRepr) {
     out.indent(curIndent);
-    out << getKindStr(tyRepr->getKind());
-  }
-
-  void dumpCommon(Pattern *pattern) {
-    out.indent(curIndent);
-    out << getKindStr(pattern->getKind());
+    withColor(nodeKindColor) << getKindStr(tyRepr->getKind());
   }
 
   /// For null nodes.
   void printNoNode() {
     out.indent(curIndent);
-    out << "<null node>\n";
+    withColor(nodeKindColor) << "<null node>\n";
   }
 
   void dumpLoc(SourceLoc loc, StringRef name) {
+    auto out = withColor(locColor);
     out << name << '=';
     loc.print(out, srcMgr, false);
   }
 
   void dumpRange(SourceRange range, StringRef name) {
+    auto out = withColor(locColor);
     out << name << '=';
     range.print(out, srcMgr, false);
   }
@@ -172,7 +181,9 @@ class Dumper : public SimpleASTVisitor<Dumper> {
 
 public:
   Dumper(raw_ostream &out, const SourceManager &srcMgr, unsigned indentSize)
-      : out(out), srcMgr(srcMgr), curIndent(0), indentSize(indentSize) {}
+      : out(out), srcMgr(srcMgr), curIndent(0), indentSize(indentSize) {
+    enableColors = out.has_colors();
+  }
 
   /// Override the visit method so it calls printNoNode() when the node is null.
   template <typename T> void visit(T node) {
@@ -312,7 +323,8 @@ public:
 
   void visitSourceFile(const SourceFile &sf) {
     out.indent(curIndent);
-    out << "SourceFile numMembers=" << sf.getNumMembers() << "\n";
+    withColor(nodeKindColor) << "SourceFile";
+    out << " numMembers=" << sf.getNumMembers() << "\n ";
     auto indent = increaseIndent();
     for (Decl *member : sf.getMembers())
       visit(member);
