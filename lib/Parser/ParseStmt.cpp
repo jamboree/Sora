@@ -5,8 +5,8 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Parser/Parser.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/Parser/Parser.hpp"
 
 using namespace sora;
 
@@ -23,4 +23,9 @@ bool Parser::isStartOfStmt() const {
   }
 }
 
-ParserResult<BlockStmt> Parser::parseBlockStmt() { return nullptr; }
+ParserResult<BlockStmt> Parser::parseBlockStmt() {
+  assert(tok.is(TokenKind::LCurly) && "not a block stmt!");
+  // TODO
+  skip();
+  return makeParserResult(BlockStmt::createEmpty(ctxt, {}, {}));
+}
