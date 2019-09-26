@@ -40,9 +40,12 @@ ERROR(expected_rparen, "expected ')'", ())
 ERROR(expected_rcurly, "expected '}'", ())
 ERROR(expected_rsquare, "expected ']'", ())
 
-ERROR(to_match_lparen, "to match this opening '('", ())
-ERROR(to_match_lcurly, "to match this opening '{'", ())
-ERROR(to_match_lsquare, "to match this opening '['", ())
+ERROR(expected_rparen_at_end_of_tuple_type, 
+  "expected ')' at end of tuple type", ())
+
+NOTE(to_match_lparen, "to match this opening '('", ())
+NOTE(to_match_lcurly, "to match this opening '{'", ())
+NOTE(to_match_lsquare, "to match this opening '['", ())
 
 // Types
 ERROR(expected_type, "expected a type", ())

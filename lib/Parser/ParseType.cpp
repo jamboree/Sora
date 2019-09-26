@@ -73,7 +73,8 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
   } while (consumeIf(TokenKind::Comma));
 
   // ')'
-  SourceLoc rParenLoc = parseMatchingToken(lParenLoc, TokenKind::RParen);
+  SourceLoc rParenLoc = parseMatchingToken(
+      lParenLoc, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_type);
   if (!rParenLoc)
     return nullptr;
 

@@ -9,8 +9,10 @@
 
 #include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/DiagnosticsParser.hpp"
+#include "Sora/Common/LLVM.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 #include "Sora/Parser/ParserResult.hpp"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <functional>
 
@@ -55,8 +57,6 @@ public:
   }
 
 private:
-  enum class ParenKind : uint8_t { Paren, Curly, Square };
-
   /// Our lexer instance
   Lexer lexer;
 
@@ -124,8 +124,11 @@ private:
   /// Emits a diagnostic and a note if the token is not found.
   /// \param the SourceLoc of the left matching token
   /// \param the kind of the right matching token (RParen, RCurly or RSquare)
+  /// \param customErr if a custom diagnostic is provided, it'll be used
+  ///                  instead of the default error message.
   /// \returns a valid SourceLoc on success, and invalid one on failure.
-  SourceLoc parseMatchingToken(SourceLoc lLoc, TokenKind kind);
+  SourceLoc parseMatchingToken(SourceLoc lLoc, TokenKind kind,
+                               Optional<TypedDiag<>> customErr = None);
 
   //===- Diagnostic Emission ----------------------------------------------===//
 
@@ -152,11 +155,6 @@ private:
            typename detail::PassArgument<Args>::type... args) {
     return diagEng.diagnose<Args...>(buffer, diag, args...);
   }
-
-  /// Emits a diagnostic about a missing ')', ']' or '}'
-  /// \param lParenLoc the SourceLoc of the opening paren
-  /// \param kind the kind of parenthese we expected
-  void diagnoseMissingRParen(SourceLoc lParenLoc, ParenKind kind);
 
   /// Emits a "expected" diagnostic.
   /// The diagnostic points at the beginning of the current token, or, if it's

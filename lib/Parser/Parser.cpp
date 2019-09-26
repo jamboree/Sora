@@ -24,11 +24,12 @@ Parser::Parser(ASTContext &ctxt, SourceFile &file)
 
 const Token &Parser::peek() const { return lexer.peek(); }
 
-SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind) {
-  auto doIt = [&](TypedDiag<> err, TypedDiag<> note) {
+SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
+                                     Optional<TypedDiag<>> customErr) {
+  auto doIt = [&](TypedDiag<> defaultErr, TypedDiag<> note) {
     SourceLoc loc = consumeIf(kind);
     if (!loc) {
-      diagnoseExpected(err);
+      diagnoseExpected(customErr ? *customErr : defaultErr);
       diagnose(lLoc, note);
     }
     return loc;
