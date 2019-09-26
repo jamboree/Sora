@@ -214,8 +214,7 @@ bool CompilerInstance::doParsing(SourceFile &file) {
   assert(astContext && "No ASTContext?");
   Parser parser(*astContext, file);
   parser.parseSourceFile();
-  if (options.dumpParse) {
-    // TODO
-  }
+  if (options.dumpParse)
+    file.dump(llvm::outs());
   return true;
 }
