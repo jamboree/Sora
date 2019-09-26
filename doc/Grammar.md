@@ -96,7 +96,7 @@ type = identifier
      | maybe-type 
  
 array-type = '[' type (';' expr)? ']'
-tuple-type = '(' type (',' type)* ')'
+tuple-type = '(' (type (',' type)*)? ')'
 reference-or-pointer-type = ('&' | '*') "mut"? type
 maybe-type = "maybe" type
 
