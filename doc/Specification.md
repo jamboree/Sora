@@ -188,7 +188,7 @@ This allows Sora to provides strong, yet simple immutability guarantees *in the 
 | 10         | Bitwise OR: <code>&#124;</code>                                                   | left-to-right |
 | 11         | Logical AND: `&&`                                                                 | left-to-right |
 | 12         | Logical OR: <code>&#124;&#124;</code>                                             | left-to-right |
-| 13         | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, `|=`, `^=`, `<<=` and `>>=` | right-to-left |
+| 13         | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, <code>&#124;=</code>, `^=`, `<<=` and `>>=` | right-to-left |
 
 #### Binary Operators
 ```
