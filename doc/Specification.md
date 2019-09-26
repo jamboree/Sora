@@ -174,6 +174,7 @@ This allows Sora to provides strong, yet simple immutability guarantees *in the 
 
 ### Operators
 
+#### Precedence Rules
 | Precedence | Operators                                                                         | Associativity |
 |------------|-----------------------------------------------------------------------------------|---------------|
 | 1          | Function call: `()`<br> Array Subscript: `[]`<br>Member access: `.`, `->`         | left-to-right |
@@ -184,7 +185,10 @@ This allows Sora to provides strong, yet simple immutability guarantees *in the 
 | 6          | Addition `+` and Substraction `-`                                                 | left-to-right |
 | 7          | Relational operators: `==`, `!=`, `<`, `<=`, `>` and `>=`                         | left-to-right |
 | 8          | Logical AND `&&` and OR <code>&#124;&#124;</code>                                 | left-to-right |
-| 9          | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, <code>&#124;=</code>, `^=`, `<<=` and `>>=` | right-to-left |
+| 9          | "Ternary" operator: `?:`                                                          | right-to-left |
+| 10          | Assignement: `=`, `+=`, `-=`, `/=`, `*=`, `%=`, `&=`, <code>&#124;=</code>, `^=`, `<<=` and `>>=` | right-to-left |
+
+These precedence rules are inspired by [C3's](https://c3lang.github.io/c3docs/precedence/).
 
 #### Binary Operators
 ```
