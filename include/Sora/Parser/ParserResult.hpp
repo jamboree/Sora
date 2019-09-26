@@ -11,10 +11,11 @@
 
 namespace sora {
 template <typename T> class ParserResult final {
-  /// The Result + a flag indicating if it's an error result.
-  llvm::PointerIntPair<T *, 1> resultAndIsSuccess;
+  /// The Result + a flag indicating if there was a parsing error.
+  llvm::PointerIntPair<T *, 1> resultAndIsParseError;
 
-  ParserResult(T *ptr, bool isSucccess) : resultAndIsSuccess(ptr, isSucccess) {}
+  ParserResult(T *ptr, bool isParseError)
+      : resultAndIsParseError(ptr, isParseError) {}
 
 public:
   /// Constructor to allow implict upcast, e.g. cast a ParserResult<BinaryExpr>
@@ -22,22 +23,24 @@ public:
   template <typename U, typename = typename std::enable_if<
                             std::is_base_of<T, U>::value, U>::type>
   ParserResult(ParserResult<U> &&derived)
-      : ParserResult(derived.getOrNull(), derived.isSuccess()) {}
-  // Constructor for error parser results
-  ParserResult(std::nullptr_t) : ParserResult(nullptr, false) {}
+      : ParserResult(derived.getOrNull(), derived.isParseError()) {}
+  // Constructor for parsing errors with no node returned.
+  ParserResult(std::nullptr_t) : ParserResult(nullptr, true) {}
   /// Constructor for successful parser results. \p result cannot be nullptr.
-  explicit ParserResult(T *result) : ParserResult(result, true) {
+  explicit ParserResult(T *result) : ParserResult(result, false) {
     assert(result && "Successful Parser Results can't be nullptr!");
   }
 
-  /// Sets the "error" flag to nullptr.
-  void setIsError() { resultAndIsSuccess.setInt(false); }
+  /// Sets the "isParseError" flag to \p value
+  void setIsParseError(bool value = true) {
+    resultAndIsParseError.setInt(value);
+  }
   /// \returns true if this represents a parsing error
-  bool isError() const { return !isSuccess(); }
-  /// \returns true if this represents a parsing success
-  bool isSuccess() const { return resultAndIsSuccess.getInt(); }
+  bool isParseError() const { return resultAndIsParseError.getInt(); }
 
-  /// \returns true if this ParserResult has a null result
+  /// \returns true if this ParserResult has a value
+  bool hasValue() const { return !isNull(); }
+  /// \returns true if this ParserResult has no value
   bool isNull() const { return getOrNull() == nullptr; }
 
   /// \returns the result (can't be nullptr)
@@ -48,10 +51,7 @@ public:
   }
 
   /// \returns the result or nullptr (if error)
-  T *getOrNull() const { return resultAndIsSuccess.getPointer(); }
-
-  /// \returns isSuccess()
-  explicit operator bool() const { return isSuccess(); }
+  T *getOrNull() const { return resultAndIsParseError.getPointer(); }
 };
 
 /// Creates a successful parser result
@@ -66,7 +66,7 @@ static inline ParserResult<T> makeParserErrorResult(T *result) {
   if (!result)
     return ParserResult<T>(nullptr);
   ParserResult<T> pr(result);
-  pr.setIsError();
+  pr.setIsParseError();
   return pr;
 }
 } // namespace sora

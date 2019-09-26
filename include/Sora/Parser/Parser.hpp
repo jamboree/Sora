@@ -19,6 +19,7 @@ class ASTContext;
 class BlockStmt;
 class Decl;
 class DeclContext;
+class Expr;
 class FuncDecl;
 class Identifier;
 class Lexer;
@@ -49,11 +50,13 @@ public:
   /// The current DeclContext
   DeclContext *declContext = nullptr;
 
-  llvm::SaveAndRestore<DeclContext*> setDeclContextRAII(DeclContext* newDC) {
+  llvm::SaveAndRestore<DeclContext *> setDeclContextRAII(DeclContext *newDC) {
     return {declContext, newDC};
   }
 
 private:
+  enum class ParenKind : uint8_t { Paren, Curly, Square };
+
   /// Our lexer instance
   Lexer lexer;
 
@@ -74,7 +77,7 @@ private:
   ParserResult<ParamDecl> parseParamDecl();
 
   /// Parses a parameter-declaration-list
-  /// The parser must be positioned on the first "("
+  /// The parser must be positioned on the "("
   ParserResult<ParamList> parseParamDeclList();
 
   /// Parses a function-declaration.
@@ -87,21 +90,42 @@ private:
   bool isStartOfStmt() const;
 
   /// Parses a block-statement
-  /// The parser must be positioned on the first "{"
+  /// The parser must be positioned on the "{"
   ParserResult<BlockStmt> parseBlockStmt();
 
   //===- Expression Parsing -----------------------------------------------===//
 
-  // TODO
+  ParserResult<Expr> parseExpr(const std::function<void()> &onNoExpr);
 
   //===- Type Parsing -----------------------------------------------------===//
 
   /// Parses a type. Calls \p onNoType if no type was found.
-  ParserResult<TypeRepr> parseType(std::function<void()> onNoType);
+  ParserResult<TypeRepr> parseType(const std::function<void()> &onNoType);
+
+  /// Parses a tuple type.
+  /// The parser must be positioned on the "("
+  ParserResult<TypeRepr> parseTupleType();
+
+  /// Parses an array type.
+  /// The parser must be positioned on the "["
+  ParserResult<TypeRepr> parseArrayType();
+
+  /// Parses a reference or pointer type.
+  /// The parser must be positioned on the "&" or "*"
+  ParserResult<TypeRepr> parseReferenceOrPointerType();
 
   //===- Pattern Parsing --------------------------------------------------===//
 
   // TODO
+
+  //===- Other Parsing Utilities ------------------------------------------===//
+
+  /// Parses a matching token (parentheses or square/curly brackets).
+  /// Emits a diagnostic and a note if the token is not found.
+  /// \param the SourceLoc of the left matching token
+  /// \param the kind of the right matching token (RParen, RCurly or RSquare)
+  /// \returns a valid SourceLoc on success, and invalid one on failure.
+  SourceLoc parseMatchingToken(SourceLoc lLoc, TokenKind kind);
 
   //===- Diagnostic Emission ----------------------------------------------===//
 
@@ -128,6 +152,11 @@ private:
            typename detail::PassArgument<Args>::type... args) {
     return diagEng.diagnose<Args...>(buffer, diag, args...);
   }
+
+  /// Emits a diagnostic about a missing ')', ']' or '}'
+  /// \param lParenLoc the SourceLoc of the opening paren
+  /// \param kind the kind of parenthese we expected
+  void diagnoseMissingRParen(SourceLoc lParenLoc, ParenKind kind);
 
   /// Emits a "expected" diagnostic.
   /// The diagnostic points at the beginning of the current token, or, if it's
@@ -185,13 +214,11 @@ private:
   /// Skips until the next token of kind \p kind without consuming it.
   void skipUntil(TokenKind kind);
 
-  /// Skips to the next Decl or }
-  /// \returns true if the current token begins a statement.
-  bool skipUntilDeclRCurly();
+  /// Skips to the next \p tok, Decl or }
+  void skipUntilDeclRCurly(TokenKind tok = TokenKind::Invalid);
 
-  /// Skips to the next Decl, Stmt or }
-  /// \returns true if the current token begins a declaration.
-  bool skipUntilDeclStmtRCurly();
+  /// Skips to the next \p tok, Decl, Stmt or }
+  void skipUntilDeclStmtRCurly(TokenKind tok = TokenKind::Invalid);
 
   //===- Miscellaneous ----------------------------------------------------===//
 

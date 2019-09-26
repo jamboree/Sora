@@ -37,11 +37,11 @@ void Parser::parseSourceFile() {
       continue;
     }
     auto result = parseFuncDecl();
-    if (result) {
-      sourceFile.addMember(result.get());
+    if (result.isNull()) {
+      skipUntil(TokenKind::FuncKw);
       continue;
     }
-    skipUntil(TokenKind::FuncKw);
+    sourceFile.addMember(result.get());
   }
 }
 
@@ -76,10 +76,10 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   // parameter-declaration-list
   ParamList *paramList = nullptr;
   if (tok.is(TokenKind::LParen)) {
-    if (auto paramListResult = parseParamDeclList())
-      paramList = paramListResult.get();
-    else
+    auto paramListResult = parseParamDeclList();
+    if (paramListResult.isNull())
       return nullptr;
+    paramList = paramListResult.get();
   }
   else {
     diagnoseExpected(diag::expected_lparen_in_fn_arg_list);
@@ -91,10 +91,9 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   if (consumeIf(TokenKind::Arrow)) {
     auto result =
         parseType([&]() { diagnoseExpected(diag::expected_fn_ret_ty); });
-    if (result)
-      retTL = TypeLoc(result.get());
-    else
+    if (result.isNull())
       return nullptr;
+    retTL = TypeLoc(result.get());
   }
 
   auto node = new (ctxt)
@@ -105,10 +104,10 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
     // Set the DeclContext for the parsing of the body.
     auto bodyDC = setDeclContextRAII(node);
     // Parse the body
-    if (auto result = parseBlockStmt())
-      node->setBody(result.get());
-    else
+    auto result = parseBlockStmt();
+    if (result.isNull())
       return nullptr;
+    node->setBody(result.get());
   }
   else {
     diagnoseExpected(diag::expected_lcurly_fn_body);

@@ -24,8 +24,30 @@ Parser::Parser(ASTContext &ctxt, SourceFile &file)
 
 const Token &Parser::peek() const { return lexer.peek(); }
 
+SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind) {
+  auto doIt = [&](TypedDiag<> err, TypedDiag<> note) {
+    SourceLoc loc = consumeIf(kind);
+    if (!loc) {
+      diagnoseExpected(err);
+      diagnose(lLoc, note);
+    }
+    return loc;
+  };
+
+  switch (kind) {
+  default:
+    llvm_unreachable("unknown matching token");
+  case TokenKind::RParen:
+    return doIt(diag::expected_rparen, diag::to_match_lparen);
+  case TokenKind::RCurly:
+    return doIt(diag::expected_rcurly, diag::to_match_lcurly);
+  case TokenKind::RSquare:
+    return doIt(diag::expected_rsquare, diag::to_match_lsquare);
+  }
+}
+
 SourceLoc Parser::consumeToken() {
-  assert(tok.getKind() != TokenKind::EndOfFile && "Consuming EOF!");
+  assert(tok.isNot(TokenKind::EndOfFile) && "Consuming EOF!");
   SourceLoc loc = tok.getLoc();
   prevTokPastTheEnd = tok.getCharRange().getEnd();
   tok = lexer.lex();
@@ -62,28 +84,23 @@ void Parser::skip() {
 }
 
 void Parser::skipUntil(TokenKind kind) {
-  while (tok.isNot(kind) && tok.isNot(TokenKind::EndOfFile))
+  while (tok.isNot(kind, TokenKind::EndOfFile))
     skip();
 }
 
-bool Parser::skipUntilDeclRCurly() {
-  while (tok.isNot(TokenKind::EndOfFile)) {
-    if (isStartOfDecl())
-      return true;
-    if (tok.is(TokenKind::RCurly))
-      return false;
+void Parser::skipUntilDeclRCurly(TokenKind kind) {
+  while (!isEOF()) {
+    if (isStartOfDecl() || tok.isAny(kind, TokenKind::RCurly))
+      return;
+    skip();
   }
-  return false;
 }
 
-bool Parser::skipUntilDeclStmtRCurly() {
-  while (tok.isNot(TokenKind::EndOfFile)) {
-    if (isStartOfDecl())
-      return true;
-    if (isStartOfStmt())
-      return true;
-    if (tok.is(TokenKind::RCurly))
-      return false;
+void Parser::skipUntilDeclStmtRCurly(TokenKind kind) {
+  while (!isEOF()) {
+    if (isStartOfDecl() || isStartOfStmt() ||
+        tok.isAny(kind, TokenKind::RCurly))
+      return;
+    skip();
   }
-  return false;
 }
