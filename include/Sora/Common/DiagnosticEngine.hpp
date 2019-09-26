@@ -82,7 +82,7 @@ template <typename Ty> struct DiagnosticArgumentFormatter {
   }
 SIMPLE_DAF_IMPL(unsigned, unsigned, { return std::to_string(value); });
 SIMPLE_DAF_IMPL(int, int, { return std::to_string(value); });
-SIMPLE_DAF_IMPL(char, char, { return std::to_string(value); });
+SIMPLE_DAF_IMPL(char, char, { return std::string(1, value); });
 SIMPLE_DAF_IMPL(StringRef, StringRef, { return value.str(); });
 SIMPLE_DAF_IMPL(std::string, const std::string &, { return value; });
 #undef SIMPLE_DAF_IMPL
