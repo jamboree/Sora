@@ -280,7 +280,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
     }
 
     // Visit the node's children.
-    visit(paramList);
+    visitParamList(paramList);
 
     // Call walkToParamListPost and handle the result
     if (!stopped)

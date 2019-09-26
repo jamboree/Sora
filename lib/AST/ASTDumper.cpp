@@ -177,6 +177,10 @@ public:
     node ? ASTVisitor::visit(node) : printNoNode();
   }
 
+  void visit(ParamList* paramList) {
+    paramList ? visitParamList(paramList) : printNoNode();
+  }
+
   /// Provide an alternative visit entry point that only visits the node if
   /// it's non-null, else it ignores it.
   template <typename T> void visitIf(T node) {

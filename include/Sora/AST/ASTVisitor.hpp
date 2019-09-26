@@ -102,13 +102,6 @@ public:
     }
   };
 
-  void visit(ParamList *paramList, Args... args) {
-    return static_cast<Derived *>(this)->visitParamList(
-        paramList, ::std::forward<Args>(args)...);
-  }
-
-  void visitParamList(ParamList *paramList) {}
-
   // Add default implementations that chain back to their base class, so we
   // require full coverage of the AST by visitors but we also allow them to
   // visit only a common base (like ValueDecl) and handle all derived classes.
