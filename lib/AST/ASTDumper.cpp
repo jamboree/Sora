@@ -5,6 +5,7 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
+#include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
@@ -177,7 +178,7 @@ public:
     node ? ASTVisitor::visit(node) : printNoNode();
   }
 
-  void visit(ParamList* paramList) {
+  void visit(ParamList *paramList) {
     paramList ? visitParamList(paramList) : printNoNode();
   }
 
@@ -425,11 +426,8 @@ public:
 };
 } // namespace
 
-
-
-void Decl::dump(raw_ostream &out, const SourceManager &srcMgr,
-                unsigned indent) const {
-  Dumper(out, srcMgr, indent).visit(const_cast<Decl*>(this));
+void Decl::dump(raw_ostream &out, unsigned indent) const {
+  Dumper(out, getASTContext().srcMgr, indent).visit(const_cast<Decl *>(this));
 }
 
 void Expr::dump(raw_ostream &out, const SourceManager &srcMgr,
