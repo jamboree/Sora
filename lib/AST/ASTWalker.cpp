@@ -82,7 +82,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       expr->setBase(base);
   }
 
-  void visitTupleIndexingExpr(TupleIndexingExpr *expr) {
+  void visitTupleElementExpr(TupleElementExpr *expr) {
     if (Expr *base = doIt(expr->getBase()))
       expr->setBase(base);
   }

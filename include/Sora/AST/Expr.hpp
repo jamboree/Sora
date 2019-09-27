@@ -375,20 +375,17 @@ public:
   }
 };
 
-/// Represents a tuple indexing expression (base.index)
+/// Represents an expression that refers to an element of a tuple
 ///
 /// e.g. tuple.0, (0, 1, 2).2, etc.
-///
-/// The base (the tuple) can be any expression, and the index is always an
-/// IntegerLiteralExpr (of type usize).
-class TupleIndexingExpr final : public Expr {
+class TupleElementExpr final : public Expr {
   Expr *base;
   SourceLoc dotLoc, indexLoc;
 
 public:
-  TupleIndexingExpr(Expr *base, SourceLoc dotLoc, SourceLoc indexLoc,
+  TupleElementExpr(Expr *base, SourceLoc dotLoc, SourceLoc indexLoc,
                     unsigned index)
-      : Expr(ExprKind::TupleIndexing), base(base), dotLoc(dotLoc),
+      : Expr(ExprKind::TupleElement), base(base), dotLoc(dotLoc),
         indexLoc(indexLoc) {
     bits.tupleIndexingExpr.index = index;
   }
@@ -409,7 +406,7 @@ public:
   SourceLoc getLoc() const { return dotLoc; }
 
   static bool classof(const Expr *expr) {
-    return expr->getKind() == ExprKind::TupleIndexing;
+    return expr->getKind() == ExprKind::TupleElement;
   }
 };
 

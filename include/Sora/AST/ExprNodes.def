@@ -40,7 +40,7 @@ ABSTRACT_EXPR(AnyLiteral, Expr)
 
 EXPR(Error, Expr)
 
-EXPR(TupleIndexing, Expr)
+EXPR(TupleElement, Expr)
 EXPR(Tuple, Expr)
 EXPR(Paren, Expr)
 

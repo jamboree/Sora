@@ -33,8 +33,7 @@ protected:
     booleanLiteralExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLiteralExpr = new (*ctxt) NullLiteralExpr(beg);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
-    tupleIndexingExpr = new (*ctxt)
-        TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), mid, end, 0);
+    tupleElementExpr = new (*ctxt) TupleElementExpr(new (*ctxt) DiscardExpr(beg), mid, end, 0);
     tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
     parenExpr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
     callExpr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
@@ -60,7 +59,7 @@ protected:
   Expr *booleanLiteralExpr;
   Expr *nullLiteralExpr;
   Expr *errorExpr;
-  Expr *tupleIndexingExpr;
+  Expr *tupleElementExpr;
   Expr *tupleExpr;
   Expr *parenExpr;
   Expr *callExpr;
@@ -84,7 +83,7 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<NullLiteralExpr>(nullLiteralExpr));
   EXPECT_TRUE(isa<AnyLiteralExpr>(nullLiteralExpr));
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
-  EXPECT_TRUE(isa<TupleIndexingExpr>(tupleIndexingExpr));
+  EXPECT_TRUE(isa<TupleElementExpr>(tupleElementExpr));
   EXPECT_TRUE(isa<TupleExpr>(tupleExpr));
   EXPECT_TRUE(isa<ParenExpr>(parenExpr));
   EXPECT_TRUE(isa<CallExpr>(callExpr));
@@ -141,11 +140,11 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(end, errorExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), errorExpr->getSourceRange());
 
-  // TupleIndexingExpr
-  EXPECT_EQ(beg, tupleIndexingExpr->getBegLoc());
-  EXPECT_EQ(end, tupleIndexingExpr->getEndLoc());
-  EXPECT_EQ(mid, tupleIndexingExpr->getLoc());
-  EXPECT_EQ(SourceRange(beg, end), tupleIndexingExpr->getSourceRange());
+  // TupleElementExpr
+  EXPECT_EQ(beg, tupleElementExpr->getBegLoc());
+  EXPECT_EQ(end, tupleElementExpr->getEndLoc());
+  EXPECT_EQ(mid, tupleElementExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), tupleElementExpr->getSourceRange());
 
   // TupleExpr
   EXPECT_EQ(beg, tupleExpr->getBegLoc());
