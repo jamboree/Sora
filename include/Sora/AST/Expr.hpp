@@ -47,17 +47,20 @@ class alignas(ExprAlignement) Expr {
     char raw[7];
     // UnresolvedMemberAccessExpr bits
     struct {
+      // whether the operator used was the '->' operator
       bool isArrow;
     } unresolvedMemberAccessExpr;
     // BooleanLiteralExpr bits
     struct {
       bool value;
     } booleanLiteralExpr;
-    /// TupleIndexingExpr bits
+    /// TupleElementExpr bits
     struct {
+      // whether the operator used was the '->' operator
+      bool isArrow;
       // the index of the element in the tuple
       unsigned index;
-    } tupleIndexingExpr;
+    } tupleElementExpr;
     /// TupleExpr bits
     struct {
       uint32_t numElements;
@@ -191,15 +194,14 @@ public:
 /// \endverbatim
 class UnresolvedMemberAccessExpr final : public UnresolvedExpr {
   Expr *base = nullptr;
-  SourceLoc dotLoc, memberIdentLoc;
+  SourceLoc opLoc, memberIdentLoc;
   Identifier memberIdent;
 
 public:
-  UnresolvedMemberAccessExpr(Expr *base, SourceLoc dotLoc, bool isArrow,
+  UnresolvedMemberAccessExpr(Expr *base, SourceLoc opLoc, bool isArrow,
                              SourceLoc memberIdentLoc, Identifier memberIdent)
       : UnresolvedExpr(ExprKind::UnresolvedMemberAccess), base(base),
-        dotLoc(dotLoc), memberIdentLoc(memberIdentLoc),
-        memberIdent(memberIdent) {
+        opLoc(opLoc), memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
     bits.unresolvedMemberAccessExpr.isArrow = isArrow;
   }
 
@@ -207,7 +209,7 @@ public:
   void setBase(Expr *expr) { base = expr; }
 
   /// \returns the SourceLoc of the '.' or '->'
-  SourceLoc getOpLoc() const { return dotLoc; }
+  SourceLoc getOpLoc() const { return opLoc; }
 
   /// \returns true if the operator used was '->', false if it was '.'
   bool isArrow() const { return bits.unresolvedMemberAccessExpr.isArrow; }
@@ -219,7 +221,7 @@ public:
 
   SourceLoc getBegLoc() const { return base->getBegLoc(); }
   SourceLoc getEndLoc() const { return memberIdentLoc; }
-  SourceLoc getLoc() const { return dotLoc; }
+  SourceLoc getLoc() const { return opLoc; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::UnresolvedMemberAccess;
@@ -395,30 +397,36 @@ public:
 /// e.g. tuple.0, (0, 1, 2).2, etc.
 class TupleElementExpr final : public Expr {
   Expr *base;
-  SourceLoc dotLoc, indexLoc;
+  SourceLoc opLoc, indexLoc;
 
 public:
-  TupleElementExpr(Expr *base, SourceLoc dotLoc, SourceLoc indexLoc,
-                   unsigned index)
-      : Expr(ExprKind::TupleElement), base(base), dotLoc(dotLoc),
+  TupleElementExpr(Expr *base, SourceLoc opLoc, bool isArrow,
+                   SourceLoc indexLoc, unsigned index)
+      : Expr(ExprKind::TupleElement), base(base), opLoc(opLoc),
         indexLoc(indexLoc) {
-    bits.tupleIndexingExpr.index = index;
+    bits.tupleElementExpr.index = index;
   }
 
   Expr *getBase() const { return base; }
   void setBase(Expr *base) { this->base = base; }
 
-  unsigned getIndex() const { return bits.tupleIndexingExpr.index; }
+  unsigned getIndex() const { return bits.tupleElementExpr.index; }
   SourceLoc getIndexLoc() const { return indexLoc; }
 
-  SourceLoc getDotLoc() const { return dotLoc; }
+  /// \returns the SourceLoc of the '.' or '->'
+  SourceLoc getOpLoc() const { return opLoc; }
+
+  /// \returns true if the operator used was '->', false if it was '.'
+  bool isArrow() const { return bits.tupleElementExpr.isArrow; }
+  /// \returns true if the operator used was '.', false if it was '->'
+  bool isDot() const { return !isArrow(); }
 
   SourceLoc getBegLoc() const {
     assert(base && "no base expr");
     return base->getBegLoc();
   }
   SourceLoc getEndLoc() const { return indexLoc; }
-  SourceLoc getLoc() const { return dotLoc; }
+  SourceLoc getLoc() const { return opLoc; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::TupleElement;
