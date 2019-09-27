@@ -26,7 +26,7 @@ protected:
     // Setup nodes
     unresolvedDeclRefExpr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
     unresolvedMemberAccessExpr = new (*ctxt)
-        UnresolvedMemberAccessExpr(unresolvedDeclRefExpr, mid, end, {});
+        UnresolvedMemberAccessExpr(unresolvedDeclRefExpr, mid, false, end, {});
     discardExpr = new (*ctxt) DiscardExpr(beg);
     integerLiteralExpr = new (*ctxt) IntegerLiteralExpr("0", beg);
     floatLiteralExpr = new (*ctxt) FloatLiteralExpr("0", beg);

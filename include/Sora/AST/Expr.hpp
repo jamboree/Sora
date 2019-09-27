@@ -45,6 +45,10 @@ class alignas(ExprAlignement) Expr {
     Bits() : raw() {}
     // Raw bits (to zero-init the union)
     char raw[7];
+    // UnresolvedMemberAccessExpr bits
+    struct {
+      bool isArrow;
+    } unresolvedMemberAccessExpr;
     // BooleanLiteralExpr bits
     struct {
       bool value;
@@ -182,6 +186,8 @@ public:
 /// \verbatim
 ///   foo.bar
 ///   foo.0
+///   foo->bar
+///   foo->0
 /// \endverbatim
 class UnresolvedMemberAccessExpr final : public UnresolvedExpr {
   Expr *base = nullptr;
@@ -189,16 +195,24 @@ class UnresolvedMemberAccessExpr final : public UnresolvedExpr {
   Identifier memberIdent;
 
 public:
-  UnresolvedMemberAccessExpr(Expr *base, SourceLoc dotLoc,
+  UnresolvedMemberAccessExpr(Expr *base, SourceLoc dotLoc, bool isArrow,
                              SourceLoc memberIdentLoc, Identifier memberIdent)
       : UnresolvedExpr(ExprKind::UnresolvedMemberAccess), base(base),
         dotLoc(dotLoc), memberIdentLoc(memberIdentLoc),
-        memberIdent(memberIdent) {}
+        memberIdent(memberIdent) {
+    bits.unresolvedMemberAccessExpr.isArrow = isArrow;
+  }
 
   Expr *getBase() const { return base; }
   void setBase(Expr *expr) { base = expr; }
 
-  SourceLoc getDotLoc() const { return dotLoc; }
+  /// \returns the SourceLoc of the '.' or '->'
+  SourceLoc getOpLoc() const { return dotLoc; }
+
+  /// \returns true if the operator used was '->', false if it was '.'
+  bool isArrow() const { return bits.unresolvedMemberAccessExpr.isArrow; }
+  /// \returns true if the operator used was '.', false if it was '->'
+  bool isDot() const { return !isArrow(); }
 
   SourceLoc getMemberIdentifierLoc() const { return memberIdentLoc; }
   Identifier getMemberIdentifier() const { return memberIdent; }
