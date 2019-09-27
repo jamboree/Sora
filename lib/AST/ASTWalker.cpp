@@ -77,10 +77,14 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   TRIVIAL_VISIT(AnyLiteralExpr)
   TRIVIAL_VISIT(ErrorExpr)
 
+  void visitUnresolvedDotExpr(UnresolvedDotExpr *expr) {
+    if (Expr *base = doIt(expr->getBase()))
+      expr->setBase(base);
+  }
+
   void visitTupleIndexingExpr(TupleIndexingExpr *expr) {
     if (Expr *base = doIt(expr->getBase()))
-      if (Expr *base = doIt(expr->getBase()))
-        expr->setBase(base);
+      expr->setBase(base);
     if (auto idx = dyn_cast_or_null<IntegerLiteralExpr>(doIt(expr->getIndex())))
       expr->setIndex(idx);
   }

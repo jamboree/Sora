@@ -160,15 +160,47 @@ public:
       : UnresolvedExpr(ExprKind::UnresolvedDeclRef), ident(ident),
         identLoc(identLoc) {}
 
-  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return identLoc; }
-  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return identLoc; }
 
   Identifier getIdentifier() const { return ident; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::UnresolvedDeclRef;
+  }
+};
+
+/// Represents an unresolved member access on an expression.
+///
+/// \verbatim
+///   foo.bar
+///   foo.0
+/// \endverbatim
+class UnresolvedDotExpr final : public UnresolvedExpr {
+  Expr *base = nullptr;
+  SourceLoc dotLoc, memberIdentLoc;
+  Identifier memberIdent;
+
+public:
+  UnresolvedDotExpr(Expr *base, SourceLoc dotLoc, SourceLoc memberIdentLoc,
+                    Identifier memberIdent)
+      : UnresolvedExpr(ExprKind::UnresolvedDot), base(base), dotLoc(dotLoc),
+        memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {}
+
+  Expr *getBase() const { return base; }
+  void setBase(Expr *expr) { base = expr; }
+
+  SourceLoc getDotLoc() const { return dotLoc; }
+
+  SourceLoc getMemberIdentifierLoc() const { return memberIdentLoc; }
+  Identifier getMemberIdentifier() const { return memberIdent; }
+
+  SourceLoc getBegLoc() const { return base->getBegLoc(); }
+  SourceLoc getEndLoc() const { return memberIdentLoc; }
+  SourceLoc getLoc() const { return dotLoc; }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::UnresolvedDot;
   }
 };
 

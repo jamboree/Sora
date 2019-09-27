@@ -25,6 +25,8 @@ protected:
     end = SourceLoc::fromPointer(str + 10);
     // Setup nodes
     unresolvedDeclRefExpr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
+    unresolvedDotExpr =
+        new (*ctxt) UnresolvedDotExpr(unresolvedDeclRefExpr, mid, end, {});
     discardExpr = new (*ctxt) DiscardExpr(beg);
     integerLiteralExpr = new (*ctxt) IntegerLiteralExpr("0", beg);
     floatLiteralExpr = new (*ctxt) FloatLiteralExpr("0", beg);
@@ -52,6 +54,7 @@ protected:
   SourceLoc beg, mid, end;
 
   Expr *unresolvedDeclRefExpr;
+  Expr *unresolvedDotExpr;
   Expr *discardExpr;
   Expr *integerLiteralExpr;
   Expr *floatLiteralExpr;
@@ -70,6 +73,8 @@ protected:
 TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<UnresolvedDeclRefExpr>(unresolvedDeclRefExpr));
   EXPECT_TRUE(isa<UnresolvedExpr>(unresolvedDeclRefExpr));
+  EXPECT_TRUE(isa<UnresolvedDotExpr>(unresolvedDotExpr));
+  EXPECT_TRUE(isa<UnresolvedExpr>(unresolvedDotExpr));
   EXPECT_TRUE(isa<DiscardExpr>(discardExpr));
   EXPECT_TRUE(isa<IntegerLiteralExpr>(integerLiteralExpr));
   EXPECT_TRUE(isa<AnyLiteralExpr>(integerLiteralExpr));
@@ -94,6 +99,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(beg, unresolvedDeclRefExpr->getLoc());
   EXPECT_EQ(beg, unresolvedDeclRefExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, beg), unresolvedDeclRefExpr->getSourceRange());
+
+  // UnresolvedDotExpr 
+  EXPECT_EQ(beg, unresolvedDotExpr->getBegLoc());
+  EXPECT_EQ(end, unresolvedDotExpr->getEndLoc());
+  EXPECT_EQ(mid, unresolvedDotExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), unresolvedDotExpr->getSourceRange());
 
   // DiscardExpr
   EXPECT_EQ(beg, discardExpr->getBegLoc());
