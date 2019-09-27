@@ -183,16 +183,17 @@ public:
 ///   foo.bar
 ///   foo.0
 /// \endverbatim
-class UnresolvedDotExpr final : public UnresolvedExpr {
+class UnresolvedMemberAccessExpr final : public UnresolvedExpr {
   Expr *base = nullptr;
   SourceLoc dotLoc, memberIdentLoc;
   Identifier memberIdent;
 
 public:
-  UnresolvedDotExpr(Expr *base, SourceLoc dotLoc, SourceLoc memberIdentLoc,
-                    Identifier memberIdent)
-      : UnresolvedExpr(ExprKind::UnresolvedDot), base(base), dotLoc(dotLoc),
-        memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {}
+  UnresolvedMemberAccessExpr(Expr *base, SourceLoc dotLoc,
+                             SourceLoc memberIdentLoc, Identifier memberIdent)
+      : UnresolvedExpr(ExprKind::UnresolvedMemberAccess), base(base),
+        dotLoc(dotLoc), memberIdentLoc(memberIdentLoc),
+        memberIdent(memberIdent) {}
 
   Expr *getBase() const { return base; }
   void setBase(Expr *expr) { base = expr; }
@@ -207,7 +208,7 @@ public:
   SourceLoc getLoc() const { return dotLoc; }
 
   static bool classof(const Expr *expr) {
-    return expr->getKind() == ExprKind::UnresolvedDot;
+    return expr->getKind() == ExprKind::UnresolvedMemberAccess;
   }
 };
 
@@ -384,7 +385,7 @@ class TupleElementExpr final : public Expr {
 
 public:
   TupleElementExpr(Expr *base, SourceLoc dotLoc, SourceLoc indexLoc,
-                    unsigned index)
+                   unsigned index)
       : Expr(ExprKind::TupleElement), base(base), dotLoc(dotLoc),
         indexLoc(indexLoc) {
     bits.tupleIndexingExpr.index = index;

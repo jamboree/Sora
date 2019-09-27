@@ -21,8 +21,8 @@
 
 ABSTRACT_EXPR(Unresolved, Expr)
 	EXPR(UnresolvedDeclRef, UnresolvedExpr)
-	EXPR(UnresolvedDot, UnresolvedExpr)
-	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedDot)
+	EXPR(UnresolvedMemberAccess, UnresolvedExpr)
+	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedMemberAccess)
 
 
 // (TBA: For Sema)
