@@ -49,6 +49,11 @@ class alignas(ExprAlignement) Expr {
     struct {
       bool value;
     } booleanLiteralExpr;
+    /// TupleIndexingExpr bits
+    struct {
+      // the index of the element in the tuple
+      unsigned index;
+    } tupleIndexingExpr;
     /// TupleExpr bits
     struct {
       uint32_t numElements;
@@ -171,6 +176,8 @@ public:
 };
 
 /// Represents an unresolved member access on an expression.
+/// This represents both unresolved member accesses on struct, and unresolved
+/// tuple indexing. In both cases, the "RHS" is stored as an identifier.
 ///
 /// \verbatim
 ///   foo.bar
@@ -376,33 +383,29 @@ public:
 /// IntegerLiteralExpr (of type usize).
 class TupleIndexingExpr final : public Expr {
   Expr *base;
-  SourceLoc dotLoc;
-  IntegerLiteralExpr *index;
+  SourceLoc dotLoc, indexLoc;
 
 public:
-  TupleIndexingExpr(Expr *base, SourceLoc dotLoc, IntegerLiteralExpr *index)
+  TupleIndexingExpr(Expr *base, SourceLoc dotLoc, SourceLoc indexLoc,
+                    unsigned index)
       : Expr(ExprKind::TupleIndexing), base(base), dotLoc(dotLoc),
-        index(index) {}
+        indexLoc(indexLoc) {
+    bits.tupleIndexingExpr.index = index;
+  }
 
   Expr *getBase() const { return base; }
   void setBase(Expr *base) { this->base = base; }
 
-  IntegerLiteralExpr *getIndex() const { return index; }
-  void setIndex(IntegerLiteralExpr *index) { this->index = index; }
+  unsigned getIndex() const { return bits.tupleIndexingExpr.index; }
+  SourceLoc getIndexLoc() const { return indexLoc; }
 
   SourceLoc getDotLoc() const { return dotLoc; }
 
-  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const {
     assert(base && "no base expr");
     return base->getBegLoc();
   }
-  /// \returns the SourceLoc of the last token of the expression
-  SourceLoc getEndLoc() const {
-    assert(index && "no index expr");
-    return index->getEndLoc();
-  }
-  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getEndLoc() const { return indexLoc; }
   SourceLoc getLoc() const { return dotLoc; }
 
   static bool classof(const Expr *expr) {

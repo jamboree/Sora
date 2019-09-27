@@ -33,9 +33,8 @@ protected:
     booleanLiteralExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLiteralExpr = new (*ctxt) NullLiteralExpr(beg);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
-    tupleIndexingExpr =
-        new (*ctxt) TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), mid,
-                                      new (*ctxt) IntegerLiteralExpr("0", end));
+    tupleIndexingExpr = new (*ctxt)
+        TupleIndexingExpr(new (*ctxt) DiscardExpr(beg), mid, end, 0);
     tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
     parenExpr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
     callExpr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
@@ -100,7 +99,7 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(beg, unresolvedDeclRefExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, beg), unresolvedDeclRefExpr->getSourceRange());
 
-  // UnresolvedDotExpr 
+  // UnresolvedDotExpr
   EXPECT_EQ(beg, unresolvedDotExpr->getBegLoc());
   EXPECT_EQ(end, unresolvedDotExpr->getEndLoc());
   EXPECT_EQ(mid, unresolvedDotExpr->getLoc());

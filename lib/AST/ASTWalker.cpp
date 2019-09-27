@@ -85,8 +85,6 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   void visitTupleIndexingExpr(TupleIndexingExpr *expr) {
     if (Expr *base = doIt(expr->getBase()))
       expr->setBase(base);
-    if (auto idx = dyn_cast_or_null<IntegerLiteralExpr>(doIt(expr->getIndex())))
-      expr->setIndex(idx);
   }
 
   void visitTupleExpr(TupleExpr *expr) {
