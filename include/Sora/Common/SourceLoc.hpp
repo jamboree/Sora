@@ -149,7 +149,7 @@ public:
   /// \p end are located
   /// \param begin the begin location
   /// \param end the end location
-  CharSourceRange(SourceManager &srcMgr, SourceLoc begin, SourceLoc end);
+  CharSourceRange(const SourceManager &srcMgr, SourceLoc begin, SourceLoc end);
 
   /// \returns true if this CharSourceRange is valid
   bool isValid() const { return begin.isValid(); }
