@@ -39,17 +39,16 @@ void Token::dump(raw_ostream &out) const {
     out << " [startOfLine]";
 }
 
-void Lexer::init(StringRef str) {
-  curPtr = str.begin();
-  endPtr = str.end();
-  nextToken = Token();
-  // TODO: Skip UTF8 bom if present
-
-  // Lex the first token (so nextToken has a value)
+Lexer::Lexer(const SourceManager &srcMgr, BufferID buffer,
+             DiagnosticEngine *diagEng)
+    : srcMgr(srcMgr), diagEng(diagEng) {
+  // Init the pointers
+  StringRef str = srcMgr.getBufferStr(buffer);
+  begPtr = tokBegPtr = curPtr = str.data();
+  endPtr = (str.data() + str.size());
+  // Lex the first token
   lexImpl();
 }
-
-void Lexer::init(BufferID id) { init(srcMgr.getBufferStr(id)); }
 
 Token Lexer::lex() {
   auto tok = nextToken;

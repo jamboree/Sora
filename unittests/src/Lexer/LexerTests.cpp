@@ -5,8 +5,8 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 #include "llvm/Support/raw_ostream.h"
 
@@ -21,13 +21,15 @@ class LexerTest : public ::testing::Test {
 public:
   SourceManager srcMgr;
   DiagnosticEngine diagEngine{srcMgr, llvm::outs()};
-  Lexer lexer{srcMgr, &diagEngine};
   llvm::raw_string_ostream errStream{errStreamBuff};
 
   bool isDone = false;
 
-  void init(StringRef input) {
-    lexer.init(srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(input)));
+  /// Creates a lexer to lex \p input
+  Lexer createLexer(StringRef input) {
+    BufferID buffer =
+        srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(input));
+    return {srcMgr, buffer, &diagEngine};
   }
 
   void
@@ -39,7 +41,8 @@ public:
   /// \returns checks the next token, returns true on success and false
   /// on failure. In case of failure, the message can be found in
   /// "errStream.str()"
-  bool checkNext(TokenKind kind, StringRef str, bool startOfLine = false) {
+  bool checkNext(Lexer &lexer, TokenKind kind, StringRef str,
+                 bool startOfLine = false) {
     errStreamBuff.clear();
     Token token = lexer.lex();
     isDone = token.getKind() == TokenKind::EndOfFile;
@@ -63,10 +66,11 @@ public:
 } // namespace
 
 #define CHECK_NEXT(KIND, STR, SOL)                                             \
-  EXPECT_TRUE(checkNext(KIND, STR, SOL)) << errStream.str();                   \
+  EXPECT_TRUE(checkNext(lexer, KIND, STR, SOL)) << errStream.str();            \
   ASSERT_FALSE(isDone)
 #define CHECK_EOF()                                                            \
-  EXPECT_TRUE(checkNext(TokenKind::EndOfFile, "", false)) << errStream.str()
+  EXPECT_TRUE(checkNext(lexer, TokenKind::EndOfFile, "", false))               \
+      << errStream.str()
 
 TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
   const char *input = "do foo // this is a comment\n"
@@ -76,7 +80,7 @@ TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
                       "maybe mut null\n"
                       "return struct true type\n"
                       "_ while //goodbye";
-  init(input);
+  Lexer lexer = createLexer(input);
   // Test
   CHECK_NEXT(TokenKind::DoKw, "do", true);
   CHECK_NEXT(TokenKind::Identifier, "foo", false);
@@ -104,7 +108,7 @@ TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
 TEST_F(LexerTest, unknownTokens) {
   const char *input = u8"ê€";
 
-  init(input);
+  Lexer lexer = createLexer(input);
   CHECK_NEXT(TokenKind::Unknown, u8"ê", true);
   CHECK_NEXT(TokenKind::Unknown, u8"€", false);
   CHECK_EOF();
@@ -124,7 +128,7 @@ TEST_F(LexerTest, invalidUTF8) {
     ++diagCount;
   });
 
-  init(input);
+  Lexer lexer = createLexer(input);
   CHECK_NEXT(TokenKind::Unknown, "\xa0\xa1", true);
   CHECK_EOF();
 
@@ -147,7 +151,7 @@ TEST_F(LexerTest, incompleteUTF8) {
     ++diagCount;
   });
 
-  init(input);
+  Lexer lexer = createLexer(input);
   CHECK_NEXT(TokenKind::Unknown, "\xc3", true);
   CHECK_EOF();
 
@@ -160,7 +164,7 @@ TEST_F(LexerTest, punctuationAndOperators) {
   const char *input =
       "()[]{}/=/++=--=&&&=&**=%%=|||=|>>>=>>=><<<=<<=<:,.!!=^^=->~;";
 
-  init(input);
+  Lexer lexer = createLexer(input);
   CHECK_NEXT(TokenKind::LParen, "(", true);
   CHECK_NEXT(TokenKind::RParen, ")", false);
   CHECK_NEXT(TokenKind::LSquare, "[", false);
@@ -210,7 +214,7 @@ TEST_F(LexerTest, numbers) {
                       "0.0.0 9999999999\n"
                       "123456.123456";
 
-  init(input);
+  Lexer lexer = createLexer(input);
 #define CHECK_NEXT_INT(STR, SOL) CHECK_NEXT(TokenKind::IntegerLiteral, STR, SOL)
 #define CHECK_NEXT_FLT(STR, SOL)                                               \
   CHECK_NEXT(TokenKind::FloatingPointLiteral, STR, SOL)

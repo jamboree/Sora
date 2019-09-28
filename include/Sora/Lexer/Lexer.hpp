@@ -35,13 +35,8 @@ class BufferID;
 /// This allows us to have an efficient "peek" method.
 class Lexer {
 public:
-  Lexer(const SourceManager &srcMgr, DiagnosticEngine *diagEng)
-      : srcMgr(srcMgr), diagEng(diagEng) {}
-
-  /// Prepares the Lexer to lex the string \p str
-  void init(StringRef str);
-  /// Prepares the Lexer to lex the buffer \p id
-  void init(BufferID id);
+  Lexer(const SourceManager &srcMgr, BufferID buffer,
+        DiagnosticEngine *diagEng);
 
   /// Lex a token and return it.
   /// If we reached EOF, this will simply return the EOF token whenever
@@ -132,6 +127,7 @@ private:
   /// Whether the next token is at the start of a line.
   bool tokenIsAtStartOfLine = true;
 
+  const char *begPtr = nullptr;
   const char *tokBegPtr = nullptr;
   const char *curPtr = nullptr;
   const char *endPtr = nullptr;
