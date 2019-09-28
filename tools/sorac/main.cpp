@@ -5,7 +5,7 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/DiagnosticsCommon.hpp"
+#include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 #include "Sora/Common/InitLLVM.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"

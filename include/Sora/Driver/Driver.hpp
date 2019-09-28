@@ -12,9 +12,9 @@
 #pragma once
 
 #include "Sora/AST/ASTContext.hpp"
-#include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
 #include <memory>

@@ -5,9 +5,9 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/DiagnosticEngine.hpp"
-#include "Sora/Common/DiagnosticsCommon.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
@@ -16,13 +16,13 @@ namespace sora {
 // Define the DiagID enum.
 enum class DiagID : uint32_t {
 #define DIAG(KIND, ID, TEXT, SIGNATURE) ID,
-#include "Sora/Common/DiagnosticsAll.def"
+#include "Sora/Diagnostics/DiagnosticsAll.def"
 };
 // Define & Initialize all diagnostic objects
 namespace diag {
 #define DIAG(KIND, ID, TEXT, SIGNATURE)                                        \
   detail::TypedDiagHelper<void SIGNATURE>::type ID = {DiagID::ID};
-#include "Sora/Common/DiagnosticsAll.def"
+#include "Sora/Diagnostics/DiagnosticsAll.def"
 } // namespace diag
 } // namespace sora
 
@@ -36,7 +36,7 @@ struct DiagnosticData {
 /// Array containing information about every diagnostic.
 const constexpr DiagnosticData diagnosticData[] = {
 #define DIAG(KIND, ID, STRING, SIGNATURE) {STRING, DiagnosticKind::KIND},
-#include "Sora/Common/DiagnosticsAll.def"
+#include "Sora/Diagnostics/DiagnosticsAll.def"
 };
 
 /// \returns the raw, unformatted diagnostic string of a diagnostic

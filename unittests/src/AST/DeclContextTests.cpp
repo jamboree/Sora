@@ -9,8 +9,8 @@
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/DeclContext.hpp"
 #include "Sora/AST/SourceFile.hpp"
-#include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "gtest/gtest.h"
 
 using namespace sora;

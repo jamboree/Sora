@@ -5,7 +5,7 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/DiagnosticEngine.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 #include "llvm/Support/raw_ostream.h"

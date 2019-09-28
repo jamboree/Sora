@@ -5,7 +5,7 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/DiagnosticConsumer.hpp"
+#include "Sora/Diagnostics/DiagnosticConsumer.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"

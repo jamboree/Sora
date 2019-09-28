@@ -1,4 +1,4 @@
-//===--- DiagnosticsDriver.hpp - Driver Diagnostics -------------*- C++ -*-===//
+//===--- DiagnosticsLexer.hpp - Lexer Diagnostics ---------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include "Sora/Common/DiagnosticsCommon.hpp"
+#include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 
 namespace sora {
 namespace diag {
 #define DIAG(KIND, ID, TEXT, SIGNATURE)                                        \
   extern detail::TypedDiagHelper<void SIGNATURE>::type ID;
-#include "DiagnosticsDriver.def"
+#include "DiagnosticsLexer.def"
 } // namespace diag
 } // namespace sora

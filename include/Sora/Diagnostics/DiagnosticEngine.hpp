@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "Sora/Common/DiagnosticConsumer.hpp"
+#include "Sora/Diagnostics/DiagnosticConsumer.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"

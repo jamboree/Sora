@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Lexer/Lexer.hpp"
-#include "Sora/Common/DiagnosticsLexer.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticsLexer.hpp"
 #include "Sora/Lexer/Token.hpp"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"

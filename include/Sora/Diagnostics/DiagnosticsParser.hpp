@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "Sora/Common/DiagnosticsCommon.hpp"
+#include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 
 namespace sora {
 namespace diag {

@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include "Sora/Common/DiagnosticEngine.hpp"
-#include "Sora/Common/DiagnosticsParser.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
+#include "Sora/Diagnostics/DiagnosticsParser.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 #include "Sora/Parser/ParserResult.hpp"
 #include "llvm/ADT/Optional.h"

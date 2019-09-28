@@ -7,8 +7,8 @@
 
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/TypeRepr.hpp"
-#include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "gtest/gtest.h"
 
 using namespace sora;

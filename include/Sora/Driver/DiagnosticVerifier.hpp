@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include "Sora/Common/DiagnosticConsumer.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticConsumer.hpp"
 #include "llvm/ADT/StringMap.h"
 #include <list>
 #include <memory>

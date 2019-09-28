@@ -6,8 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/ASTContext.hpp"
-#include "Sora/Common/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 

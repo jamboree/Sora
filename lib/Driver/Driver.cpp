@@ -7,9 +7,9 @@
 
 #include "Sora/Driver/Driver.hpp"
 #include "Sora/AST/SourceFile.hpp"
-#include "Sora/Common/DiagnosticEngine.hpp"
-#include "Sora/Common/DiagnosticsDriver.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
+#include "Sora/Diagnostics/DiagnosticsDriver.hpp"
 #include "Sora/Driver/DiagnosticVerifier.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "Sora/Parser/Parser.hpp"
