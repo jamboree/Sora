@@ -47,12 +47,12 @@ type-declaration = "type" identifier "=" type
 
 function-declaration = "func" identifier parameter-declaration-list ("->" type)? block-statement // note: if the return type isn't present, the function returns void.
 parameter-declaration-list = '(' parameter-declaration (',' parameter-declaration)* ')'
-parameter-declaration = identifier type-annotation
+parameter-declaration = identifier ':' type
 
 let-declaration = "let" pattern-initializer
 
 // Patterns
-pattern = "mut"? (tuple-pattern | identifier-pattern | discard-pattern) type-annotation?
+pattern = "mut"? (tuple-pattern | identifier-pattern | discard-pattern) (':' type)?
 discard-pattern = '_'
 identifier-pattern = identifier
 tuple-pattern = '(' pattern (',' pattern)* ')'
@@ -99,8 +99,6 @@ array-type = '[' type (';' expr)? ']'
 tuple-type = '(' (type (',' type)*)? ')'
 reference-or-pointer-type = ('&' | '*') "mut"? type
 maybe-type = "maybe" type
-
-type-annotation = ':' type
 
 // Expressions
 binary-operator = '+' | '-' | '/' | '*' | '%'
