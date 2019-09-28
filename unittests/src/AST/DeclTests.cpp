@@ -31,7 +31,7 @@ protected:
     // Setup nodes
     varDecl = new (*ctxt) VarDecl(nullptr, beg, {});
     TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(end, {});
-    paramDecl = new (*ctxt) ParamDecl(nullptr, beg, {}, {}, {tyRepr, {}});
+    paramDecl = new (*ctxt) ParamDecl(nullptr, beg, {}, {tyRepr, {}});
     funcDecl = new (*ctxt) FuncDecl(nullptr, beg, {}, {}, nullptr, {});
     cast<FuncDecl>(funcDecl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
     Pattern *pat = new (*ctxt) DiscardPattern(mid);
@@ -100,7 +100,7 @@ TEST_F(DeclTest, getSourceFile) {
   //    FuncDecl
   //      ParamDecl
   FuncDecl *fn = new (*ctxt) FuncDecl(sf, {}, {}, {}, nullptr, {});
-  ParamDecl *param = new (*ctxt) ParamDecl(fn, {}, {}, {}, {});
+  ParamDecl *param = new (*ctxt) ParamDecl(fn, {}, {}, {});
   fn->setParamList(ParamList::create(*ctxt, {}, param, {}));
 
   // Now, let's try to retrieve our ASTContext, SourceFile and DiagnosticEngine

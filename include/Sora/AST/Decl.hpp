@@ -227,13 +227,12 @@ public:
 /// Function parameter declarations
 class ParamDecl final : public ValueDecl {
   TypeLoc tyLoc;
-  SourceLoc colonLoc;
 
 public:
   ParamDecl(DeclContext *declContext, SourceLoc identifierLoc,
-            Identifier identifier, SourceLoc colonLoc, TypeLoc typeLoc)
+            Identifier identifier, TypeLoc typeLoc)
       : ValueDecl(DeclKind::Param, declContext, identifierLoc, identifier),
-        tyLoc(typeLoc), colonLoc(colonLoc) {}
+        tyLoc(typeLoc) {}
 
   /// \returns the TypeLoc of the ParamDecl's type.
   /// This should always have a valid TypeRepr*.
@@ -246,8 +245,6 @@ public:
 
   /// \returns the type this value has (the type of the parameter)
   Type getValueType() const { return tyLoc.getType(); }
-
-  SourceLoc getColonLoc() const { return colonLoc; }
 
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;

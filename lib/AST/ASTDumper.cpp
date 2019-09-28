@@ -214,8 +214,6 @@ public:
 
   void visitParamDecl(ParamDecl *decl) {
     dumpCommon(decl);
-    out << ' ';
-    dumpLoc(decl->getColonLoc(), "colonLoc");
     out << '\n';
 
     auto indent = increaseIndent();
