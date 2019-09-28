@@ -112,7 +112,7 @@ prefix-operator = '+' | '-' | '!' | '*' | '&' | '~'
 
 expression = assignement-expression
 assignement-expression = conditional-expression (assignement-operator assignement-expression)?
-conditional-expression = binary-expression ('?' conditional-expression ':' conditional-expression)? 
+conditional-expression = binary-expression ('?' expression ':' conditional-expression)?
 binary-expression = prefix-expression (binary-operator prefix-expression)*
 prefix-expression = prefix-operator prefix-expression
                   | postfix-expression
