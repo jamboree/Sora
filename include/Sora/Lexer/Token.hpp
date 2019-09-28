@@ -69,6 +69,9 @@ public:
   /// \returns the SourceLoc pointing at the beginning of the Token.
   SourceLoc getLoc() const { return charRange.getBegin(); }
 
+  /// \returns the SourceLoc past-the-end of the token
+  SourceLoc getEndLoc() const { return charRange.getEnd(); }
+
   /// \returns the kind of this token
   TokenKind getKind() const { return kind; }
 
