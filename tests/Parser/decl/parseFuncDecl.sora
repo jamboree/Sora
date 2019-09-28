@@ -1,5 +1,22 @@
 // RUN: %sorac-parse -verify %s
-func            // expect-error: expected identifier in function declaration
-func foo        // expect-error: expected '(' in function declaration argument list
-func foo()      // expect-error: expected '{' in body of function declaration
-func foo() ->   // expect-error: expected function return type
+
+func foo() {}
+func foo() -> i32 {}
+func foo(x: i32) {}
+func foo(x: i32) -> i32 {}
+func foo(x: i64, y: i32, z: i32) -> i32 {}
+func foo(x: i32) -> (i32, i32) {}
+func foo(x: (i32, i32)) -> bool {}
+
+func                // expect-error: expected identifier in function declaration
+func foo            // expect-error: expected '(' in function declaration parameter list
+func foo()          // expect-error: expected '{' in body of function declaration
+func foo() ->       // expect-error: expected function return type
+func foo(           // expect-error: expected a parameter declaration
+func foo(x: i32     // expect-error: expected ')'
+                    // expect-note@-1: to match this opening '('
+func foo(x: i32,    // expect-error: expected a parameter declaration
+func foo(x:         // expect-error: expected a type
+func foo(x          // expect-error: expected ':'
+func foo(x: i32, x: // expect-error: expected a type
+func foo(x: i32, x  // expect-error: expected ':'

@@ -47,6 +47,16 @@ SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
   }
 }
 
+void Parser::parseList(llvm::function_ref<bool(unsigned)> callback) {
+  unsigned idx = 0;
+  while (callback(idx++)) {
+    if (tok.is(TokenKind::Comma))
+      consumeToken();
+    else
+      return;
+  }
+}
+
 SourceLoc Parser::consumeToken() {
   assert(tok.isNot(TokenKind::EndOfFile) && "Consuming EOF!");
   SourceLoc loc = tok.getLoc();

@@ -132,6 +132,15 @@ private:
   SourceLoc parseMatchingToken(SourceLoc lLoc, TokenKind kind,
                                Optional<TypedDiag<>> customErr = None);
 
+  /// Parses a comma-separated list of values. The callback is called to parse
+  /// elements, and the function takes care of consuming the commas.
+  /// \param callBack The element parsing function. Returns a boolean indicating
+  /// whether parsing should continue. It takes a single argument which is the
+  /// position of the element we're parsing.
+  /// The callback is responsible for emitting diagnostics as this function
+  /// won't emit any on its own.
+  void parseList(llvm::function_ref<bool(unsigned)> callback);
+
   //===- Diagnostic Emission ----------------------------------------------===//
 
   /// Emits a diagnostic at \p tok's location.

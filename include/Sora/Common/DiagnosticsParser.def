@@ -32,9 +32,11 @@
 
 // Punctuators
 ERROR(expected_lparen_in_fn_arg_list, 
-  "expected '(' in function declaration argument list", ())
+  "expected '(' in function declaration parameter list", ())
 ERROR(expected_lcurly_fn_body, 
   "expected '{' in body of function declaration", ())
+
+ERROR(expected_colon, "expected ':'", ())
 
 ERROR(expected_rparen, "expected ')'", ())
 ERROR(expected_rcurly, "expected '}'", ())
@@ -57,6 +59,7 @@ ERROR(expected_ident_in_fn,
 
 // Declarations
 ERROR(expected_fn_decl, "expected a function declaration", ())
+ERROR(expected_param_decl, "expected a parameter declaration", ())
 
 // Expressions
 ERROR(expected_expr, "expected an expression", ())
