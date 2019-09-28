@@ -8,9 +8,9 @@ add_source(unittest_src
   "AST/PatternTests.cpp"
   "AST/TypeReprTests.cpp"
   "AST/StmtTests.cpp"
-  "Common/DiagnosticConsumerTests.cpp"
-  "Common/DiagnosticEngineTests.cpp"
   "Common/SourceTests.cpp"
+  "Diagnostics/DiagnosticConsumerTests.cpp"
+  "Diagnostics/DiagnosticEngineTests.cpp"
   "Lexer/TokenTests.cpp"
   "Lexer/LexerTests.cpp"
 )
