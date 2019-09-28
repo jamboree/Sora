@@ -39,12 +39,20 @@ public:
   }
 
   /// \returns checks the next token, returns true on success and false
-  /// on failure. In case of failure, the message can be found in
+  /// on failure. In case of failure, the failure message can be found in
   /// "errStream.str()"
   bool checkNext(Lexer &lexer, TokenKind kind, StringRef str,
-                 bool startOfLine = false) {
-    errStreamBuff.clear();
+                 bool startOfLine) {
     Token token = lexer.lex();
+    return checkToken(lexer, token, kind, str, startOfLine);
+  }
+
+  /// \returns checks a token, returns true on success and false
+  /// on failure. In case of failure, the failure message can be found in
+  /// "errStream.str()"
+  bool checkToken(Lexer &lexer, const Token &token, TokenKind kind,
+                  StringRef str, bool startOfLine) {
+    errStreamBuff.clear();
     isDone = token.getKind() == TokenKind::EndOfFile;
     if (token.getKind() != kind) {
       errStream << "mismatched kinds: expected '" << to_string(kind)
@@ -66,10 +74,10 @@ public:
 } // namespace
 
 #define CHECK_NEXT(KIND, STR, SOL)                                             \
-  EXPECT_TRUE(checkNext(lexer, KIND, STR, SOL)) << errStream.str();            \
+  ASSERT_TRUE(checkNext(lexer, KIND, STR, SOL)) << errStream.str();            \
   ASSERT_FALSE(isDone)
 #define CHECK_EOF()                                                            \
-  EXPECT_TRUE(checkNext(lexer, TokenKind::EndOfFile, "", false))               \
+  ASSERT_TRUE(checkNext(lexer, TokenKind::EndOfFile, "", false))               \
       << errStream.str()
 
 TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
@@ -251,4 +259,60 @@ TEST_F(LexerTest, numbers) {
 #undef CHECK_NEXT_INT
 #undef CHECK_NEXT_FLT
   CHECK_EOF();
+}
+
+TEST_F(LexerTest, getTokenAtLoc) {
+  const char *input = "aaa bbb \r\nccc\nddd";
+  Lexer lexer = createLexer(input);
+
+  const char *aaa = input;
+  const char *bbb = input + 4;
+  const char *ccc = input + 10;
+  const char *ddd = input + 14;
+  const char *eof = input + 17;
+
+  CHECK_NEXT(TokenKind::Identifier, "aaa", true);
+  CHECK_NEXT(TokenKind::Identifier, "bbb", false);
+  CHECK_NEXT(TokenKind::Identifier, "ccc", true);
+  CHECK_NEXT(TokenKind::Identifier, "ddd", true);
+  CHECK_EOF();
+
+#define CHECK(PTR, KIND, STR, SOL)                                             \
+  ASSERT_TRUE(checkToken(                                                      \
+      lexer, Lexer::getTokenAtLoc(srcMgr, SourceLoc::fromPointer(PTR)), KIND,  \
+      STR, SOL))                                                               \
+      << errStream.str()
+  CHECK(aaa, TokenKind::Identifier, "aaa", true);
+  CHECK(bbb, TokenKind::Identifier, "bbb", false);
+  CHECK(ccc, TokenKind::Identifier, "ccc", true);
+  CHECK(ddd, TokenKind::Identifier, "ddd", true);
+  CHECK(eof, TokenKind::EndOfFile, "", false);
+#undef CHECK
+}
+
+TEST_F(LexerTest, toCharSourceRange) {
+  const char *input = "aaa bbb \r\nccc\nddd";
+  Lexer lexer = createLexer(input);
+
+  const char *aaa = input;
+  const char *bbb = input + 4;
+  const char *ccc = input + 10;
+  const char *ddd = input + 14;
+  const char *eof = input + 17;
+
+  CHECK_NEXT(TokenKind::Identifier, "aaa", true);
+  CHECK_NEXT(TokenKind::Identifier, "bbb", false);
+  CHECK_NEXT(TokenKind::Identifier, "ccc", true);
+  CHECK_NEXT(TokenKind::Identifier, "ddd", true);
+  CHECK_EOF();
+
+#define CHECK(BEGLOC, ENDLOC)                                                  \
+  ASSERT_EQ(Lexer::toCharSourceRange(srcMgr, BEGLOC),                          \
+            CharSourceRange(srcMgr, BEGLOC, ENDLOC));
+  CHECK(SourceLoc::fromPointer(aaa), SourceLoc::fromPointer(aaa + 3));
+  CHECK(SourceLoc::fromPointer(bbb), SourceLoc::fromPointer(bbb + 3));
+  CHECK(SourceLoc::fromPointer(ccc), SourceLoc::fromPointer(ccc + 3));
+  CHECK(SourceLoc::fromPointer(ddd), SourceLoc::fromPointer(ddd + 3));
+  CHECK(SourceLoc::fromPointer(eof), SourceLoc::fromPointer(eof));
+#undef CHECK
 }

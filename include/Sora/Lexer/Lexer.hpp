@@ -43,6 +43,16 @@ public:
   /// it is called.
   Token lex();
 
+  /// \returns the token that begins at \p loc
+  static Token getTokenAtLoc(const SourceManager &srcMgr, SourceLoc loc);
+
+  /// Converst a SourceRange/Loc to a CharSourceRange.
+  static CharSourceRange toCharSourceRange(const SourceManager &srcMgr,
+                                           SourceRange range) {
+    return CharSourceRange(srcMgr, range.begin,
+                           getTokenAtLoc(srcMgr, range.end).getEndLoc());
+  }
+
   /// \returns a view of the next token that will be returned by "lex" without
   /// consuming it or changing the state of the lexer.
   const Token &peek() const { return nextToken; }
@@ -51,6 +61,14 @@ public:
   const SourceManager &srcMgr;
 
 private:
+  void moveTo(const char *ptr) {
+    assert(((begPtr <= ptr) && (ptr <= endPtr)) &&
+           "ptr is from a different buffer");
+    curPtr = ptr;
+    tokBegPtr = nullptr;
+    tokenIsAtStartOfLine = (curPtr == begPtr);
+  }
+
   /// NOTE: This returns an invalid InFlightDiagnostic if diagnostic emission is
   /// not supported.
   template <typename... Args>
@@ -125,7 +143,7 @@ private:
   DiagnosticEngine *diagEng = nullptr;
 
   /// Whether the next token is at the start of a line.
-  bool tokenIsAtStartOfLine = true;
+  bool tokenIsAtStartOfLine = false;
 
   const char *begPtr = nullptr;
   const char *tokBegPtr = nullptr;

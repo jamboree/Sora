@@ -42,10 +42,12 @@ void Token::dump(raw_ostream &out) const {
 Lexer::Lexer(const SourceManager &srcMgr, BufferID buffer,
              DiagnosticEngine *diagEng)
     : srcMgr(srcMgr), diagEng(diagEng) {
-  // Init the pointers
+  // Init begPtr and endPtr
   StringRef str = srcMgr.getBufferStr(buffer);
-  begPtr = tokBegPtr = curPtr = str.data();
+  begPtr = str.data();
   endPtr = (str.data() + str.size());
+  // Move curPtr to the beginning of the file
+  moveTo(begPtr);
   // Lex the first token
   lexImpl();
 }
@@ -115,6 +117,26 @@ uint32_t advanceUTF8(const char *&cur, const char *end,
   return (result == llvm::conversionOK) ? cp : ~0U;
 }
 } // namespace
+
+Token Lexer::getTokenAtLoc(const SourceManager &srcMgr, SourceLoc loc) {
+  Lexer lexer(srcMgr, srcMgr.findBufferContainingLoc(loc), nullptr);
+  const char *ptr = loc.getPointer();
+  const char *beg = lexer.tokBegPtr;
+  // Backtrack until we hit a newline or something that isn't a trivia.
+  // That way, when we call lexImpl(), it'll accurately set the
+  // "tokenIsAtStartOfLine" flag.
+  while (ptr != beg) {
+    char ch = ptr[-1];
+    if (!isTrivia(ch))
+      break;
+    --ptr;
+    if (ch == '\n')
+      break;
+  }
+  lexer.moveTo(ptr);
+  lexer.lexImpl();
+  return lexer.peek();
+}
 
 void Lexer::lexUnknown() {
   curPtr = tokBegPtr;
