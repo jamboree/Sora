@@ -132,11 +132,11 @@ void Lexer::lexUnknown() {
     case llvm::conversionOK:
       break;
     case llvm::sourceExhausted:
-      diagEng.diagnose(getTokBegLoc(), diag::incomplete_utf8_cp);
+      diagnose(tokBegPtr, diag::incomplete_utf8_cp);
       sourceOk = false;
       break;
     case llvm::sourceIllegal:
-      diagEng.diagnose(getTokBegLoc(), diag::illegal_utf8_cp);
+      diagnose(tokBegPtr, diag::illegal_utf8_cp);
       sourceOk = false;
       break;
     }

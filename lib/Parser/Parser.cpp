@@ -17,7 +17,7 @@ using namespace sora;
 
 Parser::Parser(ASTContext &ctxt, SourceFile &file)
     : ctxt(ctxt), diagEng(ctxt.diagEngine), sourceFile(file),
-      declContext(&file), lexer(ctxt.srcMgr, diagEng) {
+      declContext(&file), lexer(ctxt.srcMgr, &diagEng) {
   lexer.init(sourceFile.getBufferID());
   tok = lexer.lex();
 }

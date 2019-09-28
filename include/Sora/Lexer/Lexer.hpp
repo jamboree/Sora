@@ -11,6 +11,7 @@
 
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
+#include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Lexer/Token.hpp"
 #include "llvm/ADT/Optional.h"
 
@@ -34,7 +35,7 @@ class BufferID;
 /// This allows us to have an efficient "peek" method.
 class Lexer {
 public:
-  Lexer(SourceManager &srcMgr, DiagnosticEngine &diagEng)
+  Lexer(SourceManager &srcMgr, DiagnosticEngine *diagEng)
       : srcMgr(srcMgr), diagEng(diagEng) {}
 
   /// Prepares the Lexer to lex the string \p str
@@ -53,10 +54,20 @@ public:
 
   /// The SourceManager instance
   SourceManager &srcMgr;
-  /// The DiagnosticEngine instance
-  DiagnosticEngine &diagEng;
 
 private:
+  /// NOTE: This returns an invalid InFlightDiagnostic if diagnostic emission is
+  /// not supported.
+  template <typename... Args>
+  InFlightDiagnostic
+  diagnose(const char *loc, TypedDiag<Args...> diag,
+           typename detail::PassArgument<Args>::type... args) {
+    if (diagEng)
+      return diagEng->diagnose<Args...>(SourceLoc::fromPointer(loc), diag,
+                                        args...);
+    return InFlightDiagnostic();
+  }
+
   /// Finishes lexing (sets nextToken = EOF and cur = end)
   void stopLexing() {
     assert(nextToken.isNot(TokenKind::EndOfFile) && "already EOF");
@@ -112,11 +123,11 @@ private:
   /// Trivia is any whitespace character, or comments.
   void consumeTrivia();
 
-  /// \returns tokBegPtr as a SourceLoc
-  SourceLoc getTokBegLoc() const { return SourceLoc::fromPointer(tokBegPtr); }
-
   /// \returns the current token as a string
   StringRef getTokStr() const;
+
+  /// The (optional) DiagnosticEngine instance
+  DiagnosticEngine *diagEng = nullptr;
 
   /// Whether the next token is at the start of a line.
   bool tokenIsAtStartOfLine = true;

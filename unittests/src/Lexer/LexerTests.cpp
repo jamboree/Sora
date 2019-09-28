@@ -21,7 +21,7 @@ class LexerTest : public ::testing::Test {
 public:
   SourceManager srcMgr;
   DiagnosticEngine diagEngine{srcMgr, llvm::outs()};
-  Lexer lexer{srcMgr, diagEngine};
+  Lexer lexer{srcMgr, &diagEngine};
   llvm::raw_string_ostream errStream{errStreamBuff};
 
   bool isDone = false;
