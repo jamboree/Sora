@@ -10,7 +10,7 @@
 
 using namespace sora;
 
-ParserResult<Expr> Parser::parseExpr(const std::function<void()> &onNoExpr) {
+ParserResult<Expr> Parser::parseExpr(llvm::function_ref<void()> onNoExpr) {
   // TODO
   // This is just to make some tests work.
   if (tok.is(TokenKind::IntegerLiteral)) {

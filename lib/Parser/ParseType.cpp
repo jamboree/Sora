@@ -15,8 +15,7 @@ type = identifier
      | tuple-type
      | reference-or-pointer-type
 */
-ParserResult<TypeRepr>
-Parser::parseType(const std::function<void()> &onNoType) {
+ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   switch (tok.getKind()) {
   case TokenKind::Identifier: {
     Identifier ident;

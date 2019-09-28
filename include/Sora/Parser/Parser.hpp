@@ -13,6 +13,7 @@
 #include "Sora/Lexer/Lexer.hpp"
 #include "Sora/Parser/ParserResult.hpp"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <functional>
 
@@ -95,12 +96,12 @@ private:
 
   //===- Expression Parsing -----------------------------------------------===//
 
-  ParserResult<Expr> parseExpr(const std::function<void()> &onNoExpr);
+  ParserResult<Expr> parseExpr(llvm::function_ref<void()> onNoExpr);
 
   //===- Type Parsing -----------------------------------------------------===//
 
   /// Parses a type. Calls \p onNoType if no type was found.
-  ParserResult<TypeRepr> parseType(const std::function<void()> &onNoType);
+  ParserResult<TypeRepr> parseType(llvm::function_ref<void()> onNoType);
 
   /// Parses a tuple type.
   /// The parser must be positioned on the "("
