@@ -35,7 +35,7 @@ class BufferID;
 /// This allows us to have an efficient "peek" method.
 class Lexer {
 public:
-  Lexer(SourceManager &srcMgr, DiagnosticEngine *diagEng)
+  Lexer(const SourceManager &srcMgr, DiagnosticEngine *diagEng)
       : srcMgr(srcMgr), diagEng(diagEng) {}
 
   /// Prepares the Lexer to lex the string \p str
@@ -53,7 +53,7 @@ public:
   const Token &peek() const { return nextToken; }
 
   /// The SourceManager instance
-  SourceManager &srcMgr;
+  const SourceManager &srcMgr;
 
 private:
   /// NOTE: This returns an invalid InFlightDiagnostic if diagnostic emission is
