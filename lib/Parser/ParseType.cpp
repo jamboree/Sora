@@ -131,7 +131,6 @@ ParserResult<TypeRepr> Parser::parseReferenceOrPointerType() {
   assert(signLoc && "no signLoc");
 
   /// "mut"?
-  bool isMut = false;
   SourceLoc mutLoc;
   if (SourceLoc kwLoc = consumeIf(TokenKind::MutKw))
     mutLoc = kwLoc;
