@@ -52,14 +52,14 @@ DiagnosticKind getDefaultDiagnosticKind(DiagID id) {
 
 RawDiagnostic &InFlightDiagnostic::getRawDiagnostic() {
   assert(isActive() && "Diagnostic isn't active!");
-  assert(diagEngine->hasActiveDiagnostic() && "No Active Diagnostic?");
   return diagEngine->activeDiagnostic.getValue();
 }
 
-void InFlightDiagnostic::emit() {
-  assert(isActive() && "cannot emit an inactive diagnostic");
-  diagEngine->emit();
-  diagEngine = nullptr;
+InFlightDiagnostic::~InFlightDiagnostic() {
+  if (diagEngine) {
+    diagEngine->emit();
+    diagEngine = nullptr;
+  }
 }
 
 void InFlightDiagnostic::abort() {
@@ -69,7 +69,7 @@ void InFlightDiagnostic::abort() {
 }
 
 InFlightDiagnostic &InFlightDiagnostic::highlightChars(CharSourceRange range) {
-  assert(isActive() && "can't highlight a range on an inactive diagnostic!");
+  assert(isActive() && "cannot modify an inactive diagnostic");
   getRawDiagnostic().addRange(range);
   return *this;
 }
@@ -82,6 +82,7 @@ InFlightDiagnostic &InFlightDiagnostic::fixitInsert(SourceLoc loc,
 
 InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
                                                      StringRef text) {
+  assert(isActive() && "cannot modify an inactive diagnostic");
   getRawDiagnostic().addFixit(FixIt(text, range));
   return *this;
 }

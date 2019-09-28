@@ -11,9 +11,9 @@
 
 #pragma once
 
-#include "Sora/Diagnostics/DiagnosticConsumer.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
+#include "Sora/Diagnostics/DiagnosticConsumer.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -174,12 +174,10 @@ class InFlightDiagnostic {
   RawDiagnostic &getRawDiagnostic();
 
 public:
-  /// Destructor that emits the Diagnostic.
-  ~InFlightDiagnostic() { emit(); }
+  InFlightDiagnostic() = default;
 
-  /// Emits this diagnotic, formatting it and feeding it to the consumers.
-  /// After that, the diagnostic will be unusable
-  void emit();
+  /// Emits the Diagnostic
+  ~InFlightDiagnostic();
 
   /// Aborts this diagnostic (it will not be emitted)
   void abort();
@@ -188,14 +186,17 @@ public:
   bool isActive() const { return diagEngine; }
 
   /// Highlights the range of characters covered by \p range
+  /// NOTE: Can only be used on active diagnostics
   /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &highlightChars(CharSourceRange range);
 
   /// Highlights the token at \p loc
+  /// NOTE: Can only be used on active diagnostics
   /// NOTE: Needs the Lexer to implement.
   // InFlightDiagnostic& highlight(SourceLoc loc)
 
   /// Highlights the range of tokens \p range
+  /// NOTE: Can only be used on active diagnostics
   /// NOTE: Needs the Lexer to implement.
   // InFlightDiagnostic& highlight(SourceRange loc)
 

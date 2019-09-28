@@ -49,3 +49,7 @@ TEST(DiagnosticEngineTest, diagnose) {
                     "    ^~~~\n"
                     "   Incredibely Hyperactive\n");
 }
+
+TEST(InFlightDiagnostic, isActive) {
+  EXPECT_FALSE(InFlightDiagnostic().isActive());
+}
