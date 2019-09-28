@@ -208,18 +208,16 @@ public:
 ///   (a, b) : (i32, i32)
 /// \endverbatim
 class TypedPattern final : public Pattern {
-  SourceLoc colonLoc;
   Pattern *subPattern;
   TypeRepr *typeRepr;
 
 public:
-  TypedPattern(Pattern *subPattern, SourceLoc colonLoc, TypeRepr *typeRepr)
-      : Pattern(PatternKind::Typed), colonLoc(colonLoc), subPattern(subPattern),
+  TypedPattern(Pattern *subPattern, TypeRepr *typeRepr)
+      : Pattern(PatternKind::Typed), subPattern(subPattern),
         typeRepr(typeRepr) {}
 
   Pattern *getSubPattern() const { return subPattern; }
   TypeRepr *getTypeRepr() const { return typeRepr; }
-  SourceLoc getColonLoc() const { return colonLoc; }
 
   SourceLoc getBegLoc() const;
   SourceLoc getLoc() const { return subPattern->getLoc(); }

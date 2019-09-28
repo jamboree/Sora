@@ -30,7 +30,7 @@ protected:
     tuplePattern = TuplePattern::createEmpty(*ctxt, beg, end);
     mutPattern = new (*ctxt) MutPattern(beg, new (*ctxt) DiscardPattern(end));
     typedPattern =
-        new (*ctxt) TypedPattern(new (*ctxt) DiscardPattern(beg), {},
+        new (*ctxt) TypedPattern(new (*ctxt) DiscardPattern(beg),
                                  new (*ctxt) IdentifierTypeRepr(end, {}));
   }
 

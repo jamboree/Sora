@@ -309,8 +309,6 @@ public:
 
   void visitTypedPattern(TypedPattern *pattern) {
     dumpCommon(pattern);
-    out << ' ';
-    dumpLoc(pattern->getColonLoc(), "colonLoc");
     out << '\n';
 
     auto indent = increaseIndent();
