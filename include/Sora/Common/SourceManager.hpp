@@ -52,7 +52,7 @@ public:
   llvm::SourceMgr llvmSourceMgr;
 
   /// \returns the distance in bytes between \p beg and \p end
-  size_t getDistanceInBytes(SourceLoc beg, SourceLoc end);
+  size_t getDistanceInBytes(SourceLoc beg, SourceLoc end) const;
 
   /// Gives a buffer to this SourceManager, returning a BufferID for that
   /// buffer and taking ownership of it.

@@ -14,7 +14,7 @@
 
 using namespace sora;
 
-size_t SourceManager::getDistanceInBytes(SourceLoc beg, SourceLoc end) {
+size_t SourceManager::getDistanceInBytes(SourceLoc beg, SourceLoc end) const {
   assert(beg && end && "invalid locs!");
   const char *begPtr = beg.getPointer();
   const char *endPtr = end.getPointer();
@@ -86,7 +86,7 @@ void CharSourceRange::print(raw_ostream &out, const SourceManager &srcMgr,
     out << "=\"" << str() << '"';
 }
 
-CharSourceRange::CharSourceRange(SourceManager &srcMgr, SourceLoc begin,
+CharSourceRange::CharSourceRange(const SourceManager &srcMgr, SourceLoc begin,
                                  SourceLoc end)
     : begin(begin) {
   byteLength = srcMgr.getDistanceInBytes(begin, end);
