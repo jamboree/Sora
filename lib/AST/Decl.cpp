@@ -123,7 +123,11 @@ ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
 
 SourceLoc ParamDecl::getBegLoc() const { return getIdentifierLoc(); }
 
-SourceLoc ParamDecl::getEndLoc() const { return tyLoc.getEndLoc(); }
+SourceLoc ParamDecl::getEndLoc() const {
+  if (tyLoc.hasLocation())
+    return tyLoc.getEndLoc();
+  return getIdentifierLoc();
+}
 
 SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
 
