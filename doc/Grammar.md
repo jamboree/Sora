@@ -93,12 +93,12 @@ return-statement = "return" expression?
 type = identifier
      | tuple-type
      | array-type
-     | reference-or-pointer-type
+     | reference-type
      | maybe-type 
  
 array-type = '[' type (';' expr)? ']'
 tuple-type = '(' (type (',' type)*)? ')'
-reference-or-pointer-type = ('&' | '*') "mut"? type
+reference-type = '&' "mut"? type
 maybe-type = "maybe" type
 
 // Expressions
