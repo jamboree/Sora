@@ -91,7 +91,7 @@ COMPOUND_ASSIGN_OP(ShrAssign,  ">>=", Shr)
 COMPOUND_ASSIGN_OP(AndAssign,  "&=",  And)
 COMPOUND_ASSIGN_OP(OrAssign,   "|=",  Or)
 COMPOUND_ASSIGN_OP(XOrAssign,  "^=",  XOr)
-COMPOUND_ASSIGN_OP(AssignCoalesce,  "?\?=",  Coalesce)
+COMPOUND_ASSIGN_OP(CoalesceAssign,  "?\?=",  Coalesce)
 
 //===----------------------------------------------------------------------===//
 
