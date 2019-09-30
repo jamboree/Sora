@@ -160,7 +160,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       tyRepr->setSizeExpr(sizeExpr);
   }
 
-  void visitPointerTypeRepr(PointerTypeRepr *tyRepr) {
+  void visitReferenceTypeRepr(ReferenceTypeRepr *tyRepr) {
     doIt(tyRepr->getSubTypeRepr());
   }
 

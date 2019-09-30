@@ -429,11 +429,10 @@ public:
     visit(tyRepr->getSizeExpr());
   }
 
-  void visitPointerTypeRepr(PointerTypeRepr *tyRepr) {
+  void visitReferenceTypeRepr(ReferenceTypeRepr *tyRepr) {
     dumpCommon(tyRepr);
-    out << (tyRepr->hasMut() ? " (immutable " : " (mutable ")
-        << (tyRepr->isReference() ? "reference) " : "pointer) ");
-    dumpLoc(tyRepr->getSignLoc(), "signLoc");
+    out << (tyRepr->hasMut() ? " mutable " : " immutable ");
+    dumpLoc(tyRepr->getAmpLoc(), "ampLoc");
     if (tyRepr->hasMut()) {
       out << ' ';
       dumpLoc(tyRepr->getMutLoc(), "mutLoc");

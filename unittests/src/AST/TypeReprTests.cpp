@@ -25,8 +25,8 @@ protected:
     identifierTypeRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
     tupleTypeRepr = TupleTypeRepr::createEmpty(*ctxt, beg, end);
     arrayTypeRepr = new (*ctxt) ArrayTypeRepr(beg, nullptr, nullptr, end);
-    pointerTypeRepr = new (*ctxt)
-        PointerTypeRepr(beg, true, new (*ctxt) IdentifierTypeRepr(end, {}));
+    referenceTypeRepr = new (*ctxt)
+        ReferenceTypeRepr(beg, new (*ctxt) IdentifierTypeRepr(end, {}));
   }
 
   SourceManager srcMgr;
@@ -38,7 +38,7 @@ protected:
   TypeRepr *identifierTypeRepr;
   TypeRepr *tupleTypeRepr;
   TypeRepr *arrayTypeRepr;
-  TypeRepr *pointerTypeRepr;
+  TypeRepr *referenceTypeRepr;
 };
 } // namespace
 
@@ -46,7 +46,7 @@ TEST_F(TypeReprTest, rtti) {
   EXPECT_TRUE(isa<IdentifierTypeRepr>(identifierTypeRepr));
   EXPECT_TRUE(isa<TupleTypeRepr>(tupleTypeRepr));
   EXPECT_TRUE(isa<ArrayTypeRepr>(arrayTypeRepr));
-  EXPECT_TRUE(isa<PointerTypeRepr>(pointerTypeRepr));
+  EXPECT_TRUE(isa<ReferenceTypeRepr>(referenceTypeRepr));
 }
 
 TEST_F(TypeReprTest, getSourceRange) {
@@ -71,9 +71,9 @@ TEST_F(TypeReprTest, getSourceRange) {
   EXPECT_EQ(end, arrayTypeRepr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), arrayTypeRepr->getSourceRange());
 
-  // PointerTypeRepr
-  EXPECT_EQ(beg, pointerTypeRepr->getBegLoc());
-  EXPECT_EQ(beg, pointerTypeRepr->getLoc());
-  EXPECT_EQ(end, pointerTypeRepr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, end), pointerTypeRepr->getSourceRange());
+  // ReferenceTypeRepr
+  EXPECT_EQ(beg, referenceTypeRepr->getBegLoc());
+  EXPECT_EQ(beg, referenceTypeRepr->getLoc());
+  EXPECT_EQ(end, referenceTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), referenceTypeRepr->getSourceRange());
 }

@@ -50,10 +50,6 @@ class alignas(TypeReprAlignement) TypeRepr {
     struct {
       uint32_t numElements;
     } tupleTypeRepr;
-    // PointerTypeRepr
-    struct {
-      bool isReference;
-    } pointerTypeRepr;
   });
   static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
@@ -216,45 +212,39 @@ public:
   }
 };
 
-/// Represents a pointer or reference type.
+/// Represents a reference type.
 ///
 /// \verbatim
 /// &T
 /// &mut T
-/// *T
-/// *mut T
 /// \endverbatim
-class PointerTypeRepr final : public TypeRepr {
-  SourceLoc signLoc, mutLoc;
+class ReferenceTypeRepr final : public TypeRepr {
+  SourceLoc ampLoc, mutLoc;
   TypeRepr *subTyRepr;
 
 public:
   /// \param mutLoc the SourceLoc of the "mut" keyword. If invalid, the
-  /// PointerTypeRepr is considered immutable.
-  PointerTypeRepr(SourceLoc signLoc, bool isReference, SourceLoc mutLoc,
-                  TypeRepr *subTyRepr)
-      : TypeRepr(TypeReprKind::Pointer), signLoc(signLoc), mutLoc(mutLoc),
-        subTyRepr(subTyRepr) {
-    bits.pointerTypeRepr.isReference = isReference;
-  }
+  /// reference is considered immutable.
+  ReferenceTypeRepr(SourceLoc ampLoc, SourceLoc mutLoc, TypeRepr *subTyRepr)
+      : TypeRepr(TypeReprKind::Reference), ampLoc(ampLoc), mutLoc(mutLoc),
+        subTyRepr(subTyRepr) {}
 
-  PointerTypeRepr(SourceLoc signLoc, bool isReference, TypeRepr *subTyRepr)
-      : PointerTypeRepr(signLoc, isReference, SourceLoc(), subTyRepr) {}
+  ReferenceTypeRepr(SourceLoc ampLoc, TypeRepr *subTyRepr)
+      : ReferenceTypeRepr(ampLoc, SourceLoc(), subTyRepr) {}
 
   TypeRepr *getSubTypeRepr() const { return subTyRepr; }
-  /// \returns the SourceLoc of the & or * sign.
-  SourceLoc getSignLoc() const { return signLoc; }
+
+  /// \returns the sourceloc of the &
+  SourceLoc getAmpLoc() const { return ampLoc; }
 
   bool hasMut() const { return mutLoc.isValid(); }
-  bool isReference() const { return bits.pointerTypeRepr.isReference; }
-
   SourceLoc getMutLoc() const { return mutLoc; }
 
-  SourceLoc getBegLoc() const { return signLoc; }
+  SourceLoc getBegLoc() const { return ampLoc; }
   SourceLoc getEndLoc() const { return subTyRepr->getEndLoc(); }
 
   static bool classof(const TypeRepr *typeRepr) {
-    return typeRepr->getKind() == TypeReprKind::Pointer;
+    return typeRepr->getKind() == TypeReprKind::Reference;
   }
 };
 } // namespace sora

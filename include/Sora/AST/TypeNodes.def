@@ -22,7 +22,7 @@
 TYPE(Integer,		Type)
 TYPE(Float,		  Type)
 TYPE(Void,			Type)
-TYPE(Pointer,	  Type)
+TYPE(Reference,	Type)
 TYPE(Tuple,		  Type)
 TYPE(LValue,	  Type)
 TYPE(Error,		  Type)

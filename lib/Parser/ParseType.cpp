@@ -13,7 +13,7 @@ using namespace sora;
 /*
 type = identifier
      | tuple-type
-     | reference-or-pointer-type
+     | reference-type
 */
 ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   switch (tok.getKind()) {
@@ -26,7 +26,7 @@ ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
     return parseTupleType();
   case TokenKind::Star:
   case TokenKind::Amp:
-    return parseReferenceOrPointerType();
+    return parseReferenceType();
   default:
     onNoType();
     return nullptr;
@@ -114,21 +114,13 @@ ParserResult<TypeRepr> Parser::parseArrayType() {
 }
 
 /*
-reference-or-pointer-type = ('&' | '*') "mut"? type
+reference-type = '&' "mut"? type
 */
-ParserResult<TypeRepr> Parser::parseReferenceOrPointerType() {
-  assert(tok.isAny(TokenKind::Amp, TokenKind::Star) &&
-         "not a reference or pointer type");
-  // ('&' | '*')
-  bool isReference = false;
-  SourceLoc signLoc;
-  if (SourceLoc ampLoc = consumeIf(TokenKind::Amp)) {
-    isReference = true;
-    signLoc = ampLoc;
-  }
-  else
-    signLoc = consume(TokenKind::Star);
-  assert(signLoc && "no signLoc");
+ParserResult<TypeRepr> Parser::parseReferenceType() {
+  assert(tok.is(TokenKind::Amp) &&
+         "not a reference type");
+  // '&'
+  SourceLoc ampLoc = consume(TokenKind::Amp);
 
   /// "mut"?
   SourceLoc mutLoc;
@@ -141,5 +133,5 @@ ParserResult<TypeRepr> Parser::parseReferenceOrPointerType() {
     return nullptr;
 
   return makeParserResult(
-      new (ctxt) PointerTypeRepr(signLoc, isReference, mutLoc, result.get()));
+      new (ctxt) ReferenceTypeRepr(ampLoc, mutLoc, result.get()));
 }

@@ -112,9 +112,9 @@ private:
   /// NOTE: ArrayTypes are currenlty unsupported by Sora. Do not call this.
   ParserResult<TypeRepr> parseArrayType();
 
-  /// Parses a reference or pointer type.
-  /// The parser must be positioned on the "&" or "*"
-  ParserResult<TypeRepr> parseReferenceOrPointerType();
+  /// Parses a reference type.
+  /// The parser must be positioned on the "&".
+  ParserResult<TypeRepr> parseReferenceType();
 
   //===- Pattern Parsing --------------------------------------------------===//
 
