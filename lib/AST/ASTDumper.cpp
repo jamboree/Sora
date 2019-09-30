@@ -241,6 +241,7 @@ public:
 
     auto indent = increaseIndent();
     visit(decl->getParamList());
+    visitIf(decl->getReturnTypeLoc().getTypeRepr());
     visit(decl->getBody());
   }
 
@@ -437,17 +438,20 @@ public:
       out << ' ';
       dumpLoc(tyRepr->getMutLoc(), "mutLoc");
     }
+    out << '\n';
 
     auto indent = increaseIndent();
-    visit(tyRepr);
+    visit(tyRepr->getSubTypeRepr());
   }
 
   void visitMaybeTypeRepr(MaybeTypeRepr *tyRepr) {
     dumpCommon(tyRepr);
+    out << ' ';
     dumpLoc(tyRepr->getMaybeLoc(), "maybeLoc");
+    out << '\n';
 
     auto indent = increaseIndent();
-    visit(tyRepr);
+    visit(tyRepr->getSubTypeRepr());
   }
 };
 } // namespace
