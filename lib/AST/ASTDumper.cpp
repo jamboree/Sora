@@ -441,6 +441,14 @@ public:
     auto indent = increaseIndent();
     visit(tyRepr);
   }
+
+  void visitMaybeTypeRepr(MaybeTypeRepr *tyRepr) {
+    dumpCommon(tyRepr);
+    dumpLoc(tyRepr->getMaybeLoc(), "maybeLoc");
+
+    auto indent = increaseIndent();
+    visit(tyRepr);
+  }
 };
 } // namespace
 

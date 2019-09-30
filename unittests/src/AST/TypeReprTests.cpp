@@ -25,8 +25,9 @@ protected:
     identifierTypeRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
     tupleTypeRepr = TupleTypeRepr::createEmpty(*ctxt, beg, end);
     arrayTypeRepr = new (*ctxt) ArrayTypeRepr(beg, nullptr, nullptr, end);
-    referenceTypeRepr = new (*ctxt)
-        ReferenceTypeRepr(beg, new (*ctxt) IdentifierTypeRepr(end, {}));
+    auto subTyRepr = new (*ctxt) IdentifierTypeRepr(end, {});
+    referenceTypeRepr = new (*ctxt) ReferenceTypeRepr(beg, subTyRepr);
+    maybeTypeRepr = new (*ctxt) MaybeTypeRepr(beg, subTyRepr);
   }
 
   SourceManager srcMgr;
@@ -39,6 +40,7 @@ protected:
   TypeRepr *tupleTypeRepr;
   TypeRepr *arrayTypeRepr;
   TypeRepr *referenceTypeRepr;
+  TypeRepr *maybeTypeRepr;
 };
 } // namespace
 
@@ -47,6 +49,7 @@ TEST_F(TypeReprTest, rtti) {
   EXPECT_TRUE(isa<TupleTypeRepr>(tupleTypeRepr));
   EXPECT_TRUE(isa<ArrayTypeRepr>(arrayTypeRepr));
   EXPECT_TRUE(isa<ReferenceTypeRepr>(referenceTypeRepr));
+  EXPECT_TRUE(isa<MaybeTypeRepr>(maybeTypeRepr));
 }
 
 TEST_F(TypeReprTest, getSourceRange) {
@@ -76,4 +79,11 @@ TEST_F(TypeReprTest, getSourceRange) {
   EXPECT_EQ(beg, referenceTypeRepr->getLoc());
   EXPECT_EQ(end, referenceTypeRepr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), referenceTypeRepr->getSourceRange());
+
+  
+  // MaybeTypeRepr
+  EXPECT_EQ(beg, maybeTypeRepr->getBegLoc());
+  EXPECT_EQ(beg, maybeTypeRepr->getLoc());
+  EXPECT_EQ(end, maybeTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), maybeTypeRepr->getSourceRange());
 }

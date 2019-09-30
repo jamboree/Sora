@@ -247,4 +247,31 @@ public:
     return typeRepr->getKind() == TypeReprKind::Reference;
   }
 };
+
+/// Represents a "maybe" type
+///
+/// \verbatim
+///   maybe i32
+///   maybe &mut i64
+/// \endverbatim
+class MaybeTypeRepr final : public TypeRepr {
+  SourceLoc maybeLoc;
+  TypeRepr *subTyRepr;
+
+public:
+  MaybeTypeRepr(SourceLoc maybeLoc, TypeRepr *subTyRepr)
+      : TypeRepr(TypeReprKind::Maybe), maybeLoc(maybeLoc),
+        subTyRepr(subTyRepr) {}
+
+  SourceLoc getMaybeLoc() const { return maybeLoc; }
+
+  TypeRepr *getSubTypeRepr() const { return subTyRepr; }
+
+  SourceLoc getBegLoc() const { return maybeLoc; }
+  SourceLoc getEndLoc() const { return subTyRepr->getEndLoc(); }
+
+  static bool classof(const TypeRepr *typeRepr) {
+    return typeRepr->getKind() == TypeReprKind::Maybe;
+  }
+};
 } // namespace sora

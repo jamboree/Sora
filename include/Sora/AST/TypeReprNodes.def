@@ -15,6 +15,7 @@ TYPEREPR(Identifier, TypeRepr)
 TYPEREPR(Tuple, TypeRepr)
 TYPEREPR(Array, TypeRepr)
 TYPEREPR(Reference, TypeRepr)
+TYPEREPR(Maybe, TypeRepr)
 
 //===----------------------------------------------------------------------===//
 

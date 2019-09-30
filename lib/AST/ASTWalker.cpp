@@ -164,6 +164,10 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
     doIt(tyRepr->getSubTypeRepr());
   }
 
+  void visitMaybeTypeRepr(MaybeTypeRepr *tyRepr) {
+    doIt(tyRepr->getSubTypeRepr());
+  }
+
   //===- Stmt -------------------------------------------------------------===//
 
   TRIVIAL_VISIT(ContinueStmt)
