@@ -18,11 +18,13 @@
 #endif
 
 //===----------------------------------------------------------------------===//
-
-TYPE(Integer,		Type)
-TYPE(Float,		  Type)
-TYPE(Void,			Type)
+ABSTRACT_TYPE(Primitive, Type)
+  TYPE(Integer,		Type)
+  TYPE(Float,		  Type)
+  TYPE(Void,			Type)
+  TYPE_RANGE(Primitive, Integer, Void)
 TYPE(Reference,	Type)
+TYPE(Maybe,     Type)
 TYPE(Tuple,		  Type)
 TYPE(LValue,	  Type)
 TYPE(Error,		  Type)
