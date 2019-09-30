@@ -67,6 +67,9 @@ TOKEN(PipeEqual)      // |=
 TOKEN(PipePipe)       // ||
 TOKEN(Plus)           // +
 TOKEN(PlusEqual)      // +=
+TOKEN(Question)       // ?
+TOKEN(QuestionQuestion) // ??
+TOKEN(QuestionQuestionEqual) // ??=
 TOKEN(RCurly)         // }
 TOKEN(RParen)         // )
 TOKEN(RSquare)        // ]

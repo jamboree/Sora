@@ -347,6 +347,16 @@ void Lexer::lexImpl() {
     else 
       pushToken(TokenKind::Less);
     break;
+  case '?':
+    if (*curPtr == '?') {
+      ++curPtr;
+      if(*curPtr == '=')
+        ++curPtr, pushToken(TokenKind::QuestionQuestionEqual);
+      else 
+        pushToken(TokenKind::QuestionQuestion);
+    }
+    else 
+      pushToken(TokenKind::Question);
   case ',':
     pushToken(TokenKind::Comma);
     break;
