@@ -14,6 +14,7 @@ using namespace sora;
 type = identifier
      | tuple-type
      | reference-type
+     | maybe-type
 */
 ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   switch (tok.getKind()) {
@@ -27,6 +28,8 @@ ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   case TokenKind::Star:
   case TokenKind::Amp:
     return parseReferenceType();
+  case TokenKind::MaybeKw:
+    return parseMaybeType();
   default:
     onNoType();
     return nullptr;
@@ -117,8 +120,7 @@ ParserResult<TypeRepr> Parser::parseArrayType() {
 reference-type = '&' "mut"? type
 */
 ParserResult<TypeRepr> Parser::parseReferenceType() {
-  assert(tok.is(TokenKind::Amp) &&
-         "not a reference type");
+  assert(tok.is(TokenKind::Amp) && "not a reference type");
   // '&'
   SourceLoc ampLoc = consume(TokenKind::Amp);
 
@@ -132,6 +134,20 @@ ParserResult<TypeRepr> Parser::parseReferenceType() {
   if (result.isNull())
     return nullptr;
 
-  return makeParserResult(
-      new (ctxt) ReferenceTypeRepr(ampLoc, mutLoc, result.get()));
+  return makeParserResult(new (ctxt)
+                              ReferenceTypeRepr(ampLoc, mutLoc, result.get()));
+}
+
+/*
+maybe-type = "maybe" type
+*/
+ParserResult<TypeRepr> Parser::parseMaybeType() {
+  assert(tok.is(TokenKind::MaybeKw) && "not a maybe type");
+  SourceLoc maybeLoc = consumeToken();
+
+  auto result = parseType([&]() { diagnoseExpected(diag::expected_type); });
+  if (result.isNull())
+    return nullptr;
+
+  return makeParserResult(new (ctxt) MaybeTypeRepr(maybeLoc, result.get()));
 }

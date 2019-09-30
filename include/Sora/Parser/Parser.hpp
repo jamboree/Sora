@@ -109,12 +109,17 @@ private:
 
   /// Parses an array type.
   /// The parser must be positioned on the "["
-  /// NOTE: ArrayTypes are currenlty unsupported by Sora. Do not call this.
+  /// NOTE: ArrayTypes are currenlty unsupported by Sora, so this method
+  /// is currently disabled. Do not use it.
   ParserResult<TypeRepr> parseArrayType();
 
   /// Parses a reference type.
   /// The parser must be positioned on the "&".
   ParserResult<TypeRepr> parseReferenceType();
+
+  /// Parses a "maybe" type
+  /// The parser must be positioned on the "maybe" keyword.
+  ParserResult<TypeRepr> parseMaybeType();
 
   //===- Pattern Parsing --------------------------------------------------===//
 
