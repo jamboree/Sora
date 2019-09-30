@@ -357,6 +357,7 @@ void Lexer::lexImpl() {
     }
     else 
       pushToken(TokenKind::Question);
+    break;
   case ',':
     pushToken(TokenKind::Comma);
     break;
