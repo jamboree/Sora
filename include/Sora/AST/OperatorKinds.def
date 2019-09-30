@@ -75,6 +75,8 @@ BINARY_OP(GE,   ">=")
 BINARY_OP(LAnd, "&&")
 // Logical OR
 BINARY_OP(LOr,  "||")
+// Null Coalescing
+BINARY_OP(Coalesce, "??")
 
 //===--- Assignement Operators --------------------------------------------===//
 
@@ -89,6 +91,7 @@ COMPOUND_ASSIGN_OP(ShrAssign,  ">>=", Shr)
 COMPOUND_ASSIGN_OP(AndAssign,  "&=",  And)
 COMPOUND_ASSIGN_OP(OrAssign,   "|=",  Or)
 COMPOUND_ASSIGN_OP(XOrAssign,  "^=",  XOr)
+COMPOUND_ASSIGN_OP(AssignCoalesce,  "?\?=",  Coalesce)
 
 //===----------------------------------------------------------------------===//
 

@@ -170,7 +170,7 @@ TEST_F(LexerTest, incompleteUTF8) {
 
 TEST_F(LexerTest, punctuationAndOperators) {
   const char *input =
-      "()[]{}/=/++=--=&&&=&**=%%=|||=|>>>=>>=><<<=<<=<:,.!!=^^=->~;?? ??=?";
+      "()[]{}/=/++=--=&&&=&**=%%=|||=|>>>=>>=><<<=<<=<:,.!!=^^=->~;?? ?\?=?";
 
   Lexer lexer = createLexer(input);
   CHECK_NEXT(TokenKind::LParen, "(", true);
@@ -214,7 +214,7 @@ TEST_F(LexerTest, punctuationAndOperators) {
   CHECK_NEXT(TokenKind::Tilde, "~", false);
   CHECK_NEXT(TokenKind::Semicolon, ";", false);
   CHECK_NEXT(TokenKind::QuestionQuestion, "??", false);
-  CHECK_NEXT(TokenKind::QuestionQuestionEqual, "??=", false);
+  CHECK_NEXT(TokenKind::QuestionQuestionEqual, "?\?=", false);
   CHECK_NEXT(TokenKind::Question, "?", false);
   CHECK_EOF();
 }
