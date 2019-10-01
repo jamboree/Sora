@@ -100,12 +100,9 @@ public:
   bool hasType() const { return (bool)getType(); }
   void setType(Type type) { typeAndIsImplicit.setPointer(type); }
 
-  /// Recursively ignores the ParenExprs that might surround this expression.
-  /// \returns the first expression found that isn't a ParenExpr
+  /// Skips parentheses around this Expr: If this is a ParenExpr, returns
+  /// getSubExpr()->ignoreParens(), else returns this.
   Expr *ignoreParens();
-
-  /// Recursively ignores the ParenExprs that might surround this expression.
-  /// \returns the first expression found that isn't a ParenExpr
   const Expr *ignoreParens() const {
     return const_cast<Expr *>(this)->ignoreParens();
   }
