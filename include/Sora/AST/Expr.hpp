@@ -199,9 +199,9 @@ class UnresolvedMemberRefExpr final : public UnresolvedExpr {
 
 public:
   UnresolvedMemberRefExpr(Expr *base, SourceLoc opLoc, bool isArrow,
-                             SourceLoc memberIdentLoc, Identifier memberIdent)
-      : UnresolvedExpr(ExprKind::UnresolvedMemberRef), base(base),
-        opLoc(opLoc), memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
+                          SourceLoc memberIdentLoc, Identifier memberIdent)
+      : UnresolvedExpr(ExprKind::UnresolvedMemberRef), base(base), opLoc(opLoc),
+        memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
     bits.unresolvedMemberRefExpr.isArrow = isArrow;
   }
 
@@ -436,9 +436,9 @@ public:
 /// Represents a Tuple Expression, which is a list of expressions between
 /// parentheses.
 ///
-/// This can only represent N-element tuples where N is either 0 or >1.
-/// Grouping parentheses (single element tuples) must be represented using
-/// ParenExpr. This Expr always has a TupleType.
+/// Thi represents N-element tuples where N is either 0 or >1. Grouping
+/// parentheses (single element tuples) are represented using ParenExpr. This
+/// Expr always has a TupleType.
 class TupleExpr final : public Expr,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
   friend llvm::TrailingObjects<TupleExpr, Expr *>;
@@ -448,18 +448,14 @@ class TupleExpr final : public Expr,
   TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc)
       : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
     bits.tupleExpr.numElements = exprs.size();
-    assert(getNumElements() != 1 &&
-           "Grouping parentheses must be represented using ParenExpr");
     std::uninitialized_copy(exprs.begin(), exprs.end(),
                             getTrailingObjects<Expr *>());
   }
 
 public:
-  /// Creates a TupleExpr with 0 or 2+ elements.
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
                            ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 
-  /// Creates an empty TupleExpr.
   static TupleExpr *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
                                 SourceLoc rParenLoc) {
     return create(ctxt, lParenLoc, {}, rParenLoc);
