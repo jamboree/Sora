@@ -159,7 +159,8 @@ class ParenPattern final : public Pattern {
 
 public:
   ParenPattern(SourceLoc lParenLoc, Pattern *subPattern, SourceLoc rParenLoc)
-      : Pattern(PatternKind::Paren), lParenLoc(lParenLoc), rParenLoc(rParenLoc), subPattern(subPattern) {}
+      : Pattern(PatternKind::Paren), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
+        subPattern(subPattern) {}
 
   Pattern *getSubPattern() const { return subPattern; }
 
@@ -176,7 +177,8 @@ public:
 };
 
 /// Represents a Tuple pattern, which is a group of 0 or more patterns
-/// in parentheses.
+/// in parentheses. Note that there are no single-element tuples, so patterns
+/// like "(mut x)" are simply represented using ParenPattern.
 class TuplePattern final
     : public Pattern,
       private llvm::TrailingObjects<TuplePattern, Pattern *> {
@@ -188,13 +190,18 @@ class TuplePattern final
                SourceLoc rParenLoc)
       : Pattern(PatternKind::Tuple), lParenLoc(lParenLoc),
         rParenLoc(rParenLoc) {
+    assert(patterns.size() != 1 &&
+           "Single-element tuples don't exist - Use ParenPattern!");
     bits.tuplePattern.numElements = patterns.size();
     std::uninitialized_copy(patterns.begin(), patterns.end(),
                             getTrailingObjects<Pattern *>());
   }
 
 public:
-  /// Creates a tuple pattern
+  /// Creates a TuplePattern. Note that \p patterns must contain either zero
+  /// elements, or 2+ elements. It can't contain a single element as one-element
+  /// tuples don't exist in Sora (There's no way to write them). Things like
+  /// "(pattern)" are represented using a ParenPattern instead.
   static TuplePattern *create(ASTContext &ctxt, SourceLoc lParenLoc,
                               ArrayRef<Pattern *> patterns,
                               SourceLoc rParenLoc);

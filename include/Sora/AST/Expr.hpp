@@ -433,12 +433,9 @@ public:
   }
 };
 
-/// Represents a Tuple Expression, which is a list of expressions between
-/// parentheses.
-///
-/// Thi represents N-element tuples where N is either 0 or >1. Grouping
-/// parentheses (single element tuples) are represented using ParenExpr. This
-/// Expr always has a TupleType.
+/// Represents a list of zero or more expressions in parentheses.
+/// Note that there are no single-element tuples, so expressions like "(0)" are
+/// represented using ParenExpr.
 class TupleExpr final : public Expr,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
   friend llvm::TrailingObjects<TupleExpr, Expr *>;
@@ -447,12 +444,18 @@ class TupleExpr final : public Expr,
 
   TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc)
       : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
+    assert(exprs.size() != 1 &&
+           "Single-element tuples don't exist - Use ParenExpr!");
     bits.tupleExpr.numElements = exprs.size();
     std::uninitialized_copy(exprs.begin(), exprs.end(),
                             getTrailingObjects<Expr *>());
   }
 
 public:
+  /// Creates a TupleExpr. Note that \p exprs must contain either zero elements,
+  /// or 2+ elements. It can't contain a single element as one-element tuples
+  /// don't exist in Sora (There's no way to write them). Things like
+  /// "(expr)" are represented using a ParenExpr instead.
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
                            ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 

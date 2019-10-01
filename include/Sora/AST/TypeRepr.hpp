@@ -123,7 +123,7 @@ public:
   }
 };
 
-/// Represents grouping parentheses around another type.
+/// Represents parentheses around another type.
 ///
 /// \verbatim
 ///   (i32)
@@ -151,11 +151,10 @@ public:
   }
 };
 
-/// Represents a tuple type.
+/// Represents a tuple type of 0 or 2+ types.
 ///
 /// \verbatim
 ///   ()
-///   (a)
 ///   (a, b)
 ///   (a, b, c)
 /// \endverbatim
@@ -170,13 +169,18 @@ class TupleTypeRepr final
                 SourceLoc rParenLoc)
       : TypeRepr(TypeReprKind::Tuple), lParenLoc(lParenLoc),
         rParenLoc(rParenLoc) {
+    assert(elements.size() != 1 &&
+           "Single-element tuples don't exist - Use ParenTypeRepr!");
     bits.tupleTypeRepr.numElements = elements.size();
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<TypeRepr *>());
   }
 
 public:
-  /// Creates a TupleTypeRepr
+  /// Creates a TupleTypeRepr. Note that \p elements must contain either zero
+  /// elements, or 2+ elements. It can't contain a single element as one-element
+  /// tuple types don't exist in Sora (There's no way to write them). Things
+  /// like "(type)" are represented using a ParenTypeRepr instead.
   static TupleTypeRepr *create(ASTContext &ctxt, SourceLoc lParenLoc,
                                ArrayRef<TypeRepr *> elements,
                                SourceLoc rParenLoc);
