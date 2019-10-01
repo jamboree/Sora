@@ -1,10 +1,32 @@
-// RUN: %sorac-parse -verify %s
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
+// CHECK: TupleTypeRepr numElements=0 lParenLoc=line:4:13 rParenLoc=line:4:14
 func a() -> () {}
+// CHECK: ParenTypeRepr lParenLoc=line:7:13 rParenLoc=line:7:17
+// CHECK-NEXT: IdentifierTypeRepr loc=line:7:14
 func b() -> (i32) {}
+// CHECK: TupleTypeRepr numElements=2 lParenLoc=line:11:13 rParenLoc=line:11:22
+// CHECK-NEXT: IdentifierTypeRepr loc=line:11:14
+// CHECK-NEXT: IdentifierTypeRepr loc=line:11:19
 func c() -> (i32, i32) {}
+// CHECK: TupleTypeRepr numElements=3 lParenLoc=line:16:13 rParenLoc=line:16:27
+// CHECK-NEXT: IdentifierTypeRepr loc=line:16:14
+// CHECK-NEXT: IdentifierTypeRepr loc=line:16:19
+// CHECK-NEXT: IdentifierTypeRepr loc=line:16:24
 func d() -> (i32, i32, i32) {}
-func e() -> (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) {}
+// CHECK: TupleTypeRepr numElements=4 lParenLoc=line:22:13 rParenLoc=line:22:32
+// CHECK-NEXT: IdentifierTypeRepr loc=line:22:14
+// CHECK-NEXT: IdentifierTypeRepr loc=line:22:19
+// CHECK-NEXT: IdentifierTypeRepr loc=line:22:24
+// CHECK-NEXT: IdentifierTypeRepr loc=line:22:29
+func e() -> (i32, i32, i32, i32) {}
+// CHECK: TupleTypeRepr numElements=5 lParenLoc=line:29:13 rParenLoc=line:29:37
+// CHECK-NEXT: IdentifierTypeRepr loc=line:29:14
+// CHECK-NEXT: IdentifierTypeRepr loc=line:29:19
+// CHECK-NEXT: IdentifierTypeRepr loc=line:29:24
+// CHECK-NEXT: IdentifierTypeRepr loc=line:29:29
+// CHECK-NEXT: IdentifierTypeRepr loc=line:29:34
+func e() -> (i32, i32, i32, i32, i32) {}
 
 func f() -> (                       // expect-error:    expected a type
 func g() -> (i32,                   // expect-error:    expected a type
