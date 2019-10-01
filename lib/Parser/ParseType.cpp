@@ -82,7 +82,7 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
   if (elements.size() == 1)
     result = new (ctxt) ParenTypeRepr(lParenLoc, elements[0], rParenLoc);
   else
-    TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
+    result = TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
   return makeParserResult(result);
 }
 
