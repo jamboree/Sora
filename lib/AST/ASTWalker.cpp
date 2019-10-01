@@ -101,7 +101,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   void visitCallExpr(CallExpr *expr) {
     if (Expr *fn = doIt(expr->getFn()))
       expr->setFn(fn);
-    if (auto *args = dyn_cast_or_null<TupleExpr>(doIt(expr->getArgs())))
+    if (Expr *args = doIt(expr->getArgs()))
       expr->setArgs(args);
   }
 

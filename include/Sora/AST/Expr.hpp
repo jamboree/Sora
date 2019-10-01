@@ -437,10 +437,9 @@ public:
 /// Represents a Tuple Expression, which is a list of expressions between
 /// parentheses.
 ///
-/// Note that single-element tuples that aren't part of a call aren't
-/// represented as a TupleExpr but as a ParenExpr. For instance, (0) is
-/// represented at a ParenExpr, but in foo(0), the (0) is represented as a
-/// TupleExpr.
+/// This can only represent N-element tuples where N is either 0 or >1.
+/// Grouping parentheses (single element tuples) must be represented using
+/// ParenExpr.
 class TupleExpr final : public Expr,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
   friend llvm::TrailingObjects<TupleExpr, Expr *>;
@@ -452,12 +451,14 @@ class TupleExpr final : public Expr,
       : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
     bits.tupleExpr.numElements = exprs.size();
     bits.tupleExpr.isCallArgs = isCallArgs;
+    assert(getNumElements() != 1 &&
+           "Grouping parentheses must be represented using ParenExpr");
     std::uninitialized_copy(exprs.begin(), exprs.end(),
                             getTrailingObjects<Expr *>());
   }
 
 public:
-  /// Creates a TupleExpr with one or more element.
+  /// Creates a TupleExpr with 0 or 2+ elements.
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
                            ArrayRef<Expr *> exprs, SourceLoc rParenLoc,
                            bool isCallArgs);
@@ -498,9 +499,13 @@ public:
   }
 };
 
-/// Represents a parenthesized expression
+/// Represents a simple parenthesized expression.
+/// This always has the same type as its subexpression.
 ///
-/// e.g. (0), (foo), etc.
+/// \verbatim
+/// (foo)
+/// foo(3) // (3) is a ParenExpr
+/// \endverbatim
 class ParenExpr final : public Expr {
   Expr *subExpr;
   SourceLoc lParenLoc, rParenLoc;
@@ -534,34 +539,28 @@ public:
 class CallExpr final : public Expr {
   /// The function being called
   Expr *fn;
-  /// The arguments passed to the function
-  TupleExpr *args;
+  /// The arguments passed to the function. This is usually a ParenExpr, a
+  /// TupleExpr or an ErrorExpr.
+  Expr *args;
 
 public:
-  CallExpr(Expr *fn, TupleExpr *args)
-      : Expr(ExprKind::Call), fn(fn), args(args) {}
+  CallExpr(Expr *fn, Expr *args) : Expr(ExprKind::Call), fn(fn), args(args) {}
 
   Expr *getFn() const { return fn; }
   void setFn(Expr *base) { this->fn = base; }
 
-  TupleExpr *getArgs() const { return args; }
-  void setArgs(TupleExpr *args) { this->args = args; }
+  Expr *getArgs() const { return args; }
+  void setArgs(Expr *args) { this->args = args; }
 
-  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const {
     assert(fn && "no fn");
     return fn->getBegLoc();
   }
-  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const {
     assert(args && "no args");
     return args->getEndLoc();
   }
-  /// \returns the preffered SourceLoc for diagnostics
-  SourceLoc getLoc() const {
-    /// FIXME: Is this the best choice?
-    return fn->getLoc();
-  }
+  SourceLoc getLoc() const { return fn->getLoc(); }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Call;
