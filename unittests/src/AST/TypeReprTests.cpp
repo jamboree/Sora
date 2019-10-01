@@ -19,10 +19,13 @@ class TypeReprTest : public ::testing::Test {
 protected:
   TypeReprTest() {
     // Setup SourceLocs
-    SourceLoc beg = SourceLoc::fromPointer(str);
-    SourceLoc end = SourceLoc::fromPointer(str + 10);
+    beg = SourceLoc::fromPointer(str);
+    mid = SourceLoc::fromPointer(str + 5);
+    end = SourceLoc::fromPointer(str + 10);
     // Setup nodes
     identifierTypeRepr = new (*ctxt) IdentifierTypeRepr(beg, {});
+    parenTypeRepr = new (*ctxt)
+        ParenTypeRepr(beg, new (*ctxt) IdentifierTypeRepr(mid, {}), end);
     tupleTypeRepr = TupleTypeRepr::createEmpty(*ctxt, beg, end);
     arrayTypeRepr = new (*ctxt) ArrayTypeRepr(beg, nullptr, nullptr, end);
     auto subTyRepr = new (*ctxt) IdentifierTypeRepr(end, {});
@@ -34,9 +37,10 @@ protected:
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
-  SourceLoc beg, end;
+  SourceLoc beg, mid, end;
 
   TypeRepr *identifierTypeRepr;
+  TypeRepr *parenTypeRepr;
   TypeRepr *tupleTypeRepr;
   TypeRepr *arrayTypeRepr;
   TypeRepr *referenceTypeRepr;
@@ -46,6 +50,7 @@ protected:
 
 TEST_F(TypeReprTest, rtti) {
   EXPECT_TRUE(isa<IdentifierTypeRepr>(identifierTypeRepr));
+  EXPECT_TRUE(isa<ParenTypeRepr>(parenTypeRepr));
   EXPECT_TRUE(isa<TupleTypeRepr>(tupleTypeRepr));
   EXPECT_TRUE(isa<ArrayTypeRepr>(arrayTypeRepr));
   EXPECT_TRUE(isa<ReferenceTypeRepr>(referenceTypeRepr));
@@ -61,6 +66,12 @@ TEST_F(TypeReprTest, getSourceRange) {
   EXPECT_EQ(beg, identifierTypeRepr->getLoc());
   EXPECT_EQ(beg, identifierTypeRepr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, beg), identifierTypeRepr->getSourceRange());
+
+  // ParenTypeRepr
+  EXPECT_EQ(beg, parenTypeRepr->getBegLoc());
+  EXPECT_EQ(mid, parenTypeRepr->getLoc());
+  EXPECT_EQ(end, parenTypeRepr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), parenTypeRepr->getSourceRange());
 
   // TupleTypeRepr
   EXPECT_EQ(beg, tupleTypeRepr->getBegLoc());
@@ -80,7 +91,6 @@ TEST_F(TypeReprTest, getSourceRange) {
   EXPECT_EQ(end, referenceTypeRepr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), referenceTypeRepr->getSourceRange());
 
-  
   // MaybeTypeRepr
   EXPECT_EQ(beg, maybeTypeRepr->getBegLoc());
   EXPECT_EQ(beg, maybeTypeRepr->getLoc());

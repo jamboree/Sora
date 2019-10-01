@@ -128,6 +128,10 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
   void visitMutPattern(MutPattern *pattern) { doIt(pattern->getSubPattern()); }
 
+  void visitParenPattern(ParenPattern *pattern) {
+    doIt(pattern->getSubPattern());
+  }
+
   void visitTuplePattern(TuplePattern *pattern) {
     for (Pattern *elem : pattern->getElements())
       doIt(elem);
@@ -148,6 +152,10 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   //===- TypeRepr ---------------------------------------------------------===//
 
   TRIVIAL_VISIT(IdentifierTypeRepr)
+
+  void visitParenTypeRepr(ParenTypeRepr *tyRepr) {
+    doIt(tyRepr->getSubTypeRepr());
+  }
 
   void visitTupleTypeRepr(TupleTypeRepr *tyRepr) {
     for (TypeRepr *elem : tyRepr->getElements())

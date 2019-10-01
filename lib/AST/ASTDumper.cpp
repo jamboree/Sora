@@ -295,6 +295,18 @@ public:
     visit(pattern->getSubPattern());
   }
 
+  void visitParenPattern(ParenPattern *pattern) {
+    dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(pattern->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getSubPattern());
+  }
+
   void visitTuplePattern(TuplePattern *pattern) {
     dumpCommon(pattern);
     out << " numElements=" << pattern->getNumElements() << ' ';
@@ -402,6 +414,18 @@ public:
     out << ' ';
     dumpLoc(tyRepr->getLoc(), "loc");
     out << '\n';
+  }
+
+  void visitParenTypeRepr(ParenTypeRepr *tyRepr) {
+    dumpCommon(tyRepr);
+    out << ' ';
+    dumpLoc(tyRepr->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(tyRepr->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(tyRepr->getSubTypeRepr());
   }
 
   void visitTupleTypeRepr(TupleTypeRepr *tyRepr) {

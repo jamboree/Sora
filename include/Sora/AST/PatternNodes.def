@@ -14,6 +14,7 @@
 PATTERN(Var, Pattern)
 PATTERN(Discard, Pattern)
 PATTERN(Mut, Pattern)
+PATTERN(Paren, Pattern)
 PATTERN(Tuple, Pattern)
 PATTERN(Typed, Pattern)
 

@@ -23,10 +23,13 @@ protected:
   PatternTest() {
     // Setup SourceLocs
     beg = SourceLoc::fromPointer(str);
+    mid = SourceLoc::fromPointer(str + 5);
     end = SourceLoc::fromPointer(str + 10);
     // Setup nodes
     varPattern = new (*ctxt) VarPattern(new (*ctxt) VarDecl(nullptr, beg, {}));
     discardPattern = new (*ctxt) DiscardPattern(beg);
+    parenPattern =
+        new (*ctxt) ParenPattern(beg, new (*ctxt) DiscardPattern(mid), end);
     tuplePattern = TuplePattern::createEmpty(*ctxt, beg, end);
     mutPattern = new (*ctxt) MutPattern(beg, new (*ctxt) DiscardPattern(end));
     typedPattern =
@@ -38,11 +41,12 @@ protected:
   DiagnosticEngine diagEng{srcMgr, llvm::outs()};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
-  SourceLoc beg, end;
+  SourceLoc beg, mid, end;
 
   Pattern *varPattern;
   Pattern *discardPattern;
   Pattern *mutPattern;
+  Pattern *parenPattern;
   Pattern *tuplePattern;
   Pattern *typedPattern;
 };
@@ -52,6 +56,7 @@ TEST_F(PatternTest, rtti) {
   EXPECT_TRUE(isa<VarPattern>(varPattern));
   EXPECT_TRUE(isa<DiscardPattern>(discardPattern));
   EXPECT_TRUE(isa<MutPattern>(mutPattern));
+  EXPECT_TRUE(isa<ParenPattern>(parenPattern));
   EXPECT_TRUE(isa<TuplePattern>(tuplePattern));
   EXPECT_TRUE(isa<TypedPattern>(typedPattern));
 }
@@ -71,6 +76,11 @@ TEST_F(PatternTest, getSourceRange) {
   EXPECT_EQ(end, mutPattern->getLoc());
   EXPECT_EQ(end, mutPattern->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), mutPattern->getSourceRange());
+
+  EXPECT_EQ(beg, parenPattern->getBegLoc());
+  EXPECT_EQ(mid, parenPattern->getLoc());
+  EXPECT_EQ(end, parenPattern->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), parenPattern->getSourceRange());
 
   EXPECT_EQ(beg, tuplePattern->getBegLoc());
   EXPECT_EQ(beg, tuplePattern->getLoc());

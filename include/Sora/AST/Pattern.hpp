@@ -151,6 +151,30 @@ public:
   }
 };
 
+/// Represents a pattern that only consists of grouping parentheses around
+/// another pattern.
+class ParenPattern final : public Pattern {
+  SourceLoc lParenLoc, rParenLoc;
+  Pattern *subPattern = nullptr;
+
+public:
+  ParenPattern(SourceLoc lParenLoc, Pattern *subPattern, SourceLoc rParenLoc)
+      : Pattern(PatternKind::Paren), lParenLoc(lParenLoc), rParenLoc(rParenLoc), subPattern(subPattern) {}
+
+  Pattern *getSubPattern() const { return subPattern; }
+
+  SourceLoc getLParenLoc() const { return lParenLoc; }
+  SourceLoc getRParenLoc() const { return rParenLoc; }
+
+  SourceLoc getBegLoc() const { return lParenLoc; }
+  SourceLoc getLoc() const { return subPattern->getLoc(); }
+  SourceLoc getEndLoc() const { return rParenLoc; }
+
+  static bool classof(const Pattern *pattern) {
+    return pattern->getKind() == PatternKind::Paren;
+  }
+};
+
 /// Represents a Tuple pattern, which is a group of 0 or more patterns
 /// in parentheses.
 class TuplePattern final
@@ -158,12 +182,12 @@ class TuplePattern final
       private llvm::TrailingObjects<TuplePattern, Pattern *> {
   friend llvm::TrailingObjects<TuplePattern, Pattern *>;
 
-  SourceLoc lParenLoc, rParenloc;
+  SourceLoc lParenLoc, rParenLoc;
 
   TuplePattern(SourceLoc lParenLoc, ArrayRef<Pattern *> patterns,
-               SourceLoc rParenloc)
+               SourceLoc rParenLoc)
       : Pattern(PatternKind::Tuple), lParenLoc(lParenLoc),
-        rParenloc(rParenloc) {
+        rParenLoc(rParenLoc) {
     bits.tuplePattern.numElements = patterns.size();
     std::uninitialized_copy(patterns.begin(), patterns.end(),
                             getTrailingObjects<Pattern *>());
@@ -190,10 +214,10 @@ public:
   }
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
-  SourceLoc getRParenLoc() const { return rParenloc; }
+  SourceLoc getRParenLoc() const { return rParenLoc; }
 
   SourceLoc getBegLoc() const { return lParenLoc; }
-  SourceLoc getEndLoc() const { return rParenloc; }
+  SourceLoc getEndLoc() const { return rParenLoc; }
 
   static bool classof(const Pattern *pattern) {
     return pattern->getKind() == PatternKind::Tuple;

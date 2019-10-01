@@ -123,6 +123,34 @@ public:
   }
 };
 
+/// Represents grouping parentheses around another type.
+///
+/// \verbatim
+///   (i32)
+/// \endverbatim
+class ParenTypeRepr final : public TypeRepr {
+  SourceLoc lParenLoc, rParenLoc;
+  TypeRepr *subTyRepr;
+
+public:
+  ParenTypeRepr(SourceLoc lParenLoc, TypeRepr *subTyRepr, SourceLoc rParenLoc)
+      : TypeRepr(TypeReprKind::Paren), lParenLoc(lParenLoc),
+        rParenLoc(rParenLoc), subTyRepr(subTyRepr) {}
+
+  TypeRepr *getSubTypeRepr() const { return subTyRepr; }
+
+  SourceLoc getLParenLoc() const { return lParenLoc; }
+  SourceLoc getRParenLoc() const { return rParenLoc; }
+
+  SourceLoc getBegLoc() const { return lParenLoc; }
+  SourceLoc getLoc() const { return subTyRepr->getLoc(); }
+  SourceLoc getEndLoc() const { return rParenLoc; }
+
+  static bool classof(const TypeRepr *typeRepr) {
+    return typeRepr->getKind() == TypeReprKind::Paren;
+  }
+};
+
 /// Represents a tuple type.
 ///
 /// \verbatim
