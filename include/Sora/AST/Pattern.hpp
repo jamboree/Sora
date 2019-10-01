@@ -78,6 +78,13 @@ public:
   /// \return the kind of patterns this is
   PatternKind getKind() const { return kind; }
 
+  /// Skips parentheses around this Pattern: If this is a ParenPattern, returns
+  /// getSubPattern()->ignoreParens(), else returns this.
+  Pattern *ignoreParens();
+  const Pattern *ignoreParens() const {
+    return const_cast<Pattern *>(this)->ignoreParens();
+  }
+
   /// \returns the SourceLoc of the first token of the pattern
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the pattern

@@ -24,6 +24,12 @@ void *TypeRepr::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, AllocatorKind::Permanent);
 }
 
+TypeRepr* TypeRepr::ignoreParens() {
+  if (auto paren = dyn_cast<ParenTypeRepr>(this))
+    return paren->getSubTypeRepr()->ignoreParens();
+  return this;
+}
+
 SourceLoc TypeRepr::getBegLoc() const {
   switch (getKind()) {
   default:

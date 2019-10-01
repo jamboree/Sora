@@ -73,6 +73,13 @@ public:
   /// \return the kind of TypeRepr this is
   TypeReprKind getKind() const { return kind; }
 
+  /// Skips parentheses around this TypeRepr: If this is a ParenTypeRepr,
+  /// returns getSubTypeRepr()->ignoreParens(), else returns this.
+  TypeRepr *ignoreParens();
+  const TypeRepr *ignoreParens() const {
+    return const_cast<TypeRepr *>(this)->ignoreParens();
+  }
+
   /// Traverse this TypeRepr using \p walker.
   /// \returns true if the walk completed successfully, false if it ended
   /// prematurely.

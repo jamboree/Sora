@@ -26,6 +26,12 @@ void *Pattern::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, AllocatorKind::Permanent);
 }
 
+Pattern *Pattern::ignoreParens() {
+  if (auto paren = dyn_cast<ParenPattern>(this))
+    return paren->getSubPattern()->ignoreParens();
+  return this;
+}
+
 SourceLoc Pattern::getBegLoc() const {
   switch (getKind()) {
   default:
