@@ -64,7 +64,6 @@ class alignas(ExprAlignement) Expr {
     /// TupleExpr bits
     struct {
       uint32_t numElements;
-      bool isCallArgs;
     } tupleExpr;
     /// BinaryExpr bits
     struct {
@@ -200,9 +199,9 @@ class UnresolvedMemberRefExpr final : public UnresolvedExpr {
 
 public:
   UnresolvedMemberRefExpr(Expr *base, SourceLoc opLoc, bool isArrow,
-                          SourceLoc memberIdentLoc, Identifier memberIdent)
-      : UnresolvedExpr(ExprKind::UnresolvedMemberRef), base(base), opLoc(opLoc),
-        memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
+                             SourceLoc memberIdentLoc, Identifier memberIdent)
+      : UnresolvedExpr(ExprKind::UnresolvedMemberRef), base(base),
+        opLoc(opLoc), memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
     bits.unresolvedMemberRefExpr.isArrow = isArrow;
   }
 
@@ -446,11 +445,9 @@ class TupleExpr final : public Expr,
 
   SourceLoc lParenLoc, rParenLoc;
 
-  TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc,
-            bool isCallArgs)
+  TupleExpr(SourceLoc lParenLoc, ArrayRef<Expr *> exprs, SourceLoc rParenLoc)
       : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
     bits.tupleExpr.numElements = exprs.size();
-    bits.tupleExpr.isCallArgs = isCallArgs;
     assert(getNumElements() != 1 &&
            "Grouping parentheses must be represented using ParenExpr");
     std::uninitialized_copy(exprs.begin(), exprs.end(),
@@ -460,13 +457,12 @@ class TupleExpr final : public Expr,
 public:
   /// Creates a TupleExpr with 0 or 2+ elements.
   static TupleExpr *create(ASTContext &ctxt, SourceLoc lParenLoc,
-                           ArrayRef<Expr *> exprs, SourceLoc rParenLoc,
-                           bool isCallArgs);
+                           ArrayRef<Expr *> exprs, SourceLoc rParenLoc);
 
   /// Creates an empty TupleExpr.
   static TupleExpr *createEmpty(ASTContext &ctxt, SourceLoc lParenLoc,
-                                SourceLoc rParenLoc, bool isCallArgs) {
-    return create(ctxt, lParenLoc, {}, rParenLoc, isCallArgs);
+                                SourceLoc rParenLoc) {
+    return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
   size_t getNumElements() const { return bits.tupleExpr.numElements; }
@@ -478,11 +474,6 @@ public:
   }
   Expr *getElement(size_t n) { return getElements()[n]; }
   void setElement(size_t n, Expr *expr) { getElements()[n] = expr; }
-
-  /// \returns a boolean indicating if this tuple is used to represent the
-  /// arguments of a CallExpr
-  bool isCallArgs() const { return bits.tupleExpr.isCallArgs; }
-  void setIsCallArgs(bool value = true) { bits.tupleExpr.isCallArgs = value; }
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }

@@ -91,10 +91,9 @@ APInt IntegerLiteralExpr::getRawValue() const {
 }
 
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
-                             ArrayRef<Expr *> exprs, SourceLoc rParenLoc,
-                             bool isCallArgs) {
+                             ArrayRef<Expr *> exprs, SourceLoc rParenLoc) {
   // Need manual memory allocation here because of trailing objects.
   auto size = totalSizeToAlloc<Expr *>(exprs.size());
   void *mem = ctxt.allocate(size, alignof(TupleExpr));
-  return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc, isCallArgs);
+  return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc);
 }

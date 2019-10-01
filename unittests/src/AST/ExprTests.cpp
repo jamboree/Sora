@@ -35,11 +35,10 @@ protected:
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
     tupleElementExpr = new (*ctxt)
         TupleElementExpr(new (*ctxt) DiscardExpr(beg), mid, false, end, 0);
-    tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end, false);
+    tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
     parenExpr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
-    callExpr =
-        new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
-                             TupleExpr::createEmpty(*ctxt, beg, end, false));
+    callExpr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
+                                    TupleExpr::createEmpty(*ctxt, beg, end));
     binaryExpr = new (*ctxt)
         BinaryExpr(new (*ctxt) DiscardExpr(beg), BinaryOperatorKind::Add, mid,
                    new (*ctxt) DiscardExpr(end));
