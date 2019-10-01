@@ -1,4 +1,0 @@
-// RUN: %sorac-parse -verify %s
-
-func foo() -> &     // expect-error: expected a type
-func foo() -> &mut  // expect-error: expected a type

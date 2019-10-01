@@ -1,0 +1,11 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+// CHECK: ReferenceTypeRepr immutable ampLoc=line:5:15
+// CHECK-NEXT: IdentifierTypeRepr loc=line:5:16
+func foo() -> &i32 {}
+// CHECK: ReferenceTypeRepr mutable ampLoc=line:8:15 mutLoc=line:8:16
+// CHECK-NEXT: IdentifierTypeRepr loc=line:8:20
+func foo() -> &mut i32 {}
+
+func foo() -> &     // expect-error: expected a type
+func foo() -> &mut  // expect-error: expected a type
