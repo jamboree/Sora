@@ -438,7 +438,7 @@ public:
 ///
 /// This can only represent N-element tuples where N is either 0 or >1.
 /// Grouping parentheses (single element tuples) must be represented using
-/// ParenExpr.
+/// ParenExpr. This Expr always has a TupleType.
 class TupleExpr final : public Expr,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
   friend llvm::TrailingObjects<TupleExpr, Expr *>;
