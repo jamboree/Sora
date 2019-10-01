@@ -191,6 +191,7 @@ public:
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
+  bool isEmpty() const { return getNumElements() == 0; }
   size_t getNumElements() const { return bits.tupleTypeRepr.numElements; }
   ArrayRef<TypeRepr *> getElements() const {
     return {getTrailingObjects<TypeRepr *>(), getNumElements()};

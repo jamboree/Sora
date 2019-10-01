@@ -464,6 +464,7 @@ public:
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
+  bool isEmpty() const { return getNumElements() == 0; }
   size_t getNumElements() const { return bits.tupleExpr.numElements; }
   MutableArrayRef<Expr *> getElements() {
     return {getTrailingObjects<Expr *>(), getNumElements()};
@@ -476,8 +477,6 @@ public:
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }
-
-  bool isEmpty() const { return getNumElements() == 0; }
 
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return lParenLoc; }

@@ -212,6 +212,7 @@ public:
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
+  bool isEmpty() const { return getNumElements() == 0; }
   size_t getNumElements() const { return bits.tuplePattern.numElements; }
   ArrayRef<Pattern *> getElements() const {
     return {getTrailingObjects<Pattern *>(), getNumElements()};
