@@ -32,6 +32,8 @@ class SourceFile;
 class CompilerInstance {
   friend class Driver;
   CompilerInstance() = default;
+  CompilerInstance(const CompilerInstance &) = delete;
+  CompilerInstance &operator=(const CompilerInstance &) = delete;
 
 public:
   /// A step in the compilation process
@@ -127,6 +129,9 @@ private:
 /// This is a high-level compiler driver. It handles command-line options and
 /// creation of CompilerInstances.
 class Driver {
+  Driver(const Driver &) = delete;
+  Driver &operator=(const Driver &) = delete;
+
 public:
   /// \param out the stream where the driver will print diagnostics
   /// NOTE: This will not be used to print compilation-related diagnostics

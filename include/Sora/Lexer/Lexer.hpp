@@ -34,9 +34,12 @@ class BufferID;
 /// lex() returns a pre-lexed token and prepares (lexs) the next token.
 /// This allows us to have an efficient "peek" method.
 class Lexer {
-public:
-  Lexer(const SourceManager &srcMgr, BufferID buffer,
-        DiagnosticEngine *diagEng);
+  Lexer(const Lexer &) = delete;
+  Lexer &operator=(const Lexer &) = delete;
+
+public
+      : Lexer(const SourceManager &srcMgr, BufferID buffer,
+              DiagnosticEngine *diagEng);
 
   /// Lex a token and return it.
   /// If we reached EOF, this will simply return the EOF token whenever
