@@ -24,7 +24,7 @@ TEST(BinaryOperatorKindTest, getOpForCompoundAssignementOp) {
   CHECK(Op::AndAssign, Op::And);
   CHECK(Op::OrAssign, Op::Or);
   CHECK(Op::XOrAssign, Op::XOr);
-  CHECK(Op::CoalesceAssign, Op::Coalesce);
+  CHECK(Op::NullCoalesceAssign, Op::NullCoalesce);
 #undef CHECK
 }
 
@@ -61,7 +61,7 @@ TEST(BinaryOperatorKindTest, classificationAndSpelling) {
   OP(Op::GE, ">=", 0, 0, 0, 0, 0, 1, 0, 0, 0);
   OP(Op::LAnd, "&&", 0, 0, 0, 0, 0, 0, 1, 0, 0);
   OP(Op::LOr, "||", 0, 0, 0, 0, 0, 0, 1, 0, 0);
-  OP(Op::Coalesce, "??", 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  OP(Op::NullCoalesce, "??", 0, 0, 0, 0, 0, 0, 0, 0, 0);
   OP(Op::Assign, "=", 0, 0, 0, 0, 0, 0, 0, 1, 0);
   OP(Op::AddAssign, "+=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::SubAssign, "-=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
@@ -73,7 +73,7 @@ TEST(BinaryOperatorKindTest, classificationAndSpelling) {
   OP(Op::AndAssign, "&=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::OrAssign, "|=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
   OP(Op::XOrAssign, "^=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::CoalesceAssign, "?\?=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(Op::NullCoalesceAssign, "?\?=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
 #undef OP
 }
 
