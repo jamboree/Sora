@@ -158,8 +158,8 @@ public:
   }
 };
 
-/// Represents an unresolved reference to a declaration. This is always a
-/// single identifier.
+/// Represents an unresolved reference to a declaration.
+/// This is simply an identifier and a SourceLoc.
 class UnresolvedDeclRefExpr final : public UnresolvedExpr {
   Identifier ident;
   SourceLoc identLoc;
@@ -226,18 +226,14 @@ public:
 };
 
 /// Represents the "discard" variable, which is a write-only variable
-/// whose name is an underscore '_'.
+/// whose name is an underscore '_'. This always has a contextual l-value type.
 class DiscardExpr final : public Expr {
   SourceLoc loc;
 
 public:
   DiscardExpr(SourceLoc loc) : Expr(ExprKind::Discard), loc(loc) {}
 
-  SourceLoc getLoc() const { return loc; }
-
-  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return loc; }
-  /// \returns the SourceLoc of the last token of the expression
   SourceLoc getEndLoc() const { return loc; }
 
   static bool classof(const Expr *expr) {
@@ -579,6 +575,7 @@ public:
 
   SourceLoc getOpLoc() const { return opLoc; }
   OpKind getOpKind() const { return bits.binaryExpr.opKind; }
+  const char *getOpKindStr() const { return to_string(getOpKind()); }
   /// \returns the spelling of the operator (e.g. "+" for Add)
   const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }
 
@@ -651,6 +648,7 @@ public:
 
   SourceLoc getOpLoc() const { return opLoc; }
   OpKind getOpKind() const { return bits.unaryExpr.opKind; }
+  const char *getOpKindStr() const { return to_string(getOpKind()); }
   /// \returns the spelling of the operator
   const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }
 
