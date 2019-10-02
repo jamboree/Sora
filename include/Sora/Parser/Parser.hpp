@@ -33,6 +33,9 @@ class TypeRepr;
 
 /// Sora Language Parser
 class Parser final {
+  Parser(const Parser &) = delete;
+  Parser &operator=(const Parser &) = delete;
+
 public:
   /// \param ctxt the ASTContext that owns the SourceFile. This is where we'll
   /// allocate memory for the AST. We'll also use its DiagnosticEngine to emit
@@ -40,24 +43,17 @@ public:
   /// \param sf the SourceFile that this parser will be working on
   Parser(ASTContext &ctxt, SourceFile &file);
 
-  /// Parses everything in the SourceFile until the whole file has been
-  /// consumed.
-  void parseSourceFile();
-
   /// The ASTContext
   ASTContext &ctxt;
   /// The Diagnostic Engine
   DiagnosticEngine &diagEng;
   /// The SourceFile that this parser is working on
   SourceFile &sourceFile;
+
+private:
   /// The current DeclContext
   DeclContext *declContext = nullptr;
 
-  llvm::SaveAndRestore<DeclContext *> setDeclContextRAII(DeclContext *newDC) {
-    return {declContext, newDC};
-  }
-
-private:
   /// Our lexer instance
   Lexer lexer;
 
@@ -67,6 +63,12 @@ private:
   /// The SourceLoc that's right past-the-end of the last token consumed by the
   /// parser.
   SourceLoc prevTokPastTheEnd;
+
+public:
+  //===- Source-File Parsing ----------------------------------------------===//
+
+  /// Parses a source-file
+  void parseSourceFile();
 
   //===- Declaration Parsing ----------------------------------------------===//
 
@@ -188,6 +190,18 @@ private:
     assert(loc && "loc is null?");
     return diagEng.diagnose<Args...>(loc, diag, args...);
   }
+
+  //===- Current DeclContext Management -----------------------------------===//
+
+  /// Sets the DeclContext that will be used by the parser.
+  /// \returns a RAII object that restores the previous DeclContext on
+  /// destruction.
+  llvm::SaveAndRestore<DeclContext *> setDeclContextRAII(DeclContext *newDC) {
+    return {declContext, newDC};
+  }
+
+  /// \returns the current DeclContext used by the parser
+  DeclContext *getDeclContext() const { return declContext; }
 
   //===- Token Consumption & Peeking --------------------------------------===//
 
