@@ -37,9 +37,9 @@ class Lexer {
   Lexer(const Lexer &) = delete;
   Lexer &operator=(const Lexer &) = delete;
 
-public
-      : Lexer(const SourceManager &srcMgr, BufferID buffer,
-              DiagnosticEngine *diagEng);
+public:
+  Lexer(const SourceManager &srcMgr, BufferID buffer,
+        DiagnosticEngine *diagEng);
 
   /// Lex a token and return it.
   /// If we reached EOF, this will simply return the EOF token whenever
