@@ -15,6 +15,7 @@
 #include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -262,10 +263,135 @@ public:
 
   //===--- Expr -----------------------------------------------------------===//
 
-  // TODO
-  void visitExpr(Expr *expr) {
+  void visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
     dumpCommon(expr);
-    out << " TODO\n";
+    out << ' ';
+    dumpIdent(expr->getIdentifier(), "ident");
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << '\n';
+  }
+
+  void visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
+    dumpCommon(expr);
+    out << ' ' << (expr->isArrow() ? "arrow" : "dot") << ' ';
+    dumpIdent(expr->getMemberIdentifier(), "memberIdent");
+    out << ' ';
+    dumpLoc(expr->getMemberIdentifierLoc(), "memberIdentLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getBase());
+  }
+
+  void visitDiscardExpr(DiscardExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << '\n';
+  }
+
+  void visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << " str='" << expr->getString() << "' rawValue=" << expr->getRawValue()
+        << '\n';
+  }
+
+  void visitFloatLiteralExpr(FloatLiteralExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << " str='" << expr->getString() << "'\n";
+  }
+
+  void visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << " value=" << (expr->getValue() ? "true" : "false") << "\n";
+  }
+
+  void visitNullLiteralExpr(NullLiteralExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << '\n';
+  }
+
+  void visitErrorExpr(ErrorExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpRange(expr->getSourceRange(), "range");
+    out << '\n';
+  }
+
+  void visitTupleElementExpr(TupleElementExpr *expr) {
+    dumpCommon(expr);
+    out << ' ' << (expr->isArrow() ? "arrow" : "dot") << ' ';
+    dumpLoc(expr->getOpLoc(), "opLoc");
+    out << " index=" << expr->getIndex() << " ";
+    dumpLoc(expr->getIndexLoc(), "indexLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getBase());
+  }
+
+  void visitTupleExpr(TupleExpr *expr) {
+    dumpCommon(expr);
+    out << " numElements=" << expr->getNumElements() << ' ';
+    dumpLoc(expr->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(expr->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    for (auto elem : expr->getElements())
+      visit(elem);
+  }
+
+  void visitParenExpr(ParenExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(expr->getRParenLoc(), "rParenLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getSubExpr());
+  }
+
+  void visitCallExpr(CallExpr *expr) {
+    dumpCommon(expr);
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getFn());
+    visit(expr->getArgs());
+  }
+
+  void visitBinaryExpr(BinaryExpr *expr) {
+    dumpCommon(expr);
+    out << ' ' << expr->getOpSpelling() << " (" << expr->getOpKindStr() << ") ";
+    dumpLoc(expr->getOpLoc(), "opLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getLHS());
+    visit(expr->getRHS());
+  }
+
+  void visitUnaryExpr(UnaryExpr *expr) {
+    dumpCommon(expr);
+    out << ' ' << expr->getOpSpelling() << " (" << expr->getOpKindStr() << ") ";
+    dumpLoc(expr->getOpLoc(), "opLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getSubExpr());
   }
 
   //===--- Pattern --------------------------------------------------------===//
