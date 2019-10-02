@@ -22,6 +22,9 @@ enum class BinaryOperatorKind : uint8_t {
 /// \returns the spelling of a binary operator (e.g. "+" for Add)
 const char *getSpelling(BinaryOperatorKind op);
 
+/// \returns the operator kind as a string (e.g. "Add")
+const char *to_string(BinaryOperatorKind op);
+
 // Make BinaryOperatorKind usable in Diagnostic Arguments
 template <> struct DiagnosticArgumentFormatter<BinaryOperatorKind> {
   static std::string format(BinaryOperatorKind op) { return getSpelling(op); }
@@ -77,6 +80,9 @@ enum class UnaryOperatorKind : uint8_t {
 
 /// \returns the spelling of an unary operator (e.g. "+" for Plus)
 const char *getSpelling(UnaryOperatorKind op);
+
+/// \returns the operator kind as a string (e.g. "Plus")
+const char *to_string(UnaryOperatorKind op);
 
 // Make UnaryOperatorKind usable in Diagnostic Arguments
 template <> struct DiagnosticArgumentFormatter<UnaryOperatorKind> {

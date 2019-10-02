@@ -13,7 +13,7 @@ using namespace sora;
 TEST(BinaryOperatorKindTest, getOpForCompoundAssignementOp) {
   using Op = BinaryOperatorKind;
 #define CHECK(COMPOUND_OP, EXPECTED)                                           \
-  EXPECT_EQ(getOpForCompoundAssignementOp(COMPOUND_OP), EXPECTED)
+  ASSERT_EQ(getOpForCompoundAssignementOp(COMPOUND_OP), EXPECTED)
   CHECK(Op::AddAssign, Op::Add);
   CHECK(Op::SubAssign, Op::Sub);
   CHECK(Op::MulAssign, Op::Mul);
@@ -28,61 +28,68 @@ TEST(BinaryOperatorKindTest, getOpForCompoundAssignementOp) {
 #undef CHECK
 }
 
-TEST(BinaryOperatorKindTest, classificationAndSpelling) {
+TEST(BinaryOperatorKindTest, classificationSpellingAndToString) {
   using Op = BinaryOperatorKind;
 
 #define OP(ID, SPELL, ADD, MUL, SH, BIT, EQ, REL, LOGIC, ASS, CASS)            \
-  EXPECT_STRCASEEQ(getSpelling(ID), SPELL);                                    \
-  EXPECT_EQ(isAdditiveOp(ID), ADD);                                            \
-  EXPECT_EQ(isMultiplicativeOp(ID), MUL);                                      \
-  EXPECT_EQ(isShiftOp(ID), SH);                                                \
-  EXPECT_EQ(isBitwiseOp(ID), BIT);                                             \
-  EXPECT_EQ(isEqualityOp(ID), EQ);                                             \
-  EXPECT_EQ(isRelationalOp(ID), REL);                                          \
-  EXPECT_EQ(isLogicalOp(ID), LOGIC);                                           \
-  EXPECT_EQ(isAssignementOp(ID), ASS);                                         \
-  EXPECT_EQ(isCompoundAssignementOp(ID), CASS)
+  ASSERT_STRCASEEQ(getSpelling(Op::ID), SPELL);                                \
+  ASSERT_STRCASEEQ(to_string(Op::ID), #ID);                                    \
+  ASSERT_EQ(isAdditiveOp(Op::ID), ADD);                                        \
+  ASSERT_EQ(isMultiplicativeOp(Op::ID), MUL);                                  \
+  ASSERT_EQ(isShiftOp(Op::ID), SH);                                            \
+  ASSERT_EQ(isBitwiseOp(Op::ID), BIT);                                         \
+  ASSERT_EQ(isEqualityOp(Op::ID), EQ);                                         \
+  ASSERT_EQ(isRelationalOp(Op::ID), REL);                                      \
+  ASSERT_EQ(isLogicalOp(Op::ID), LOGIC);                                       \
+  ASSERT_EQ(isAssignementOp(Op::ID), ASS);                                     \
+  ASSERT_EQ(isCompoundAssignementOp(Op::ID), CASS)
 
-  OP(Op::Add, "+", 1, 0, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Sub, "-", 1, 0, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Mul, "*", 0, 1, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Div, "/", 0, 1, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Rem, "%", 0, 1, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Shl, "<<", 0, 0, 1, 0, 0, 0, 0, 0, 0);
-  OP(Op::Shr, ">>", 0, 0, 1, 0, 0, 0, 0, 0, 0);
-  OP(Op::And, "&", 0, 0, 0, 1, 0, 0, 0, 0, 0);
-  OP(Op::Or, "|", 0, 0, 0, 1, 0, 0, 0, 0, 0);
-  OP(Op::XOr, "^", 0, 0, 0, 1, 0, 0, 0, 0, 0);
-  OP(Op::Eq, "==", 0, 0, 0, 0, 1, 0, 0, 0, 0);
-  OP(Op::NEq, "!=", 0, 0, 0, 0, 1, 0, 0, 0, 0);
-  OP(Op::LT, "<", 0, 0, 0, 0, 0, 1, 0, 0, 0);
-  OP(Op::LE, "<=", 0, 0, 0, 0, 0, 1, 0, 0, 0);
-  OP(Op::GT, ">", 0, 0, 0, 0, 0, 1, 0, 0, 0);
-  OP(Op::GE, ">=", 0, 0, 0, 0, 0, 1, 0, 0, 0);
-  OP(Op::LAnd, "&&", 0, 0, 0, 0, 0, 0, 1, 0, 0);
-  OP(Op::LOr, "||", 0, 0, 0, 0, 0, 0, 1, 0, 0);
-  OP(Op::NullCoalesce, "??", 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  OP(Op::Assign, "=", 0, 0, 0, 0, 0, 0, 0, 1, 0);
-  OP(Op::AddAssign, "+=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::SubAssign, "-=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::MulAssign, "*=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::DivAssign, "/=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::RemAssign, "%=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::ShlAssign, "<<=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::ShrAssign, ">>=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::AndAssign, "&=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::OrAssign, "|=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::XOrAssign, "^=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
-  OP(Op::NullCoalesceAssign, "?\?=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(Add, "+", 1, 0, 0, 0, 0, 0, 0, 0, 0);
+  OP(Sub, "-", 1, 0, 0, 0, 0, 0, 0, 0, 0);
+  OP(Mul, "*", 0, 1, 0, 0, 0, 0, 0, 0, 0);
+  OP(Div, "/", 0, 1, 0, 0, 0, 0, 0, 0, 0);
+  OP(Rem, "%", 0, 1, 0, 0, 0, 0, 0, 0, 0);
+  OP(Shl, "<<", 0, 0, 1, 0, 0, 0, 0, 0, 0);
+  OP(Shr, ">>", 0, 0, 1, 0, 0, 0, 0, 0, 0);
+  OP(And, "&", 0, 0, 0, 1, 0, 0, 0, 0, 0);
+  OP(Or, "|", 0, 0, 0, 1, 0, 0, 0, 0, 0);
+  OP(XOr, "^", 0, 0, 0, 1, 0, 0, 0, 0, 0);
+  OP(Eq, "==", 0, 0, 0, 0, 1, 0, 0, 0, 0);
+  OP(NEq, "!=", 0, 0, 0, 0, 1, 0, 0, 0, 0);
+  OP(LT, "<", 0, 0, 0, 0, 0, 1, 0, 0, 0);
+  OP(LE, "<=", 0, 0, 0, 0, 0, 1, 0, 0, 0);
+  OP(GT, ">", 0, 0, 0, 0, 0, 1, 0, 0, 0);
+  OP(GE, ">=", 0, 0, 0, 0, 0, 1, 0, 0, 0);
+  OP(LAnd, "&&", 0, 0, 0, 0, 0, 0, 1, 0, 0);
+  OP(LOr, "||", 0, 0, 0, 0, 0, 0, 1, 0, 0);
+  OP(NullCoalesce, "??", 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  OP(Assign, "=", 0, 0, 0, 0, 0, 0, 0, 1, 0);
+  OP(AddAssign, "+=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(SubAssign, "-=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(MulAssign, "*=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(DivAssign, "/=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(RemAssign, "%=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(ShlAssign, "<<=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(ShrAssign, ">>=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(AndAssign, "&=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(OrAssign, "|=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(XOrAssign, "^=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
+  OP(NullCoalesceAssign, "?\?=", 0, 0, 0, 0, 0, 0, 0, 1, 1);
 #undef OP
 }
 
-TEST(UnaryOperatorKindTest, spelling) {
+TEST(UnaryOperatorKindTest, spellingAndToString) {
   using Op = UnaryOperatorKind;
-  EXPECT_STRCASEEQ(getSpelling(Op::Plus), "+");
-  EXPECT_STRCASEEQ(getSpelling(Op::Minus), "-");
-  EXPECT_STRCASEEQ(getSpelling(Op::LNot), "!");
-  EXPECT_STRCASEEQ(getSpelling(Op::Not), "~");
-  EXPECT_STRCASEEQ(getSpelling(Op::Deref), "*");
-  EXPECT_STRCASEEQ(getSpelling(Op::AddressOf), "&");
+#define OP(KIND, SPELLING)                                                     \
+  ASSERT_STRCASEEQ(getSpelling(Op::KIND), SPELLING);                           \
+  ASSERT_STRCASEEQ(to_string(Op::KIND), #KIND);
+
+  OP(Plus, "+");
+  OP(Minus, "-");
+  OP(LNot, "!");
+  OP(Not, "~");
+  OP(Deref, "*");
+  OP(AddressOf, "&");
+
+#undef OP
 }
