@@ -5,7 +5,7 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/AST/Decl.hpp"
+#include "Sora/AST/Pattern.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/Type.hpp"
@@ -43,6 +43,38 @@ void Parser::parseSourceFile() {
     }
     sourceFile.addMember(result.get());
   }
+}
+
+/*
+let-declaration = "let" pattern ('=' expression)?
+*/
+ParserResult<Decl> Parser::parseLetDecl(SmallVectorImpl<VarDecl *> &vars) {
+  assert(tok.is(TokenKind::LetKw));
+  // "let"
+  SourceLoc letLoc = consumeToken();
+  // pattern
+  auto result =
+      parsePattern([&]() { diagnoseExpected(diag::expected_pat_after_let); });
+
+  if (!result.hasValue())
+    return nullptr;
+
+  Pattern *pattern = result.get();
+  pattern->forEachVarDecl([&](VarDecl *var) { vars.push_back(var); });
+
+  // ('=' expression)?
+  bool hadError = false;
+  if (SourceLoc eqLoc = consumeIf(TokenKind::Equal)) {
+    auto result = parseExpr(
+        [&]() { diagnoseExpected(diag::expected_initial_value_after_equal); });
+    if (result.hasValue()) {
+      return makeParserResult(new (ctxt) LetDecl(declContext, letLoc, pattern,
+                                                 eqLoc, result.get()));
+    }
+    hadError = true;
+  }
+  LetDecl *decl = new (ctxt) LetDecl(declContext, letLoc, pattern);
+  return hadError ? makeParserErrorResult(decl) : makeParserResult(decl);
 }
 
 /*

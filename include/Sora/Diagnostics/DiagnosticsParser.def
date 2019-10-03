@@ -63,6 +63,18 @@ ERROR(expected_param_decl, "expected a parameter declaration", ())
 
 // Expressions
 ERROR(expected_expr, "expected an expression", ())
+ERROR(expected_initial_value_after_equal, 
+  "expected initial value after '='", ())
+
+// Patterns
+ERROR(expected_pat_after_let, "expected a pattern after 'let'", ())
+ERROR(expected_pat_after_mut, "expected a pattern after 'mut'", ())
+ERROR(expected_pat, "expected a pattern", ())
+ERROR(expected_rparen_at_end_of_tuple_pat, 
+  "expected ')' at end of tuple pattern", ())
+ERROR(var_already_mutable, "variable is already mutable", ())
+ERROR(pat_can_only_have_one_mut, 
+  "pattern can only have one 'mut' specifier", ())
 
 //===----------------------------------------------------------------------===//
 

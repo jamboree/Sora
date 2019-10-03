@@ -18,6 +18,9 @@ type = identifier
 */
 ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   switch (tok.getKind()) {
+  default:
+    onNoType();
+    return nullptr;
   case TokenKind::Identifier: {
     Identifier ident;
     SourceLoc identLoc = consumeIdentifier(ident);
@@ -30,9 +33,6 @@ ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
     return parseReferenceType();
   case TokenKind::MaybeKw:
     return parseMaybeType();
-  default:
-    onNoType();
-    return nullptr;
   }
 }
 
@@ -52,14 +52,21 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
 
   SmallVector<TypeRepr *, 4> elements;
 
+  // Utility function to create a ParenTypeRepr or a TupleTypeRepr depending on
+  // the number of elements.
+  auto createResult = [&](SourceLoc rParenLoc) -> TypeRepr * {
+    if (elements.size() == 1)
+      return new (ctxt) ParenTypeRepr(lParenLoc, elements[0], rParenLoc);
+    return TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
+  };
+
   // Utility function to try to recover and return something.
   auto tryRecoverAndReturn = [&]() -> ParserResult<TypeRepr> {
     skipUntilDeclStmtRCurly(TokenKind::LParen);
     if (!tok.is(TokenKind::LParen))
       return nullptr;
     SourceLoc rParenLoc = consumeToken();
-    return makeParserErrorResult(
-        TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc));
+    return makeParserErrorResult(createResult(rParenLoc));
   };
 
   // type (',' type)*
@@ -76,14 +83,7 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
       lParenLoc, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_type);
   if (!rParenLoc)
     return nullptr;
-
-  TypeRepr *result = nullptr;
-  // Create a ParenTypeRepr if we just have (type), else create a TupleTypeRepr.
-  if (elements.size() == 1)
-    result = new (ctxt) ParenTypeRepr(lParenLoc, elements[0], rParenLoc);
-  else
-    result = TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
-  return makeParserResult(result);
+  return makeParserResult(createResult(rParenLoc));
 }
 
 /*

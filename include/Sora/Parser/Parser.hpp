@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Sora/AST/Decl.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Diagnostics/DiagnosticsParser.hpp"
@@ -20,14 +21,10 @@
 namespace sora {
 class ASTContext;
 class BlockStmt;
-class Decl;
-class DeclContext;
 class Expr;
-class FuncDecl;
 class Identifier;
 class Lexer;
-class ParamDecl;
-class ParamList;
+class Pattern;
 class SourceFile;
 class TypeRepr;
 
@@ -64,6 +61,9 @@ private:
   /// parser.
   SourceLoc prevTokPastTheEnd;
 
+  /// Whether we can apply the "mut" specifier when parsing a pattern.
+  bool canApplyMutSpecifier = true;
+
 public:
   //===- Source-File Parsing ----------------------------------------------===//
 
@@ -74,6 +74,10 @@ public:
 
   /// \returns true if the parser is positioned at the start of a declaration.
   bool isStartOfDecl() const;
+
+  /// Parses a let-declaration
+  /// The parser must be position on the "let" keyword.
+  ParserResult<Decl> parseLetDecl(SmallVectorImpl<VarDecl *> &vars);
 
   /// Parses a parameter-declaration
   /// The parser must be positioned on the identifier.
@@ -87,6 +91,20 @@ public:
   /// The parser must be positioned on the "func" keyword.
   ParserResult<FuncDecl> parseFuncDecl();
 
+  //===- Expression Parsing -----------------------------------------------===//
+
+  /// Parses an expression
+  ParserResult<Expr> parseExpr(llvm::function_ref<void()> onNoExpr);
+
+  //===- Pattern Parsing --------------------------------------------------===//
+
+  /// Parses a pattern
+  ParserResult<Pattern> parsePattern(llvm::function_ref<void()> onNoPat);
+
+  /// Parses a tuple-pattern.
+  /// The parse must be positioned on the '('
+  ParserResult<Pattern> parseTuplePattern();
+
   //===- Statement Parsing ------------------------------------------------===//
 
   /// \returns true if the parser is positioned at the start of a statement.
@@ -95,10 +113,6 @@ public:
   /// Parses a block-statement
   /// The parser must be positioned on the "{"
   ParserResult<BlockStmt> parseBlockStmt();
-
-  //===- Expression Parsing -----------------------------------------------===//
-
-  ParserResult<Expr> parseExpr(llvm::function_ref<void()> onNoExpr);
 
   //===- Type Parsing -----------------------------------------------------===//
 
@@ -122,10 +136,6 @@ public:
   /// Parses a "maybe" type
   /// The parser must be positioned on the "maybe" keyword.
   ParserResult<TypeRepr> parseMaybeType();
-
-  //===- Pattern Parsing --------------------------------------------------===//
-
-  // TODO
 
   //===- Other Parsing Utilities ------------------------------------------===//
 
