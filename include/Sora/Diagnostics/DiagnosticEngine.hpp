@@ -161,6 +161,8 @@ public:
 ///
 /// When this object is destroyed, it emits the Diagnostic.
 /// The Diagnostic can be aborted by calling "abort()".
+///
+/// NOTE: If the diagnostic doesn't have a valid SourceLoc, you can't change it.
 class InFlightDiagnostic {
   /// The DiagnosticEngine instance
   DiagnosticEngine *diagEngine = nullptr;
@@ -172,6 +174,16 @@ class InFlightDiagnostic {
 
   /// \returns the raw diagnostic we're building
   RawDiagnostic &getRawDiagnostic();
+
+  const RawDiagnostic &getRawDiagnostic() const {
+    return const_cast<InFlightDiagnostic *>(this)->getRawDiagnostic();
+  }
+
+  /// Converts a SourceRange to a CharSourceRange
+  CharSourceRange toCharSourceRange(SourceRange range) const;
+
+  /// \returns true if this diagnostic is active and has a valid loc
+  bool canAddInfo() const;
 
 public:
   InFlightDiagnostic() = default;
@@ -186,22 +198,20 @@ public:
   bool isActive() const { return diagEngine; }
 
   /// Highlights the range of characters covered by \p range
-  /// NOTE: Can only be used on active diagnostics
-  /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &highlightChars(CharSourceRange range);
 
   /// Highlights the range of tokens \p range
-  /// NOTE: Can only be used on active diagnostics
   InFlightDiagnostic &highlight(SourceRange range);
 
   /// Adds a insertion fix-it (insert \p text at \p loc)
-  /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &fixitInsert(SourceLoc loc, StringRef text);
 
   /// Adds a replacement fix-it (replace the character range \p range by
   /// \p text)
-  /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &fixitReplace(CharSourceRange range, StringRef text);
+
+  /// Adds a removal fix-it (remove the tokens in \p range)
+  InFlightDiagnostic &fixitRemove(SourceRange range);
 };
 
 /// The DiagnosticEngine, the heart of the Diagnostic System.

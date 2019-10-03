@@ -56,6 +56,14 @@ RawDiagnostic &InFlightDiagnostic::getRawDiagnostic() {
   return diagEngine->activeDiagnostic.getValue();
 }
 
+CharSourceRange InFlightDiagnostic::toCharSourceRange(SourceRange range) const {
+  assert(diagEngine && "needs a DiagnosticEngine for this");
+  return Lexer::toCharSourceRange(diagEngine->srcMgr, range);
+}
+bool InFlightDiagnostic::canAddInfo() const {
+  return isActive() && getRawDiagnostic().getLoc().isValid();
+}
+
 InFlightDiagnostic::~InFlightDiagnostic() {
   if (diagEngine) {
     diagEngine->emit();
@@ -70,29 +78,35 @@ void InFlightDiagnostic::abort() {
 }
 
 InFlightDiagnostic &InFlightDiagnostic::highlightChars(CharSourceRange range) {
-  assert(isActive() && "cannot modify an inactive diagnostic");
+  assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
   assert(range && "range is invalid");
   getRawDiagnostic().addRange(range);
   return *this;
 }
 
 InFlightDiagnostic &InFlightDiagnostic::highlight(SourceRange range) {
-  assert(isActive() && "cannot modify an inactive diagnostic");
+  assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
   assert(range && "range is invalid");
-  return highlightChars(Lexer::toCharSourceRange(diagEngine->srcMgr, range));
+  return highlightChars(toCharSourceRange(range));
 }
 
 InFlightDiagnostic &InFlightDiagnostic::fixitInsert(SourceLoc loc,
                                                     StringRef text) {
+  assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
   fixitReplace(CharSourceRange(diagEngine->srcMgr, loc, loc), text);
   return *this;
 }
 
 InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
                                                      StringRef text) {
-  assert(isActive() && "cannot modify an inactive diagnostic");
+  assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
   getRawDiagnostic().addFixit(FixIt(text, range));
   return *this;
+}
+
+InFlightDiagnostic &InFlightDiagnostic::fixitRemove(SourceRange range) {
+  assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
+  return fixitReplace(toCharSourceRange(range), "");
 }
 
 void DiagnosticEngine::initBitfields() {
