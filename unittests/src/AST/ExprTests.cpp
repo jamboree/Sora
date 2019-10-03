@@ -23,27 +23,30 @@ protected:
     beg = SourceLoc::fromPointer(str);
     mid = SourceLoc::fromPointer(str + 5);
     end = SourceLoc::fromPointer(str + 10);
+    Expr *begExpr = new (*ctxt) DiscardExpr(beg);
+    Expr *midExpr = new (*ctxt) DiscardExpr(mid);
+    Expr *endExpr = new (*ctxt) DiscardExpr(end);
     // Setup nodes
-    unresolvedDeclRefExpr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
-    unresolvedMemberRefExpr = new (*ctxt)
-        UnresolvedMemberRefExpr(unresolvedDeclRefExpr, mid, false, end, {});
+    unresDeclRefExpr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
+    unresMembRefExpr = new (*ctxt)
+        UnresolvedMemberRefExpr(unresDeclRefExpr, mid, false, end, {});
     discardExpr = new (*ctxt) DiscardExpr(beg);
-    integerLiteralExpr = new (*ctxt) IntegerLiteralExpr("0", beg);
-    floatLiteralExpr = new (*ctxt) FloatLiteralExpr("0", beg);
-    booleanLiteralExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
-    nullLiteralExpr = new (*ctxt) NullLiteralExpr(beg);
+    intLitExpr = new (*ctxt) IntegerLiteralExpr("0", beg);
+    fltLitExpr = new (*ctxt) FloatLiteralExpr("0", beg);
+    boolLitExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
+    nullLitExpr = new (*ctxt) NullLiteralExpr(beg);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
-    tupleElementExpr = new (*ctxt)
-        TupleElementExpr(new (*ctxt) DiscardExpr(beg), mid, false, end, 0);
+    tupleEltExpr =
+        new (*ctxt) TupleElementExpr(begExpr, mid, false, end, 0);
     tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
-    parenExpr = new (*ctxt) ParenExpr(beg, new (*ctxt) DiscardExpr(mid), end);
-    callExpr = new (*ctxt) CallExpr(new (*ctxt) DiscardExpr(beg),
-                                    TupleExpr::createEmpty(*ctxt, beg, end));
-    binaryExpr = new (*ctxt)
-        BinaryExpr(new (*ctxt) DiscardExpr(beg), BinaryOperatorKind::Add, mid,
-                   new (*ctxt) DiscardExpr(end));
-    unaryExpr = new (*ctxt) UnaryExpr(UnaryOperatorKind::AddressOf, beg,
-                                      new (*ctxt) DiscardExpr(end));
+    parenExpr = new (*ctxt) ParenExpr(beg, midExpr, end);
+    callExpr =
+        new (*ctxt) CallExpr(begExpr, TupleExpr::createEmpty(*ctxt, beg, end));
+    condExpr = new (*ctxt) ConditionalExpr(begExpr, mid, nullptr, {}, endExpr);
+    binaryExpr =
+        new (*ctxt) BinaryExpr(begExpr, BinaryOperatorKind::Add, mid, endExpr);
+    unaryExpr =
+        new (*ctxt) UnaryExpr(UnaryOperatorKind::AddressOf, beg, endExpr);
   }
 
   SourceManager srcMgr;
@@ -52,58 +55,60 @@ protected:
 
   SourceLoc beg, mid, end;
 
-  Expr *unresolvedDeclRefExpr;
-  Expr *unresolvedMemberRefExpr;
+  Expr *unresDeclRefExpr;
+  Expr *unresMembRefExpr;
   Expr *discardExpr;
-  Expr *integerLiteralExpr;
-  Expr *floatLiteralExpr;
-  Expr *booleanLiteralExpr;
-  Expr *nullLiteralExpr;
+  Expr *intLitExpr;
+  Expr *fltLitExpr;
+  Expr *boolLitExpr;
+  Expr *nullLitExpr;
   Expr *errorExpr;
-  Expr *tupleElementExpr;
+  Expr *tupleEltExpr;
   Expr *tupleExpr;
   Expr *parenExpr;
   Expr *callExpr;
+  Expr *condExpr;
   Expr *binaryExpr;
   Expr *unaryExpr;
 };
 } // namespace
 
 TEST_F(ExprTest, rtti) {
-  EXPECT_TRUE(isa<UnresolvedDeclRefExpr>(unresolvedDeclRefExpr));
-  EXPECT_TRUE(isa<UnresolvedExpr>(unresolvedDeclRefExpr));
-  EXPECT_TRUE(isa<UnresolvedMemberRefExpr>(unresolvedMemberRefExpr));
-  EXPECT_TRUE(isa<UnresolvedExpr>(unresolvedMemberRefExpr));
+  EXPECT_TRUE(isa<UnresolvedDeclRefExpr>(unresDeclRefExpr));
+  EXPECT_TRUE(isa<UnresolvedExpr>(unresDeclRefExpr));
+  EXPECT_TRUE(isa<UnresolvedMemberRefExpr>(unresMembRefExpr));
+  EXPECT_TRUE(isa<UnresolvedExpr>(unresMembRefExpr));
   EXPECT_TRUE(isa<DiscardExpr>(discardExpr));
-  EXPECT_TRUE(isa<IntegerLiteralExpr>(integerLiteralExpr));
-  EXPECT_TRUE(isa<AnyLiteralExpr>(integerLiteralExpr));
-  EXPECT_TRUE(isa<FloatLiteralExpr>(floatLiteralExpr));
-  EXPECT_TRUE(isa<AnyLiteralExpr>(floatLiteralExpr));
-  EXPECT_TRUE(isa<BooleanLiteralExpr>(booleanLiteralExpr));
-  EXPECT_TRUE(isa<AnyLiteralExpr>(booleanLiteralExpr));
-  EXPECT_TRUE(isa<NullLiteralExpr>(nullLiteralExpr));
-  EXPECT_TRUE(isa<AnyLiteralExpr>(nullLiteralExpr));
+  EXPECT_TRUE(isa<IntegerLiteralExpr>(intLitExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(intLitExpr));
+  EXPECT_TRUE(isa<FloatLiteralExpr>(fltLitExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(fltLitExpr));
+  EXPECT_TRUE(isa<BooleanLiteralExpr>(boolLitExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(boolLitExpr));
+  EXPECT_TRUE(isa<NullLiteralExpr>(nullLitExpr));
+  EXPECT_TRUE(isa<AnyLiteralExpr>(nullLitExpr));
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
-  EXPECT_TRUE(isa<TupleElementExpr>(tupleElementExpr));
+  EXPECT_TRUE(isa<TupleElementExpr>(tupleEltExpr));
   EXPECT_TRUE(isa<TupleExpr>(tupleExpr));
   EXPECT_TRUE(isa<ParenExpr>(parenExpr));
   EXPECT_TRUE(isa<CallExpr>(callExpr));
+  EXPECT_TRUE(isa<ConditionalExpr>(condExpr));
   EXPECT_TRUE(isa<BinaryExpr>(binaryExpr));
   EXPECT_TRUE(isa<UnaryExpr>(unaryExpr));
 }
 
 TEST_F(ExprTest, getSourceRange) {
   // UnresolvedDeclRefExpr
-  EXPECT_EQ(beg, unresolvedDeclRefExpr->getBegLoc());
-  EXPECT_EQ(beg, unresolvedDeclRefExpr->getLoc());
-  EXPECT_EQ(beg, unresolvedDeclRefExpr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), unresolvedDeclRefExpr->getSourceRange());
+  EXPECT_EQ(beg, unresDeclRefExpr->getBegLoc());
+  EXPECT_EQ(beg, unresDeclRefExpr->getLoc());
+  EXPECT_EQ(beg, unresDeclRefExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), unresDeclRefExpr->getSourceRange());
 
   // UnresolvedDotExpr
-  EXPECT_EQ(beg, unresolvedMemberRefExpr->getBegLoc());
-  EXPECT_EQ(end, unresolvedMemberRefExpr->getEndLoc());
-  EXPECT_EQ(mid, unresolvedMemberRefExpr->getLoc());
-  EXPECT_EQ(SourceRange(beg, end), unresolvedMemberRefExpr->getSourceRange());
+  EXPECT_EQ(beg, unresMembRefExpr->getBegLoc());
+  EXPECT_EQ(end, unresMembRefExpr->getEndLoc());
+  EXPECT_EQ(mid, unresMembRefExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), unresMembRefExpr->getSourceRange());
 
   // DiscardExpr
   EXPECT_EQ(beg, discardExpr->getBegLoc());
@@ -112,28 +117,28 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(SourceRange(beg, beg), discardExpr->getSourceRange());
 
   // IntegerLiteralExpr
-  EXPECT_EQ(beg, integerLiteralExpr->getBegLoc());
-  EXPECT_EQ(beg, integerLiteralExpr->getLoc());
-  EXPECT_EQ(beg, integerLiteralExpr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), integerLiteralExpr->getSourceRange());
+  EXPECT_EQ(beg, intLitExpr->getBegLoc());
+  EXPECT_EQ(beg, intLitExpr->getLoc());
+  EXPECT_EQ(beg, intLitExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), intLitExpr->getSourceRange());
 
   // FloatLiteralExpr
-  EXPECT_EQ(beg, floatLiteralExpr->getBegLoc());
-  EXPECT_EQ(beg, floatLiteralExpr->getLoc());
-  EXPECT_EQ(beg, floatLiteralExpr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), floatLiteralExpr->getSourceRange());
+  EXPECT_EQ(beg, fltLitExpr->getBegLoc());
+  EXPECT_EQ(beg, fltLitExpr->getLoc());
+  EXPECT_EQ(beg, fltLitExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), fltLitExpr->getSourceRange());
 
   // BooleanLiteralExpr
-  EXPECT_EQ(beg, booleanLiteralExpr->getBegLoc());
-  EXPECT_EQ(beg, booleanLiteralExpr->getLoc());
-  EXPECT_EQ(beg, booleanLiteralExpr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), booleanLiteralExpr->getSourceRange());
+  EXPECT_EQ(beg, boolLitExpr->getBegLoc());
+  EXPECT_EQ(beg, boolLitExpr->getLoc());
+  EXPECT_EQ(beg, boolLitExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), boolLitExpr->getSourceRange());
 
   // NullLiteralExpr
-  EXPECT_EQ(beg, nullLiteralExpr->getBegLoc());
-  EXPECT_EQ(beg, nullLiteralExpr->getLoc());
-  EXPECT_EQ(beg, nullLiteralExpr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), nullLiteralExpr->getSourceRange());
+  EXPECT_EQ(beg, nullLitExpr->getBegLoc());
+  EXPECT_EQ(beg, nullLitExpr->getLoc());
+  EXPECT_EQ(beg, nullLitExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), nullLitExpr->getSourceRange());
 
   // ErrorExpr
   EXPECT_EQ(beg, errorExpr->getBegLoc());
@@ -142,10 +147,10 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(SourceRange(beg, end), errorExpr->getSourceRange());
 
   // TupleElementExpr
-  EXPECT_EQ(beg, tupleElementExpr->getBegLoc());
-  EXPECT_EQ(end, tupleElementExpr->getEndLoc());
-  EXPECT_EQ(mid, tupleElementExpr->getLoc());
-  EXPECT_EQ(SourceRange(beg, end), tupleElementExpr->getSourceRange());
+  EXPECT_EQ(beg, tupleEltExpr->getBegLoc());
+  EXPECT_EQ(end, tupleEltExpr->getEndLoc());
+  EXPECT_EQ(mid, tupleEltExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), tupleEltExpr->getSourceRange());
 
   // TupleExpr
   EXPECT_EQ(beg, tupleExpr->getBegLoc());
@@ -165,6 +170,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(end, callExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), callExpr->getSourceRange());
 
+  // ConditionalExpr
+  EXPECT_EQ(beg, condExpr->getBegLoc());
+  EXPECT_EQ(mid, condExpr->getLoc());
+  EXPECT_EQ(end, condExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), condExpr->getSourceRange());
+
   // BinaryExpr
   EXPECT_EQ(beg, binaryExpr->getBegLoc());
   EXPECT_EQ(end, binaryExpr->getEndLoc());
@@ -174,6 +185,6 @@ TEST_F(ExprTest, getSourceRange) {
   // UnaryExpr
   EXPECT_EQ(beg, unaryExpr->getBegLoc());
   EXPECT_EQ(end, unaryExpr->getEndLoc());
-  EXPECT_EQ(end, unaryExpr->getLoc());
+  EXPECT_EQ(beg, unaryExpr->getLoc());
   EXPECT_EQ(SourceRange(beg, end), unaryExpr->getSourceRange());
 }

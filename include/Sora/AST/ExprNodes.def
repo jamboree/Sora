@@ -23,29 +23,22 @@ ABSTRACT_EXPR(Unresolved, Expr)
 	EXPR(UnresolvedDeclRef, UnresolvedExpr)
 	EXPR(UnresolvedMemberRef, UnresolvedExpr)
 	EXPR_RANGE(Unresolved, UnresolvedDeclRef, UnresolvedMemberRef)
-
-
 // (TBA: For Sema)
 //EXPR(ConstructorDeclRef, Expr)
 //EXPR(DeclRef, Expr)
-
 EXPR(Discard, Expr)
-
 ABSTRACT_EXPR(AnyLiteral, Expr)
   EXPR(IntegerLiteral, AnyLiteralExpr)
   EXPR(FloatLiteral, AnyLiteralExpr)
 	EXPR(BooleanLiteral, AnyLiteralExpr)
 	EXPR(NullLiteral, AnyLiteralExpr)
 	EXPR_RANGE(AnyLiteral, IntegerLiteral, NullLiteral)
-
 EXPR(Error, Expr)
-
 EXPR(TupleElement, Expr)
 EXPR(Tuple, Expr)
 EXPR(Paren, Expr)
-
 EXPR(Call, Expr)
-
+EXPR(Conditional, Expr)
 EXPR(Binary, Expr)
 EXPR(Unary, Expr)
 

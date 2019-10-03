@@ -373,6 +373,20 @@ public:
     visit(expr->getArgs());
   }
 
+  void visitConditionalExpr(ConditionalExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getQuestionLoc(), "questionLoc");
+    out << ' ';
+    dumpLoc(expr->getColonLoc(), "colonLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getCond());
+    visit(expr->getThen());
+    visit(expr->getElse());
+  }
+
   void visitBinaryExpr(BinaryExpr *expr) {
     dumpCommon(expr);
     out << ' ' << expr->getOpSpelling() << " (" << expr->getOpKindStr() << ") ";

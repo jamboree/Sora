@@ -105,6 +105,15 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       expr->setArgs(args);
   }
 
+  void visitConditionalExpr(ConditionalExpr *expr) {
+    if (Expr *condExpr = doIt(expr->getCond()))
+      expr->setCond(condExpr);
+    if (Expr *thenExpr = doIt(expr->getThen()))
+      expr->setCond(thenExpr);
+    if (Expr *elseExpr = doIt(expr->getElse()))
+      expr->setCond(elseExpr);
+  }
+
   void visitBinaryExpr(BinaryExpr *expr) {
     if (Expr *lhs = doIt(expr->getLHS()))
       expr->setLHS(expr);

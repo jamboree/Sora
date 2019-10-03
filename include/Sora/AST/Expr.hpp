@@ -49,7 +49,7 @@ class alignas(ExprAlignement) Expr {
     struct {
       // whether the operator used was the '->' operator
       bool isArrow;
-    } unresolvedMemberRefExpr;
+    } unresMembRefExpr;
     // BooleanLiteralExpr bits
     struct {
       bool value;
@@ -60,7 +60,7 @@ class alignas(ExprAlignement) Expr {
       bool isArrow;
       // the index of the element in the tuple
       unsigned index;
-    } tupleElementExpr;
+    } tupleEltExpr;
     /// TupleExpr bits
     struct {
       uint32_t numElements;
@@ -199,7 +199,7 @@ public:
                           SourceLoc memberIdentLoc, Identifier memberIdent)
       : UnresolvedExpr(ExprKind::UnresolvedMemberRef), base(base), opLoc(opLoc),
         memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
-    bits.unresolvedMemberRefExpr.isArrow = isArrow;
+    bits.unresMembRefExpr.isArrow = isArrow;
   }
 
   Expr *getBase() const { return base; }
@@ -209,7 +209,7 @@ public:
   SourceLoc getOpLoc() const { return opLoc; }
 
   /// \returns true if the operator used was '->', false if it was '.'
-  bool isArrow() const { return bits.unresolvedMemberRefExpr.isArrow; }
+  bool isArrow() const { return bits.unresMembRefExpr.isArrow; }
   /// \returns true if the operator used was '.', false if it was '->'
   bool isDot() const { return !isArrow(); }
 
@@ -397,20 +397,20 @@ public:
                    SourceLoc indexLoc, unsigned index)
       : Expr(ExprKind::TupleElement), base(base), opLoc(opLoc),
         indexLoc(indexLoc) {
-    bits.tupleElementExpr.index = index;
+    bits.tupleEltExpr.index = index;
   }
 
   Expr *getBase() const { return base; }
   void setBase(Expr *base) { this->base = base; }
 
-  unsigned getIndex() const { return bits.tupleElementExpr.index; }
+  unsigned getIndex() const { return bits.tupleEltExpr.index; }
   SourceLoc getIndexLoc() const { return indexLoc; }
 
   /// \returns the SourceLoc of the '.' or '->'
   SourceLoc getOpLoc() const { return opLoc; }
 
   /// \returns true if the operator used was '->', false if it was '.'
-  bool isArrow() const { return bits.tupleElementExpr.isArrow; }
+  bool isArrow() const { return bits.tupleEltExpr.isArrow; }
   /// \returns true if the operator used was '.', false if it was '->'
   bool isDot() const { return !isArrow(); }
 
@@ -549,6 +549,39 @@ public:
   }
 };
 
+/// Represents a conditional (AKA ternary) expression.
+/// e.g. foo ? a : b
+class ConditionalExpr final : public Expr {
+  Expr *condExpr, *thenExpr, *elseExpr;
+  SourceLoc questionLoc, colonLoc;
+
+public:
+  ConditionalExpr(Expr *condExpr, SourceLoc questionLoc, Expr *thenExpr,
+                  SourceLoc colonLoc, Expr *elseExpr)
+      : Expr(ExprKind::Conditional), condExpr(condExpr), thenExpr(thenExpr),
+        elseExpr(elseExpr), questionLoc(questionLoc), colonLoc(colonLoc) {}
+
+  SourceLoc getQuestionLoc() const { return questionLoc; }
+  SourceLoc getColonLoc() const { return colonLoc; }
+
+  Expr *getCond() const { return condExpr; }
+  void setCond(Expr *expr) { condExpr = expr; }
+
+  Expr *getThen() const { return thenExpr; }
+  void setThen(Expr *expr) { thenExpr = expr; }
+
+  Expr *getElse() const { return elseExpr; }
+  void setElse(Expr *expr) { elseExpr = expr; }
+
+  SourceLoc getBegLoc() const { return condExpr->getBegLoc(); }
+  SourceLoc getEndLoc() const { return elseExpr->getEndLoc(); }
+  SourceLoc getLoc() const { return questionLoc; }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::Conditional;
+  }
+};
+
 /// Represents an infix binary operation
 ///
 /// e.g a = b, 1 + 2, c += d, 32 ^ 56
@@ -608,17 +641,8 @@ public:
     return sora::getOpForCompoundAssignementOp(getOpKind());
   }
 
-  /// \returns the SourceLoc of the first token of the expression
-  SourceLoc getBegLoc() const {
-    assert(lhs && "no lhs");
-    return lhs->getBegLoc();
-  }
-  /// \returns the SourceLoc of the last token of the expression
-  SourceLoc getEndLoc() const {
-    assert(rhs && "no rhs");
-    return rhs->getEndLoc();
-  }
-  /// \returns the preffered SourceLoc for diagnostics
+  SourceLoc getBegLoc() const { return lhs->getBegLoc(); }
+  SourceLoc getEndLoc() const { return rhs->getEndLoc(); }
   SourceLoc getLoc() const { return opLoc; }
 
   static bool classof(const Expr *expr) {
@@ -652,18 +676,8 @@ public:
   /// \returns the spelling of the operator
   const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }
 
-  /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const { return opLoc; }
-  /// \returns the SourceLoc of the last token of the expression
-  SourceLoc getEndLoc() const {
-    assert(subExpr && "no subExpr");
-    return subExpr->getEndLoc();
-  }
-  /// \returns the preffered SourceLoc for diagnostics
-  SourceLoc getLoc() const {
-    /// FIXME: Is this the best choice?
-    return subExpr->getLoc();
-  }
+  SourceLoc getEndLoc() const { return subExpr->getEndLoc(); }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Unary;
