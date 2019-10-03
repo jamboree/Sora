@@ -106,7 +106,7 @@ InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
 
 InFlightDiagnostic &InFlightDiagnostic::fixitRemove(SourceRange range) {
   assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
-  return fixitReplace(toCharSourceRange(range), "");
+  return fixitReplace(toCharSourceRange(range), {});
 }
 
 void DiagnosticEngine::initBitfields() {
