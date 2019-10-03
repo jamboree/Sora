@@ -42,19 +42,23 @@ void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
   case Kind::Discard:
     break;
   case Kind::Mut:
-    cast<MutPattern>(this)->getSubPattern()->forEachVarDecl(fn);
+    if (Pattern *sub = cast<MutPattern>(this)->getSubPattern())
+      sub->forEachVarDecl(fn);
     break;
   case Kind::Paren:
-    cast<ParenPattern>(this)->getSubPattern()->forEachVarDecl(fn);
+    if (Pattern *sub = cast<ParenPattern>(this)->getSubPattern())
+      sub->forEachVarDecl(fn);
     break;
   case Kind::Tuple: {
     const TuplePattern *tuple = cast<TuplePattern>(this);
     for (Pattern *elem : tuple->getElements())
-      elem->forEachVarDecl(fn);
+      if (elem)
+        elem->forEachVarDecl(fn);
     break;
   }
   case Kind::Typed:
-    cast<TypedPattern>(this)->getSubPattern()->forEachVarDecl(fn);
+    if (Pattern *sub = cast<TypedPattern>(this)->getSubPattern())
+      sub->forEachVarDecl(fn);
     break;
   }
 }
