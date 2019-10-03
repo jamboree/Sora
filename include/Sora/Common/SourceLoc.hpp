@@ -11,6 +11,7 @@
 #pragma once
 
 #include "Sora/Common/LLVM.hpp"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/SMLoc.h"
 
 namespace sora {
@@ -194,5 +195,51 @@ public:
     return !(*this == other);
   }
 };
-
 } // namespace sora
+
+namespace llvm {
+template <typename Ty> struct DenseMapInfo;
+
+template <> struct DenseMapInfo<sora::SourceLoc> {
+  static sora::SourceLoc getEmptyKey() {
+    return sora::SourceLoc::fromPointer(
+        DenseMapInfo<const char *>::getEmptyKey());
+  }
+
+  static sora::SourceLoc getTombstoneKey() {
+    return sora::SourceLoc::fromPointer(
+        DenseMapInfo<const char *>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const sora::SourceLoc &loc) {
+    return DenseMapInfo<const char *>::getHashValue(loc.getPointer());
+  }
+
+  static bool isEqual(const sora::SourceLoc &lhs, const sora::SourceLoc &rhs) {
+    return lhs == rhs;
+  }
+};
+
+template <> struct DenseMapInfo<sora::SourceRange> {
+  static sora::SourceRange getEmptyKey() {
+    return sora::SourceLoc::fromPointer(
+        DenseMapInfo<const char *>::getEmptyKey());
+  }
+
+  static sora::SourceRange getTombstoneKey() {
+    return sora::SourceLoc::fromPointer(
+        DenseMapInfo<const char *>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const sora::SourceRange &loc) {
+    auto beg = DenseMapInfo<const char *>::getHashValue(loc.begin.getPointer());
+    auto end = DenseMapInfo<const char *>::getHashValue(loc.end.getPointer());
+    return hash_combine(beg, end);
+  }
+
+  static bool isEqual(const sora::SourceRange &lhs,
+                      const sora::SourceRange &rhs) {
+    return lhs == rhs;
+  }
+};
+} // namespace llvm
