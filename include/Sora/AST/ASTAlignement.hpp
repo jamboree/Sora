@@ -13,6 +13,7 @@ namespace sora {
 class Decl;
 class DeclContext;
 class Expr;
+class LetDecl;
 class Pattern;
 class SourceFile;
 class Stmt;
@@ -39,22 +40,23 @@ DECLARE(TypeRepr, 1);
 // multiple LLVM ADT classes, such as PointerUnion
 namespace llvm {
 template <class T> struct PointerLikeTypeTraits;
-#define LLVM_DEFINE_PLTT(CLASS)                                                \
+#define LLVM_DEFINE_PLTT(CLASS, NUMLOWBITS)                                    \
   template <> struct PointerLikeTypeTraits<::sora::CLASS *> {                  \
-    enum { NumLowBitsAvailable = ::sora::CLASS##FreeLowBits };                 \
+    enum { NumLowBitsAvailable = NUMLOWBITS };                                 \
     static inline void *getAsVoidPointer(::sora::CLASS *ptr) { return ptr; }   \
     static inline ::sora::CLASS *getFromVoidPointer(void *ptr) {               \
       return static_cast<::sora::CLASS *>(ptr);                                \
     }                                                                          \
   }
 
-LLVM_DEFINE_PLTT(Expr);
-LLVM_DEFINE_PLTT(Decl);
-LLVM_DEFINE_PLTT(Pattern);
-LLVM_DEFINE_PLTT(SourceFile);
-LLVM_DEFINE_PLTT(Stmt);
-LLVM_DEFINE_PLTT(TypeBase);
-LLVM_DEFINE_PLTT(TypeRepr);
+LLVM_DEFINE_PLTT(Expr, sora::ExprFreeLowBits);
+LLVM_DEFINE_PLTT(Decl, sora::DeclFreeLowBits);
+LLVM_DEFINE_PLTT(LetDecl, sora::DeclFreeLowBits);
+LLVM_DEFINE_PLTT(Pattern, sora::PatternFreeLowBits);
+LLVM_DEFINE_PLTT(SourceFile, sora::SourceFileFreeLowBits);
+LLVM_DEFINE_PLTT(Stmt, sora::StmtFreeLowBits);
+LLVM_DEFINE_PLTT(TypeBase, sora::TypeBaseFreeLowBits);
+LLVM_DEFINE_PLTT(TypeRepr, sora::TypeReprFreeLowBits);
 
 #undef LLVM_DEFINE_PLTT
 
