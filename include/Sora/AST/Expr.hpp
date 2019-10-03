@@ -112,6 +112,7 @@ public:
   /// successfully (true = success), and the second element, if non-null, is the
   /// Expr that should replace this Expr in the tree.
   std::pair<bool, Expr *> walk(ASTWalker &walker);
+  std::pair<bool, Expr *> walk(ASTWalker &&walker) { return walk(walker); }
 
   /// Dumps this expression to \p out
   void dump(raw_ostream &out, const SourceManager &srcMgr,

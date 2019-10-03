@@ -106,6 +106,7 @@ public:
   /// \returns true if the walk completed successfully, false if it ended
   /// prematurely.
   bool walk(ASTWalker &walker);
+  bool walk(ASTWalker &&walker) { return walk(walker); }
 
   /// Dumps this declaration to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const;
