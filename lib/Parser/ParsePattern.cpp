@@ -8,6 +8,8 @@
 #include "Sora/AST/ASTWalker.hpp"
 #include "Sora/AST/Pattern.hpp"
 #include "Sora/Parser/Parser.hpp"
+#include "llvm/ADT/DenseMap.h"
+
 using namespace sora;
 
 namespace {
@@ -15,9 +17,27 @@ namespace {
 /// mutability in the process.
 class ApplyMutSpecifier : public ASTWalker {
 public:
+  /// Maps a VarDecl to the SourceLoc of the mut specifier that made it mutable.
+  /// FIXME: If I ever store the MutLoc inside VarDecls, this can go away and
+  /// the code of this class simplified.
+  llvm::DenseMap<VarDecl *, SourceLoc> appliedMuts;
+
   ApplyMutSpecifier(Parser &parser) : parser(parser) {}
 
   Parser &parser;
+
+  void makeMutable(VarDecl *var, SourceLoc mutLoc) {
+    assert(mutLoc);
+    var->setIsMutable();
+    appliedMuts[var] = mutLoc;
+  }
+
+  SourceLoc getOriginalMutLoc(VarDecl *var) {
+    assert(var->isMutable() && "only for mut vars");
+    SourceLoc loc = appliedMuts[var];
+    assert(loc && "no applied mut?");
+    return loc;
+  }
 
   // Walk from outer-in (pre-order)
   Action walkToPatternPre(Pattern *pattern) override {
@@ -32,9 +52,12 @@ public:
         if (var->isMutable()) {
           parser.diagnose(var->getLoc(), diag::var_already_mutable)
               .fixitRemove(mutPat->getMutLoc());
+          SourceLoc noteLoc = getOriginalMutLoc(var);
+          parser.diagnose(noteLoc, diag::var_made_mutable_here)
+              .highlight(var->getLoc());
         }
         else
-          var->setIsMutable();
+          makeMutable(var, mutPat->getMutLoc());
       });
     }
     return Action::Continue;

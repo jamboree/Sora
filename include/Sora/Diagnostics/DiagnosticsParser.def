@@ -76,6 +76,8 @@ ERROR(var_already_mutable, "variable is already mutable", ())
 ERROR(pat_can_only_have_one_mut, 
   "pattern can only have one 'mut' specifier", ())
 
+NOTE(var_made_mutable_here, "variable was made mutable here", ())
+
 //===----------------------------------------------------------------------===//
 
 #ifndef KEEP_DIAG_MACROS
