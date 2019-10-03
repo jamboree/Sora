@@ -32,6 +32,33 @@ Pattern *Pattern::ignoreParens() {
   return this;
 }
 
+void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
+  using Kind = PatternKind;
+  switch (getKind()) {
+  default:
+  case Kind::Var:
+    fn(cast<VarPattern>(this)->getVarDecl());
+    break;
+  case Kind::Discard:
+    break;
+  case Kind::Mut:
+    cast<MutPattern>(this)->getSubPattern()->forEachVarDecl(fn);
+    break;
+  case Kind::Paren:
+    cast<ParenPattern>(this)->getSubPattern()->forEachVarDecl(fn);
+    break;
+  case Kind::Tuple: {
+    const TuplePattern *tuple = cast<TuplePattern>(this);
+    for (Pattern *elem : tuple->getElements())
+      elem->forEachVarDecl(fn);
+    break;
+  }
+  case Kind::Typed:
+    cast<TypedPattern>(this)->getSubPattern()->forEachVarDecl(fn);
+    break;
+  }
+}
+
 SourceLoc Pattern::getBegLoc() const {
   switch (getKind()) {
   default:

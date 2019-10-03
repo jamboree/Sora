@@ -12,6 +12,7 @@
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
@@ -84,6 +85,9 @@ public:
   const Pattern *ignoreParens() const {
     return const_cast<Pattern *>(this)->ignoreParens();
   }
+
+  /// Call \p fn on each VarDecl in this Pattern.
+  void forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const;
 
   /// \returns the SourceLoc of the first token of the pattern
   SourceLoc getBegLoc() const;
