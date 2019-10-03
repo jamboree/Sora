@@ -412,10 +412,11 @@ public:
 
   void visitVarPattern(VarPattern *pattern) {
     dumpCommon(pattern);
+    out << ' ';
+    dumpLoc(pattern->getLoc(), "loc");
+    out << ' ';
+    dumpIdent(pattern->getIdentifier(), "ident");
     out << '\n';
-
-    auto indent = increaseIndent();
-    visit(pattern->getVarDecl());
   }
 
   void visitDiscardPattern(DiscardPattern *pattern) {
