@@ -192,9 +192,9 @@ class VarDecl final : public ValueDecl {
 
 public:
   VarDecl(DeclContext *declContext, SourceLoc identifierLoc,
-          Identifier identifier, bool isMutable = false)
+          Identifier identifier)
       : ValueDecl(DeclKind::Var, declContext, identifierLoc, identifier) {
-    bits.varDecl.isMutable = isMutable;
+    bits.varDecl.isMutable = false;
   }
 
   /// \returns the TypeLoc of the VarDecl.
@@ -211,12 +211,10 @@ public:
   /// \returns the type this value has (the type of the variable)
   Type getValueType() const { return tyLoc.getType(); }
 
-  /// \returns true if the variable is mutable, false otherwise
   bool isMutable() const { return bits.varDecl.isMutable; }
+  void setIsMutable(bool value = true) { bits.varDecl.isMutable = value; }
 
-  /// \returns the SourceLoc of the first token of the declaration
   SourceLoc getBegLoc() const { return getIdentifierLoc(); }
-  /// \returns the SourceLoc of the last token of the declaration
   SourceLoc getEndLoc() const { return getIdentifierLoc(); }
 
   static bool classof(const Decl *decl) {
