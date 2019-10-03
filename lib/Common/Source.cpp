@@ -92,6 +92,11 @@ CharSourceRange::CharSourceRange(const SourceManager &srcMgr, SourceLoc begin,
   byteLength = srcMgr.getDistanceInBytes(begin, end);
 }
 
+bool CharSourceRange::contains(const CharSourceRange &range) const {
+  // beg <= range <= end
+  return (getBegin() <= range.getBegin()) && (range.getEnd() <= getEnd());
+}
+
 StringRef CharSourceRange::str() const {
   return StringRef(begin.getPointer(), byteLength);
 }

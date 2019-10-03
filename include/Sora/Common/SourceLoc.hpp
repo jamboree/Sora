@@ -152,6 +152,9 @@ public:
   /// \param end the end location
   CharSourceRange(const SourceManager &srcMgr, SourceLoc begin, SourceLoc end);
 
+  /// \returns true \p range is inside this range
+  bool contains(const CharSourceRange &range) const;
+
   /// \returns true if this CharSourceRange is valid
   bool isValid() const { return begin.isValid(); }
   /// \returns true if this CharSourceRange is invalid
@@ -160,6 +163,9 @@ public:
   bool empty() const { return byteLength == 0; }
   /// \returns true if this CharSourceRange is valid
   explicit operator bool() const { return isValid(); }
+
+  /// \returns the length in bytes of this CharSourceRange
+  unsigned getByteLength() const { return byteLength; }
 
   /// Prints this CharSourceRange to \p out
   void print(raw_ostream &out, const SourceManager &srcMgr,
