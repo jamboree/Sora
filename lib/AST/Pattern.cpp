@@ -35,7 +35,6 @@ Pattern *Pattern::ignoreParens() {
 void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
   using Kind = PatternKind;
   switch (getKind()) {
-  default:
   case Kind::Var:
     fn(cast<VarPattern>(this)->getVarDecl());
     break;
