@@ -13,8 +13,8 @@
 using namespace sora;
 
 namespace {
-/// Handles the application of a "mut" specifier, diagnosting redudant
-/// mutability in the process.
+/// Handles the application of a "mut" specifier to variables in its sub
+/// pattern, diagnosting redudant mutability in the process.
 class ApplyMutSpecifier : public ASTWalker {
 public:
   /// Maps a VarDecl to the SourceLoc of the mut specifier that made it mutable.
