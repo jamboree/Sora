@@ -41,7 +41,7 @@ source-file = top-level-declaration+
 top-level-declaration = function-declaration | type-declaration | struct-declaration
 
 struct-declaration = "struct" identifier '{' struct-member-declaration+ '}'
-struct-member-declaration = pattern-initializer
+struct-member-declaration = pattern ('=' expression)?
 
 type-declaration = "type" identifier "=" type
 
@@ -50,14 +50,11 @@ parameter-declaration-list = '(' parameter-declaration (',' parameter-declaratio
                            | '(' ')'
 parameter-declaration = identifier ':' type
 
-let-declaration = "let" pattern-initializer
+let-declaration = "let" pattern ('=' expression)?
 
 // Patterns
-pattern = "mut"? (tuple-pattern | identifier-pattern | discard-pattern) (':' type)?
-discard-pattern = '_'
-identifier-pattern = identifier
+pattern = "mut"? (tuple-pattern | identifier | '_') (':' type)?
 tuple-pattern = '(' pattern (',' pattern)* ')'
-pattern-initializer = pattern ('=' expression)?
 
 // Statements 
 statement = block-statement
