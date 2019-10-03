@@ -106,7 +106,36 @@ InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
 
 InFlightDiagnostic &InFlightDiagnostic::fixitRemove(SourceRange range) {
   assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
-  return fixitReplace(toCharSourceRange(range), {});
+  CharSourceRange charRange = toCharSourceRange(range);
+  // When we're removing something that has :
+  //    - a space ' ' after it
+  //    - a whitespace before it
+  // Remove the extra space after the range to keep the source consistent.
+  SourceManager &srcMgr = diagEngine->srcMgr;
+  BufferID buffer = srcMgr.findBufferContainingLoc(range.begin);
+  assert(buffer && "bogus range?");
+  CharSourceRange fileRange = srcMgr.getBufferCharSourceRange(buffer);
+  assert(fileRange.contains(charRange));
+  
+  bool hasWhitespaceBefore = false;
+  if (charRange.getBegin() == fileRange.getBegin())
+    hasWhitespaceBefore = true;
+  else
+    hasWhitespaceBefore = isspace(*(charRange.getBegin().getPointer() - 1));
+
+  if (hasWhitespaceBefore) {
+    bool hasSpaceAfter = false;
+    if (charRange.getEnd() == fileRange.getEnd())
+      hasSpaceAfter = false;
+    else
+      hasSpaceAfter = (*charRange.getEnd().getPointer() == ' ');
+
+    if (hasSpaceAfter)
+      charRange =
+          CharSourceRange(charRange.getBegin(), charRange.getByteLength() + 1);
+  }
+
+  return fixitReplace(charRange, {});
 }
 
 void DiagnosticEngine::initBitfields() {
