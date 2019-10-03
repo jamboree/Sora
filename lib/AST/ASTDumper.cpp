@@ -195,6 +195,10 @@ public:
     paramList ? visitParamList(paramList) : printNoNode();
   }
 
+  void visit(StmtCondition cond) {
+    !cond.isNull() ? visitStmtCondition(cond) : printNoNode();
+  }
+
   /// Provide an alternative visit entry point that only visits the node if
   /// it's non-null, else it ignores it.
   template <typename T> void visitIf(T node) {
@@ -481,6 +485,20 @@ public:
       visit(member);
   }
 
+  //===--- StmtCondition --------------------------------------------------===//
+
+  void visitStmtCondition(StmtCondition cond) {
+    out.indent(curIndent);
+    withColor(nodeKindColor) << "StmtCondition";
+
+    if (cond.isExpr())
+      visit(cond.getExpr());
+    else if (cond.isLetDecl())
+      visit(cond.getLetDecl());
+    else
+      llvm_unreachable("unknown StmtCondition kind");
+  }
+
   //===--- Stmt -----------------------------------------------------------===//
 
   void visitContinueStmt(ContinueStmt *stmt) {
@@ -534,6 +552,7 @@ public:
     out << '\n';
 
     auto indent = increaseIndent();
+    visit(stmt->getCond());
     visit(stmt->getThen());
     visitIf(stmt->getElse());
   }
@@ -545,6 +564,7 @@ public:
     out << '\n';
 
     auto indent = increaseIndent();
+    visit(stmt->getCond());
     visit(stmt->getBody());
   }
 
