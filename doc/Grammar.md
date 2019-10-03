@@ -53,8 +53,7 @@ parameter-declaration = identifier ':' type
 let-declaration = "let" pattern ('=' expression)?
 
 // Patterns
-pattern = (mut-pattern | tuple-pattern | identifier | '_') (':' type)?
-mut-pattern = "mut" pattern
+pattern = "mut" (tuple-pattern | identifier | '_') (':' type)?
 tuple-pattern = '(' (pattern (',' pattern)*)? ')'
 
 // Statements 
