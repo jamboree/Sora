@@ -8,6 +8,7 @@
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticsCommon.hpp"
+#include "Sora/Lexer/Lexer.hpp"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
@@ -70,8 +71,15 @@ void InFlightDiagnostic::abort() {
 
 InFlightDiagnostic &InFlightDiagnostic::highlightChars(CharSourceRange range) {
   assert(isActive() && "cannot modify an inactive diagnostic");
+  assert(range && "range is invalid");
   getRawDiagnostic().addRange(range);
   return *this;
+}
+
+InFlightDiagnostic &InFlightDiagnostic::highlight(SourceRange range) {
+  assert(isActive() && "cannot modify an inactive diagnostic");
+  assert(range && "range is invalid");
+  return highlightChars(Lexer::toCharSourceRange(diagEngine->srcMgr, range));
 }
 
 InFlightDiagnostic &InFlightDiagnostic::fixitInsert(SourceLoc loc,

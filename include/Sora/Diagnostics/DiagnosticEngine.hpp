@@ -190,15 +190,9 @@ public:
   /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
   InFlightDiagnostic &highlightChars(CharSourceRange range);
 
-  /// Highlights the token at \p loc
-  /// NOTE: Can only be used on active diagnostics
-  /// NOTE: Needs the Lexer to implement.
-  // InFlightDiagnostic& highlight(SourceLoc loc)
-
   /// Highlights the range of tokens \p range
   /// NOTE: Can only be used on active diagnostics
-  /// NOTE: Needs the Lexer to implement.
-  // InFlightDiagnostic& highlight(SourceRange loc)
+  InFlightDiagnostic &highlight(SourceRange range);
 
   /// Adds a insertion fix-it (insert \p text at \p loc)
   /// NOTE: This can only be used if the Diagnostic has a valid SourceLocation.
