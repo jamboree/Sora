@@ -146,8 +146,6 @@ void Lexer::lexUnknown() {
     llvm::ConversionResult result;
     advanceUTF8(curPtr, endPtr, result);
     switch (result) {
-    default:
-      llvm_unreachable("unknown ConversionResult");
     case llvm::targetExhausted:
       llvm_unreachable("target exhausted?");
     case llvm::conversionOK:

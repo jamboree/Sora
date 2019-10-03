@@ -37,7 +37,7 @@ SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
 
   switch (kind) {
   default:
-    llvm_unreachable("unknown matching token");
+    llvm_unreachable("not a matching token");
   case TokenKind::RParen:
     return doIt(diag::expected_rparen, diag::to_match_lparen);
   case TokenKind::RCurly:

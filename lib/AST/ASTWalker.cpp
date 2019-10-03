@@ -402,13 +402,18 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
 void ASTWalker::anchor() {}
 
-// Walk implementations
+//===- walk() implementations ---------------------------------------------===//
 
 bool ASTNode::walk(ASTWalker &walker) { return Traversal(walker).walk(*this); }
+
 bool Decl::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
+
 std::pair<bool, Expr *> Expr::walk(ASTWalker &walker) {
   return Traversal(walker).walk(this);
 }
+
 bool Pattern::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
+
 bool Stmt::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
+
 bool TypeRepr::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }

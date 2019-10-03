@@ -65,8 +65,6 @@ DiagnosticVerifier::getNoteUnemitted(StringRef message,
   case DiagnosticKind::Error:
     rso << "error";
     break;
-  default:
-    llvm_unreachable("unknown DiagnosticKind");
   }
   rso << " '" << message << "' expected at line " << data.line << " of '"
       << srcMgr.getBufferIdentifier(data.buffer) << "' was not emitted";
