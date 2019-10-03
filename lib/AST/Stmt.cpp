@@ -8,6 +8,7 @@
 #include "Sora/AST/Stmt.hpp"
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -97,12 +98,16 @@ BlockStmt *BlockStmt::createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,
 
 SourceLoc StmtCondition::getBegLoc() const {
   if (isExpr())
-    return expr->getBegLoc();
+    return getExpr()->getBegLoc();
+  if (isLetDecl())
+    return getLetDecl()->getBegLoc();
   llvm_unreachable("unknown condition kind");
 }
 
 SourceLoc StmtCondition::getEndLoc() const {
   if (isExpr())
-    return expr->getEndLoc();
+    return getExpr()->getEndLoc();
+  if (isLetDecl())
+    return getLetDecl()->getEndLoc();
   llvm_unreachable("unknown condition kind");
 }

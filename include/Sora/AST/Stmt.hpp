@@ -21,6 +21,7 @@ namespace sora {
 class ASTContext;
 class ASTWalker;
 class Expr;
+class LetDecl;
 
 /// Kinds of Statements
 enum class StmtKind : uint8_t {
@@ -218,28 +219,40 @@ public:
 /// Represents the condition of a loop or an if statement.
 /// This can be a boolean expression (or a "let" declaration in the future)
 class StmtCondition final {
-  Expr *expr = nullptr; // FIXME: Make this a PointerUnion w/ a "let" decl
+  llvm::PointerUnion<Expr *, LetDecl *> cond;
 
 public:
   /// Creates a null (empty) condition
-  StmtCondition() = default;
+  StmtCondition() : StmtCondition(nullptr) {}
+
+  /// Creates a null (empty) condition
+  StmtCondition(std::nullptr_t) : cond(nullptr) {}
 
   /// Creates an expression condition
-  StmtCondition(Expr *expr) : expr(expr) {}
+  StmtCondition(Expr *expr) : cond(expr) {}
 
-  bool isExpr() const { return true; }
+  /// Creates a let-declaration condition
+  StmtCondition(LetDecl *decl) : cond(decl) {}
+
+  bool isNull() const { return cond.isNull(); }
+
+  bool isExpr() const { return cond.is<Expr *>(); }
   Expr *getExpr() const {
     assert(isExpr() && "not an expr");
-    return expr;
+    return cond.get<Expr *>();
   }
   void setExpr(Expr *expr) {
     assert(isExpr() && "not an expr");
-    this->expr = expr;
+    cond = expr;
   }
 
-  /// \returns the SourceLoc of the first token of the condition
+  bool isLetDecl() const { return cond.is<LetDecl *>(); }
+  LetDecl *getLetDecl() const {
+    assert(isLetDecl() && "not a LetDecl");
+    return cond.get<LetDecl *>();
+  }
+
   SourceLoc getBegLoc() const;
-  /// \returns the SourceLoc of the last token of the condition
   SourceLoc getEndLoc() const;
 };
 

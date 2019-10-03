@@ -353,6 +353,8 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       if (Expr *expr = doIt(cond.getExpr()))
         cond.setExpr(expr);
     }
+    else if (cond.isLetDecl())
+      doIt(cond.getLetDecl());
     else
       llvm_unreachable("Unhandled StmtCondition Kind!");
   }
