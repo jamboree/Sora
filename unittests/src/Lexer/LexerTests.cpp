@@ -321,12 +321,3 @@ TEST_F(LexerTest, toCharSourceRange) {
   CHECK(SourceLoc::fromPointer(eof), SourceLoc::fromPointer(eof));
 #undef CHECK
 }
-
-TEST_F(LexerTest, getFileBegEndLoc) { 
-  const char *input = "foo bar\n baz"; 
-  StringRef str(input);
-
-  Lexer &lexer = getLexer(input);
-  EXPECT_EQ(SourceLoc::fromPointer(str.begin()),  lexer.getFileBegLoc());
-  EXPECT_EQ(SourceLoc::fromPointer(str.end()),    lexer.getFileEndLoc());
-}

@@ -56,11 +56,6 @@ public:
                            getTokenAtLoc(srcMgr, range.end).getEndLoc());
   }
 
-  /// \returns the first SourceLoc of the file the lexer is working on
-  SourceLoc getFileBegLoc() const { return SourceLoc::fromPointer(begPtr); }
-  /// \returns the last SourceLoc of the file the lexer is working on
-  SourceLoc getFileEndLoc() const { return SourceLoc::fromPointer(endPtr); }
-
   /// \returns a view of the next token that will be returned by "lex" without
   /// consuming it or changing the state of the lexer.
   const Token &peek() const { return nextToken; }
