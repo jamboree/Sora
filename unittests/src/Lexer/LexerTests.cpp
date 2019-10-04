@@ -27,7 +27,7 @@ public:
   bool isDone = false;
 
   /// Creates a lexer to lex \p input
-  Lexer &createLexer(StringRef input) {
+  Lexer &getLexer(StringRef input) {
     BufferID buffer =
         srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(input));
     lexerInstance = std::make_unique<Lexer>(srcMgr, buffer, &diagEngine);
@@ -90,7 +90,7 @@ TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
                       "maybe mut null\n"
                       "return struct true type\n"
                       "_ while //goodbye";
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
   // Test
   CHECK_NEXT(TokenKind::DoKw, "do", true);
   CHECK_NEXT(TokenKind::Identifier, "foo", false);
@@ -118,7 +118,7 @@ TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
 TEST_F(LexerTest, unknownTokens) {
   const char *input = u8"ê€";
 
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
   CHECK_NEXT(TokenKind::Unknown, u8"ê", true);
   CHECK_NEXT(TokenKind::Unknown, u8"€", false);
   CHECK_EOF();
@@ -138,7 +138,7 @@ TEST_F(LexerTest, invalidUTF8) {
     ++diagCount;
   });
 
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
   CHECK_NEXT(TokenKind::Unknown, "\xa0\xa1", true);
   CHECK_EOF();
 
@@ -161,7 +161,7 @@ TEST_F(LexerTest, incompleteUTF8) {
     ++diagCount;
   });
 
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
   CHECK_NEXT(TokenKind::Unknown, "\xc3", true);
   CHECK_EOF();
 
@@ -174,7 +174,7 @@ TEST_F(LexerTest, punctuationAndOperators) {
   const char *input =
       "()[]{}/=/++=--=&&&=&**=%%=|||=|>>>=>>=><<<=<<=<:,.!!=^^=->~;?? ?\?=?";
 
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
   CHECK_NEXT(TokenKind::LParen, "(", true);
   CHECK_NEXT(TokenKind::RParen, ")", false);
   CHECK_NEXT(TokenKind::LSquare, "[", false);
@@ -227,7 +227,7 @@ TEST_F(LexerTest, numbers) {
                       "0.0.0 9999999999\n"
                       "123456.123456";
 
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
 #define CHECK_NEXT_INT(STR, SOL) CHECK_NEXT(TokenKind::IntegerLiteral, STR, SOL)
 #define CHECK_NEXT_FLT(STR, SOL)                                               \
   CHECK_NEXT(TokenKind::FloatingPointLiteral, STR, SOL)
@@ -268,7 +268,7 @@ TEST_F(LexerTest, numbers) {
 
 TEST_F(LexerTest, getTokenAtLoc) {
   const char *input = "aaa bbb \r\nccc\nddd";
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
 
   const char *aaa = input;
   const char *bbb = input + 4;
@@ -297,7 +297,7 @@ TEST_F(LexerTest, getTokenAtLoc) {
 
 TEST_F(LexerTest, toCharSourceRange) {
   const char *input = "aaa bbb \r\nccc\nddd";
-  Lexer &lexer = createLexer(input);
+  Lexer &lexer = getLexer(input);
 
   const char *aaa = input;
   const char *bbb = input + 4;
@@ -320,4 +320,13 @@ TEST_F(LexerTest, toCharSourceRange) {
   CHECK(SourceLoc::fromPointer(ddd), SourceLoc::fromPointer(ddd + 3));
   CHECK(SourceLoc::fromPointer(eof), SourceLoc::fromPointer(eof));
 #undef CHECK
+}
+
+TEST_F(LexerTest, getFileBegEndLoc) { 
+  const char *input = "foo bar\n baz"; 
+  StringRef str(input);
+
+  Lexer &lexer = getLexer(input);
+  EXPECT_EQ(SourceLoc::fromPointer(str.begin()),  lexer.getFileBegLoc());
+  EXPECT_EQ(SourceLoc::fromPointer(str.end()),    lexer.getFileEndLoc());
 }
