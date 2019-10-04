@@ -236,6 +236,9 @@ public:
 
   bool isNull() const { return cond.isNull(); }
 
+  /// \returns true if this condition is not null
+  explicit operator bool() const { return !cond.isNull(); }
+
   bool isExpr() const { return cond.is<Expr *>(); }
   Expr *getExpr() const {
     assert(isExpr() && "not an expr");
@@ -264,8 +267,8 @@ protected:
   ConditionalStmt(StmtKind kind, StmtCondition cond) : Stmt(kind), cond(cond) {}
 
 public:
-  StmtCondition &getCond() { return cond; }
-  const StmtCondition &getCond() const { return cond; }
+  StmtCondition getCond() const { return cond; }
+  void setCond(StmtCondition cond) { this->cond = cond; }
 
   static bool classof(const Stmt *stmt) {
     return (stmt->getKind() >= StmtKind::First_Conditional) &&

@@ -202,13 +202,15 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   }
 
   void visitIfStmt(IfStmt *stmt) {
-    doIt(stmt->getCond());
+    if (StmtCondition cond = doIt(stmt->getCond()))
+      stmt->setCond(cond);
     doIt(stmt->getThen());
     doIt(stmt->getElse());
   }
 
   void visitWhileStmt(WhileStmt *stmt) {
-    doIt(stmt->getCond());
+    if (StmtCondition cond = doIt(stmt->getCond()))
+      stmt->setCond(cond);
     doIt(stmt->getBody());
   }
 
@@ -348,13 +350,16 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       stopped = !walker.walkToStmtPost(stmt);
   }
 
-  void doIt(StmtCondition &cond) {
+  StmtCondition doIt(StmtCondition cond) {
     if (cond.isExpr()) {
       if (Expr *expr = doIt(cond.getExpr()))
-        cond.setExpr(expr);
+        return expr;
+      return cond;
     }
-    else if (cond.isLetDecl())
+    else if (cond.isLetDecl()) {
       doIt(cond.getLetDecl());
+      return cond;
+    }
     else
       llvm_unreachable("Unhandled StmtCondition Kind!");
   }
