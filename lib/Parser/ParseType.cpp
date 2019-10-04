@@ -62,7 +62,7 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
 
   // Utility function to try to recover and return something.
   auto tryRecoverAndReturn = [&]() -> ParserResult<TypeRepr> {
-    skipUntilDeclStmtRCurly(TokenKind::LParen);
+    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
     if (!tok.is(TokenKind::LParen))
       return nullptr;
     SourceLoc rParenLoc = consumeToken();

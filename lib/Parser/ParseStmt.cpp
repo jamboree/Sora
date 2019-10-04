@@ -25,9 +25,10 @@ bool Parser::isStartOfStmt() const {
 
 ParserResult<BlockStmt> Parser::parseBlockStmt() {
   assert(tok.is(TokenKind::LCurly) && "not a block stmt!");
+  SourceLoc lCurly = consumeToken();
   // As a hack, parse a let-declaration if there's one in the body. This is just
   // for parser testing.
-  if (peek().is(TokenKind::LetKw)) {
+  if (tok.is(TokenKind::LetKw)) {
     // consume the { and parse the letdecl
     SourceLoc lCurlyLoc = consumeToken();
     SmallVector<ASTNode, 8> elements;
@@ -38,13 +39,14 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
       for (VarDecl *var : vars)
         elements.push_back(var);
     }
+    // FIXME: better recovery - try to find the }
     SourceLoc rCurlyLoc = parseMatchingToken(lCurlyLoc, TokenKind::RCurly);
     if (!rCurlyLoc)
       return nullptr;
     return makeParserResult(
         BlockStmt::create(ctxt, lCurlyLoc, elements, rCurlyLoc));
   }
-  // TODO
-  skip();
-  return makeParserResult(BlockStmt::createEmpty(ctxt, {}, {}));
+  if (SourceLoc rCurly = parseMatchingToken(lCurly, TokenKind::RCurly))
+    return makeParserResult(BlockStmt::createEmpty(ctxt, lCurly, rCurly));
+  return nullptr;
 }

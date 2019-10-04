@@ -29,12 +29,21 @@ top-level-declaration = function-declaration
 */
 void Parser::parseSourceFile() {
   auto recover = [&]() { skipUntilDecl(); };
+  // Once parsing of a member is done, adds to it to the source file and checks
+  // that we got a newline after it.
+  auto addMember = [&](Decl *decl) {
+    // Add it to the file
+    sourceFile.addMember(decl);
+    // Check that we got a newline after the declaration, else, complain.
+    if (!tok.isAtStartOfLine() && tok.isNot(TokenKind::EndOfFile))
+      diagnose(prevTokPastTheEnd, diag::no_newline_after_decl);
+  };
   while (!isEOF()) {
     switch (tok.getKind()) {
     // function-declaration
     case TokenKind::FuncKw: {
       if (FuncDecl *func = parseFuncDecl().getOrNull())
-        sourceFile.addMember(func);
+        addMember(func);
       else
         recover();
       break;
@@ -42,7 +51,8 @@ void Parser::parseSourceFile() {
     // Trying to declare global variables is a relatively common mistake, so
     // parse them but ignore them & inform the user that it's not allowed.
     case TokenKind::LetKw: {
-      // FIXME: Should this be emitted only on successful parsing of the LetDecl?
+      // FIXME: Should this be emitted only on successful parsing of the
+      // LetDecl?
       diagnose(tok, diag::let_not_allowed_at_global_level);
       SmallVector<VarDecl *, 4> vars;
       if (parseLetDecl(vars).isParseError())
@@ -156,13 +166,13 @@ ParserResult<ParamList> Parser::parseParamDeclList() {
   if (rParenLoc)
     return makeParserResult(
         ParamList::create(ctxt, lParenLoc, params, rParenLoc));
-  // When we don't have the ')', but we have a -> or {, recover by returning an
-  // empty parameter list.
+  // When we don't have the ')', but we have a -> or {, recover by returning the
+  // parameter list, using the SourceLoc of the lParen or the end of the last
+  // Parameter as the RParenLoc.
   if (tok.isAny(TokenKind::Arrow, TokenKind::LCurly))
-    // FIXME: It isn't ideal to have the lParenLoc == rParenLoc in the ParamList
-    // but that's the best I can do currently.
-    return makeParserErrorResult(
-        ParamList::createEmpty(ctxt, lParenLoc, lParenLoc));
+    return makeParserErrorResult(ParamList::create(
+        ctxt, lParenLoc, params,
+        params.empty() ? lParenLoc : params.back()->getEndLoc()));
   // Else just return an error.
   return nullptr;
 }
@@ -176,30 +186,29 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   SourceLoc fnLoc = consumeToken();
 
   // identifier
-  Identifier identifier;
-  SourceLoc identifierLoc;
-  if (tok.isIdentifier())
-    identifierLoc = consumeIdentifier(identifier);
-  else {
+  if (!tok.isIdentifier()) {
     diagnoseExpected(diag::expected_ident_in_fn);
     return nullptr;
   }
 
+  Identifier identifier;
+  SourceLoc identifierLoc = consumeIdentifier(identifier);
+
   // parameter-declaration-list
   ParamList *paramList = nullptr;
-  if (tok.is(TokenKind::LParen)) {
-    auto paramListResult = parseParamDeclList();
-    if (paramListResult.isNull())
-      return nullptr;
-    paramList = paramListResult.get();
-  }
-  else {
+  if (tok.isNot(TokenKind::LParen)) {
     diagnoseExpected(diag::expected_lparen_in_fn_arg_list);
-    // If we can parse something else, just leave the paramList to nullptr and
-    // keep going, else return directly.
+    // If we can parse something else (the user just forgot the parameter list),
+    // just leave the paramList to nullptr and keep going, else stop because
+    // this doesn't really look like a function.
     if (tok.isNot(TokenKind::Arrow, TokenKind::LCurly))
       return nullptr;
   }
+
+  auto paramListResult = parseParamDeclList();
+  if (paramListResult.isNull())
+    return nullptr;
+  paramList = paramListResult.get();
 
   // ("->" type)?
   TypeLoc retTL;
@@ -211,23 +220,31 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
     retTL = TypeLoc(result.get());
   }
 
+  // Now that we have enough elements, create the node.
   auto node = new (ctxt)
       FuncDecl(declContext, fnLoc, identifierLoc, identifier, paramList, retTL);
 
-  // block-statement
-  if (tok.is(TokenKind::LCurly)) {
-    // Set the DeclContext for the parsing of the body.
-    auto bodyDC = setDeclContextRAII(node);
-    // Parse the body
-    auto result = parseBlockStmt();
-    if (result.isNull())
+  if (tok.isNot(TokenKind::LCurly)) {
+    // Try to find the LCurly on the same line or at the start of the next line.
+    // FIXME: Should this be in a separate method?
+    while (!isEOF()) {
+      if (isStartOfDecl() || tok.is(TokenKind::LCurly) || tok.isAtStartOfLine())
+        break;
+      skip();
+    }
+    // Check if we found our LCurly
+    if (tok.isNot(TokenKind::LCurly)) {
+      diagnoseExpected(diag::expected_lcurly_fn_body);
       return nullptr;
-    node->setBody(result.get());
+    }
   }
-  else {
-    diagnoseExpected(diag::expected_lcurly_fn_body);
+
+  // block-statement
+  auto bodyDC = setDeclContextRAII(node);
+  auto body = parseBlockStmt();
+  if (body.isNull())
     return nullptr;
-  }
+  node->setBody(body.get());
 
   return makeParserResult(node);
 }

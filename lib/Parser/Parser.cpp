@@ -107,7 +107,7 @@ void Parser::skipUntilDecl() {
   }
 }
 
-void Parser::skipUntilDeclRCurly(TokenKind kind) {
+void Parser::skipUntilTokDeclRCurly(TokenKind kind) {
   while (!isEOF()) {
     if (isStartOfDecl() || tok.isAny(kind, TokenKind::RCurly))
       return;
@@ -115,7 +115,7 @@ void Parser::skipUntilDeclRCurly(TokenKind kind) {
   }
 }
 
-void Parser::skipUntilDeclStmtRCurly(TokenKind kind) {
+void Parser::skipUntilTokDeclStmtRCurly(TokenKind kind) {
   while (!isEOF()) {
     if (isStartOfDecl() || isStartOfStmt() ||
         tok.isAny(kind, TokenKind::RCurly))

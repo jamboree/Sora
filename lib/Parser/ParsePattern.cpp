@@ -173,7 +173,7 @@ ParserResult<Pattern> Parser::parseTuplePattern() {
 
   // Utility function to try to recover and return something.
   auto tryRecoverAndReturn = [&]() -> ParserResult<Pattern> {
-    skipUntilDeclStmtRCurly(TokenKind::LParen);
+    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
     if (!tok.is(TokenKind::LParen))
       return nullptr;
     SourceLoc rParenLoc = consumeToken();

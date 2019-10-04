@@ -4,3 +4,10 @@ func foo() {}
 let // expect-error:    'let' declarations are not allowed at the global level
     // expect-error@-1: expected a pattern after 'let'
 let foo // expect-error: 'let' declarations are not allowed at the global level
+
+func foo() {} func foo() {} // expect-error: no newline after declaration
+
+// NOTE: Keep the EOF on the same line as the }, so this tests that the compiler
+// doesn't complain that there's no newline after the declaration 
+// when the next token is EOF.
+func foo() {}

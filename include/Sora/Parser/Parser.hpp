@@ -244,6 +244,8 @@ public:
   }
 
   //===- Recovery ---------------------------------------------------------===//
+  // NOTE: All of those methods will also stop at the EOF token.
+  //===--------------------------------------------------------------------===//
 
   /// Skips the current token, matching parentheses.
   /// (e.g. if the current token is {, this skips until past the next })
@@ -256,10 +258,10 @@ public:
   void skipUntilDecl();
 
   /// Skips to the next \p tok, Decl or }
-  void skipUntilDeclRCurly(TokenKind tok = TokenKind::Invalid);
+  void skipUntilTokDeclRCurly(TokenKind tok = TokenKind::Invalid);
 
   /// Skips to the next \p tok, Decl, Stmt or }
-  void skipUntilDeclStmtRCurly(TokenKind tok = TokenKind::Invalid);
+  void skipUntilTokDeclStmtRCurly(TokenKind tok = TokenKind::Invalid);
 
   //===- Miscellaneous ----------------------------------------------------===//
 

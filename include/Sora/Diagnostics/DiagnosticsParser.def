@@ -64,6 +64,8 @@ ERROR(expected_param_decl,
   "expected a parameter declaration", ())
 ERROR(let_not_allowed_at_global_level,
   "'let' declarations are not allowed at the global level", ())
+ERROR(no_newline_after_decl,
+  "no newline after declaration", ())
 
 // Expressions
 ERROR(expected_expr,
