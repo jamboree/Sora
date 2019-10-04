@@ -29,8 +29,7 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
   // As a hack, parse a let-declaration if there's one in the body. This is just
   // for parser testing.
   if (tok.is(TokenKind::LetKw)) {
-    // consume the { and parse the letdecl
-    SourceLoc lCurlyLoc = consumeToken();
+    // parse the letdecl
     SmallVector<ASTNode, 8> elements;
     SmallVector<VarDecl *, 4> vars;
     auto let = parseLetDecl(vars);
@@ -40,11 +39,11 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
         elements.push_back(var);
     }
     // FIXME: better recovery - try to find the }
-    SourceLoc rCurlyLoc = parseMatchingToken(lCurlyLoc, TokenKind::RCurly);
+    SourceLoc rCurlyLoc = parseMatchingToken(lCurly, TokenKind::RCurly);
     if (!rCurlyLoc)
       return nullptr;
     return makeParserResult(
-        BlockStmt::create(ctxt, lCurlyLoc, elements, rCurlyLoc));
+        BlockStmt::create(ctxt, lCurly, elements, rCurlyLoc));
   }
   if (SourceLoc rCurly = parseMatchingToken(lCurly, TokenKind::RCurly))
     return makeParserResult(BlockStmt::createEmpty(ctxt, lCurly, rCurly));
