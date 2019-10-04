@@ -32,7 +32,8 @@ top-level-declaration = function-declaration
 void Parser::parseSourceFile() {
   while (!isEOF()) {
     if (tok.isNot(TokenKind::FuncKw)) {
-      diagnose(tok, diag::expected_fn_decl);
+      if (tok.isNot(TokenKind::Unknown))
+        diagnose(tok, diag::expected_fn_decl);
       skipUntil(TokenKind::FuncKw);
       continue;
     }
