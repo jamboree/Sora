@@ -9,6 +9,7 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Identifier.hpp"
+#include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -36,6 +37,7 @@ class alignas(PatternAlignement) Pattern {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
+  Type type;
   PatternKind kind;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfield themselves.
@@ -80,6 +82,10 @@ public:
   /// \return the kind of patterns this is
   PatternKind getKind() const { return kind; }
 
+  bool hasType() const { return !type.isNull(); }
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
+
   /// Skips parentheses around this Pattern: If this is a ParenPattern, returns
   /// getSubPattern()->ignoreParens(), else returns this.
   Pattern *ignoreParens();
@@ -101,8 +107,8 @@ public:
   SourceRange getSourceRange() const;
 };
 
-/// We should only use 8 bytes (1 pointers) max in 64 bits mode because we only
-/// store the kind + some packed bits in the base class.
+/// We should only use 16 bytes (2 pointers) max in 64 bits mode because we only
+/// store the type, the kind + some packed bits in the base class.
 static_assert(sizeof(Pattern) <= 16, "Pattern is too big!");
 
 /// Represents a single variable pattern, which matches any argument and binds

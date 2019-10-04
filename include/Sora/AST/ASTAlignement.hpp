@@ -28,7 +28,7 @@ class TypeRepr;
 DECLARE(Decl, 3);
 DECLARE(DeclContext, 3);
 DECLARE(Expr, 3);
-DECLARE(Pattern, 1);
+DECLARE(Pattern, 3);
 DECLARE(SourceFile, 3);
 DECLARE(Stmt, 3);
 DECLARE(TypeBase, 1);
