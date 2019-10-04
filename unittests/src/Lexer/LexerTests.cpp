@@ -20,11 +20,27 @@ class LexerTest : public ::testing::Test {
   std::unique_ptr<Lexer> lexerInstance;
 
 public:
+  /// Number of diagnostics emitted
+  unsigned diagCount = 0;
+  /// Last diag message
+  std::string diagMsg;
+  /// Last diag loc
+  SourceLoc diagLoc;
+
   SourceManager srcMgr;
   DiagnosticEngine diagEngine{srcMgr, llvm::outs()};
   llvm::raw_string_ostream errStream{errStreamBuff};
 
   bool isDone = false;
+
+  LexerTest() {
+    diagEngine.setConsumer(std::make_unique<ForwardingDiagnosticConsumer>(
+        [&](const SourceManager &, const Diagnostic &diag) {
+          diagMsg = diag.message;
+          diagLoc = diag.loc;
+          ++diagCount;
+        }));
+  }
 
   /// Creates a lexer to lex \p input
   Lexer &getLexer(StringRef input) {
@@ -32,12 +48,6 @@ public:
         srcMgr.giveBuffer(llvm::MemoryBuffer::getMemBuffer(input));
     lexerInstance = std::make_unique<Lexer>(srcMgr, buffer, &diagEngine);
     return *lexerInstance;
-  }
-
-  void
-  installForwardingHandler(ForwardingDiagnosticConsumer::HandlerFunction func) {
-    diagEngine.setConsumer(
-        std::make_unique<ForwardingDiagnosticConsumer>(func));
   }
 
   /// \returns checks the next token, returns true on success and false
@@ -119,7 +129,11 @@ TEST_F(LexerTest, unknownTokens) {
   const char *input = u8"ê€";
 
   Lexer &lexer = getLexer(input);
+  ASSERT_EQ(diagMsg, "unknown character");
+  ASSERT_EQ(diagLoc, SourceLoc::fromPointer(input));
   CHECK_NEXT(TokenKind::Unknown, u8"ê", true);
+  ASSERT_EQ(diagMsg, "unknown character");
+  ASSERT_EQ(diagLoc, SourceLoc::fromPointer(input + 2));
   CHECK_NEXT(TokenKind::Unknown, u8"€", false);
   CHECK_EOF();
 }
@@ -127,16 +141,6 @@ TEST_F(LexerTest, unknownTokens) {
 /// Test for invalid/illegal UTF-8 codepoint (ill-formed codepoints)
 TEST_F(LexerTest, invalidUTF8) {
   const char *input = "\xa0\xa1";
-
-  unsigned diagCount = 0;
-  std::string diagMsg;
-  SourceLoc diagLoc;
-
-  installForwardingHandler([&](SourceManager &srcMgr, const Diagnostic &diag) {
-    diagMsg = diag.message;
-    diagLoc = diag.loc;
-    ++diagCount;
-  });
 
   Lexer &lexer = getLexer(input);
   CHECK_NEXT(TokenKind::Unknown, "\xa0\xa1", true);
@@ -150,16 +154,6 @@ TEST_F(LexerTest, invalidUTF8) {
 /// Test for unfinished UTF-8 codepoint (found EOF before rest of codepoint)
 TEST_F(LexerTest, incompleteUTF8) {
   const char *input = "\xc3";
-
-  unsigned diagCount = 0;
-  std::string diagMsg;
-  SourceLoc diagLoc;
-
-  installForwardingHandler([&](SourceManager &srcMgr, const Diagnostic &diag) {
-    diagMsg = diag.message;
-    diagLoc = diag.loc;
-    ++diagCount;
-  });
 
   Lexer &lexer = getLexer(input);
   CHECK_NEXT(TokenKind::Unknown, "\xc3", true);
