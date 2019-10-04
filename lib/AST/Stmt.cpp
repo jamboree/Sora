@@ -28,46 +28,42 @@ void *Stmt::operator new(size_t size, ASTContext &ctxt, unsigned align) {
 
 SourceLoc Stmt::getBegLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
     return ASTNodeLoc<Stmt, ID##Stmt>::getBegLoc(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
+  llvm_unreachable("unknown StmtKind");
 }
 
 SourceLoc Stmt::getEndLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
     return ASTNodeLoc<Stmt, ID##Stmt>::getEndLoc(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
+  llvm_unreachable("unknown StmtKind");
 }
 
 SourceLoc Stmt::getLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
     return ASTNodeLoc<Stmt, ID##Stmt>::getLoc(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
+  llvm_unreachable("unknown StmtKind");
 }
 
 SourceRange Stmt::getSourceRange() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown StmtKind");
 #define STMT(ID, PARENT)                                                       \
   case StmtKind::ID:                                                           \
     return ASTNodeLoc<Stmt, ID##Stmt>::getSourceRange(cast<ID##Stmt>(this));
 #include "Sora/AST/StmtNodes.def"
   }
+  llvm_unreachable("unknown StmtKind");
 }
 
 SourceLoc ReturnStmt::getBegLoc() const { return returnLoc; }

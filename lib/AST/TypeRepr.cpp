@@ -32,49 +32,45 @@ TypeRepr* TypeRepr::ignoreParens() {
 
 SourceLoc TypeRepr::getBegLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown TypeReprKind");
 #define TYPEREPR(ID, PARENT)                                                   \
   case TypeReprKind::ID:                                                       \
     return ASTNodeLoc<TypeRepr, ID##TypeRepr>::getBegLoc(                      \
         cast<ID##TypeRepr>(this));
 #include "Sora/AST/TypeReprNodes.def"
   }
+  llvm_unreachable("unknown TypeReprKind");
 }
 
 SourceLoc TypeRepr::getEndLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown TypeReprKind");
 #define TYPEREPR(ID, PARENT)                                                   \
   case TypeReprKind::ID:                                                       \
     return ASTNodeLoc<TypeRepr, ID##TypeRepr>::getEndLoc(                      \
         cast<ID##TypeRepr>(this));
 #include "Sora/AST/TypeReprNodes.def"
   }
+  llvm_unreachable("unknown TypeReprKind");
 }
 
 SourceLoc TypeRepr::getLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown TypeReprKind");
 #define TYPEREPR(ID, PARENT)                                                   \
   case TypeReprKind::ID:                                                       \
     return ASTNodeLoc<TypeRepr, ID##TypeRepr>::getLoc(cast<ID##TypeRepr>(this));
 #include "Sora/AST/TypeReprNodes.def"
   }
+  llvm_unreachable("unknown TypeReprKind");
 }
 
 SourceRange TypeRepr::getSourceRange() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown TypeReprKind");
 #define TYPEREPR(ID, PARENT)                                                   \
   case TypeReprKind::ID:                                                       \
     return ASTNodeLoc<TypeRepr, ID##TypeRepr>::getSourceRange(                 \
         cast<ID##TypeRepr>(this));
 #include "Sora/AST/TypeReprNodes.def"
   }
+  llvm_unreachable("unknown TypeReprKind");
 }
 
 TupleTypeRepr *TupleTypeRepr::create(ASTContext &ctxt, SourceLoc lParenLoc,

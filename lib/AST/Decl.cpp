@@ -52,46 +52,42 @@ bool Decl::isLocal() const {
 
 SourceLoc Decl::getBegLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getBegLoc(cast<ID##Decl>(this));
 #include "Sora/AST/DeclNodes.def"
   }
+  llvm_unreachable("unknown DeclKind");
 }
 
 SourceLoc Decl::getEndLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getEndLoc(cast<ID##Decl>(this));
 #include "Sora/AST/DeclNodes.def"
   }
+  llvm_unreachable("unknown DeclKind");
 }
 
 SourceLoc Decl::getLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getLoc(cast<ID##Decl>(this));
 #include "Sora/AST/DeclNodes.def"
   }
+  llvm_unreachable("unknown DeclKind");
 }
 
 SourceRange Decl::getSourceRange() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown DeclKind");
 #define DECL(ID, PARENT)                                                       \
   case DeclKind::ID:                                                           \
     return ASTNodeLoc<Decl, ID##Decl>::getSourceRange(cast<ID##Decl>(this));
 #include "Sora/AST/DeclNodes.def"
   }
+  llvm_unreachable("unknown DeclKind");
 }
 
 Type ValueDecl::getValueType() const {

@@ -23,44 +23,40 @@ BinaryOperatorKind sora::getOpForCompoundAssignementOp(BinaryOperatorKind op) {
 
 const char *sora::getSpelling(BinaryOperatorKind op) {
   switch (op) {
-  default:
-    llvm_unreachable("Unknown BinaryOperatorKind");
 #define BINARY_OP(ID, SPELLING)                                                \
   case BinaryOperatorKind::ID:                                                 \
     return SPELLING;
 #include "Sora/AST/OperatorKinds.def"
   }
+  llvm_unreachable("Unknown BinaryOperatorKind");
 }
 
 const char *sora::to_string(BinaryOperatorKind op) {
   switch (op) {
-  default:
-    llvm_unreachable("Unknown BinaryOperatorKind");
 #define BINARY_OP(ID, SPELLING)                                                \
   case BinaryOperatorKind::ID:                                                 \
     return #ID;
 #include "Sora/AST/OperatorKinds.def"
   }
+  llvm_unreachable("Unknown BinaryOperatorKind");
 }
 
 const char *sora::getSpelling(UnaryOperatorKind op) {
   switch (op) {
-  default:
-    llvm_unreachable("Unknown UnaryOperatorKind");
 #define UNARY_OP(ID, SPELLING)                                                 \
   case UnaryOperatorKind::ID:                                                  \
     return SPELLING;
 #include "Sora/AST/OperatorKinds.def"
   }
+  llvm_unreachable("Unknown UnaryOperatorKind");
 }
 
 const char *sora::to_string(UnaryOperatorKind op) {
   switch (op) {
-  default:
-    llvm_unreachable("Unknown UnaryOperatorKind");
 #define UNARY_OP(ID, SPELLING)                                                 \
   case UnaryOperatorKind::ID:                                                  \
     return #ID;
 #include "Sora/AST/OperatorKinds.def"
   }
+  llvm_unreachable("Unknown UnaryOperatorKind");
 }

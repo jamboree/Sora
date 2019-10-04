@@ -19,13 +19,12 @@ using namespace sora;
 
 const char *sora::to_string(TokenKind kind) {
   switch (kind) {
-  default:
-    llvm_unreachable("unknown TokenKind");
 #define TOKEN(KIND)                                                            \
   case TokenKind::KIND:                                                        \
     return #KIND;
 #include "Sora/Lexer/TokenKinds.def"
   }
+  llvm_unreachable("unknown TokenKind");
 }
 
 StringRef Token::str() const { return charRange.str(); }

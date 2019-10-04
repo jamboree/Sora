@@ -26,9 +26,8 @@ llvm::SourceMgr::DiagKind getDKasLLVM(DiagnosticKind kind) {
     return DiagKind::DK_Warning;
   case DiagnosticKind::Error:
     return DiagKind::DK_Error;
-  default:
-    llvm_unreachable("unknown DiagnosticKind");
   }
+  llvm_unreachable("unknown DiagnosticKind");
 }
 } // namespace
 
@@ -47,8 +46,6 @@ void PrintingDiagnosticConsumer::handleSimpleDiagnostic(
   case DiagnosticKind::Error:
     llvm::WithColor::error(out, "", !showColors);
     break;
-  default:
-    llvm_unreachable("unknown DiagnosticKind");
   }
   llvm::WithColor(out, raw_ostream::SAVEDCOLOR, true, false, !showColors)
       << diagnostic.message << "\n";

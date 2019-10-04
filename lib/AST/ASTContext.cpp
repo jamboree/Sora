@@ -85,13 +85,12 @@ ASTContext::~ASTContext() { getImpl().~Impl(); }
 
 llvm::BumpPtrAllocator &ASTContext::getAllocator(AllocatorKind kind) {
   switch (kind) {
-  default:
-    llvm_unreachable("unknown allocator kind");
   case AllocatorKind::Permanent:
     return getImpl().permanentAllocator;
   case AllocatorKind::UnresolvedExpr:
     return getImpl().unresolvedExprAllocator;
   }
+  llvm_unreachable("unknown allocator kind");
 }
 
 void ASTContext::freeUnresolvedExprs() {

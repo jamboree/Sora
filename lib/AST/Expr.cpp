@@ -24,45 +24,41 @@ using namespace sora;
 
 SourceLoc Expr::getBegLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
     return ASTNodeLoc<Expr, ID##Expr>::getBegLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
+  llvm_unreachable("unknown ExprKind");
 }
 
 SourceLoc Expr::getEndLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
     return ASTNodeLoc<Expr, ID##Expr>::getEndLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
+  llvm_unreachable("unknown ExprKind");
 }
 
 SourceLoc Expr::getLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
     return ASTNodeLoc<Expr, ID##Expr>::getLoc(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
+  llvm_unreachable("unknown ExprKind");
 }
 SourceRange Expr::getSourceRange() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown ExprKind");
 #define EXPR(ID, PARENT)                                                       \
   case ExprKind::ID:                                                           \
     return ASTNodeLoc<Expr, ID##Expr>::getSourceRange(cast<ID##Expr>(this));
 #include "Sora/AST/ExprNodes.def"
   }
+  llvm_unreachable("unknown ExprKind");
 }
 
 void *Expr::operator new(size_t size, ASTContext &ctxt, unsigned align) {

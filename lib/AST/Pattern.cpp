@@ -64,47 +64,43 @@ void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
 
 SourceLoc Pattern::getBegLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown PatternKind");
 #define PATTERN(ID, PARENT)                                                    \
   case PatternKind::ID:                                                        \
     return ASTNodeLoc<Pattern, ID##Pattern>::getBegLoc(cast<ID##Pattern>(this));
 #include "Sora/AST/PatternNodes.def"
   }
+  llvm_unreachable("unknown PatternKind");
 }
 
 SourceLoc Pattern::getEndLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown PatternKind");
 #define PATTERN(ID, PARENT)                                                    \
   case PatternKind::ID:                                                        \
     return ASTNodeLoc<Pattern, ID##Pattern>::getEndLoc(cast<ID##Pattern>(this));
 #include "Sora/AST/PatternNodes.def"
   }
+  llvm_unreachable("unknown PatternKind");
 }
 
 SourceLoc Pattern::getLoc() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown PatternKind");
 #define PATTERN(ID, PARENT)                                                    \
   case PatternKind::ID:                                                        \
     return ASTNodeLoc<Pattern, ID##Pattern>::getLoc(cast<ID##Pattern>(this));
 #include "Sora/AST/PatternNodes.def"
   }
+  llvm_unreachable("unknown PatternKind");
 }
 
 SourceRange Pattern::getSourceRange() const {
   switch (getKind()) {
-  default:
-    llvm_unreachable("unknown PatternKind");
 #define PATTERN(ID, PARENT)                                                    \
   case PatternKind::ID:                                                        \
     return ASTNodeLoc<Pattern, ID##Pattern>::getSourceRange(                   \
         cast<ID##Pattern>(this));
 #include "Sora/AST/PatternNodes.def"
   }
+  llvm_unreachable("unknown PatternKind");
 }
 
 Identifier VarPattern::getIdentifier() const {

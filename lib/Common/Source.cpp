@@ -8,7 +8,6 @@
 // SourceManager classes.
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/SourceLoc.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "llvm/Support/raw_ostream.h"
 
