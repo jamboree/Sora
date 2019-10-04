@@ -30,6 +30,7 @@
 
 ERROR(illegal_utf8_cp, "illegal utf-8 codepoint", ())
 ERROR(incomplete_utf8_cp, "incomplete utf-8 codepoint", ())
+ERROR(unknown_char, "unknown character", ())
 
 //===----------------------------------------------------------------------===//
 

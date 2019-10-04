@@ -141,6 +141,7 @@ void Lexer::lexUnknown() {
   curPtr = tokBegPtr;
 
   bool sourceOk = true;
+  bool complained = false;
   auto advance = [&]() {
     llvm::ConversionResult result;
     advanceUTF8(curPtr, endPtr, result);
@@ -151,15 +152,16 @@ void Lexer::lexUnknown() {
       break;
     case llvm::sourceExhausted:
       diagnose(tokBegPtr, diag::incomplete_utf8_cp);
-      sourceOk = false;
+      sourceOk = false, complained = true;
       break;
     case llvm::sourceIllegal:
       diagnose(tokBegPtr, diag::illegal_utf8_cp);
-      sourceOk = false;
+      sourceOk = false, complained = true;
       break;
     }
   };
 
+  // Advance once
   advance();
 
   // When the source is valid, skip potential continuation codepoints,
@@ -169,8 +171,14 @@ void Lexer::lexUnknown() {
   // When the source can't be trusted, just skip until the next ASCII character.
   while (!sourceOk && isUTF8(*curPtr) && (curPtr != endPtr))
     ++curPtr;
+
   // Push the token
   pushToken(TokenKind::Unknown);
+  // Complain if we didn't already
+  if (!complained) {
+    diagnose(tokBegPtr, diag::unknown_char)
+        .fixitReplace(nextToken.getCharRange(), " ");
+  }
 }
 
 void Lexer::lexNumberLiteral() {
