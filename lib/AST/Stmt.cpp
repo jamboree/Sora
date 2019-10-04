@@ -93,17 +93,21 @@ BlockStmt *BlockStmt::createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,
 }
 
 SourceLoc StmtCondition::getBegLoc() const {
-  if (isExpr())
+  switch (getKind()) {
+  case StmtConditionKind::Expr:
     return getExpr()->getBegLoc();
-  if (isLetDecl())
+  case StmtConditionKind::LetDecl:
     return getLetDecl()->getBegLoc();
+  }
   llvm_unreachable("unknown condition kind");
 }
 
 SourceLoc StmtCondition::getEndLoc() const {
-  if (isExpr())
+  switch (getKind()) {
+  case StmtConditionKind::Expr:
     return getExpr()->getEndLoc();
-  if (isLetDecl())
+  case StmtConditionKind::LetDecl:
     return getLetDecl()->getEndLoc();
+  }
   llvm_unreachable("unknown condition kind");
 }

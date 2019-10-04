@@ -351,17 +351,16 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   }
 
   StmtCondition doIt(StmtCondition cond) {
-    if (cond.isExpr()) {
+    switch (cond.getKind()) {
+    case StmtConditionKind::Expr:
       if (Expr *expr = doIt(cond.getExpr()))
         return expr;
       return cond;
-    }
-    else if (cond.isLetDecl()) {
+    case StmtConditionKind::LetDecl:
       doIt(cond.getLetDecl());
       return cond;
     }
-    else
-      llvm_unreachable("Unhandled StmtCondition Kind!");
+    llvm_unreachable("unknown StmtCondition Kind!");
   }
 
   void doIt(TypeLoc &tyLoc) {

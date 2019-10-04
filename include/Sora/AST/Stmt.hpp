@@ -216,8 +216,19 @@ public:
   }
 };
 
+/// Kinds of StmtConditions
+enum class StmtConditionKind {
+  /// An expression condition, e.g. 'foo || bar' in `'if foo || bar'
+  Expr,
+  /// A declaration condition, e.g. 'let x = x' in 'if let x = x'
+  LetDecl
+};
+
 /// Represents the condition of a loop or an if statement.
 /// This can be a boolean expression (or a "let" declaration in the future)
+///
+/// This is intended to be a thin pointer-sized wrapper around a PointerUnion,
+/// providing convenience methods like getKind(), getBegLoc() & getEndLoc().
 class StmtCondition final {
   llvm::PointerUnion<Expr *, LetDecl *> cond;
 
@@ -226,34 +237,34 @@ public:
   StmtCondition() : StmtCondition(nullptr) {}
 
   /// Creates a null (empty) condition
-  StmtCondition(std::nullptr_t) : cond(nullptr) {}
+  /*implicit*/ StmtCondition(std::nullptr_t) : cond(nullptr) {}
 
   /// Creates an expression condition
-  StmtCondition(Expr *expr) : cond(expr) {}
+  /*implicit*/ StmtCondition(Expr *expr) : cond(expr) {}
 
   /// Creates a let-declaration condition
-  StmtCondition(LetDecl *decl) : cond(decl) {}
+  /*implicit*/ StmtCondition(LetDecl *decl) : cond(decl) {}
 
   bool isNull() const { return cond.isNull(); }
 
   /// \returns true if this condition is not null
   explicit operator bool() const { return !cond.isNull(); }
 
-  bool isExpr() const { return cond.is<Expr *>(); }
-  Expr *getExpr() const {
-    assert(isExpr() && "not an expr");
-    return cond.get<Expr *>();
-  }
-  void setExpr(Expr *expr) {
-    assert(isExpr() && "not an expr");
-    cond = expr;
+  /// \returns the kind of StmtCondition this is
+  StmtConditionKind getKind() const {
+    return cond.is<Expr *>() ? StmtConditionKind::Expr
+                             : StmtConditionKind::LetDecl;
   }
 
-  bool isLetDecl() const { return cond.is<LetDecl *>(); }
-  LetDecl *getLetDecl() const {
-    assert(isLetDecl() && "not a LetDecl");
-    return cond.get<LetDecl *>();
-  }
+  /// \returns the Expr* or nullptr.
+  Expr *getExprOrNull() const { return cond.dyn_cast<Expr *>(); }
+  /// \returns the Expr*. Can only be used if this is an Expr.
+  Expr *getExpr() const { return cond.get<Expr *>(); }
+
+  /// \returns the LetDecl* or nullptr.
+  LetDecl *getLetDeclOrNull() const { return cond.dyn_cast<LetDecl *>(); }
+  /// \returns the LetDecl*. Can only be used if this is an LetDecl.
+  LetDecl *getLetDecl() const { return cond.get<LetDecl *>(); }
 
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;

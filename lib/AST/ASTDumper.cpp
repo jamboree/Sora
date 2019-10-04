@@ -491,12 +491,15 @@ public:
     out.indent(curIndent);
     withColor(nodeKindColor) << "StmtCondition";
 
-    if (cond.isExpr())
+    switch (cond.getKind()) {
+    case StmtConditionKind::Expr:
       visit(cond.getExpr());
-    else if (cond.isLetDecl())
+      return;
+    case StmtConditionKind::LetDecl:
       visit(cond.getLetDecl());
-    else
-      llvm_unreachable("unknown StmtCondition kind");
+      return;
+    }
+    llvm_unreachable("unknown StmtConditionKind");
   }
 
   //===--- Stmt -----------------------------------------------------------===//
