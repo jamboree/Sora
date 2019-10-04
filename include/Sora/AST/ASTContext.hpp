@@ -39,7 +39,7 @@ class ASTContext final {
   ASTContext(const ASTContext &) = delete;
   ASTContext &operator=(const ASTContext &) = delete;
 
-  ASTContext(SourceManager &srcMgr, DiagnosticEngine &diagEngine);
+  ASTContext(const SourceManager &srcMgr, DiagnosticEngine &diagEngine);
 
   llvm::BumpPtrAllocator &
   getAllocator(AllocatorKind kind = AllocatorKind::Permanent);
@@ -54,7 +54,7 @@ public:
   /// Creates a new ASTContext.
   /// This is a separate method because the ASTContext needs to trail-allocate
   /// its implementation object.
-  static std::unique_ptr<ASTContext> create(SourceManager &srcMgr,
+  static std::unique_ptr<ASTContext> create(const SourceManager &srcMgr,
                                             DiagnosticEngine &diagEngine);
   ~ASTContext();
 
@@ -93,7 +93,7 @@ public:
   Identifier getIdentifier(StringRef str);
 
   /// The SourceManager that owns the source buffers that created this AST.
-  SourceManager &srcMgr;
+  const SourceManager &srcMgr;
 
   /// The DiagnosticEngine used to diagnose errors related to the AST.
   DiagnosticEngine &diagEngine;

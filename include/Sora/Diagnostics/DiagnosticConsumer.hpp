@@ -69,7 +69,7 @@ class DiagnosticConsumer {
 public:
   virtual ~DiagnosticConsumer() = default;
   /// Handles a diagnostic.
-  virtual void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) = 0;
+  virtual void handle(const SourceManager &srcMgr, const Diagnostic &diagnostic) = 0;
 };
 
 /// A DiagnosticConsumer that pretty-prints diagnostics to a raw_ostream.
@@ -83,19 +83,21 @@ public:
   /// the output stream
   raw_ostream &out;
 
-  void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override;
+  void handle(const SourceManager &srcMgr,
+              const Diagnostic &diagnostic) override;
 };
 
 /// A DiagnosticConsumer that forwards diagnostic handling to a function
 class ForwardingDiagnosticConsumer : public DiagnosticConsumer {
 public:
   using HandlerFunction =
-      std::function<void(SourceManager &, const Diagnostic &)>;
+      std::function<void(const SourceManager &, const Diagnostic &)>;
 
   ForwardingDiagnosticConsumer(HandlerFunction func) : func(func) {}
 
   /// Handles a diagnostic.
-  void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override {
+  void handle(const SourceManager &srcMgr,
+              const Diagnostic &diagnostic) override {
     func(srcMgr, diagnostic);
   }
 

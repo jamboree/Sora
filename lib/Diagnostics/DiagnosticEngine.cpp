@@ -111,7 +111,7 @@ InFlightDiagnostic &InFlightDiagnostic::fixitRemove(SourceRange range) {
   //    - a space ' ' after it
   //    - a whitespace before it
   // Remove the extra space after the range to keep the source consistent.
-  SourceManager &srcMgr = diagEngine->srcMgr;
+  const SourceManager &srcMgr = diagEngine->srcMgr;
   BufferID buffer = srcMgr.findBufferContainingLoc(range.begin);
   assert(buffer && "bogus range?");
   CharSourceRange fileRange = srcMgr.getBufferCharSourceRange(buffer);

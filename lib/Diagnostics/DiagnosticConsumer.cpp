@@ -51,7 +51,7 @@ void PrintingDiagnosticConsumer::handleSimpleDiagnostic(
       << diagnostic.message << "\n";
 }
 
-void PrintingDiagnosticConsumer::handle(SourceManager &srcMgr,
+void PrintingDiagnosticConsumer::handle(const SourceManager &srcMgr,
                                         const Diagnostic &diagnostic) {
   bool showColors = out.has_colors();
   // Simple diagnostics are handled differently.

@@ -36,14 +36,15 @@ struct ASTContext::Impl {
   }
 };
 
-ASTContext::ASTContext(SourceManager &srcMgr, DiagnosticEngine &diagEngine)
+ASTContext::ASTContext(const SourceManager &srcMgr,
+                       DiagnosticEngine &diagEngine)
     : srcMgr(srcMgr), diagEngine(diagEngine) {}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
 }
 
-std::unique_ptr<ASTContext> ASTContext::create(SourceManager &srcMgr,
+std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
                                                DiagnosticEngine &diagEngine) {
   // FIXME: This could be simplified with a aligned_alloc if we had access to
   // it.

@@ -79,7 +79,7 @@ public:
 
   /// Handles a diagnostic. If the diagnostic was not expected by the verifier,
   /// it'll be forwarded to the consumer.
-  void handle(SourceManager &srcMgr, const Diagnostic &diagnostic) override;
+  void handle(const SourceManager &srcMgr, const Diagnostic &diagnostic) override;
 
   /// Finishes verification
   /// \returns true if the verification succeeded.

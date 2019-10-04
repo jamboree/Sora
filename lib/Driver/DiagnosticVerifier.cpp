@@ -201,7 +201,7 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
   return parsingSuccessful;
 }
 
-void DiagnosticVerifier::handle(SourceManager &srcMgr,
+void DiagnosticVerifier::handle(const SourceManager &srcMgr,
                                 const Diagnostic &diagnostic) {
   assert((&(this->srcMgr) == &srcMgr) &&
          "The SourceManager used by the DiagnosticEngine is different from the "

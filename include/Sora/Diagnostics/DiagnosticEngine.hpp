@@ -233,7 +233,7 @@ class DiagnosticEngine {
 
 public:
   /// Creates a DiagnosticEngine using a pre-existing consumer
-  DiagnosticEngine(SourceManager &srcMgr,
+  DiagnosticEngine(const SourceManager &srcMgr,
                    std::unique_ptr<DiagnosticConsumer> consumer)
       : srcMgr(srcMgr), consumer(std::move(consumer)) {
     assert(this->consumer && "consumer cannot be null!");
@@ -242,7 +242,7 @@ public:
 
   /// Creates a DiagnosticEngine with a PrintingDiagnosticConsumer that
   /// pretty-prints diagnostics to \p out
-  DiagnosticEngine(SourceManager &srcMgr, raw_ostream &out)
+  DiagnosticEngine(const SourceManager &srcMgr, raw_ostream &out)
       : DiagnosticEngine(srcMgr,
                          std::make_unique<PrintingDiagnosticConsumer>(out)) {}
 
@@ -299,12 +299,12 @@ public:
   /// \param true if warnings should be treated as errors, false otherwise.
   void setWarningsAreErrors(bool value = true) { warningsAreErrors = true; }
 
-private:
-  friend InFlightDiagnostic;
-
   /// The SourceManager instance used by this DiagnosticEngine.
   /// This will also be passed to consumers.
-  SourceManager &srcMgr;
+  const SourceManager &srcMgr;
+
+private:
+  friend InFlightDiagnostic;
 
   /// \returns the kind of diagnostic of \p id depending on the current
   /// state of this DiagnosticEngine. Returns "None" if the diagnostic
