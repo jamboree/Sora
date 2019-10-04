@@ -96,8 +96,8 @@ public:
   void setImplicit(bool implicit = true) { typeAndIsImplicit.setInt(implicit); }
   bool isImplicit() const { return typeAndIsImplicit.getInt(); }
 
+  bool hasType() const { return !getType().isNull(); }
   Type getType() const { return typeAndIsImplicit.getPointer(); }
-  bool hasType() const { return (bool)getType(); }
   void setType(Type type) { typeAndIsImplicit.setPointer(type); }
 
   /// Skips parentheses around this Expr: If this is a ParenExpr, returns
