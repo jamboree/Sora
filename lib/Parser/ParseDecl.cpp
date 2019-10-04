@@ -26,23 +26,35 @@ bool Parser::isStartOfDecl() const {
 /*
 source-file = top-level-declaration+
 top-level-declaration = function-declaration
-                      | type-declaration
-                      | struct-declaration
 */
 void Parser::parseSourceFile() {
+  auto recover = [&]() { skipUntilDecl(); };
   while (!isEOF()) {
-    if (tok.isNot(TokenKind::FuncKw)) {
+    switch (tok.getKind()) {
+    // function-declaration
+    case TokenKind::FuncKw: {
+      if (FuncDecl *func = parseFuncDecl().getOrNull())
+        sourceFile.addMember(func);
+      else
+        recover();
+      break;
+    }
+    // Trying to declare global variables is a relatively common mistake, so
+    // parse them but ignore them & inform the user that it's not allowed.
+    case TokenKind::LetKw: {
+      // FIXME: Should this be emitted only on successful parsing of the LetDecl?
+      diagnose(tok, diag::let_not_allowed_at_global_level);
+      SmallVector<VarDecl *, 4> vars;
+      if (parseLetDecl(vars).isParseError())
+        recover();
+      break;
+    }
+    default:
       if (tok.isNot(TokenKind::Unknown))
         diagnose(tok, diag::expected_fn_decl);
-      skipUntil(TokenKind::FuncKw);
-      continue;
+      recover();
+      break;
     }
-    auto result = parseFuncDecl();
-    if (result.isNull()) {
-      skipUntil(TokenKind::FuncKw);
-      continue;
-    }
-    sourceFile.addMember(result.get());
   }
 }
 

@@ -1,2 +1,6 @@
 // RUN: %sorac-parse -verify %s
 foo // expect-error: expected a function declaration
+func foo() {}
+let // expect-error:    'let' declarations are not allowed at the global level
+    // expect-error@-1: expected a pattern after 'let'
+let foo // expect-error: 'let' declarations are not allowed at the global level

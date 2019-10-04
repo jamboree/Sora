@@ -252,6 +252,9 @@ public:
   /// Skips until the next token of kind \p kind without consuming it.
   void skipUntil(TokenKind kind);
 
+  /// Skips to the next Decl
+  void skipUntilDecl();
+
   /// Skips to the next \p tok, Decl or }
   void skipUntilDeclRCurly(TokenKind tok = TokenKind::Invalid);
 

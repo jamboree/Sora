@@ -99,6 +99,14 @@ void Parser::skipUntil(TokenKind kind) {
     skip();
 }
 
+void Parser::skipUntilDecl() {
+  while (!isEOF()) {
+    if (isStartOfDecl())
+      return;
+    skip();
+  }
+}
+
 void Parser::skipUntilDeclRCurly(TokenKind kind) {
   while (!isEOF()) {
     if (isStartOfDecl() || tok.isAny(kind, TokenKind::RCurly))

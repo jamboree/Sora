@@ -36,47 +36,56 @@ ERROR(expected_lparen_in_fn_arg_list,
 ERROR(expected_lcurly_fn_body, 
   "expected '{' in body of function declaration", ())
 
-ERROR(expected_colon, "expected ':'", ())
+ERROR(expected_colon,   "expected ':'", ())
 
-ERROR(expected_rparen, "expected ')'", ())
-ERROR(expected_rcurly, "expected '}'", ())
+ERROR(expected_rparen,  "expected ')'", ())
+ERROR(expected_rcurly,  "expected '}'", ())
 ERROR(expected_rsquare, "expected ']'", ())
 
 ERROR(expected_rparen_at_end_of_tuple_type, 
   "expected ')' at end of tuple type", ())
 
-NOTE(to_match_lparen, "to match this opening '('", ())
-NOTE(to_match_lcurly, "to match this opening '{'", ())
-NOTE(to_match_lsquare, "to match this opening '['", ())
+NOTE(to_match_lparen,   "to match this opening '('", ())
+NOTE(to_match_lcurly,   "to match this opening '{'", ())
+NOTE(to_match_lsquare,  "to match this opening '['", ())
 
 // Types
-ERROR(expected_type, "expected a type", ())
+ERROR(expected_type,      "expected a type", ())
 ERROR(expected_fn_ret_ty, "expected function return type", ())
 
 // Identifiers
-ERROR(expected_ident_in_fn, 
+ERROR(expected_ident_in_fn,
   "expected identifier in function declaration", ())
 
 // Declarations
-ERROR(expected_fn_decl, "expected a function declaration", ())
-ERROR(expected_param_decl, "expected a parameter declaration", ())
+ERROR(expected_fn_decl,
+  "expected a function declaration", ())
+ERROR(expected_param_decl,
+  "expected a parameter declaration", ())
+ERROR(let_not_allowed_at_global_level,
+  "'let' declarations are not allowed at the global level", ())
 
 // Expressions
-ERROR(expected_expr, "expected an expression", ())
-ERROR(expected_initial_value_after_equal, 
+ERROR(expected_expr,
+  "expected an expression", ())
+ERROR(expected_initial_value_after_equal,
   "expected initial value after '='", ())
 
 // Patterns
-ERROR(expected_pat_after_let, "expected a pattern after 'let'", ())
-ERROR(expected_pat_after_mut, "expected a pattern after 'mut'", ())
-ERROR(expected_pat, "expected a pattern", ())
-ERROR(expected_rparen_at_end_of_tuple_pat, 
+ERROR(expected_pat_after_let,
+  "expected a pattern after 'let'", ())
+ERROR(expected_pat_after_mut,
+  "expected a pattern after 'mut'", ())
+ERROR(expected_pat,
+  "expected a pattern", ())
+ERROR(expected_rparen_at_end_of_tuple_pat,
   "expected ')' at end of tuple pattern", ())
-ERROR(var_already_mutable, "variable is already mutable", ())
-ERROR(pat_can_only_have_one_mut, 
+ERROR(var_already_mutable,
+  "variable is already mutable", ())
+ERROR(pat_can_only_have_one_mut,
   "pattern can only have one 'mut' specifier", ())
-
-NOTE(var_made_mutable_here, "variable was made mutable here", ())
+NOTE(var_made_mutable_here,
+  "variable was made mutable here", ())
 
 //===----------------------------------------------------------------------===//
 
