@@ -209,7 +209,7 @@ public:
 
   void visitVarDecl(VarDecl *decl) {
     dumpCommon(decl);
-    out << '\n';
+    out << ' ' << (decl->isMutable() ? "mutable" : "immutable") << '\n';
 
     if (TypeRepr *tyRepr = decl->getTypeLoc().getTypeRepr()) {
       auto indent = increaseIndent();
