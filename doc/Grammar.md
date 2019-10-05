@@ -55,20 +55,22 @@ let-declaration = "let" pattern ('=' expression)?
 // Patterns
 pattern = "mut" (tuple-pattern | identifier | '_') (':' type)?
 tuple-pattern = '(' (pattern (',' pattern)*)? ')'
+          
+// Statements
+block-statement = '{' block-statement-item* '}'
 
-// Statements 
-statement = block-statement
+block-statement-item =
           | expression
+          | block-statement
           | if-statement
           | while-statement
           | do-while-statement
           | for-statement
           | control-transfer-statement
-          | declaration-statement
-          
-declaration-statement = function-declaration | type-declaration | struct-declaration | let-declaration
-
-block-statement = '{' statement* '}'
+          | function-declaration 
+          | type-declaration 
+          | struct-declaration 
+          | let-declaration
 
 if-statement = "if" condition block-statement ("else" (brace-statement | if-statement))?
 
