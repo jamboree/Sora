@@ -82,12 +82,12 @@ ERROR(expected_pat,
   "expected a pattern", ())
 ERROR(expected_rparen_at_end_of_tuple_pat,
   "expected ')' at end of tuple pattern", ())
-ERROR(var_already_mutable,
-  "variable is already mutable", ())
 ERROR(pat_can_only_have_one_mut,
   "pattern can only have one 'mut' specifier", ())
-NOTE(var_made_mutable_here,
-  "variable was made mutable here", ())
+ERROR(useless_mut_spec__already_mut,
+  "unnecessary 'mut' specifier - pattern is already mutable", ())
+NOTE(pat_made_mutable_by_this_mut,
+  "pattern was made mutable by this 'mut'", ())
 
 //===----------------------------------------------------------------------===//
 

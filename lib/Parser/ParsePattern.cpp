@@ -17,10 +17,12 @@ namespace {
 /// pattern, diagnosting redudant mutability in the process.
 class ApplyMutSpecifier : public ASTWalker {
 public:
-  /// Maps a VarDecl to the SourceLoc of the mut specifier that made it mutable.
-  /// FIXME: If I ever store the MutLoc inside VarDecls, this can go away and
-  /// the code of this class simplified.
-  llvm::DenseMap<VarDecl *, SourceLoc> appliedMuts;
+  /// The parent "MutPattern" that owns the tree we are currently visiting.
+  /// If nullptr, the pattern isn't inside a MutPattern.
+  /// Note that this is always the outermost MutPattern. If a MutPattern is seen
+  /// inside another MutPattern , it is considered errenous and parentMutPattern
+  /// isn't changed.
+  MutPattern *parentMutPattern = nullptr;
 
   ApplyMutSpecifier(Parser &parser) : parser(parser) {}
 
@@ -29,38 +31,43 @@ public:
   void makeMutable(VarDecl *var, SourceLoc mutLoc) {
     assert(mutLoc);
     var->setIsMutable();
-    appliedMuts[var] = mutLoc;
-  }
-
-  SourceLoc getOriginalMutLoc(VarDecl *var) {
-    assert(var->isMutable() && "only for mut vars");
-    SourceLoc loc = appliedMuts[var];
-    assert(loc && "no applied mut?");
-    return loc;
   }
 
   // Walk from outer-in (pre-order)
-  Action walkToPatternPre(Pattern *pattern) override {
-    // FIXME: This walks the whole subtree of each MutPattern, so it's not the
-    // most efficient thing there is. However it shouldn't be a problem unless
-    // we have hundred of muts in a single pattern, but can this function be
-    // more efficient?
-
-    // We only care about "mut" patterns
-    if (MutPattern *mutPat = dyn_cast<MutPattern>(pattern)) {
-      mutPat->forEachVarDecl([&](VarDecl *var) {
-        if (var->isMutable()) {
-          parser.diagnose(var->getLoc(), diag::var_already_mutable)
-              .fixitRemove(mutPat->getMutLoc());
-          SourceLoc noteLoc = getOriginalMutLoc(var);
-          parser.diagnose(noteLoc, diag::var_made_mutable_here)
-              .highlight(var->getLoc());
-        }
-        else
-          makeMutable(var, mutPat->getMutLoc());
-      });
+  Action walkToPatternPre(Pattern *pat) override {
+    // Make Vars mutable if parentMutPattern isn't null
+    if (VarPattern *var = dyn_cast<VarPattern>(pat)) {
+      var->getVarDecl()->setIsMutable(parentMutPattern != nullptr);
+      return Action::Continue;
     }
+
+    // Else, we only care about MutPatterns
+    MutPattern *mutPat = dyn_cast<MutPattern>(pat);
+    if (!mutPat)
+      return Action::Continue;
+
+    // If we see this MutPattern inside another MutPattern, diagnose.
+    if (parentMutPattern != nullptr) {
+      // Emit an error for this MutPattern, and a note pointing at the first
+      // parent MutPattern.
+      SourceRange subPatRange = mutPat->getSubPattern()->getSourceRange();
+      SourceLoc curMutLoc = mutPat->getMutLoc();
+      SourceLoc parentMutLoc = parentMutPattern->getMutLoc();
+      parser.diagnose(curMutLoc, diag::useless_mut_spec__already_mut)
+          .highlight(subPatRange)
+          .fixitRemove(curMutLoc);
+      parser.diagnose(parentMutLoc, diag::pat_made_mutable_by_this_mut)
+          .highlight(subPatRange);
+    }
+    else
+      parentMutPattern = mutPat;
     return Action::Continue;
+  }
+
+  bool walkToPatternPost(Pattern *pat) override {
+    if (parentMutPattern == pat)
+      parentMutPattern = nullptr;
+    return true;
   }
 };
 } // namespace
