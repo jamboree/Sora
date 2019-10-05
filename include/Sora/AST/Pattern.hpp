@@ -112,8 +112,17 @@ public:
 static_assert(sizeof(Pattern) <= 16, "Pattern is too big!");
 
 /// Represents a single variable pattern, which matches any argument and binds
-/// it to a name. This is the node that contains VarDecl nodes. A VarDecl* must
-/// be given when constructing the object and it can't be changed afterwards.
+/// it to a name.
+///
+/// This contains a pointer to the VarDecl it created. This is set when
+/// constructing the VarPattern and cannot be changed afterwards.
+///
+/// The VarDecl is also added to its enclosing node's content (e.g. they'll also
+/// become elements of the BraceStmt)
+///
+/// Usually, VarDecls aren't visited through their VarPattern. They are visited
+/// through their enclosing "node", e.g. when walking the elements of a
+/// BraceStmt.
 class VarPattern final : public Pattern {
   VarDecl *const varDecl = nullptr;
 
