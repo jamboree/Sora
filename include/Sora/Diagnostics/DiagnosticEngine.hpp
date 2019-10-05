@@ -232,19 +232,12 @@ class DiagnosticEngine {
   SourceLoc getLocForDiag(BufferID buffer) const;
 
 public:
-  /// Creates a DiagnosticEngine using a pre-existing consumer
   DiagnosticEngine(const SourceManager &srcMgr,
                    std::unique_ptr<DiagnosticConsumer> consumer)
       : srcMgr(srcMgr), consumer(std::move(consumer)) {
     assert(this->consumer && "consumer cannot be null!");
     initBitfields();
   }
-
-  /// Creates a DiagnosticEngine with a PrintingDiagnosticConsumer that
-  /// pretty-prints diagnostics to \p out
-  DiagnosticEngine(const SourceManager &srcMgr, raw_ostream &out)
-      : DiagnosticEngine(srcMgr,
-                         std::make_unique<PrintingDiagnosticConsumer>(out)) {}
 
   // The DiagnosticEngine is non-copyable.
   DiagnosticEngine(const DiagnosticEngine &) = delete;

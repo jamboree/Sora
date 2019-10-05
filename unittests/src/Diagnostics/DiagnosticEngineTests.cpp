@@ -35,7 +35,8 @@ TEST(DiagnosticEngineTest, diagnose) {
   std::string output;
   llvm::raw_string_ostream stream(output);
 
-  DiagnosticEngine diagEngine(srcMgr, stream);
+  DiagnosticEngine diagEngine(
+      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(stream));
   diagEngine.diagnose(loc, diag::unknown_arg, "Pierre")
       .highlightChars(additionalRange)
       .fixitInsert(ins, "Incredibely")
@@ -68,7 +69,8 @@ TEST(DiagnosticEngineTest, fixitRemove) {
   std::string output;
   llvm::raw_string_ostream stream(output);
 
-  DiagnosticEngine diagEngine(srcMgr, stream);
+  DiagnosticEngine diagEngine(
+      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(stream));
   diagEngine.diagnose(loc, diag::unknown_arg, "Pierre")
       .fixitRemove(foo)   // should remove foo + extra whitespace
       .fixitRemove(bar)   // should remove bar + extra whitespace

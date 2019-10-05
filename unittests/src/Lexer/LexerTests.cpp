@@ -28,7 +28,8 @@ public:
   SourceLoc diagLoc;
 
   SourceManager srcMgr;
-  DiagnosticEngine diagEngine{srcMgr, llvm::outs()};
+  DiagnosticEngine diagEngine{
+      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
   llvm::raw_string_ostream errStream{errStreamBuff};
 
   bool isDone = false;

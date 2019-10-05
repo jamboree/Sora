@@ -20,7 +20,9 @@ using namespace sora;
 using namespace llvm::opt;
 
 Driver::Driver(raw_ostream &out)
-    : driverDiags(driverDiagsSrcMgr, out), optTable(createSoraOptTable()) {}
+    : driverDiags(driverDiagsSrcMgr,
+                  std::make_unique<PrintingDiagnosticConsumer>(out)),
+      optTable(createSoraOptTable()) {}
 
 InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
   hadError = false;

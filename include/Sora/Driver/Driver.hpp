@@ -100,7 +100,8 @@ public:
   }
 
   SourceManager srcMgr;
-  DiagnosticEngine diagEng{srcMgr, llvm::outs()};
+  DiagnosticEngine diagEng{
+      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
   std::unique_ptr<ASTContext> astContext;
 
 private:
