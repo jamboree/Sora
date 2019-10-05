@@ -28,19 +28,18 @@ public:
   SourceLoc diagLoc;
 
   SourceManager srcMgr;
-  DiagnosticEngine diagEngine{
-      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
+  DiagnosticEngine diagEngine{srcMgr};
   llvm::raw_string_ostream errStream{errStreamBuff};
 
   bool isDone = false;
 
   LexerTest() {
-    diagEngine.setConsumer(std::make_unique<ForwardingDiagnosticConsumer>(
+    diagEngine.createConsumer<ForwardingDiagnosticConsumer>(
         [&](const SourceManager &, const Diagnostic &diag) {
           diagMsg = diag.message;
           diagLoc = diag.loc;
           ++diagCount;
-        }));
+        });
   }
 
   /// Creates a lexer to lex \p input

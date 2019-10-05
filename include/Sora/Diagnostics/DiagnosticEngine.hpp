@@ -232,10 +232,7 @@ class DiagnosticEngine {
   SourceLoc getLocForDiag(BufferID buffer) const;
 
 public:
-  DiagnosticEngine(const SourceManager &srcMgr,
-                   std::unique_ptr<DiagnosticConsumer> consumer)
-      : srcMgr(srcMgr), consumer(std::move(consumer)) {
-    assert(this->consumer && "consumer cannot be null!");
+  explicit DiagnosticEngine(const SourceManager &srcMgr) : srcMgr(srcMgr) {
     initBitfields();
   }
 
@@ -264,6 +261,14 @@ public:
 
   /// \returns a observing pointer to the current diagnostic consumer
   DiagnosticConsumer *getConsumer() { return consumer.get(); }
+
+  /// Creates a new DiagnosticConsumer to replace the current one.
+  template <typename Consumer, typename... Args,
+            typename = typename std::enable_if_t<
+                std::is_base_of<DiagnosticConsumer, Consumer>::value, Consumer>>
+  void createConsumer(Args&&... args) {
+    setConsumer(std::make_unique<Consumer>(std::forward<Args>(args)...));
+  }
 
   /// Replaces the current diagnostic consumer with \p newConsumer
   void setConsumer(std::unique_ptr<DiagnosticConsumer> newConsumer) {

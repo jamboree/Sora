@@ -68,9 +68,8 @@ public:
   /// used by the parent DiagnosticEngine.
   /// \param consumer the DiagnosticConsumer that will consume unexpected
   /// diagnostics.
-  DiagnosticVerifier(raw_ostream &out, SourceManager &srcMgr,
-                     std::unique_ptr<DiagnosticConsumer> consumer)
-      : consumer(std::move(consumer)), srcMgr(srcMgr), out(out) {}
+  DiagnosticVerifier(raw_ostream &out, SourceManager &srcMgr)
+      : srcMgr(srcMgr), out(out) {}
 
   /// Parses all of the "expect" lines in \p buff
   /// This prints error when error occurs.
@@ -79,7 +78,8 @@ public:
 
   /// Handles a diagnostic. If the diagnostic was not expected by the verifier,
   /// it'll be forwarded to the consumer.
-  void handle(const SourceManager &srcMgr, const Diagnostic &diagnostic) override;
+  void handle(const SourceManager &srcMgr,
+              const Diagnostic &diagnostic) override;
 
   /// Finishes verification
   /// \returns true if the verification succeeded.

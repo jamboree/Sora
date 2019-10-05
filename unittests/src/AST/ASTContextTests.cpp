@@ -17,8 +17,7 @@ namespace {
 class ASTContextTest : public ::testing::Test {
 public:
   SourceManager srcMgr;
-  DiagnosticEngine diagEngine{
-      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
+  DiagnosticEngine diagEngine{srcMgr};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEngine)};
 };
 } // namespace

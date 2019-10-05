@@ -20,9 +20,9 @@ using namespace sora;
 using namespace llvm::opt;
 
 Driver::Driver(raw_ostream &out)
-    : driverDiags(driverDiagsSrcMgr,
-                  std::make_unique<PrintingDiagnosticConsumer>(out)),
-      optTable(createSoraOptTable()) {}
+    : driverDiags(driverDiagsSrcMgr), optTable(createSoraOptTable()) {
+  driverDiags.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+}
 
 InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
   hadError = false;
@@ -195,8 +195,8 @@ ArrayRef<BufferID> CompilerInstance::getInputBuffers() const {
 DiagnosticVerifier *CompilerInstance::installDiagnosticVerifierIfNeeded() {
   if (!options.verifyModeEnabled)
     return nullptr;
-  auto verifier = std::make_unique<DiagnosticVerifier>(llvm::outs(), srcMgr,
-                                                       diagEng.takeConsumer());
+  auto verifier = std::make_unique<DiagnosticVerifier>(llvm::outs(), srcMgr);
+  verifier->setConsumer(diagEng.takeConsumer());
   auto ptr = verifier.get();
   diagEng.setConsumer(std::move(verifier));
   return ptr;

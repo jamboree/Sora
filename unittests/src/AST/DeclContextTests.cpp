@@ -23,8 +23,7 @@ protected:
         func(new (*ctxt) FuncDecl(sf, {}, {}, {}, nullptr, {})) {}
 
   SourceManager srcMgr;
-  DiagnosticEngine diagEng{
-      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
+  DiagnosticEngine diagEng{srcMgr};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
   SourceFile *sf;

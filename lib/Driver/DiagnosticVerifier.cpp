@@ -206,10 +206,10 @@ void DiagnosticVerifier::handle(const SourceManager &srcMgr,
   assert((&(this->srcMgr) == &srcMgr) &&
          "The SourceManager used by the DiagnosticEngine is different from the "
          "one used by the DiagnosticVerifier!");
-  assert(consumer && "no consumer!");
   auto fail = [&]() {
     unexpectedDiagsEmitted = true;
-    consumer->handle(srcMgr, diagnostic);
+    if (consumer)
+      consumer->handle(srcMgr, diagnostic);
   };
 
   // Did we expect this diagnostic?

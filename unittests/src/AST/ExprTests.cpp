@@ -36,8 +36,7 @@ protected:
     boolLitExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLitExpr = new (*ctxt) NullLiteralExpr(beg);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
-    tupleEltExpr =
-        new (*ctxt) TupleElementExpr(begExpr, mid, false, end, 0);
+    tupleEltExpr = new (*ctxt) TupleElementExpr(begExpr, mid, false, end, 0);
     tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
     parenExpr = new (*ctxt) ParenExpr(beg, midExpr, end);
     callExpr =
@@ -50,8 +49,7 @@ protected:
   }
 
   SourceManager srcMgr;
-  DiagnosticEngine diagEng{
-      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
+  DiagnosticEngine diagEng{srcMgr};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
   SourceLoc beg, mid, end;

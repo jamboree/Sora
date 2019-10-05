@@ -116,7 +116,7 @@ InFlightDiagnostic &InFlightDiagnostic::fixitRemove(SourceRange range) {
   assert(buffer && "bogus range?");
   CharSourceRange fileRange = srcMgr.getBufferCharSourceRange(buffer);
   assert(fileRange.contains(charRange));
-  
+
   bool hasWhitespaceBefore = false;
   if (charRange.getBegin() == fileRange.getBegin())
     hasWhitespaceBefore = true;
@@ -210,7 +210,6 @@ getFormattedDiagnosticString(DiagID id,
 
 void DiagnosticEngine::emit() {
   assert(activeDiagnostic.hasValue() && "No active diagnostic!");
-  assert(consumer && "can't emit a diagnostic without a consumer!");
 
   // Fetch the Diagnostic Kind, if it's null, abort the diag.
   RawDiagnostic &rawDiag = *activeDiagnostic;
@@ -228,8 +227,9 @@ void DiagnosticEngine::emit() {
   Diagnostic diag(diagStr, optDiagKind.getValue(), rawDiag.getLoc(),
                   rawDiag.getRanges(), rawDiag.getFixits());
 
-  // Feed it to the consumer
-  consumer->handle(srcMgr, diag);
+  // Feed it to the consumer if there's one
+  if (consumer)
+    consumer->handle(srcMgr, diag);
   activeDiagnostic.reset();
 }
 

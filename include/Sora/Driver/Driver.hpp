@@ -31,7 +31,9 @@ class SourceFile;
 /// (simply because it's not needed)
 class CompilerInstance {
   friend class Driver;
-  CompilerInstance() = default;
+  CompilerInstance() : diagEng(srcMgr) {
+    diagEng.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+  }
   CompilerInstance(const CompilerInstance &) = delete;
   CompilerInstance &operator=(const CompilerInstance &) = delete;
 
@@ -100,8 +102,7 @@ public:
   }
 
   SourceManager srcMgr;
-  DiagnosticEngine diagEng{
-      srcMgr, std::make_unique<PrintingDiagnosticConsumer>(llvm::outs())};
+  DiagnosticEngine diagEng;
   std::unique_ptr<ASTContext> astContext;
 
 private:
