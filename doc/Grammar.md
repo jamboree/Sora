@@ -119,8 +119,7 @@ suffix = tuple-expression // suffixes = calls, member accesses and subscripts.
        | member-access-expression
        | array-subscript
        | postfix-operator
-primary-expression = identifier | literal | tuple-expression | discard-expression
-discard-expression = '_'
+primary-expression = identifier | literal | tuple-expression | '_'
 tuple-expression = '(' expression-list? ')'
 expression-list = expression (',' expression)*
 member-access-expression = ('.' | "->") (identifier | integer-literal)
