@@ -12,9 +12,9 @@ using namespace sora;
 
 /*
 type = identifier
-     | tuple-type
-     | reference-type
-     | maybe-type
+  | tuple-type
+  | reference-type
+  | maybe-type
 */
 ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   switch (tok.getKind()) {

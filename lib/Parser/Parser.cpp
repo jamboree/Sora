@@ -107,6 +107,14 @@ void Parser::skipUntilDecl() {
   }
 }
 
+void Parser::skipUntilTokOrNewline(TokenKind kind) {
+  while (!isEOF()) {
+    if (tok.is(kind) || tok.isAtStartOfLine())
+      return;
+    skip();
+  }
+}
+
 void Parser::skipUntilTokDeclRCurly(TokenKind kind) {
   while (!isEOF()) {
     if (isStartOfDecl() || tok.isAny(kind, TokenKind::RCurly))

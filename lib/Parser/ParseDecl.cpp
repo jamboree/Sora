@@ -24,6 +24,23 @@ bool Parser::isStartOfDecl() const {
 }
 
 /*
+declaration =  top-level-declaration | let-declaration
+top-level-declaration = function-declaration
+*/
+ParserResult<Decl> Parser::parseDecl(SmallVectorImpl<VarDecl *> &vars,
+                                     bool isTopLevel) {
+  assert(isStartOfDecl() && "not a stmt");
+  switch (tok.getKind()) {
+  case TokenKind::LetKw:
+    return parseLetDecl(vars);
+  case TokenKind::FuncKw:
+    return parseFuncDecl();
+  default:
+    return nullptr;
+  }
+}
+
+/*
 source-file = top-level-declaration+
 top-level-declaration = function-declaration
 */
@@ -226,12 +243,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
 
   if (tok.isNot(TokenKind::LCurly)) {
     // Try to find the LCurly on the same line or at the start of the next line.
-    // FIXME: Should this be in a separate method?
-    while (!isEOF()) {
-      if (isStartOfDecl() || tok.is(TokenKind::LCurly) || tok.isAtStartOfLine())
-        break;
-      skip();
-    }
+    skipUntilTokOrNewline(TokenKind::LCurly);
     // Check if we found our LCurly
     if (tok.isNot(TokenKind::LCurly)) {
       diagnoseExpected(diag::expected_lcurly_fn_body);

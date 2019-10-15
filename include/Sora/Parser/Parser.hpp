@@ -75,8 +75,21 @@ public:
   /// \returns true if the parser is positioned at the start of a declaration.
   bool isStartOfDecl() const;
 
+  /// Parses a declaration or top-level-declaration.
+  /// \param vars for LetDecls, the vector where the vars declared by the
+  /// LetDecl will be stored.
+  /// \param isTopLevel if true, only top-level-declarations are allowed, and
+  /// declarations that can't appear at the top level are diagnosed.
+  ///
+  /// isStartOfDecl() must return true.
+  ParserResult<Decl> Parser::parseDecl(SmallVectorImpl<VarDecl *> &vars,
+                                       bool isTopLevel = false);
+
   /// Parses a let-declaration
-  /// The parser must be position on the "let" keyword.
+  /// \param vars the vector where the vars declared by the LetDecl will be
+  /// stored.
+  ///
+  /// The parser must be positioned on the "let" keyword.
   ParserResult<Decl> parseLetDecl(SmallVectorImpl<VarDecl *> &vars);
 
   /// Parses a parameter-declaration
@@ -109,6 +122,10 @@ public:
 
   /// \returns true if the parser is positioned at the start of a statement.
   bool isStartOfStmt() const;
+
+  /// Parses a statement.
+  /// isStartOfStmt() must return true.
+  ParserResult<Stmt> parseStmt();
 
   /// Parses a block-statement
   /// The parser must be positioned on the "{"
@@ -165,7 +182,7 @@ public:
   InFlightDiagnostic
   diagnose(const Token &tok, TypedDiag<Args...> diag,
            typename detail::PassArgument<Args>::type... args) {
-    return diagEng.diagnose<Args...>(tok.getLoc(), diag, args...);
+    return diagnose(tok.getLoc(), diag, args...);
   }
 
   /// Emits a diagnostic at \p loc
@@ -173,15 +190,8 @@ public:
   InFlightDiagnostic
   diagnose(SourceLoc loc, TypedDiag<Args...> diag,
            typename detail::PassArgument<Args>::type... args) {
+    assert(loc && "Parser can't emit diagnostics without SourceLocs");
     return diagEng.diagnose<Args...>(loc, diag, args...);
-  }
-
-  /// Emits a diagnostic at the beginning of \p buffer
-  template <typename... Args>
-  InFlightDiagnostic
-  diagnose(BufferID buffer, TypedDiag<Args...> diag,
-           typename detail::PassArgument<Args>::type... args) {
-    return diagEng.diagnose<Args...>(buffer, diag, args...);
   }
 
   /// Emits a "expected" diagnostic.
@@ -256,6 +266,9 @@ public:
 
   /// Skips to the next Decl
   void skipUntilDecl();
+
+  /// Skips until the next tok or newline.
+  void skipUntilTokOrNewline(TokenKind tok = TokenKind::Invalid);
 
   /// Skips to the next \p tok, Decl or }
   void skipUntilTokDeclRCurly(TokenKind tok = TokenKind::Invalid);

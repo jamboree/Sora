@@ -89,6 +89,12 @@ ERROR(useless_mut_spec__already_mut,
 NOTE(pat_made_mutable_by_this_mut,
   "pattern was made mutable by this 'mut'", ())
 
+// Statements
+ERROR(expected_block_item,
+  "expected a statement, an expression or a declaration", ())
+ERROR(expected_newline,
+  "expected a newline", ())
+
 //===----------------------------------------------------------------------===//
 
 #ifndef KEEP_DIAG_MACROS
