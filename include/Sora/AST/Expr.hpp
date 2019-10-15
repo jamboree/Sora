@@ -583,6 +583,32 @@ public:
   }
 };
 
+/// Represents a forced 'maybe' unwrapping.
+/// This forces the value out of a maybe type and can dynamically fail (trap).
+///
+/// e.g. foo!
+class ForceUnwrapExpr final : public Expr {
+  Expr *subExpr;
+  SourceLoc exclaimLoc;
+
+public:
+  ForceUnwrapExpr(Expr *subExpr, SourceLoc exclaimLoc)
+      : Expr(ExprKind::ForceUnwrap), subExpr(subExpr), exclaimLoc(exclaimLoc) {}
+
+  Expr *getSubExpr() const { return subExpr; }
+  void setSubExpr(Expr *subExpr) { this->subExpr = subExpr; }
+
+  SourceLoc getExclaimLoc() const { return exclaimLoc; }
+
+  SourceLoc getBegLoc() const { return subExpr->getBegLoc(); }
+  SourceLoc getEndLoc() const { return exclaimLoc; }
+  SourceLoc getLoc() const { return subExpr->getLoc(); }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::ForceUnwrap;
+  }
+};
+
 /// Represents an infix binary operation
 ///
 /// e.g a = b, 1 + 2, c += d, 32 ^ 56

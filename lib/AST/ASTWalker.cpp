@@ -114,6 +114,11 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
       expr->setCond(elseExpr);
   }
 
+  void visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
+    if (Expr *subExpr = doIt(expr->getSubExpr()))
+      expr->setSubExpr(subExpr);
+  }
+
   void visitBinaryExpr(BinaryExpr *expr) {
     if (Expr *lhs = doIt(expr->getLHS()))
       expr->setLHS(expr);

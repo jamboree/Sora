@@ -39,6 +39,7 @@ EXPR(Tuple, Expr)
 EXPR(Paren, Expr)
 EXPR(Call, Expr)
 EXPR(Conditional, Expr)
+EXPR(ForceUnwrap, Expr)
 EXPR(Binary, Expr)
 EXPR(Unary, Expr)
 

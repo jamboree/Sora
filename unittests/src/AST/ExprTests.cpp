@@ -42,6 +42,7 @@ protected:
     callExpr =
         new (*ctxt) CallExpr(begExpr, TupleExpr::createEmpty(*ctxt, beg, end));
     condExpr = new (*ctxt) ConditionalExpr(begExpr, mid, nullptr, {}, endExpr);
+    forceUnwrapExpr = new (*ctxt) ForceUnwrapExpr(begExpr, end);
     binaryExpr =
         new (*ctxt) BinaryExpr(begExpr, BinaryOperatorKind::Add, mid, endExpr);
     unaryExpr =
@@ -67,6 +68,7 @@ protected:
   Expr *parenExpr;
   Expr *callExpr;
   Expr *condExpr;
+  Expr *forceUnwrapExpr;
   Expr *binaryExpr;
   Expr *unaryExpr;
 };
@@ -92,6 +94,7 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<ParenExpr>(parenExpr));
   EXPECT_TRUE(isa<CallExpr>(callExpr));
   EXPECT_TRUE(isa<ConditionalExpr>(condExpr));
+  EXPECT_TRUE(isa<ForceUnwrapExpr>(forceUnwrapExpr));
   EXPECT_TRUE(isa<BinaryExpr>(binaryExpr));
   EXPECT_TRUE(isa<UnaryExpr>(unaryExpr));
 }
@@ -174,6 +177,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(mid, condExpr->getLoc());
   EXPECT_EQ(end, condExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), condExpr->getSourceRange());
+
+  // ForceUnwrapExpr
+  EXPECT_EQ(beg, forceUnwrapExpr->getBegLoc());
+  EXPECT_EQ(beg, forceUnwrapExpr->getLoc());
+  EXPECT_EQ(end, forceUnwrapExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), forceUnwrapExpr->getSourceRange());
 
   // BinaryExpr
   EXPECT_EQ(beg, binaryExpr->getBegLoc());

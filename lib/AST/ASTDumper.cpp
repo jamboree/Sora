@@ -391,6 +391,16 @@ public:
     visit(expr->getElse());
   }
 
+  void visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getExclaimLoc(), "exclaimLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getSubExpr());
+  }
+
   void visitBinaryExpr(BinaryExpr *expr) {
     dumpCommon(expr);
     out << ' ' << expr->getOpSpelling() << " (" << expr->getOpKindStr() << ") ";
