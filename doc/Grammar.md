@@ -38,8 +38,8 @@ identifier = identifier-head identifier-body*
 // Declarations
 
 source-file = top-level-declaration+
+declaration =  top-level-declaration | let-declaration
 top-level-declaration = function-declaration | type-declaration | struct-declaration
-declaration =  function-declaration | type-declaration | struct-declaration | let-declaration
 
 struct-declaration = "struct" identifier '{' struct-member-declaration+ '}'
 struct-member-declaration = pattern ('=' expression)?
