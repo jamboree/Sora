@@ -39,6 +39,7 @@ identifier = identifier-head identifier-body*
 
 source-file = top-level-declaration+
 top-level-declaration = function-declaration | type-declaration | struct-declaration
+declaration =  function-declaration | type-declaration | struct-declaration | let-declaration
 
 struct-declaration = "struct" identifier '{' struct-member-declaration+ '}'
 struct-member-declaration = pattern ('=' expression)?
@@ -58,19 +59,15 @@ tuple-pattern = '(' (pattern (',' pattern)*)? ')'
           
 // Statements
 block-statement = '{' block-statement-item* '}'
+block-statement-item = expression | statement | declaration
 
-block-statement-item =
-          | expression
+statement =           
           | block-statement
           | if-statement
           | while-statement
           | do-while-statement
           | for-statement
           | control-transfer-statement
-          | function-declaration 
-          | type-declaration 
-          | struct-declaration 
-          | let-declaration
 
 if-statement = "if" condition block-statement ("else" (brace-statement | if-statement))?
 
