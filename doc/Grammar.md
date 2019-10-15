@@ -38,6 +38,7 @@ identifier = identifier-head identifier-body*
 // Declarations
 
 source-file = top-level-declaration+
+declaration =  top-level-declaration | let-declaration
 top-level-declaration = function-declaration | type-declaration | struct-declaration
 
 struct-declaration = "struct" identifier '{' struct-member-declaration+ '}'
@@ -58,19 +59,15 @@ tuple-pattern = '(' (pattern (',' pattern)*)? ')'
           
 // Statements
 block-statement = '{' block-statement-item* '}'
+block-statement-item = expression | statement | declaration
 
-block-statement-item =
-          | expression
+statement =           
           | block-statement
           | if-statement
           | while-statement
           | do-while-statement
           | for-statement
           | control-transfer-statement
-          | function-declaration 
-          | type-declaration 
-          | struct-declaration 
-          | let-declaration
 
 if-statement = "if" condition block-statement ("else" (brace-statement | if-statement))?
 
@@ -108,17 +105,20 @@ binary-operator = '+' | '-' | '/' | '*' | '%'
 assignement-operator = '=' | "+=" | "-=" | "/=" | "*=" | "%="
                      | ">>=" | "<<=" | "&=" | "|=" | "^=" | '??='
 prefix-operator = '+' | '-' | '!' | '*' | '&' | '~'
+postfix-operator = '!'
 
 expression = assignement-expression
 assignement-expression = conditional-expression (assignement-operator assignement-expression)?
 conditional-expression = binary-expression ('?' expression ':' conditional-expression)?
-binary-expression = prefix-expression (binary-operator prefix-expression)*
+binary-expression = cast-expression (binary-operator cast-expression)*
+cast-expression = prefix-expression ("as" type)*
 prefix-expression = prefix-operator prefix-expression
                   | postfix-expression
 postfix-expression = primary-expression suffix* 
 suffix = tuple-expression // suffixes = calls, member accesses and subscripts.
        | member-access-expression
        | array-subscript
+       | postfix-operator
 primary-expression = identifier | literal | tuple-expression | discard-expression
 discard-expression = '_'
 tuple-expression = '(' expression-list? ')'
