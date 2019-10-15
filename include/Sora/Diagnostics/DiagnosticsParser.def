@@ -71,7 +71,11 @@ ERROR(no_newline_after_decl,
 ERROR(expected_expr,
   "expected an expression", ())
 ERROR(expected_initial_value_after_equal,
-  "expected initial value after '='", ())
+  "expected initial value after '='", ()) 
+ERROR(expected_expr_after,
+  "expected an expression after '%0'", (StringRef))
+ERROR(expected_expr_after_in_ternary,
+  "expected an expression after '%0' in ternary expression", (StringRef))
 
 // Patterns
 ERROR(expected_pat_after_let,

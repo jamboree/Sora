@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/OperatorKinds.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "Sora/Diagnostics/DiagnosticsParser.hpp"
@@ -82,7 +83,7 @@ public:
   /// declarations that can't appear at the top level are diagnosed.
   ///
   /// isStartOfDecl() must return true.
-  ParserResult<Decl> Parser::parseDecl(SmallVectorImpl<VarDecl *> &vars,
+  ParserResult<Decl> parseDecl(SmallVectorImpl<VarDecl *> &vars,
                                        bool isTopLevel = false);
 
   /// Parses a let-declaration
@@ -108,6 +109,73 @@ public:
 
   /// Parses an expression
   ParserResult<Expr> parseExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Parses an assignement-expression
+  ParserResult<Expr> parseAssignementExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Consumes an assignement-operator
+  /// \param result the operator that was found. Will not be changed if no
+  /// operator was found.
+  /// \returns SourceLoc() if not found.
+  SourceLoc consumeAssignementOperator(BinaryOperatorKind &result);
+
+  /// Parses a conditional-expression
+  ParserResult<Expr> parseConditionalExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Binary operator precedences, from highest (0) to lowest (last).
+  enum class PrecedenceKind : uint8_t {
+    /// Multiplicative Operators: * / %
+    Multiplicative = 0,
+    /// Shift operators: << >>
+    Shift,
+    /// Bitwise operators: | ^ &
+    Bitwise,
+    /// Additive operators: + -
+    Additive,
+    /// Relational operators: == != < <= > >=
+    Relational,
+    /// Logical operators: && ||
+    Logical,
+    /// Null-Coalescing operator: ??
+    NullCoalesce,
+
+    HighestPrecedence = Multiplicative,
+    LowestPrecedence = NullCoalesce
+  };
+
+  /// Parses a binary-expression.
+  ///
+  /// NOTE: This uses precedence-climbing (lowest to highest) in order to
+  /// respect operator precedences, and \p precedence will be the "starting"
+  /// precedence (usually it's LowestPrecedence).
+  ParserResult<Expr>
+  parseBinaryExpr(llvm::function_ref<void()> onNoExpr,
+                  PrecedenceKind precedence = PrecedenceKind::LowestPrecedence);
+
+  /// Consumes an binary-operator
+  /// \param result the operator that was found. Will not be changed if no
+  /// operator was found.
+  /// \returns SourceLoc() if not found.
+  SourceLoc consumeBinaryOperator(BinaryOperatorKind &result,
+                                  PrecedenceKind precedence);
+
+  /// Parses a cast-expression
+  ParserResult<Expr> parseCastExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Parses a prefix-expression
+  ParserResult<Expr> parsePrefixExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Consumes a prefix-operator
+  /// \param result the operator that was found. Will not be changed if no
+  /// operator was found.
+  /// \returns SourceLoc() if not found.
+  SourceLoc consumePrefixOperator(UnaryOperatorKind &result);
+
+  /// Parses a postfix-expression
+  ParserResult<Expr> parsePostfixExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Parses a primary-expression
+  ParserResult<Expr> parsePrimaryExpr(llvm::function_ref<void()> onNoExpr);
 
   //===- Pattern Parsing --------------------------------------------------===//
 
