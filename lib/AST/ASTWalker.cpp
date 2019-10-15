@@ -77,6 +77,12 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   TRIVIAL_VISIT(AnyLiteralExpr)
   TRIVIAL_VISIT(ErrorExpr)
 
+  void visitCastExpr(CastExpr *expr) {
+    if (Expr *subExpr = doIt(expr->getSubExpr()))
+      expr->setSubExpr(subExpr);
+    doIt(expr->getTypeLoc());
+  }
+
   void visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
     if (Expr *base = doIt(expr->getBase()))
       expr->setBase(base);

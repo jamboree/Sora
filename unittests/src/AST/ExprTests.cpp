@@ -7,6 +7,7 @@
 
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Expr.hpp"
+#include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "gtest/gtest.h"
@@ -36,6 +37,8 @@ protected:
     boolLitExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLitExpr = new (*ctxt) NullLiteralExpr(beg);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
+    castExpr = new (*ctxt)
+        CastExpr(begExpr, mid, new (*ctxt) IdentifierTypeRepr(end, {}));
     tupleEltExpr = new (*ctxt) TupleElementExpr(begExpr, mid, false, end, 0);
     tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
     parenExpr = new (*ctxt) ParenExpr(beg, midExpr, end);
@@ -63,6 +66,7 @@ protected:
   Expr *boolLitExpr;
   Expr *nullLitExpr;
   Expr *errorExpr;
+  Expr *castExpr;
   Expr *tupleEltExpr;
   Expr *tupleExpr;
   Expr *parenExpr;
@@ -89,6 +93,7 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<NullLiteralExpr>(nullLitExpr));
   EXPECT_TRUE(isa<AnyLiteralExpr>(nullLitExpr));
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
+  EXPECT_TRUE(isa<CastExpr>(castExpr));
   EXPECT_TRUE(isa<TupleElementExpr>(tupleEltExpr));
   EXPECT_TRUE(isa<TupleExpr>(tupleExpr));
   EXPECT_TRUE(isa<ParenExpr>(parenExpr));
@@ -147,6 +152,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(beg, errorExpr->getLoc());
   EXPECT_EQ(end, errorExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), errorExpr->getSourceRange());
+
+  // CastExpr
+  EXPECT_EQ(beg, castExpr->getBegLoc());
+  EXPECT_EQ(end, castExpr->getEndLoc());
+  EXPECT_EQ(mid, castExpr->getLoc());
+  EXPECT_EQ(SourceRange(beg, end), castExpr->getSourceRange());
 
   // TupleElementExpr
   EXPECT_EQ(beg, tupleEltExpr->getBegLoc());

@@ -331,6 +331,17 @@ public:
     out << '\n';
   }
 
+  void visitCastExpr(CastExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getAsLoc(), "asLoc");
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getSubExpr());
+    visit(expr->getTypeLoc().getTypeRepr());
+  }
+
   void visitTupleElementExpr(TupleElementExpr *expr) {
     dumpCommon(expr);
     out << ' ' << (expr->isArrow() ? "arrow" : "dot") << ' ';

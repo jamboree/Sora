@@ -386,6 +386,37 @@ public:
   }
 };
 
+/// Represents a casting expression. This is written "expr as type" and
+/// can't really fail at runtime. However, it can lead to UB in some cases.
+///
+/// e.g. 0 as i32, foo as f64
+class CastExpr final : public Expr {
+  Expr *subExpr = nullptr;
+  SourceLoc asLoc;
+  TypeLoc typeLoc;
+
+public:
+  CastExpr(Expr *subExpr, SourceLoc asLoc, TypeRepr *typeRepr)
+      : Expr(ExprKind::Cast), subExpr(subExpr), asLoc(asLoc),
+        typeLoc(typeRepr) {}
+
+  Expr *getSubExpr() const { return subExpr; }
+  void setSubExpr(Expr *subExpr) { this->subExpr = subExpr; }
+
+  SourceLoc getAsLoc() const { return asLoc; }
+
+  TypeLoc &getTypeLoc() { return typeLoc; }
+  const TypeLoc &getTypeLoc() const { return typeLoc; }
+
+  SourceLoc getBegLoc() const { return subExpr->getBegLoc(); }
+  SourceLoc getEndLoc() const { return typeLoc.getEndLoc(); }
+  SourceLoc getLoc() const { return asLoc; }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::Cast;
+  }
+};
+
 /// Represents an expression that refers to an element of a tuple
 ///
 /// e.g. tuple.0, (0, 1, 2).2, etc.
