@@ -41,3 +41,10 @@ func foo()
 func foo() { let x: i32 let x: i32 } // expect-error: expected a newline
 func foo() { let x: i32 ) } // expect-error: expected a statement, an expression or a declaration
                             // expect-error@-1: expected a newline
+
+// test recovery
+func foo() {
+  let x =  // expect-error: expected initial value after '='
+  let z =  // expect-error: expected initial value after '='
+  let y = 0
+}
