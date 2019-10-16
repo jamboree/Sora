@@ -7,10 +7,60 @@ func suffix() {
   // CHECK: UnresolvedMemberRefExpr type=<null type> dot memberIdent=bar memberIdentLoc=line:9:7
   // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:9:3
   foo.bar
-    // CHECK: UnresolvedMemberRefExpr type=<null type> arrow memberIdent=0 memberIdentLoc=line:12:8
+  // CHECK: UnresolvedMemberRefExpr type=<null type> arrow memberIdent=0 memberIdentLoc=line:12:8
   // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:12:3
   foo->0
   // CHECK: UnresolvedMemberRefExpr type=<null type> arrow memberIdent=bar memberIdentLoc=line:15:8
   // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:15:3
   foo->bar
+  // CHECK: ForceUnwrapExpr type=<null type> exclaimLoc=line:18:6
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:18:3
+  foo!
+  // CHECK: CallExpr type=<null type>
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:22:3
+  // CHECK-NEXT:  TupleExpr type=<null type> numElements=0 lParenLoc=line:22:6 rParenLoc=line:22:7
+  foo() 
+  // CHECK: CallExpr type=<null type>
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:27:3
+  // CHECK-NEXT: ParenExpr type=<null type> lParenLoc=line:27:6 rParenLoc=line:27:8
+  // CHECK-NEXT:  IntegerLiteralExpr type=<null type> loc=line:27:7 str='0' rawValue=0
+  foo(0)
+  // CHECK: CallExpr type=<null type>
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:33:3
+  // CHECK-NEXT: TupleExpr type=<null type> numElements=2 lParenLoc=line:33:6 rParenLoc=line:33:11
+  // CHECK-NEXT:   IntegerLiteralExpr type=<null type> loc=line:33:7 str='1' rawValue=1
+  // CHECK-NEXT:   IntegerLiteralExpr type=<null type> loc=line:33:10 str='2' rawValue=2
+  foo(1, 2)
+
+  // Shouldn't be treated as a call.
+  // CHECK-NOT: CallExpr
+  // CHECK: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:38:3
+  foo 
+  // CHECK: TupleExpr type=<null type> numElements=0 lParenLoc=line:40:3 rParenLoc=line:40:4
+  ()
+
+  // Shouldn't be treated as unwrap expr.
+  // CHECK-NOT: ForceUnwrapExpr
+  // CHECK: IntegerLiteralExpr type=<null type> loc=line:45:3 str='0' rawValue=0
+  0 
+  // CHECK: UnaryExpr type=<null type> ! (LNot) opLoc=line:48:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:48:4 str='0' rawValue=0
+  !0
+}
+
+// test suffix chains
+func suffixChain() {
+  // CHECK: ForceUnwrapExpr type=<null type> exclaimLoc=line:59:11
+  // CHECK-NEXT: CallExpr type=<null type>
+  // CHECK-NEXT:   UnresolvedMemberRefExpr type=<null type> dot memberIdent=c memberIdentLoc=line:59:8
+  // CHECK-NEXT:    UnresolvedMemberRefExpr type=<null type> arrow memberIdent=b memberIdentLoc=line:59:6
+  // CHECK-NEXT:     UnresolvedDeclRefExpr type=<null type> ident=a loc=line:59:3
+  // CHECK-NEXT:   TupleExpr type=<null type> numElements=0 lParenLoc=line:59:9 rParenLoc=line:59:10
+  a->b.c()!
+}
+
+func badSuffix() {
+  foo-> // expect-error: expected a member name or an index after '->'
+  let x // to prevent this from being recognized as foo->foo.
+  foo.  // expect-error: expected a member name or an index after '.'
 }

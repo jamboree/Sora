@@ -1,0 +1,19 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func correctCast() {
+  // CHECK: CastExpr type=<null type> asLoc=line:7:5
+  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:7:3 str='0' rawValue=0
+  // CHECK-NEXT: IdentifierTypeRepr loc=line:7:8
+  0 as i32
+  // CHECK: CastExpr type=<null type> asLoc=line:13:12
+  // CHECK-NEXT: CastExpr type=<null type> asLoc=line:13:5
+  // CHECK-NEXT:    IntegerLiteralExpr type=<null type> loc=line:13:3 str='0' rawValue=0
+  // CHECK-NEXT:    IdentifierTypeRepr loc=line:13:8
+  // CHECK-NEXT: IdentifierTypeRepr loc=line:13:15
+  0 as i32 as i64
+  0 as &mut (i32, i32)
+}
+
+func err() {
+  0 as // expect-error: expected type after 'as'
+}
