@@ -115,13 +115,13 @@ prefix-expression = prefix-operator prefix-expression
                   | postfix-expression
 postfix-expression = primary-expression suffix* 
 suffix = tuple-expression // suffixes = calls, member accesses and subscripts.
-       | member-access-expression
+       | member-access
        | array-subscript
        | '!'
 primary-expression = identifier | literal | tuple-expression | '_'
 tuple-expression = '(' expression-list? ')'
 expression-list = expression (',' expression)*
-member-access-expression = ('.' | "->") (identifier | integer-literal)
+member-access = ('.' | "->") (identifier | integer-literal)
 array-subscript = '[' expression ']'
 
 literal = null-literal | integer-literal | floating-point-literal | boolean-literal | string-literal | char-literal | array-literal
