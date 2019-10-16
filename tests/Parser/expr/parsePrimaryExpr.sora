@@ -1,0 +1,18 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func foo() {
+  // CHECK: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:5:3
+  foo
+  // CHECK-NEXT: DiscardExpr type=<null type> loc=line:7:3
+  _
+  // CHECK-NEXT: NullLiteralExpr type=<null type> loc=line:9:3
+  null
+  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:11:3 str='0' rawValue=0
+  0
+  // CHECK-NEXT: FloatLiteralExpr type=<null type> loc=line:13:3 str='0.0'
+  0.0
+  // CHECK-NEXT: BooleanLiteralExpr type=<null type> loc=line:15:3 value=true
+  true
+  // CHECK-NEXT: BooleanLiteralExpr type=<null type> loc=line:17:3 value=false
+  false
+}

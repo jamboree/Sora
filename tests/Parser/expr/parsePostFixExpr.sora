@@ -1,0 +1,16 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func suffix() {
+  // CHECK: UnresolvedMemberRefExpr type=<null type> dot memberIdent=0 memberIdentLoc=line:6:7
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:6:3
+  foo.0
+  // CHECK: UnresolvedMemberRefExpr type=<null type> dot memberIdent=bar memberIdentLoc=line:9:7
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:9:3
+  foo.bar
+    // CHECK: UnresolvedMemberRefExpr type=<null type> arrow memberIdent=0 memberIdentLoc=line:12:8
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:12:3
+  foo->0
+  // CHECK: UnresolvedMemberRefExpr type=<null type> arrow memberIdent=bar memberIdentLoc=line:15:8
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null type> ident=foo loc=line:15:3
+  foo->bar
+}
