@@ -67,10 +67,8 @@ SourceLoc Parser::consumeToken() {
 
 SourceLoc Parser::consumeIdentifier(Identifier &identifier) {
   assert(tok.isIdentifier());
-  identifier = ctxt.getIdentifier(tok.str());
-  SourceLoc loc = tok.getLoc();
-  consumeToken();
-  return loc;
+  identifier = getIdentifier(tok);
+  return consumeToken();
 }
 
 void Parser::skip() {
@@ -130,4 +128,8 @@ void Parser::skipUntilTokDeclStmtRCurly(TokenKind kind) {
       return;
     skip();
   }
+}
+
+Identifier Parser::getIdentifier(const Token& tok) {
+  return ctxt.getIdentifier(tok.str());
 }

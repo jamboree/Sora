@@ -52,6 +52,7 @@ NOTE(to_match_lsquare,  "to match this opening '['", ())
 // Types
 ERROR(expected_type,      "expected a type", ())
 ERROR(expected_fn_ret_ty, "expected function return type", ())
+ERROR(expected_type_after, "expected a type after '%0'", (StringRef))
 
 // Identifiers
 ERROR(expected_ident_in_fn,
@@ -76,6 +77,10 @@ ERROR(expected_expr_after,
   "expected an expression after '%0'", (StringRef))
 ERROR(expected_expr_after_in_ternary,
   "expected an expression after '%0' in ternary expression", (StringRef))
+ERROR(expected_member_name_or_index_after,
+  "expected a member name or an index after '%0'", (StringRef))
+ERROR(expected_rparen_at_end_of_tuple_expr, 
+  "expected ')' at end of tuple expression", ())
 
 // Patterns
 ERROR(expected_pat_after_let,

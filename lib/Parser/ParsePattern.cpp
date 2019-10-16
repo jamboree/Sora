@@ -160,46 +160,39 @@ tuple-pattern = '(' (pattern (',' pattern)*)? ')'
 ParserResult<Pattern> Parser::parseTuplePattern() {
   assert(tok.is(TokenKind::LParen) && "not a tuple-pattern!");
   // '('
-  SourceLoc lParenLoc = consumeToken();
+  SourceLoc lParen = consumeToken();
 
-  /*Short path for empty tuple patterns*/
+  /*Short path for empty tuples*/
   // ')'
-  if (SourceLoc rParenLoc = consumeIf(TokenKind::RParen))
-    return makeParserResult(
-        TuplePattern::createEmpty(ctxt, lParenLoc, rParenLoc));
+  if (SourceLoc rParen = consumeIf(TokenKind::RParen))
+    return makeParserResult(TuplePattern::createEmpty(ctxt, lParen, rParen));
 
   SmallVector<Pattern *, 4> elements;
 
   // Utility function to create a ParenPattern or a TuplePattern depending on
   // the number of elements.
-  auto createResult = [&](SourceLoc rParenLoc) -> Pattern * {
+  auto createResult = [&](SourceLoc rParen) -> Pattern * {
     if (elements.size() == 1)
-      return new (ctxt) ParenPattern(lParenLoc, elements[0], rParenLoc);
-    return TuplePattern::create(ctxt, lParenLoc, elements, rParenLoc);
+      return new (ctxt) ParenPattern(lParen, elements[0], rParen);
+    return TuplePattern::create(ctxt, lParen, elements, rParen);
   };
 
-  // Utility function to try to recover and return something.
-  auto tryRecoverAndReturn = [&]() -> ParserResult<Pattern> {
-    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-    if (!tok.is(TokenKind::LParen))
-      return nullptr;
-    SourceLoc rParenLoc = consumeToken();
-    return makeParserErrorResult(createResult(rParenLoc));
-  };
-
-  // pattern (',' pattern)
+  // pattern (',' pattern)*
   do {
     auto result = parsePattern([&]() { diagnoseExpected(diag::expected_pat); });
-    if (Pattern *type = result.getOrNull())
-      elements.push_back(result.get());
-    else
-      return tryRecoverAndReturn();
+    if (!result.hasValue()) {
+      skipUntilTokDeclStmtRCurly(TokenKind::LParen);
+      if (tok.isNot(TokenKind::LParen))
+        return nullptr;
+      return makeParserErrorResult(createResult(consumeToken()));
+    }
+    elements.push_back(result.get());
   } while (consumeIf(TokenKind::Comma));
 
   // ')'
-  SourceLoc rParenLoc = parseMatchingToken(
-      lParenLoc, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_pat);
-  if (!rParenLoc)
+  SourceLoc rParen = parseMatchingToken(
+      lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_pat);
+  if (!rParen)
     return nullptr;
-  return makeParserResult(createResult(rParenLoc));
+  return makeParserResult(createResult(rParen));
 }

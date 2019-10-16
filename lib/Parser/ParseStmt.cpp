@@ -69,12 +69,6 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
   // block-statement-item*
   SmallVector<ASTNode, 16> elements;
 
-  // Helper used to recover to the next statement/decl or }.
-  // FIXME: It would definitely be better if we could recover at the next
-  // expression as well, but that's hard to do since we might be in the middle
-  // of one when this is called.
-  auto recover = [&]() { skipUntilTokDeclStmtRCurly(); };
-
   while (!isEOF() && tok.isNot(TokenKind::RCurly)) {
     // Always skip 'unknown' tokens
     if (tok.is(TokenKind::Unknown))
@@ -93,14 +87,14 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
         elements.append(vars.begin(), vars.end());
       }
       else
-        recover();
+        skipUntilTokDeclStmtRCurly();
     }
     // statement
     else if (isStartOfStmt()) {
       if (Stmt *stmt = parseStmt().getOrNull())
         elements.push_back(stmt);
       else
-        recover();
+        skipUntilTokDeclStmtRCurly();
     }
     // expression
     else {
@@ -110,7 +104,7 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
       if (Expr *expr = result.getOrNull())
         elements.push_back(expr);
       else
-        recover();
+        skipUntilTokDeclStmtRCurly();
     }
   }
 

@@ -242,7 +242,20 @@ SourceLoc Parser::consumeBinaryOperator(BinaryOperatorKind &result,
 cast-expression = prefix-expression ("as" type)*
 */
 ParserResult<Expr> Parser::parseCastExpr(llvm::function_ref<void()> onNoExpr) {
-  return nullptr;
+  // prefix-expression
+  Expr *expr = parsePrefixExpr(onNoExpr).getOrNull();
+  // ("as" type)*
+  // Note: we parse this in a loop, even if it has limited usefulness so the
+  // compiler won't emit cryptic error messages if you type "foo as A as B".
+  // FIXME: Should the extra casts be diagnosed?
+  while (SourceLoc asLoc = consumeIf(TokenKind::AsKw)) {
+    auto result =
+        parseType([&]() { diagnoseExpected(diag::expected_type_after, "as"); });
+    if (!result.hasValue())
+      return nullptr;
+    expr = new (ctxt) CastExpr(expr, asLoc, result.get());
+  }
+  return makeParserResult(expr);
 }
 
 /*
@@ -251,7 +264,18 @@ prefix-expression = prefix-operator prefix-expression
 */
 ParserResult<Expr>
 Parser::parsePrefixExpr(llvm::function_ref<void()> onNoExpr) {
-  return nullptr;
+  UnaryOperatorKind op;
+  SourceLoc opLoc = consumePrefixOperator(op);
+  if (!opLoc)
+    return parsePostfixExpr(onNoExpr);
+
+  auto result = parsePrefixExpr(
+      [&]() { diagnoseExpected(diag::expected_expr_after, getSpelling(op)); });
+
+  if (!result.hasValue())
+    return nullptr;
+
+  return makeParserResult(new (ctxt) UnaryExpr(op, opLoc, result.get()));
 }
 
 /*
@@ -281,21 +305,167 @@ SourceLoc Parser::consumePrefixOperator(UnaryOperatorKind &result) {
 /*
 postfix-expression = primary-expression suffix*
 suffix = tuple-expression
-       | member-access-expression
-       | array-subscript
-       | postfix-operator
+       | member-access
+       | '!'
 */
 ParserResult<Expr>
 Parser::parsePostfixExpr(llvm::function_ref<void()> onNoExpr) {
-  return nullptr;
+  Expr *base = parsePrimaryExpr(onNoExpr).getOrNull();
+  if (!base)
+    return nullptr;
+
+parse_suffix:
+  assert(base && "no base!");
+  switch (tok.getKind()) {
+  default:
+    break;
+  case TokenKind::LParen: {
+    auto *args = parseTupleExpr().getOrNull();
+    if (!args)
+      return nullptr;
+    base = new (ctxt) CallExpr(base, args);
+    goto parse_suffix;
+  }
+  case TokenKind::Dot:
+  case TokenKind::Arrow: {
+    base = parseMemberAccessExpr(base).getOrNull();
+    goto parse_suffix;
+  }
+  case TokenKind::Exclaim: {
+    base = new (ctxt) ForceUnwrapExpr(base, consumeToken());
+    goto parse_suffix;
+  }
+  }
+
+  return makeParserResult(base);
 }
 
 /*
-primary-expression = identifier | literal | tuple-expression | '_'
+member-access-expression = ('.' | "->") (identifier | integer-literal)
+*/
+ParserResult<Expr> Parser::parseMemberAccessExpr(Expr *base) {
+  assert(tok.isAny(TokenKind::Dot, TokenKind::Arrow));
+  // ('.' | "->")
+  bool isArrow = tok.is(TokenKind::Arrow);
+  SourceLoc opLoc = consumeToken();
+
+  // (identifier | integer-literal)
+  Identifier ident;
+  SourceLoc identLoc;
+  switch (tok.getKind()) {
+  default:
+    diagnoseExpected(diag::expected_member_name_or_index_after, ".");
+    return nullptr;
+  case TokenKind::Identifier:
+    identLoc = consumeIdentifier(ident);
+    break;
+  case TokenKind::IntegerLiteral:
+    ident = getIdentifier(tok);
+    identLoc = consumeToken();
+    break;
+  }
+
+  Expr *expr =
+      new (ctxt) UnresolvedMemberRefExpr(base, opLoc, isArrow, identLoc, ident);
+  return makeParserResult(expr);
+}
+
+/*
+primary-expression = identifier | '_' | tuple-expression | literal
 literal = null-literal | integer-literal | floating-point-literal |
           boolean-literal
 */
 ParserResult<Expr>
 Parser::parsePrimaryExpr(llvm::function_ref<void()> onNoExpr) {
-  return nullptr;
+  Expr *expr = nullptr;
+  switch (tok.getKind()) {
+  default:
+    onNoExpr();
+    break;
+  // identifier
+  case TokenKind::Identifier: {
+    Identifier ident;
+    SourceLoc identLoc = consumeIdentifier(ident);
+    expr = new (ctxt) UnresolvedDeclRefExpr(ident, identLoc);
+    break;
+  }
+  // '_'
+  case TokenKind::UnderscoreKw:
+    expr = new (ctxt) DiscardExpr(consumeToken());
+    break;
+  // tuple-expression
+  case TokenKind::LParen:
+    // This may leave expr "null" in error. This is intended.
+    expr = parseTupleExpr().getOrNull();
+    break;
+  // literal
+  //    null-literal
+  case TokenKind::NullKw:
+    expr = new (ctxt) NullLiteralExpr(consumeToken());
+    break;
+  //    integer-literal
+  case TokenKind::IntegerLiteral:
+    expr = new (ctxt) IntegerLiteralExpr(tok.str(), consumeToken());
+    break;
+  //    floating-point-literal
+  case TokenKind::FloatingPointLiteral:
+    expr = new (ctxt) FloatLiteralExpr(tok.str(), consumeToken());
+    break;
+  //    boolean-literal = "true" | "false"
+  case TokenKind::TrueKw:
+    expr = new (ctxt) BooleanLiteralExpr(true, consumeToken());
+    break;
+  case TokenKind::FalseKw:
+    expr = new (ctxt) BooleanLiteralExpr(false, consumeToken());
+    break;
+  }
+  return expr ? makeParserResult(expr) : nullptr;
+}
+
+/*
+tuple-expression = '(' expression-list? ')'
+expression-list = expression (',' expression)*
+*/
+ParserResult<Expr> Parser::parseTupleExpr() {
+  assert(tok.is(TokenKind::LParen));
+  // '('
+  SourceLoc lParen = consumeToken();
+
+  /*Short path for empty tuples*/
+  // ')'
+  if (SourceLoc rParen = consumeIf(TokenKind::RParen))
+    return makeParserResult(TupleExpr::createEmpty(ctxt, lParen, rParen));
+
+  SmallVector<Expr *, 4> elements;
+
+  // Utility function to create a ParenExpr or a TupleExpr depending on
+  // the number of elements.
+  auto createResult = [&](SourceLoc rParen) -> Expr * {
+    if (elements.size() == 1)
+      return new (ctxt) ParenExpr(lParen, elements[0], rParen);
+    return TupleExpr::create(ctxt, lParen, elements, rParen);
+  };
+
+  // expression (',' expression)*
+  do {
+    auto result = parseExpr([&]() {
+      // If we got no elements, the last thing we parsed was a '(', if we have
+      // an element, the last thing we parsed was a ','
+      diagnoseExpected(diag::expected_expr_after, elements.empty() ? "(" : ",");
+    });
+    if (!result.hasValue()) {
+      skipUntilTokDeclStmtRCurly(TokenKind::LParen);
+      if (tok.isNot(TokenKind::LParen))
+        return nullptr;
+      return makeParserErrorResult(createResult(consumeToken()));
+    }
+    elements.push_back(result.get());
+  } while (consumeIf(TokenKind::Comma));
+
+  // ')'
+  SourceLoc rParen = parseMatchingToken(
+      lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_expr);
+  if (!rParen)
+    return nullptr;
+  return makeParserResult(createResult(rParen));
 }

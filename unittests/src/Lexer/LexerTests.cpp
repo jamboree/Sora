@@ -93,7 +93,7 @@ public:
       << errStream.str()
 
 TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
-  const char *input = "do foo // this is a comment\n"
+  const char *input = "as do foo // this is a comment\n"
                       "break /* another comment*/ continue\n"
                       "else false\n"
                       "for func if in let\n"
@@ -102,7 +102,8 @@ TEST_F(LexerTest, keywordCommentsAndIdentifiers) {
                       "_ while //goodbye";
   Lexer &lexer = getLexer(input);
   // Test
-  CHECK_NEXT(TokenKind::DoKw, "do", true);
+  CHECK_NEXT(TokenKind::AsKw, "as", true);
+  CHECK_NEXT(TokenKind::DoKw, "do", false);
   CHECK_NEXT(TokenKind::Identifier, "foo", false);
   CHECK_NEXT(TokenKind::BreakKw, "break", true);
   CHECK_NEXT(TokenKind::ContinueKw, "continue", false);

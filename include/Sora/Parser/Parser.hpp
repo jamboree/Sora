@@ -30,6 +30,12 @@ class SourceFile;
 class TypeRepr;
 
 /// Sora Language Parser
+///
+/// Note: Parsing method should return nullptr when they failed to parse
+/// something and couldn't recover, and return a value when they successfully
+/// recovered. They can also use makeParserErrorResult to create a result
+/// with an error bit set to tell the caller that an error occured but
+/// we successfully recovered.
 class Parser final {
   Parser(const Parser &) = delete;
   Parser &operator=(const Parser &) = delete;
@@ -84,7 +90,7 @@ public:
   ///
   /// isStartOfDecl() must return true.
   ParserResult<Decl> parseDecl(SmallVectorImpl<VarDecl *> &vars,
-                                       bool isTopLevel = false);
+                               bool isTopLevel = false);
 
   /// Parses a let-declaration
   /// \param vars the vector where the vars declared by the LetDecl will be
@@ -174,8 +180,16 @@ public:
   /// Parses a postfix-expression
   ParserResult<Expr> parsePostfixExpr(llvm::function_ref<void()> onNoExpr);
 
+  /// Parses a member-access on \p base (a suffix).
+  /// The parser must be positioned on the '.' or '->'
+  ParserResult<Expr> parseMemberAccessExpr(Expr *base);
+
   /// Parses a primary-expression
   ParserResult<Expr> parsePrimaryExpr(llvm::function_ref<void()> onNoExpr);
+
+  /// Parses a tuple-expression
+  /// The parser must be positioned on the '('.
+  ParserResult<Expr> parseTupleExpr();
 
   //===- Pattern Parsing --------------------------------------------------===//
 
@@ -239,6 +253,9 @@ public:
   /// \param callBack The element parsing function. Returns a boolean indicating
   /// whether parsing should continue. It takes a single argument which is the
   /// position of the element we're parsing.
+  ///
+  /// The callback is always called at least once.
+  ///
   /// The callback is responsible for emitting diagnostics as this function
   /// won't emit any on its own.
   void parseList(llvm::function_ref<bool(unsigned)> callback);
@@ -348,5 +365,8 @@ public:
 
   /// \returns true if the parser has reached EOF
   bool isEOF() const { return tok.is(TokenKind::EndOfFile); }
+
+  /// \returns an identifier object for the contents (string) of \p tok
+  Identifier getIdentifier(const Token &tok);
 };
 } // namespace sora
