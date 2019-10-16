@@ -36,6 +36,11 @@ class TypeRepr;
 /// recovered. They can also use makeParserErrorResult to create a result
 /// with an error bit set to tell the caller that an error occured but
 /// we successfully recovered.
+/// Alternatively, parsing methods can also use makeParserResult(false, node)
+/// to create an error parser result with a value. This can be used to notify
+/// the caller that something went wrong during the parsing but we recovered
+/// successfully and can continue parsing. The error bit is usually
+/// not propagated unless needed.
 class Parser final {
   Parser(const Parser &) = delete;
   Parser &operator=(const Parser &) = delete;
