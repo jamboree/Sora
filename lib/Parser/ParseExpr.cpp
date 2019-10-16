@@ -34,13 +34,12 @@ Parser::parseAssignementExpr(llvm::function_ref<void()> onNoExpr) {
   if (!opLoc)
     return result;
 
-  onNoExpr = [&]() {
-    diagnoseExpected(diag::expected_expr_after, getSpelling(op));
-  };
-  Expr *rhs = parseAssignementExpr(onNoExpr).getOrNull();
-  if (!rhs)
+  auto rhs = parseAssignementExpr(
+      [&]() { diagnoseExpected(diag::expected_expr_after, getSpelling(op)); });
+  if (rhs.isNull())
     return nullptr;
-  return makeParserResult(new (ctxt) BinaryExpr(result.get(), op, opLoc, rhs));
+  return makeParserResult(new (ctxt)
+                              BinaryExpr(result.get(), op, opLoc, rhs.get()));
 }
 
 /*
@@ -95,10 +94,10 @@ Parser::parseConditionalExpr(llvm::function_ref<void()> onNoExpr) {
   // '?'
   SourceLoc questionLoc = consumeToken();
   // expression
-  onNoExpr = [&]() {
-    diagnoseExpected(diag::expected_expr_after_in_ternary, "?");
-  };
-  Expr *thenExpr = parseExpr(onNoExpr).getOrNull();
+  Expr *thenExpr =
+      parseExpr([&]() {
+        diagnoseExpected(diag::expected_expr_after_in_ternary, "?");
+      }).getOrNull();
   // If we don't have an expr, check if we got a colon, because if we do, we can
   // still recover & return a failure after.
   if (!thenExpr && tok.isNot(TokenKind::Colon))
@@ -112,15 +111,22 @@ Parser::parseConditionalExpr(llvm::function_ref<void()> onNoExpr) {
 
   SourceLoc colonLoc = consumeToken();
   // conditional-expression
-  onNoExpr = [&]() {
-    diagnoseExpected(diag::expected_expr_after_in_ternary, ":");
-  };
-  Expr *elseExpr = parseConditionalExpr(onNoExpr).getOrNull();
+  Expr *elseExpr =
+      parseConditionalExpr(onNoExpr = [this]() {
+        diagnoseExpected(diag::expected_expr_after_in_ternary, ":");
+      }).getOrNull();
 
   // If everything parsed correctly, return a fully-formed ConditionalExpr,
-  // else, just return the cond with the error bit set.
-  if (!thenExpr || !elseExpr)
+  // else, return a partial result.
+  if (!thenExpr || !elseExpr) {
+    // If we got a then but no else, return a cond with an ErrorExpr in the
+    // middle.
+    if (!thenExpr && elseExpr) {
+      return makeParserErrorResult(new (ctxt) ConditionalExpr(
+          cond, questionLoc, new (ctxt) ErrorExpr({}), colonLoc, elseExpr));
+    }
     return makeParserErrorResult(cond);
+  }
 
   Expr *expr = new (ctxt)
       ConditionalExpr(cond, questionLoc, thenExpr, colonLoc, elseExpr);
@@ -134,14 +140,14 @@ ParserResult<Expr> Parser::parseBinaryExpr(llvm::function_ref<void()> onNoExpr,
                                            PrecedenceKind precedence) {
   // Parses an operand, which is either a cast-expression or a binary-expression
   // of higher precedence.
-  auto parseOperand = [&]() {
+  auto parseOperand = [&](llvm::function_ref<void()> onNoExpr) {
     if (precedence == PrecedenceKind::HighestPrecedence)
       return parseCastExpr(onNoExpr);
     return parseBinaryExpr(onNoExpr, PrecedenceKind(unsigned(precedence) - 1));
   };
 
-  // left operaand
-  auto result = parseOperand();
+  // left operand
+  auto result = parseOperand(onNoExpr);
   if (result.isNull())
     return result;
   Expr *current = result.get();
@@ -151,18 +157,16 @@ ParserResult<Expr> Parser::parseBinaryExpr(llvm::function_ref<void()> onNoExpr,
   bool hasParsedOperator = false;
   while (SourceLoc opLoc = consumeBinaryOperator(op, precedence)) {
     hasParsedOperator = true;
-    onNoExpr = [&]() {
-      diagnoseExpected(diag::expected_expr_after, getSpelling(op));
-    };
-    Expr *rhs = parseOperand().getOrNull();
+    Expr *rhs = parseOperand([&]() {
+                  diagnoseExpected(diag::expected_expr_after, getSpelling(op));
+                }).getOrNull();
     if (!rhs)
       return nullptr;
 
     current = new (ctxt) BinaryExpr(current, op, opLoc, rhs);
   }
 
-  // If we didn't parse any operator, just forward the result, else
-  // create our own result.
+  // If we didn't parse any operator, just forward the result
   return hasParsedOperator ? makeParserResult(current) : result;
 }
 
@@ -174,6 +178,9 @@ SourceLoc Parser::consumeBinaryOperator(BinaryOperatorKind &result,
                                         PrecedenceKind precedence) {
   using TK = TokenKind;
   using Op = BinaryOperatorKind;
+  // Binary operators can't be at the start of a line
+  if (tok.isAtStartOfLine())
+    return {};
 #define CASE(TOK, OP)                                                          \
   case TOK:                                                                    \
     result = OP;                                                               \
