@@ -321,11 +321,12 @@ Parser::parsePostfixExpr(llvm::function_ref<void()> onNoExpr) {
     return nullptr;
 
   Expr *base = result.get();
+
 parse_suffix:
   assert(base && "no base!");
   switch (tok.getKind()) {
   default:
-    return result;
+    break;
   case TokenKind::LParen: {
     // If the '(' is on another line, this isn't a call.
     if (tok.isAtStartOfLine())
@@ -340,7 +341,10 @@ parse_suffix:
   case TokenKind::Arrow: {
     /// FIXME: Ideally, a warning should be emitted if the token is
     /// at the start of a line w/ the same indent level.
-    base = parseMemberAccessExpr(base).getOrNull();
+    auto result = parseMemberAccessExpr(base);
+    if (result.isNull())
+      return nullptr;
+    base = result.getOrNull();
     goto parse_suffix;
   }
   case TokenKind::Exclaim: {
@@ -352,6 +356,10 @@ parse_suffix:
   }
   }
 
+  // If we didn't parse any suffixes, just return the result so the error bit is
+  // preserved.
+  if (base == result.get())
+    return result;
   return makeParserResult(base);
 }
 
@@ -360,6 +368,7 @@ member-access-expression = ('.' | "->") (identifier | integer-literal)
 */
 ParserResult<Expr> Parser::parseMemberAccessExpr(Expr *base) {
   assert(tok.isAny(TokenKind::Dot, TokenKind::Arrow));
+  assert(base && "base is nullptr");
   // ('.' | "->")
   bool isArrow = tok.is(TokenKind::Arrow);
   SourceLoc opLoc = consumeToken();
@@ -379,7 +388,6 @@ ParserResult<Expr> Parser::parseMemberAccessExpr(Expr *base) {
     identLoc = consumeToken();
     break;
   }
-
   Expr *expr =
       new (ctxt) UnresolvedMemberRefExpr(base, opLoc, isArrow, identLoc, ident);
   return makeParserResult(expr);
