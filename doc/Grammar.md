@@ -105,7 +105,6 @@ binary-operator = '+' | '-' | '/' | '*' | '%'
 assignement-operator = '=' | "+=" | "-=" | "/=" | "*=" | "%="
                      | ">>=" | "<<=" | "&=" | "|=" | "^=" | '??='
 prefix-operator = '+' | '-' | '!' | '*' | '&' | '~'
-postfix-operator = '!'
 
 expression = assignement-expression
 assignement-expression = conditional-expression (assignement-operator assignement-expression)?
@@ -118,7 +117,7 @@ postfix-expression = primary-expression suffix*
 suffix = tuple-expression // suffixes = calls, member accesses and subscripts.
        | member-access-expression
        | array-subscript
-       | postfix-operator
+       | '!'
 primary-expression = identifier | literal | tuple-expression | '_'
 tuple-expression = '(' expression-list? ')'
 expression-list = expression (',' expression)*
