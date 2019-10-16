@@ -60,6 +60,15 @@ static inline ParserResult<T> makeParserResult(T *result) {
   return ParserResult<T>(result);
 }
 
+/// Creates a parser result, and if \p isParseError is true, set its error bit
+/// to true (else, the result is successful)
+template <typename T>
+static inline ParserResult<T> makeParserResult(bool isParseError, T *result) {
+  auto result = ParserResult<T>(result);
+  result.setIsParseError(isParseError);
+  return result;
+}
+
 /// Creates a parser error result
 template <typename T>
 static inline ParserResult<T> makeParserErrorResult(T *result) {
