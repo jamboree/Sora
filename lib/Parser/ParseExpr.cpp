@@ -469,6 +469,14 @@ ParserResult<Expr> Parser::parseTupleExpr() {
 
   // expression (',' expression)*
   do {
+    // eat extra commas
+    while (SourceLoc extraComma = consumeIf(TokenKind::Comma))
+      diagnose(extraComma, diag::unexpected_sep, ",");
+
+    // stop at )
+    if (tok.is(TokenKind::RParen))
+      break;
+
     auto result = parseExpr([&]() {
       hadMissingExpr = true;
       // If we got no elements, the last thing we parsed was a '(', if we have
