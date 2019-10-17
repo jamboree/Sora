@@ -509,9 +509,6 @@ public:
   //===--- StmtCondition --------------------------------------------------===//
 
   void visitStmtCondition(StmtCondition cond) {
-    out.indent(curIndent);
-    withColor(nodeKindColor) << "StmtCondition";
-
     switch (cond.getKind()) {
     case StmtConditionKind::Expr:
       visit(cond.getExpr());
