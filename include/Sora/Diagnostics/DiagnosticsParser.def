@@ -83,6 +83,8 @@ ERROR(expected_member_name_or_index_after,
   "expected a member name or an index after '%0'", (StringRef))
 ERROR(expected_rparen_at_end_of_tuple_expr, 
   "expected ')' at end of tuple expression", ())
+ERROR(binary_op_at_start_of_line,
+  "operator '%0' cannot appear at the start of a line", (StringRef))
 
 // Patterns
 ERROR(expected_pat_after_let,

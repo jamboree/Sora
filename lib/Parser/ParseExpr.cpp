@@ -30,9 +30,14 @@ Parser::parseAssignementExpr(llvm::function_ref<void()> onNoExpr) {
 
   // (assignement-operator assignement-expression)?
   BinaryOperatorKind op;
+  bool startOfLine = tok.isAtStartOfLine();
   SourceLoc opLoc = consumeAssignementOperator(op);
   if (!opLoc)
     return result;
+
+  // Binary operator can't appear at the start of a line
+  if (startOfLine)
+    diagnose(opLoc, diag::binary_op_at_start_of_line, getSpelling(op));
 
   auto rhs = parseAssignementExpr(
       [&]() { diagnoseExpected(diag::expected_expr_after, getSpelling(op)); });
@@ -155,7 +160,17 @@ ParserResult<Expr> Parser::parseBinaryExpr(llvm::function_ref<void()> onNoExpr,
   // (binary-operator (right operand))*
   BinaryOperatorKind op;
   bool hasParsedOperator = false;
-  while (SourceLoc opLoc = consumeBinaryOperator(op, precedence)) {
+  while (true) {
+    // Parse the operator, break if we can't parse it
+    bool startOfLine = tok.isAtStartOfLine();
+    SourceLoc opLoc = consumeBinaryOperator(op, precedence);
+    if (!opLoc)
+      break;
+
+    // Binary operators can't appear at the start of a line
+    if (startOfLine)
+      diagnose(opLoc, diag::binary_op_at_start_of_line, getSpelling(op));
+
     hasParsedOperator = true;
     Expr *rhs = parseOperand([&]() {
                   diagnoseExpected(diag::expected_expr_after, getSpelling(op));
@@ -178,9 +193,14 @@ SourceLoc Parser::consumeBinaryOperator(BinaryOperatorKind &result,
                                         PrecedenceKind precedence) {
   using TK = TokenKind;
   using Op = BinaryOperatorKind;
-  // Binary operators can't be at the start of a line
-  if (tok.isAtStartOfLine())
-    return {};
+  // Case for Binary operators that have the same syntax as an unary operator.
+  // Those are ignored when they're at the start of a line.
+#define CONFUSABLE_CASE(TOK, OP)                                               \
+  case TOK:                                                                    \
+    if (tok.isAtStartOfLine())                                                 \
+      return {};                                                               \
+    result = OP;                                                               \
+    return consumeToken()
 #define CASE(TOK, OP)                                                          \
   case TOK:                                                                    \
     result = OP;                                                               \
@@ -192,7 +212,7 @@ SourceLoc Parser::consumeBinaryOperator(BinaryOperatorKind &result,
     switch (tok.getKind()) {
     default:
       return {};
-      CASE(TK::Star, Op::Mul);
+      CONFUSABLE_CASE(TK::Star, Op::Mul);
       CASE(TK::Slash, Op::Div);
       CASE(TK::Percent, Op::Rem);
     }
@@ -209,14 +229,14 @@ SourceLoc Parser::consumeBinaryOperator(BinaryOperatorKind &result,
       return {};
       CASE(TK::Pipe, Op::Or);
       CASE(TK::Caret, Op::XOr);
-      CASE(TK::Amp, Op::And);
+      CONFUSABLE_CASE(TK::Amp, Op::And);
     }
   case PrecedenceKind::Additive:
     switch (tok.getKind()) {
     default:
       return {};
-      CASE(TK::Plus, Op::Add);
-      CASE(TK::Minus, Op::Sub);
+      CONFUSABLE_CASE(TK::Plus, Op::Add);
+      CONFUSABLE_CASE(TK::Minus, Op::Sub);
     }
   case PrecedenceKind::Relational:
     switch (tok.getKind()) {
@@ -297,6 +317,10 @@ prefix-operator = '+' | '-' | '!' | '*' | '&' | '~'
 SourceLoc Parser::consumePrefixOperator(UnaryOperatorKind &result) {
   using TK = TokenKind;
   using Op = UnaryOperatorKind;
+  // NOTE: When adding new prefix operators that are confusable with an
+  // existing binary operator (e.g. like '+', it can be unary and binary),
+  // you'll need to teach consumeBinaryOperator to ignore them when they're at
+  // the start of a line.
 #define CASE(TOK, OP)                                                          \
   case TOK:                                                                    \
     result = OP;                                                               \

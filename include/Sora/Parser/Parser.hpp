@@ -166,8 +166,10 @@ public:
   /// Consumes an binary-operator
   /// \param result the operator that was found. Will not be changed if no
   /// operator was found.
-  /// \returns SourceLoc() if not found, or if the next token is at the start of
-  /// a line.
+  /// \returns SourceLoc() if not found
+  ///
+  /// Note that some binary operators will be ignored when they're at the start
+  /// of a line, because they can be confused with unary operators. e.g. +
   SourceLoc consumeBinaryOperator(BinaryOperatorKind &result,
                                   PrecedenceKind precedence);
 
