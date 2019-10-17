@@ -568,8 +568,10 @@ public:
     dumpCommon(stmt);
     out << ' ';
     dumpLoc(stmt->getIfLoc(), "ifLoc");
-    if (SourceLoc loc = stmt->getElseLoc())
+    if (SourceLoc loc = stmt->getElseLoc()) {
+      out << ' ';
       dumpLoc(loc, "elseLoc");
+    }
     out << '\n';
 
     auto indent = increaseIndent();
