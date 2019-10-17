@@ -1,0 +1,31 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func correct() {
+  // CHECK: ReturnStmt loc=line:5:3
+  return
+  // CHECK: ReturnStmt loc=line:8:3
+  // CHECK-NEXT: TupleExpr type=<null type> numElements=0 lParenLoc=line:8:10 rParenLoc=line:8:11
+  return ()
+  // CHECK: ReturnStmt loc=line:13:3
+  // CHECK-NEXT: BinaryExpr
+  // CHECK-NEXT:   IntegerLiteralExpr
+  // CHECK-NEXT:   IntegerLiteralExpr
+  return 3+3
+  // CHECK: ReturnStmt loc=line:15:3
+  return 
+  // CHECK: BreakStmt loc=line:17:3
+  break
+  // CHECK: ContinueStmt loc=line:19:3
+  continue
+  // CHECK: ReturnStmt loc=line:21:3
+  return
+}
+
+func retExpr() {
+  return  // expect-warning@+1: expression following 'return' is treated as an argument of the 'return'
+  0       // expect-note: indent the expression to silence this warning
+  return  // expect-warning@+1: expression following 'return' is treated as an argument of the 'return'
+ 0        // expect-note: indent the expression to silence this warning
+  return 
+   0
+}

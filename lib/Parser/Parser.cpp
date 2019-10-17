@@ -130,6 +130,11 @@ void Parser::skipUntilTokDeclStmtRCurly(TokenKind kind) {
   }
 }
 
-Identifier Parser::getIdentifier(const Token& tok) {
+Identifier Parser::getIdentifier(const Token &tok) {
   return ctxt.getIdentifier(tok.str());
+}
+
+int Parser::getColumnDifference(SourceLoc a, SourceLoc b) const {
+  const SourceManager &srcMgr = ctxt.srcMgr;
+  return srcMgr.getLineAndColumn(b).second - srcMgr.getLineAndColumn(a).second;
 }

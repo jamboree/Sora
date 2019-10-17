@@ -1,0 +1,18 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func whileStmt() {
+  // CHECK: WhileStmt whileLoc=line:7:3
+  // CHECK-NEXT: BooleanLiteralExpr
+  // CHECK-NEXT: BlockStmt
+  while true {}
+  // CHECK: WhileStmt whileLoc=line:12:3
+  // CHECK-NEXT: ParenExpr
+  // CHECK-NEXT:  ParenExpr
+  // CHECK-NEXT:   BooleanLiteralExpr
+  while ((true)) {}
+}
+
+func errors() {
+  while       // expect-error: expected an expression after 'while'
+  while true  // expect-error: expected '{' after 'while' condition
+}

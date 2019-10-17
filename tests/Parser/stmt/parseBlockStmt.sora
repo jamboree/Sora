@@ -1,6 +1,5 @@
 // RUN: %sorac-parse -verify %s
 
-
 func foo() {}
 func foo() {
 }
@@ -15,10 +14,16 @@ func foo() { let x: i32
 }
 func foo() { 
   let x: i32 
+  {
+    let y : i32
+  }  let y : i32 // expect-error: expected a newline
 }
 func foo() 
 { 
-  let x: i32 
+  let x: i32 {  // expect-error: expected a newline
+    let x : i32
+  } let y : i32 // expect-error: expected a newline
+  let z : i32
 }
 
 func foo() { let x: i32 

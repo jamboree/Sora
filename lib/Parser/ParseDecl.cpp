@@ -14,6 +14,7 @@
 using namespace sora;
 
 bool Parser::isStartOfDecl() const {
+  // Must handle everything that parseDecl handles.
   switch (tok.getKind()) {
   case TokenKind::LetKw:
   case TokenKind::FuncKw:
@@ -29,14 +30,14 @@ top-level-declaration = function-declaration
 */
 ParserResult<Decl> Parser::parseDecl(SmallVectorImpl<VarDecl *> &vars,
                                      bool isTopLevel) {
-  assert(isStartOfDecl() && "not a stmt");
+  assert(isStartOfDecl() && "not a decl");
   switch (tok.getKind()) {
   case TokenKind::LetKw:
     return parseLetDecl(vars);
   case TokenKind::FuncKw:
     return parseFuncDecl();
   default:
-    return nullptr;
+    llvm_unreachable("unknown start of decl");
   }
 }
 

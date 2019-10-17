@@ -42,6 +42,11 @@ ERROR(expected_rparen,  "expected ')'", ())
 ERROR(expected_rcurly,  "expected '}'", ())
 ERROR(expected_rsquare, "expected ']'", ())
 
+ERROR(expected_lcurly_after_cond, 
+  "expected '{' after '%0' condition", (StringRef))
+ERROR(expected_lcurly_or_if_after_else, 
+  "expected '{' or 'if' after 'else'", ())
+
 ERROR(expected_rparen_at_end_of_tuple_type, 
   "expected ')' at end of tuple type", ())
 
@@ -85,6 +90,13 @@ ERROR(expected_rparen_at_end_of_tuple_expr,
   "expected ')' at end of tuple expression", ())
 ERROR(binary_op_at_start_of_line,
   "operator '%0' cannot appear at the start of a line", (StringRef))
+ERROR(expected_expr_return, 
+  "expected an expression in 'return' statement", ())
+
+WARNING(unindented_expr_after_ret,
+  "expression following 'return' is treated as an argument of the 'return'", ())
+NOTE(indent_expr_to_silence,
+  "indent the expression to silence this warning", ())
 
 // Patterns
 ERROR(expected_pat_after_let,

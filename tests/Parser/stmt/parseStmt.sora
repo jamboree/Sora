@@ -1,0 +1,8 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func continueBreak() {
+  // CHECK: ContinueStmt loc=line:5:3
+  continue
+  // CHECK: BreakStmt loc=line:7:3
+  break
+}

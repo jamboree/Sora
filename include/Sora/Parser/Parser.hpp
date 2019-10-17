@@ -221,6 +221,18 @@ public:
   /// The parser must be positioned on the "{"
   ParserResult<BlockStmt> parseBlockStmt();
 
+  /// Parses a return-statement
+  /// The parser must be positioned on the 'return' keyword.
+  ParserResult<Stmt> parseReturnStmt();
+
+  /// Parses a if-statement.
+  /// The parser must be positioned on the 'if' keyword.
+  ParserResult<Stmt> parseIfStmt();
+
+  /// Parses a while-statement.
+  /// The parser must be positioned on the 'while' keyword.
+  ParserResult<Stmt> parseWhileStmt();
+
   //===- Type Parsing -----------------------------------------------------===//
 
   /// Parses a type. Calls \p onNoType if no type was found.
@@ -376,5 +388,9 @@ public:
 
   /// \returns an identifier object for the contents (string) of \p tok
   Identifier getIdentifier(const Token &tok);
+
+  /// \returns the difference between the column number of a and b.
+  /// e.g if a is column 5, and b is column 4, returns -1.
+  int getColumnDifference(SourceLoc a, SourceLoc b) const;
 };
 } // namespace sora

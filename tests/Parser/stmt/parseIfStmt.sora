@@ -1,0 +1,39 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func ifStmt() {
+  // CHECK: IfStmt ifLoc=line:7:3
+  // CHECK-NEXT: BooleanLiteralExpr
+  // CHECK-NEXT: BlockStmt
+  if false {}
+  // CHECK: IfStmt ifLoc=line:12:3 elseLoc=line:12:14
+  // CHECK-NEXT: BooleanLiteralExpr
+  // CHECK-NEXT: BlockStmt
+  // CHECK-NEXT: BlockStmt
+  if true {} else {}
+  // CHECK: IfStmt ifLoc=line:19:3 elseLoc=line:19:14
+  // CHECK-NEXT: BooleanLiteralExpr
+  // CHECK-NEXT: BlockStmt
+  // CHECK-NEXT: IfStmt ifLoc=line:19:19
+  // CHECK-NEXT:  BooleanLiteralExpr
+  // CHECK-NEXT:  BlockStmt
+  if true {} else if false {}
+  // CHECK: IfStmt ifLoc=line:27:3 elseLoc=line:27:14
+  // CHECK-NEXT: BooleanLiteralExpr
+  // CHECK-NEXT: BlockStmt
+  // CHECK-NEXT: IfStmt ifLoc=line:27:19 elseLoc=line:27:31
+  // CHECK-NEXT:    BooleanLiteralExpr
+  // CHECK-NEXT:    BlockStmt
+  // CHECK-NEXT:    BlockStmt
+  if true {} else if false {} else {}
+  // CHECK: IfStmt ifLoc=line:32:3
+  // CHECK-NEXT: ParenExpr
+  // CHECK-NEXT:  ParenExpr
+  // CHECK-NEXT:   BooleanLiteralExpr
+  if ((true)) {}
+}
+
+func errors() {
+  if                // expect-error: expected an expression after 'if'
+  if true           // expect-error: expected '{' after 'if' condition
+  if true {} else   // expect-error: expected '{' or 'if' after 'else'
+}
