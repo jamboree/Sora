@@ -68,7 +68,7 @@ statement =
           | for-statement
           | control-transfer-statement
 
-if-statement = "if" condition block-statement ("else" (brace-statement | if-statement))?
+if-statement = "if" condition block-statement ("else" (block-statement | if-statement))?
 
 while-statement = "while" condition block-statement
 
