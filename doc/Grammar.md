@@ -65,7 +65,6 @@ statement =
           | block-statement
           | if-statement
           | while-statement
-          | do-while-statement
           | for-statement
           | control-transfer-statement
 
