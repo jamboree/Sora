@@ -87,7 +87,7 @@ void Parser::parseSourceFile() {
 /*
 let-declaration = "let" pattern ('=' expression)?
 */
-ParserResult<Decl> Parser::parseLetDecl() {
+ParserResult<LetDecl> Parser::parseLetDecl() {
   assert(tok.is(TokenKind::LetKw));
   // "let"
   SourceLoc letLoc = consumeToken();

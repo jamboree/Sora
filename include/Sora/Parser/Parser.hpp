@@ -25,8 +25,10 @@ class BlockStmt;
 class Expr;
 class Identifier;
 class Lexer;
+class LetDecl;
 class Pattern;
 class SourceFile;
+class StmtCondition;
 class TypeRepr;
 
 /// Sora Language Parser
@@ -95,7 +97,7 @@ public:
 
   /// Parses a let-declaration
   /// The parser must be positioned on the "let" keyword.
-  ParserResult<Decl> parseLetDecl();
+  ParserResult<LetDecl> parseLetDecl();
 
   /// Parses a parameter-declaration
   /// The parser must be positioned on the identifier.
@@ -225,6 +227,12 @@ public:
   /// Parses a while-statement.
   /// The parser must be positioned on the 'while' keyword.
   ParserResult<Stmt> parseWhileStmt();
+
+  // Parses a condition
+  /// \param cond where the result will be stored
+  /// \param name the name of the condition (for diagnostics), e.g. "if".
+  /// \returns true if no parsing error occured, false otherwise.
+  bool parseCondition(StmtCondition& cond, StringRef name);
 
   //===- Type Parsing -----------------------------------------------------===//
 

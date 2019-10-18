@@ -30,10 +30,16 @@ func ifStmt() {
   // CHECK-NEXT:  ParenExpr
   // CHECK-NEXT:   BooleanLiteralExpr
   if ((true)) {}
+  // CHECK: IfStmt ifLoc=line:38:3
+  // CHECK-NEXT: LetDecl
+  // CHECK-NEXT:  VarPattern
+  // CHECK-NEXT:    VarDecl
+  // CHECK-NEXT:  IntegerLiteralExpr
+  if let x = 0 {}
 }
 
 func errors() {
-  if                // expect-error: expected an expression after 'if'
+  if                // expect-error: expected an expression or 'let' in 'if' condition
   if true           // expect-error: expected '{' after 'if' condition
   if true {} else   // expect-error: expected '{' or 'if' after 'else'
 }

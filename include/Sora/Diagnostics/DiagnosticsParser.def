@@ -119,6 +119,8 @@ ERROR(expected_block_item,
   "expected a statement, an expression or a declaration", ())
 ERROR(expected_newline,
   "expected a newline", ())
+ERROR(expected_cond_in,
+  "expected an expression or 'let' in '%0' condition", (StringRef))
 
 //===----------------------------------------------------------------------===//
 
