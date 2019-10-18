@@ -172,27 +172,41 @@ ParserResult<Pattern> Parser::parseTuplePattern() {
   // Utility function to create a ParenPattern or a TuplePattern depending on
   // the number of elements.
   auto createResult = [&](SourceLoc rParen) -> Pattern * {
+    if (!rParen && elements.empty())
+      return nullptr;
+    else if (!rParen)
+      rParen = prevTokPastTheEnd;
+
     if (elements.size() == 1)
       return new (ctxt) ParenPattern(lParen, elements[0], rParen);
     return TuplePattern::create(ctxt, lParen, elements, rParen);
   };
 
   // pattern (',' pattern)*
-  do {
+  bool isParsingError = false;
+  parseList([&](unsigned k) -> bool {
+    // Stop at ')'
+    if (tok.is(TokenKind::RParen))
+      return false;
+
     auto result = parsePattern([&]() { diagnoseExpected(diag::expected_pat); });
-    if (!result.hasValue()) {
-      skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-      if (tok.isNot(TokenKind::LParen))
-        return nullptr;
-      return makeParserErrorResult(createResult(consumeToken()));
+    if (result.hasValue()) {
+      elements.push_back(result.get());
+      return true;
     }
-    elements.push_back(result.get());
-  } while (consumeIf(TokenKind::Comma));
+    skipUntilTokDeclStmtRCurly(TokenKind::RParen);
+    isParsingError = true;
+    return false;
+  });
+
+  // Don't complain about missing RParen if we already had a parsing error,
+  // just recover with what we have.
+  if (isParsingError && tok.isNot(TokenKind::RParen))
+    return makeParserErrorResult(createResult(prevTokPastTheEnd));
 
   // ')'
   SourceLoc rParen = parseMatchingToken(
       lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_pat);
-  if (!rParen)
-    return nullptr;
-  return makeParserResult(createResult(rParen));
+  isParsingError |= rParen.isInvalid();
+  return makeParserResult(isParsingError, createResult(rParen));
 }

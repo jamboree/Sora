@@ -409,7 +409,8 @@ ParserResult<Expr> Parser::parseMemberAccessExpr(Expr *base) {
   SourceLoc identLoc;
   switch (tok.getKind()) {
   default:
-    diagnoseExpected(diag::expected_member_name_or_index_after, ".");
+    diagnoseExpected(diag::expected_member_name_or_index_after,
+                     isArrow ? "->" : ".");
     return nullptr;
   case TokenKind::Identifier:
     identLoc = consumeIdentifier(ident);
@@ -499,47 +500,49 @@ ParserResult<Expr> Parser::parseTupleExpr() {
   // Utility function to create a ParenExpr or a TupleExpr depending on
   // the number of elements.
   auto createResult = [&](SourceLoc rParen) -> Expr * {
+    if (!rParen && elements.empty())
+      return nullptr;
+    else if (!rParen)
+      rParen = prevTokPastTheEnd;
+
     if (elements.size() == 1)
       return new (ctxt) ParenExpr(lParen, elements[0], rParen);
     return TupleExpr::create(ctxt, lParen, elements, rParen);
   };
 
-  bool hadMissingExpr = false;
+  bool isParsingError = false;
 
   // expression (',' expression)*
-  do {
-    // eat extra commas
-    while (SourceLoc extraComma = consumeIf(TokenKind::Comma))
-      diagnose(extraComma, diag::unexpected_sep, ",");
-
-    // stop at )
+  parseList([&](unsigned k) -> bool {
+    // stop at ')'
     if (tok.is(TokenKind::RParen))
-      break;
+      return false;
 
     auto result = parseExpr([&]() {
-      hadMissingExpr = true;
       // If we got no elements, the last thing we parsed was a '(', if we have
       // an element, the last thing we parsed was a ','
-      diagnoseExpected(diag::expected_expr_after, elements.empty() ? "(" : ",");
+      diagnoseExpected(diag::expected_expr_after, k ? "," : "(");
     });
-    if (!result.hasValue()) {
-      skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-      if (tok.is(TokenKind::LParen))
-        return makeParserErrorResult(createResult(consumeToken()));
-      break;
+
+    if (result.hasValue()) {
+      elements.push_back(result.get());
+      return true;
     }
-    elements.push_back(result.get());
-  } while (consumeIf(TokenKind::Comma));
 
-  // ')'
+    // If parsing failed, try to recover & stop parsing
+    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
+    isParsingError = true;
+    return false;
+  });
 
-  // Don't complain about missing RParen if we already had a missing expr.
-  if (hadMissingExpr && tok.isNot(TokenKind::RParen))
+  // Don't complain about missing RParen if we already had a parsing error,
+  // just recover with what we have.
+  if (isParsingError && tok.isNot(TokenKind::RParen))
     return makeParserErrorResult(createResult(prevTokPastTheEnd));
 
+  // ')'
   SourceLoc rParen = parseMatchingToken(
       lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_expr);
-  if (!rParen)
-    return nullptr;
-  return makeParserResult(createResult(rParen));
+  isParsingError |= rParen.isInvalid();
+  return makeParserResult(isParsingError, createResult(rParen));
 }

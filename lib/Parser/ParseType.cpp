@@ -55,35 +55,43 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
   // Utility function to create a ParenTypeRepr or a TupleTypeRepr depending on
   // the number of elements.
   auto createResult = [&](SourceLoc rParenLoc) -> TypeRepr * {
+    if (!rParenLoc && elements.empty())
+      return nullptr;
+    else if (!rParenLoc)
+      rParenLoc = prevTokPastTheEnd;
+
     if (elements.size() == 1)
       return new (ctxt) ParenTypeRepr(lParenLoc, elements[0], rParenLoc);
     return TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
   };
 
-  // Utility function to try to recover and return something.
-  auto tryRecoverAndReturn = [&]() -> ParserResult<TypeRepr> {
-    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-    if (!tok.is(TokenKind::LParen))
-      return nullptr;
-    SourceLoc rParenLoc = consumeToken();
-    return makeParserErrorResult(createResult(rParenLoc));
-  };
-
   // type (',' type)*
-  do {
-    auto result = parseType([&]() { diagnoseExpected(diag::expected_type); });
-    if (TypeRepr *type = result.getOrNull())
-      elements.push_back(result.get());
-    else
-      return tryRecoverAndReturn();
-  } while (consumeIf(TokenKind::Comma));
+  bool isParsingError = false;
+  parseList([&](unsigned k) -> bool {
+    // Stop at ')'
+    if (tok.is(TokenKind::RParen))
+      return false;
 
+    auto result = parseType([&]() { diagnoseExpected(diag::expected_type); });
+    if (TypeRepr *type = result.getOrNull()) {
+      elements.push_back(result.get());
+      return true;
+    }
+
+    skipUntilTokDeclStmtRCurly(TokenKind::RParen);
+    isParsingError = true;
+    return false;
+  });
+
+  // Don't complain about missing RParen if we already had a parsing error,
+  // just recover with what we have.
+  if (isParsingError && tok.isNot(TokenKind::RParen))
+    return makeParserErrorResult(createResult(prevTokPastTheEnd));
   // ')'
   SourceLoc rParenLoc = parseMatchingToken(
       lParenLoc, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_type);
-  if (!rParenLoc)
-    return nullptr;
-  return makeParserResult(createResult(rParenLoc));
+  isParsingError |= rParenLoc.isInvalid();
+  return makeParserResult(isParsingError, createResult(rParenLoc));
 }
 
 /*

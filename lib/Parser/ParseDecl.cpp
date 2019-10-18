@@ -221,6 +221,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   }
 
   auto paramListResult = parseParamDeclList();
+  bool hadParseError = paramListResult.isParseError();
   if (paramListResult.isNull())
     return nullptr;
   paramList = paramListResult.get();
@@ -230,6 +231,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   if (consumeIf(TokenKind::Arrow)) {
     auto result =
         parseType([&]() { diagnoseExpected(diag::expected_fn_ret_ty); });
+    hadParseError |= result.isParseError();
     if (result.isNull())
       return nullptr;
     retTL = TypeLoc(result.get());
@@ -244,7 +246,8 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
     skipUntilTokOrNewline(TokenKind::LCurly);
     // Check if we found our LCurly
     if (tok.isNot(TokenKind::LCurly)) {
-      diagnoseExpected(diag::expected_lcurly_fn_body);
+      if (!hadParseError)
+        diagnoseExpected(diag::expected_lcurly_fn_body);
       return nullptr;
     }
   }
