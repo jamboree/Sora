@@ -78,12 +78,13 @@ public:
   /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
   void freeUnresolvedExprs();
 
-  /// Adds a cleanup function that'll be run when the ASTContext's memory is
-  /// freed.
+  /// Adds a cleanup function that'll be run when the ASTContext's memory (&
+  /// Permanent Allocator) is freed.
   void addCleanup(std::function<void()> cleanup);
 
   /// Adds a destructor cleanup function that'll be run when the ASTContext's
-  /// memory is freed.
+  /// memory is freed. This can be used to destroy non trivially-destructible
+  /// AST Nodes that are allocated in the ASTContext's Permanent allocator.
   template <typename Ty> void addDestructorCleanup(Ty &obj) {
     addCleanup([&obj]() { obj.~Ty(); });
   }
