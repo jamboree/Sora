@@ -602,6 +602,8 @@ public:
     dumpCommon(tyRepr);
     out << ' ';
     dumpLoc(tyRepr->getLoc(), "loc");
+    out << ' ';
+    dumpIdent(tyRepr->getIdentifier(), "identifier");
     out << '\n';
   }
 
