@@ -15,5 +15,5 @@ func correctCast() {
 }
 
 func err() {
-  0 as // expect-error: expected type after 'as'
+  0 as // expect-error: expected a type after 'as'
 }

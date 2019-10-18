@@ -26,16 +26,16 @@ func assign() {
 }
 
 func badAssign() {
-  a =     // expect-error: expected an expression after '='
-  a +=    // expect-error: expected an expression after '+='
-  a -=    // expect-error: expected an expression after '-='
-  a *=    // expect-error: expected an expression after '*='
-  a /=    // expect-error: expected an expression after '/='
-  a %=    // expect-error: expected an expression after '%='
-  a <<=   // expect-error: expected an expression after '<<='
-  a >>=   // expect-error: expected an expression after '>>='
-  a &=    // expect-error: expected an expression after '&='
-  a |=    // expect-error: expected an expression after '|='
-  a ^=    // expect-error: expected an expression after '^='
-  a ??=   // expect-error: expected an expression after '??='
+  {a=}    // expect-error: expected an expression after '='
+  {a+=}   // expect-error: expected an expression after '+='
+  {a-=}   // expect-error: expected an expression after '-='
+  {a*=}   // expect-error: expected an expression after '*='
+  {a/=}   // expect-error: expected an expression after '/='
+  {a%=}   // expect-error: expected an expression after '%='
+  {a<<=}  // expect-error: expected an expression after '<<='
+  {a>>=}  // expect-error: expected an expression after '>>='
+  {a&=}   // expect-error: expected an expression after '&='
+  {a|=}   // expect-error: expected an expression after '|='
+  {a^=}   // expect-error: expected an expression after '^='
+  {a??=}  // expect-error: expected an expression after '??='
 }

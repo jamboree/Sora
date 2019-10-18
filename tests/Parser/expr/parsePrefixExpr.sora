@@ -31,10 +31,10 @@ func foo() {
 }
 
 func bad() {
-  + // expect-error: expected an expression after '+'
-  - // expect-error: expected an expression after '-'
-  ! // expect-error: expected an expression after '!'
-  ~ // expect-error: expected an expression after '~'
-  * // expect-error: expected an expression after '*'
-  & // expect-error: expected an expression after '&'
+  {+} // expect-error: expected an expression after '+'
+  {-} // expect-error: expected an expression after '-'
+  {!} // expect-error: expected an expression after '!'
+  {~} // expect-error: expected an expression after '~'
+  {*} // expect-error: expected an expression after '*'
+  {&} // expect-error: expected an expression after '&'
 }

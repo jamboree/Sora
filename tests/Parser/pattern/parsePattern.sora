@@ -1,0 +1,40 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func foo() {
+  // CHECK: VarPattern loc=line:6:7 ident=a
+  // CHECK-NEXT: VarDecl type=<null type> identifier=a identifierLoc=line:6:7 immutable
+  let a
+  // CHECK: MutPattern mutLoc=line:10:7
+  // CHECK-NEXT: VarPattern loc=line:10:11 ident=a
+  // CHECK-NEXT:  VarDecl type=<null type> identifier=a identifierLoc=line:10:11 mutable
+  let mut a
+  // CHECK: DiscardPattern loc=line:12:7
+  let _
+  // CHECK: MutPattern mutLoc=line:15:7
+  // CHECK-NEXT: DiscardPattern loc=line:15:11
+  let mut _
+  // CHECK: TypedPattern
+  // CHECK-NEXT: MutPattern mutLoc=line:26:7
+  // CHECK-NEXT:  TuplePattern numElements=2 lParenLoc=line:26:11 rParenLoc=line:26:16
+  // CHECK-NEXT:   VarPattern loc=line:26:12 ident=a
+  // CHECK-NEXT:    VarDecl type=<null type> identifier=a identifierLoc=line:26:12 mutable
+  // CHECK-NEXT:   VarPattern loc=line:26:15 ident=b
+  // CHECK-NEXT:    VarDecl type=<null type> identifier=b identifierLoc=line:26:15 mutable
+  // CHECK-NEXT: TupleTypeRepr
+  // CHECK-NEXT:   IdentifierTypeRepr loc=line:26:21 identifier=i32
+  // CHECK-NEXT:   IdentifierTypeRepr loc=line:26:26 identifier=i32
+  let mut (a, b) : (i32, i32)
+  // CHECK: TypedPattern
+  // CHECK-NEXT: VarPattern loc=line:31:7 ident=a
+  // CHECK-NEXT:   VarDecl type=<null type> identifier=a identifierLoc=line:31:7 immutable
+  // CHECK-NEXT: IdentifierTypeRepr loc=line:31:10
+  let a: i3
+}
+
+func err() {
+  let (,i32,,i32) // expect-2-error: unexpected ',' separator
+  // Don't complain about a missing ) if we got a parsing error
+  let ( // expect-note: to match this opening '('
+    ( // expect-error: expected a pattern
+      // expect-error@-1: expected ')' at end of tuple pattern
+}
