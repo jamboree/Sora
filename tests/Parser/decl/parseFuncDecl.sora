@@ -20,3 +20,6 @@ func foo(x:         // expect-error: expected a type
 func foo(x          // expect-error: expected ':'
 func foo(x: i32, x: // expect-error: expected a type
 func foo(x: i32, x  // expect-error: expected ':'
+
+func foo(,x: i32) {}  // expect-error: unexpected ',' separator
+func foo(,,x: i32,,x: i64) {} // expect-3-error: unexpected ',' separator

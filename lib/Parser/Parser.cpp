@@ -49,12 +49,14 @@ SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
 
 void Parser::parseList(llvm::function_ref<bool(unsigned)> callback) {
   unsigned idx = 0;
-  while (callback(idx++)) {
-    if (tok.is(TokenKind::Comma))
-      consumeToken();
-    else
+  do  {
+    // eat extra commas
+    while (SourceLoc extraComma = consumeIf(TokenKind::Comma))
+      diagnose(extraComma, diag::unexpected_sep, ",");
+    // Parse
+    if (!callback(idx++))
       return;
-  }
+  } while (consumeIf(TokenKind::Comma));
 }
 
 SourceLoc Parser::consumeToken() {
