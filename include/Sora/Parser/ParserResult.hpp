@@ -64,9 +64,9 @@ static inline ParserResult<T> makeParserResult(T *result) {
 /// to true (else, the result is successful)
 template <typename T>
 static inline ParserResult<T> makeParserResult(bool isParseError, T *result) {
-  auto result = ParserResult<T>(result);
-  result.setIsParseError(isParseError);
-  return result;
+  auto parseResult = ParserResult<T>(result);
+  parseResult.setIsParseError(isParseError);
+  return parseResult;
 }
 
 /// Creates a parser error result
