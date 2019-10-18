@@ -31,16 +31,15 @@ class TypeRepr;
 
 /// Sora Language Parser
 ///
-/// Note: Parsing method should return nullptr when they failed to parse
-/// something and couldn't recover, and return a value when they successfully
+/// Note: Parsing method should return nullptr when they fail to parse
+/// something and can't recover, and return a value when they successfully
 /// recovered. They can also use makeParserErrorResult to create a result
 /// with an error bit set to tell the caller that an error occured but
 /// we successfully recovered.
 /// Alternatively, parsing methods can also use makeParserResult(false, node)
 /// to create an error parser result with a value. This can be used to notify
-/// the caller that something went wrong during the parsing but we recovered
-/// successfully and can continue parsing. The error bit is usually
-/// not propagated unless needed.
+/// the caller that something went wrong during the parsing but it recovered
+/// successfully and thus parsing can continue. 
 class Parser final {
   Parser(const Parser &) = delete;
   Parser &operator=(const Parser &) = delete;
@@ -88,21 +87,15 @@ public:
   bool isStartOfDecl() const;
 
   /// Parses a declaration or top-level-declaration.
-  /// \param vars for LetDecls, the vector where the vars declared by the
-  /// LetDecl will be stored.
   /// \param isTopLevel if true, only top-level-declarations are allowed, and
   /// declarations that can't appear at the top level are diagnosed.
   ///
   /// isStartOfDecl() must return true.
-  ParserResult<Decl> parseDecl(SmallVectorImpl<VarDecl *> &vars,
-                               bool isTopLevel = false);
+  ParserResult<Decl> parseDecl(bool isTopLevel = false);
 
   /// Parses a let-declaration
-  /// \param vars the vector where the vars declared by the LetDecl will be
-  /// stored.
-  ///
   /// The parser must be positioned on the "let" keyword.
-  ParserResult<Decl> parseLetDecl(SmallVectorImpl<VarDecl *> &vars);
+  ParserResult<Decl> parseLetDecl();
 
   /// Parses a parameter-declaration
   /// The parser must be positioned on the identifier.

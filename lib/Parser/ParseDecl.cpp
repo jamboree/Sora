@@ -28,12 +28,11 @@ bool Parser::isStartOfDecl() const {
 declaration =  top-level-declaration | let-declaration
 top-level-declaration = function-declaration
 */
-ParserResult<Decl> Parser::parseDecl(SmallVectorImpl<VarDecl *> &vars,
-                                     bool isTopLevel) {
+ParserResult<Decl> Parser::parseDecl(bool isTopLevel) {
   assert(isStartOfDecl() && "not a decl");
   switch (tok.getKind()) {
   case TokenKind::LetKw:
-    return parseLetDecl(vars);
+    return parseLetDecl();
   case TokenKind::FuncKw:
     return parseFuncDecl();
   default:
@@ -72,8 +71,7 @@ void Parser::parseSourceFile() {
       // FIXME: Should this be emitted only on successful parsing of the
       // LetDecl?
       diagnose(tok, diag::let_not_allowed_at_global_level);
-      SmallVector<VarDecl *, 4> vars;
-      if (parseLetDecl(vars).isParseError())
+      if (parseLetDecl().isParseError())
         recover();
       break;
     }
@@ -89,7 +87,7 @@ void Parser::parseSourceFile() {
 /*
 let-declaration = "let" pattern ('=' expression)?
 */
-ParserResult<Decl> Parser::parseLetDecl(SmallVectorImpl<VarDecl *> &vars) {
+ParserResult<Decl> Parser::parseLetDecl() {
   assert(tok.is(TokenKind::LetKw));
   // "let"
   SourceLoc letLoc = consumeToken();
@@ -101,7 +99,6 @@ ParserResult<Decl> Parser::parseLetDecl(SmallVectorImpl<VarDecl *> &vars) {
     return nullptr;
 
   Pattern *pattern = result.get();
-  pattern->forEachVarDecl([&](VarDecl *var) { vars.push_back(var); });
 
   // ('=' expression)?
   bool hadError = false;

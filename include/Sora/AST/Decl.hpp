@@ -175,7 +175,8 @@ public:
   }
 };
 
-/// Represents a *single* variable declaration.
+/// Represents a *single* variable declaration. This is usually the child
+/// of a VarPattern.
 ///
 /// This DOES NOT represent something such as "let x" entirely, it only
 /// represents the "x". "let x" as a whole would be represented by
@@ -184,7 +185,9 @@ public:
 ///
 /// Please note that the TypeLoc won't have a TypeRepr* if the type wasn't
 /// explicitely written down. However, the TypeLoc should always have a
-/// valid Type after semantic analysis. \verbatim
+/// valid Type after semantic analysis.
+///
+/// \verbatim
 ///   let x : i32 // has valid TypeRepr*
 ///   let (y, x) : (i32, i32) // has valid TypeRepr* (of the
 /// \endverbatim

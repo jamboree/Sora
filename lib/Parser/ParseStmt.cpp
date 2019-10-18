@@ -83,11 +83,8 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
 
     // declaration
     if (isStartOfDecl()) {
-      SmallVector<VarDecl *, 4> vars;
-      if (Decl *decl = parseDecl(vars).getOrNull()) {
+      if (Decl *decl = parseDecl().getOrNull())
         elements.push_back(decl);
-        elements.append(vars.begin(), vars.end());
-      }
       else
         skipUntilTokDeclStmtRCurly();
     }

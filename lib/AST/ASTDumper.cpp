@@ -437,11 +437,16 @@ public:
 
   void visitVarPattern(VarPattern *pattern) {
     dumpCommon(pattern);
+    // FIXME: Should the loc & ident be printed even though they're
+    // as part of the VarDecl already?
     out << ' ';
     dumpLoc(pattern->getLoc(), "loc");
     out << ' ';
     dumpIdent(pattern->getIdentifier(), "ident");
     out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getVarDecl());
   }
 
   void visitDiscardPattern(DiscardPattern *pattern) {
