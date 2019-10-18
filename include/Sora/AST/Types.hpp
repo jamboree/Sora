@@ -4,9 +4,169 @@
 //
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
-// This file contains the whole "type" hierarchy of classes.
+// This file contains the whole "type" hierarchy
 //===----------------------------------------------------------------------===//
 
 #pragma once
 
-namespace sora {}
+#include "Sora/AST/ASTAlignement.hpp"
+#include "Sora/AST/Type.hpp"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/Error.h"
+
+namespace sora {
+class ASTContext;
+
+/// Kinds of Types
+enum class TypeKind : uint8_t {
+#define TYPE(KIND, PARENT) KIND,
+#define TYPE_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
+#include "Sora/AST/TypeNodes.def"
+};
+
+/// Common base class for Types.
+class alignas(TypeBaseAlignement) TypeBase {
+  // Disable vanilla new/delete for types
+  void *operator new(size_t) noexcept = delete;
+  void operator delete(void *)noexcept = delete;
+
+  TypeKind kind;
+
+protected:
+  // Children should be able to use placement new, as it is needed for children
+  // with trailing objects.
+  void *operator new(size_t, void *mem) noexcept {
+    assert(mem);
+    return mem;
+  }
+
+  // Also allow allocation of Types using the ASTContext.
+  void *operator new(size_t size, ASTContext &ctxt,
+                     unsigned align = alignof(TypeBase));
+
+  TypeBase(TypeKind kind) : kind(kind) {}
+
+public:
+  /// \returns the kind of type this is
+  TypeKind getKind() const { return kind; }
+};
+
+/// Represents the width of an integer, which can be either a fixed value (e.g.
+/// 32) or an arbitrary/target-dependent value (pointer-sized).
+class IntegerWidth final {
+public:
+  using width_t = uint16_t;
+
+private:
+  enum class Kind : uint8_t {
+    /// DenseMap Tombstone Key
+    DMTombstone,
+    /// DenseMap Empty Key
+    DMEmpty,
+    /// Fixed width (e.g. 16)
+    Fixed,
+    /// Arbitrary precision
+    Arbitrary,
+    /// Pointer-sized (usize, either 32 or 64 bits usually)
+    Pointer
+  };
+
+  Kind kind;
+  width_t width;
+
+  IntegerWidth(Kind kind, width_t width = 0) : kind(kind), width(width) {}
+
+  friend struct llvm::DenseMapInfo<sora::IntegerWidth>;
+
+  unsigned getRaw() {
+    static_assert(
+        (sizeof(Kind) == 1) && (sizeof(width_t) == 2),
+        "IntegerWidth's member sizes changed - please update getRaw()!");
+    return unsigned(width) << 8 | unsigned(kind);
+  }
+
+public:
+  /// \returns an IntegerWidth representing an integer with a fixed width of \p
+  /// value. \p value can't be zero.
+  static IntegerWidth fixedWidth(width_t value) {
+    assert(value != 0 && "Can't create an integer of width 0");
+    return IntegerWidth(Kind::Fixed, value);
+  }
+
+  /// \returns an IntegerWidth representing an arbitrary precision integer
+  static IntegerWidth arbitraryPrecision() {
+    return IntegerWidth(Kind::Arbitrary);
+  }
+
+  /// \returns an IntegerWidth representing a pointer-sized integer
+  static IntegerWidth pointerSized() { return IntegerWidth(Kind::Pointer); }
+
+  bool isFixedWidth() const { return kind == Kind::Fixed; }
+  bool isArbitraryPrecision() const { return kind == Kind::Arbitrary; }
+  bool isPointerSized() const { return kind == Kind::Pointer; }
+
+  /// For FixedWidth integers, returns the width the integer has.
+  width_t getFixedWidth() const {
+    assert(isFixedWidth() && "not fixed width");
+    return width;
+  }
+
+  /// \returns the minimum width an integer of this IntegerWidth can have.
+  width_t getMinWidth() const {
+    switch (kind) {
+    case Kind::DMEmpty:
+    case Kind::DMTombstone:
+      llvm_unreachable("DenseMap-specific IntegerWidths don't have a width");
+    case Kind::Arbitrary:
+      return 1;
+    case Kind::Fixed:
+      return width;
+    case Kind::Pointer:
+      return 32;
+    }
+  }
+
+  /// \returns the maximum width an integer of this IntegerWidth can have.
+  width_t getMaxWidth() const {
+    switch (kind) {
+    case Kind::DMEmpty:
+    case Kind::DMTombstone:
+      llvm_unreachable("DenseMap-specific IntegerWidths don't have a width");
+    case Kind::Arbitrary:
+      return ~width_t(0);
+    case Kind::Fixed:
+      return width;
+    case Kind::Pointer:
+      return 64;
+    }
+  }
+
+  friend bool operator==(IntegerWidth lhs, IntegerWidth rhs) {
+    return (lhs.kind == rhs.kind) && (lhs.width == rhs.width);
+  }
+
+  friend bool operator!=(IntegerWidth lhs, IntegerWidth rhs) {
+    return !(lhs == rhs);
+  }
+};
+} // namespace sora
+
+namespace llvm { // DenseMapInfo for IntegerWidth
+template <> struct DenseMapInfo<sora::IntegerWidth> {
+  using IntegerWidth = sora::IntegerWidth;
+
+  static IntegerWidth getEmptyKey() {
+    return IntegerWidth(IntegerWidth::Kind::DMEmpty);
+  }
+
+  static IntegerWidth getTombstoneKey() {
+    return IntegerWidth(IntegerWidth::Kind::DMTombstone);
+  }
+
+  static unsigned getHashValue(IntegerWidth value) {
+    return DenseMapInfo<unsigned>::getHashValue(value.getRaw());
+  }
+
+  static bool isEqual(IntegerWidth lhs, IntegerWidth rhs) { return lhs == rhs; }
+};
+} // namespace llvm

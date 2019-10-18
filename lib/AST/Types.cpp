@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/Types.hpp"
+#include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/AST/TypeRepr.hpp"
 
@@ -25,4 +26,9 @@ SourceLoc TypeLoc::getLoc() const {
 
 SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
+}
+
+void *operator new(size_t size, ASTContext &ctxt,
+                   unsigned align = alignof(TypeBase)) {
+  return ctxt.allocate(size, align);
 }
