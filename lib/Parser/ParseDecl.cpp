@@ -92,8 +92,8 @@ ParserResult<Decl> Parser::parseLetDecl() {
   // "let"
   SourceLoc letLoc = consumeToken();
   // pattern
-  auto result =
-      parsePattern([&]() { diagnoseExpected(diag::expected_pat_after_let); });
+  auto result = parsePattern(
+      [&]() { diagnoseExpected(diag::expected_pat_after, "let"); });
 
   if (!result.hasValue())
     return nullptr;

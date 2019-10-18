@@ -39,7 +39,7 @@ class TypeRepr;
 /// Alternatively, parsing methods can also use makeParserResult(false, node)
 /// to create an error parser result with a value. This can be used to notify
 /// the caller that something went wrong during the parsing but it recovered
-/// successfully and thus parsing can continue. 
+/// successfully and thus parsing can continue.
 class Parser final {
   Parser(const Parser &) = delete;
   Parser &operator=(const Parser &) = delete;
@@ -261,17 +261,29 @@ public:
   SourceLoc parseMatchingToken(SourceLoc lLoc, TokenKind kind,
                                Optional<TypedDiag<>> customErr = None);
 
-  /// Parses a comma-separated list of values. The callback is called to parse
-  /// elements, and the function takes care of consuming the commas.
+  /// Parses a comma-separated list of values.
+  ///
   /// \param callBack The element parsing function. Returns a boolean indicating
   /// whether parsing should continue. It takes a single argument which is the
   /// position of the element we're parsing.
   ///
   /// The callback is always called at least once.
-  ///
-  /// The callback is responsible for emitting diagnostics as this function
-  /// won't emit any on its own.
   void parseList(llvm::function_ref<bool(unsigned)> callback);
+
+  /// Parses a comma-separated list of values inside a parentheses.
+  /// The parser must be positioned on the '('
+  ///
+  /// \param rParenloc If found, the SourceLoc of the ')' will be stored in this
+  /// variable. If not found, this is set to prevTokPastTheEnd.
+  /// \param callBack The element parsing function. Returns
+  /// true on success, false on parsing error. The callback is not called when
+  /// the next token is a ')', so you don't need to handle ')' in the callback.
+  /// \param missingRParenDiag passed to parseMatchingToken
+  ///
+  /// \returns true on success, false on failure.
+  bool parseTuple(SourceLoc &rParenLoc,
+                  llvm::function_ref<bool(unsigned)> callback,
+                  Optional<TypedDiag<>> missingRParenDiag = None);
 
   //===- Diagnostic Emission ----------------------------------------------===//
 

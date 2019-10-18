@@ -99,12 +99,8 @@ NOTE(indent_expr_to_silence,
   "indent the expression to silence this warning", ())
 
 // Patterns
-ERROR(expected_pat_after_let,
-  "expected a pattern after 'let'", ())
-ERROR(expected_pat_after_mut,
-  "expected a pattern after 'mut'", ())
-ERROR(expected_pat,
-  "expected a pattern", ())
+ERROR(expected_pat_after,
+  "expected a pattern after '%0'", (StringRef))
 ERROR(expected_rparen_at_end_of_tuple_pat,
   "expected ')' at end of tuple pattern", ())
 ERROR(pat_can_only_have_one_mut,

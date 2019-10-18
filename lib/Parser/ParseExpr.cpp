@@ -487,62 +487,27 @@ expression-list = expression (',' expression)*
 */
 ParserResult<Expr> Parser::parseTupleExpr() {
   assert(tok.is(TokenKind::LParen));
-  // '('
-  SourceLoc lParen = consumeToken();
-
-  /*Short path for empty tuples*/
-  // ')'
-  if (SourceLoc rParen = consumeIf(TokenKind::RParen))
-    return makeParserResult(TupleExpr::createEmpty(ctxt, lParen, rParen));
-
   SmallVector<Expr *, 4> elements;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
+    auto result = parseExpr(
+        [&]() { diagnoseExpected(diag::expected_expr_after, k ? "," : "("); });
 
-  // Utility function to create a ParenExpr or a TupleExpr depending on
-  // the number of elements.
-  auto createResult = [&](SourceLoc rParen) -> Expr * {
-    if (!rParen && elements.empty())
-      return nullptr;
-    else if (!rParen)
-      rParen = prevTokPastTheEnd;
-
-    if (elements.size() == 1)
-      return new (ctxt) ParenExpr(lParen, elements[0], rParen);
-    return TupleExpr::create(ctxt, lParen, elements, rParen);
-  };
-
-  bool isParsingError = false;
-
-  // expression (',' expression)*
-  parseList([&](unsigned k) -> bool {
-    // stop at ')'
-    if (tok.is(TokenKind::RParen))
-      return false;
-
-    auto result = parseExpr([&]() {
-      // If we got no elements, the last thing we parsed was a '(', if we have
-      // an element, the last thing we parsed was a ','
-      diagnoseExpected(diag::expected_expr_after, k ? "," : "(");
-    });
-
-    if (result.hasValue()) {
+    if (result.hasValue())
       elements.push_back(result.get());
-      return true;
-    }
+    return result.hasValue();
+  };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_expr);
 
-    // If parsing failed, try to recover & stop parsing
-    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-    isParsingError = true;
-    return false;
-  });
+  assert(rParen && "no rParenLoc!");
 
-  // Don't complain about missing RParen if we already had a parsing error,
-  // just recover with what we have.
-  if (isParsingError && tok.isNot(TokenKind::RParen))
-    return makeParserErrorResult(createResult(prevTokPastTheEnd));
-
-  // ')'
-  SourceLoc rParen = parseMatchingToken(
-      lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_expr);
-  isParsingError |= rParen.isInvalid();
-  return makeParserResult(isParsingError, createResult(rParen));
+  // Create a ParenExpr or ParenTuple depending on the number of elements.
+  Expr *expr = nullptr;
+  if (elements.size() == 1)
+    expr = new (ctxt) ParenExpr(lParen, elements[0], rParen);
+  else
+    expr = TupleExpr::create(ctxt, lParen, elements, rParen);
+  return makeParserResult(!success, expr);
 }

@@ -40,58 +40,30 @@ ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
 tuple-type = '(' (type (',' type)*)? ')'
 */
 ParserResult<TypeRepr> Parser::parseTupleType() {
-  assert(tok.is(TokenKind::LParen) && "not a tuple type");
-  // '('
-  SourceLoc lParenLoc = consumeToken();
-
-  /*Short path for empty tuple types*/
-  // ')'
-  if (SourceLoc rParenLoc = consumeIf(TokenKind::RParen))
-    return makeParserResult(
-        TupleTypeRepr::createEmpty(ctxt, lParenLoc, rParenLoc));
-
+  assert(tok.is(TokenKind::LParen));
   SmallVector<TypeRepr *, 4> elements;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
+    auto result = parseType(
+        [&]() { diagnoseExpected(diag::expected_type_after, k ? "," : "("); });
 
-  // Utility function to create a ParenTypeRepr or a TupleTypeRepr depending on
-  // the number of elements.
-  auto createResult = [&](SourceLoc rParenLoc) -> TypeRepr * {
-    if (!rParenLoc && elements.empty())
-      return nullptr;
-    else if (!rParenLoc)
-      rParenLoc = prevTokPastTheEnd;
-
-    if (elements.size() == 1)
-      return new (ctxt) ParenTypeRepr(lParenLoc, elements[0], rParenLoc);
-    return TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
-  };
-
-  // type (',' type)*
-  bool isParsingError = false;
-  parseList([&](unsigned k) -> bool {
-    // Stop at ')'
-    if (tok.is(TokenKind::RParen))
-      return false;
-
-    auto result = parseType([&]() { diagnoseExpected(diag::expected_type); });
-    if (TypeRepr *type = result.getOrNull()) {
+    if (result.hasValue())
       elements.push_back(result.get());
-      return true;
-    }
+    return result.hasValue();
+  };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_type);
 
-    skipUntilTokDeclStmtRCurly(TokenKind::RParen);
-    isParsingError = true;
-    return false;
-  });
+  assert(rParen && "no rParenLoc!");
 
-  // Don't complain about missing RParen if we already had a parsing error,
-  // just recover with what we have.
-  if (isParsingError && tok.isNot(TokenKind::RParen))
-    return makeParserErrorResult(createResult(prevTokPastTheEnd));
-  // ')'
-  SourceLoc rParenLoc = parseMatchingToken(
-      lParenLoc, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_type);
-  isParsingError |= rParenLoc.isInvalid();
-  return makeParserResult(isParsingError, createResult(rParenLoc));
+  // Create a TupleTypeRepr or ParenTypeRepr depending on the number of elements
+  TypeRepr *type = nullptr;
+  if (elements.size() == 1)
+    type = new (ctxt) ParenTypeRepr(lParen, elements[0], rParen);
+  else
+    type = TupleTypeRepr::create(ctxt, lParen, elements, rParen);
+  return makeParserResult(!success, type);
 }
 
 /*

@@ -64,6 +64,8 @@ static inline ParserResult<T> makeParserResult(T *result) {
 /// to true (else, the result is successful)
 template <typename T>
 static inline ParserResult<T> makeParserResult(bool isParseError, T *result) {
+  assert(isParseError ||
+         result && "If there is no parse error, result must not be nullptr.");
   auto parseResult = ParserResult<T>(result);
   parseResult.setIsParseError(isParseError);
   return parseResult;

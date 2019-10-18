@@ -35,6 +35,11 @@ func err() {
   let (,i32,,i32) // expect-2-error: unexpected ',' separator
   // Don't complain about a missing ) if we got a parsing error
   let ( // expect-note: to match this opening '('
-    ( // expect-error: expected a pattern
+    ( // expect-error: expected a pattern after '('
       // expect-error@-1: expected ')' at end of tuple pattern
+
+  let (   // expect-error: expected a pattern after '('
+  let (a  // expect-error: expected ')' at end of tuple pattern
+          // expect-note@-1: to match this opening '('
+  let (,,)// expect-2-error: unexpected ',' separator
 }

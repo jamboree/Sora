@@ -107,7 +107,7 @@ ParserResult<Pattern> Parser::parsePattern(llvm::function_ref<void()> onNoPat) {
       // If we had a "mut" qualifier, we expected a pattern. If we didn't have
       // one, we just didn't find anything.
       if (isMutable)
-        diagnoseExpected(diag::expected_pat_after_mut);
+        diagnoseExpected(diag::expected_pat_after, "mut");
       else
         onNoPat();
       return nullptr;
@@ -158,55 +158,28 @@ ParserResult<Pattern> Parser::parsePattern(llvm::function_ref<void()> onNoPat) {
 tuple-pattern = '(' (pattern (',' pattern)*)? ')'
 */
 ParserResult<Pattern> Parser::parseTuplePattern() {
-  assert(tok.is(TokenKind::LParen) && "not a tuple-pattern!");
-  // '('
-  SourceLoc lParen = consumeToken();
-
-  /*Short path for empty tuples*/
-  // ')'
-  if (SourceLoc rParen = consumeIf(TokenKind::RParen))
-    return makeParserResult(TuplePattern::createEmpty(ctxt, lParen, rParen));
-
+  assert(tok.is(TokenKind::LParen));
   SmallVector<Pattern *, 4> elements;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
+    auto result = parsePattern(
+        [&]() { diagnoseExpected(diag::expected_pat_after, k ? "," : "("); });
 
-  // Utility function to create a ParenPattern or a TuplePattern depending on
-  // the number of elements.
-  auto createResult = [&](SourceLoc rParen) -> Pattern * {
-    if (!rParen && elements.empty())
-      return nullptr;
-    else if (!rParen)
-      rParen = prevTokPastTheEnd;
-
-    if (elements.size() == 1)
-      return new (ctxt) ParenPattern(lParen, elements[0], rParen);
-    return TuplePattern::create(ctxt, lParen, elements, rParen);
-  };
-
-  // pattern (',' pattern)*
-  bool isParsingError = false;
-  parseList([&](unsigned k) -> bool {
-    // Stop at ')'
-    if (tok.is(TokenKind::RParen))
-      return false;
-
-    auto result = parsePattern([&]() { diagnoseExpected(diag::expected_pat); });
-    if (result.hasValue()) {
+    if (result.hasValue())
       elements.push_back(result.get());
-      return true;
-    }
-    skipUntilTokDeclStmtRCurly(TokenKind::RParen);
-    isParsingError = true;
-    return false;
-  });
+    return result.hasValue();
+  };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_pat);
 
-  // Don't complain about missing RParen if we already had a parsing error,
-  // just recover with what we have.
-  if (isParsingError && tok.isNot(TokenKind::RParen))
-    return makeParserErrorResult(createResult(prevTokPastTheEnd));
+  assert(rParen && "no rParenLoc!");
 
-  // ')'
-  SourceLoc rParen = parseMatchingToken(
-      lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_pat);
-  isParsingError |= rParen.isInvalid();
-  return makeParserResult(isParsingError, createResult(rParen));
+  // Create a TuplePattern or ParenPattern depending on the number of elements
+  Pattern *pat = nullptr;
+  if (elements.size() == 1)
+    pat = new (ctxt) ParenPattern(lParen, elements[0], rParen);
+  else
+    pat = TuplePattern::create(ctxt, lParen, elements, rParen);
+  return makeParserResult(!success, pat);
 }

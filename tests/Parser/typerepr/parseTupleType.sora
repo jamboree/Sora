@@ -28,8 +28,8 @@ func e() -> (i32, i32, i32, i32) {}
 // CHECK-NEXT: IdentifierTypeRepr loc=line:29:34
 func e() -> (i32, i32, i32, i32, i32) {}
 
-func f() -> (                       // expect-error:    expected a type
-func g() -> (i32,                   // expect-error:    expected a type
-func g() -> (i32, i32, i32, i32,    // expect-error:    expected a type
+func f() -> (                       // expect-error:    expected a type after '('
+func g() -> (i32,                   // expect-error:    expected a type after ','
+func g() -> (i32, i32, i32, i32,    // expect-error:    expected a type after ','
 func h() -> (i32                    // expect-error:    expected ')' at end of tuple type
                                     // expect-note@-1:  to match this opening '('
