@@ -74,6 +74,10 @@ ERROR(let_not_allowed_at_global_level,
   "'let' declarations are not allowed at the global level", ())
 ERROR(no_newline_after_decl,
   "no newline after declaration", ())
+ERROR(expected_rparen_at_end_of_param_list, 
+  "expected ')' at end of parameter list", ())
+ERROR(param_requires_explicit_type, 
+  "parameter requires an explicit type", ())
 
 // Expressions
 ERROR(expected_expr,

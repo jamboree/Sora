@@ -13,13 +13,17 @@ func foo            // expect-error: expected '(' in function declaration parame
 func foo()          // expect-error: expected '{' in body of function declaration
 func foo() ->       // expect-error: expected function return type
 func foo(           // expect-error: expected a parameter declaration
-func foo(x: i32     // expect-error: expected ')'
+func foo(x: i32     // expect-error: expected ')' at end of parameter list
                     // expect-note@-1: to match this opening '('
 func foo(x: i32,    // expect-error: expected a parameter declaration
 func foo(x:         // expect-error: expected a type
-func foo(x          // expect-error: expected ':'
+func foo(x          // expect-error: parameter requires an explicit type
+                    // expect-error@-1: expected ')' at end of parameter list
+                    // expect-note@-2: to match this opening '('
 func foo(x: i32, x: // expect-error: expected a type
-func foo(x: i32, x  // expect-error: expected ':'
+func foo(x: i32, x  // expect-error: parameter requires an explicit type
+                    // expect-error@-1: expected ')' at end of parameter list
+                    // expect-note@-2: to match this opening '('
 
 func foo(,x: i32) {}  // expect-error: unexpected ',' separator
 func foo(,,x: i32,,x: i64) {} // expect-3-error: unexpected ',' separator

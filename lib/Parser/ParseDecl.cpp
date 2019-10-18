@@ -126,7 +126,8 @@ ParserResult<ParamDecl> Parser::parseParamDecl() {
   auto paramDecl = new (ctxt) ParamDecl(declContext, identLoc, ident, {});
   //  ':'
   if (!consumeIf(TokenKind::Colon)) {
-    diagnoseExpected(diag::expected_colon);
+    diagnoseExpected(diag::param_requires_explicit_type)
+        .fixitInsert(prevTokPastTheEnd, ": <type>");
     return makeParserErrorResult(paramDecl);
   }
   // type
@@ -145,51 +146,28 @@ parameter-declaration-list
   | '(' ')'
 */
 ParserResult<ParamList> Parser::parseParamDeclList() {
-  assert(tok.is(TokenKind::LParen) && "not a param list!");
-  // '('
-  SourceLoc lParenLoc = consumeToken();
-  // ')'
-  if (SourceLoc rParenLoc = consumeIf(TokenKind::RParen))
-    return makeParserResult(ParamList::createEmpty(ctxt, lParenLoc, rParenLoc));
-  // parameter-declaration (',' parameter-declaration)*
+  assert(tok.is(TokenKind::LParen));
   SmallVector<ParamDecl *, 4> params;
-  bool complainedInLastIteration = false;
-  parseList([&](unsigned idx) {
-    if (tok.is(TokenKind::RParen))
-      return false;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
     if (tok.isNot(TokenKind::Identifier)) {
       diagnoseExpected(diag::expected_param_decl);
-      complainedInLastIteration = true;
       return false;
     }
     auto result = parseParamDecl();
-    complainedInLastIteration = result.isParseError();
-    if (!result.hasValue())
-      return false;
-    params.push_back(result.get());
-    return true;
-  });
-  // ')'
-  SourceLoc rParenLoc;
-  // If we already complained in the last iteration, don't emit missing RParen
-  // errors.
-  if (complainedInLastIteration)
-    rParenLoc = consumeIf(TokenKind::RParen);
-  else
-    rParenLoc = parseMatchingToken(lParenLoc, TokenKind::RParen);
-  // If we found the ')', create our ParamList & return.
-  if (rParenLoc)
-    return makeParserResult(
-        ParamList::create(ctxt, lParenLoc, params, rParenLoc));
-  // When we don't have the ')', but we have a -> or {, recover by returning the
-  // parameter list, using the SourceLoc of the lParen or the end of the last
-  // Parameter as the RParenLoc.
-  if (tok.isAny(TokenKind::Arrow, TokenKind::LCurly))
-    return makeParserErrorResult(ParamList::create(
-        ctxt, lParenLoc, params,
-        params.empty() ? lParenLoc : params.back()->getEndLoc()));
-  // Else just return an error.
-  return nullptr;
+
+    if (result.hasValue())
+      params.push_back(result.get());
+    return result.hasValue();
+  };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_param_list);
+
+  assert(rParen && "no rParenLoc!");
+
+  return makeParserResult(!success,
+                          ParamList::create(ctxt, lParen, params, rParen));
 }
 
 /*
