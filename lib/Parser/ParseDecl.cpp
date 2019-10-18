@@ -28,12 +28,11 @@ bool Parser::isStartOfDecl() const {
 declaration =  top-level-declaration | let-declaration
 top-level-declaration = function-declaration
 */
-ParserResult<Decl> Parser::parseDecl(SmallVectorImpl<VarDecl *> &vars,
-                                     bool isTopLevel) {
+ParserResult<Decl> Parser::parseDecl(bool isTopLevel) {
   assert(isStartOfDecl() && "not a decl");
   switch (tok.getKind()) {
   case TokenKind::LetKw:
-    return parseLetDecl(vars);
+    return parseLetDecl();
   case TokenKind::FuncKw:
     return parseFuncDecl();
   default:
@@ -72,8 +71,7 @@ void Parser::parseSourceFile() {
       // FIXME: Should this be emitted only on successful parsing of the
       // LetDecl?
       diagnose(tok, diag::let_not_allowed_at_global_level);
-      SmallVector<VarDecl *, 4> vars;
-      if (parseLetDecl(vars).isParseError())
+      if (parseLetDecl().isParseError())
         recover();
       break;
     }
@@ -89,19 +87,18 @@ void Parser::parseSourceFile() {
 /*
 let-declaration = "let" pattern ('=' expression)?
 */
-ParserResult<Decl> Parser::parseLetDecl(SmallVectorImpl<VarDecl *> &vars) {
+ParserResult<LetDecl> Parser::parseLetDecl() {
   assert(tok.is(TokenKind::LetKw));
   // "let"
   SourceLoc letLoc = consumeToken();
   // pattern
-  auto result =
-      parsePattern([&]() { diagnoseExpected(diag::expected_pat_after_let); });
+  auto result = parsePattern(
+      [&]() { diagnoseExpected(diag::expected_pat_after, "let"); });
 
   if (!result.hasValue())
     return nullptr;
 
   Pattern *pattern = result.get();
-  pattern->forEachVarDecl([&](VarDecl *var) { vars.push_back(var); });
 
   // ('=' expression)?
   bool hadError = false;
@@ -129,7 +126,8 @@ ParserResult<ParamDecl> Parser::parseParamDecl() {
   auto paramDecl = new (ctxt) ParamDecl(declContext, identLoc, ident, {});
   //  ':'
   if (!consumeIf(TokenKind::Colon)) {
-    diagnoseExpected(diag::expected_colon);
+    diagnoseExpected(diag::param_requires_explicit_type)
+        .fixitInsert(prevTokPastTheEnd, ": <type>");
     return makeParserErrorResult(paramDecl);
   }
   // type
@@ -148,51 +146,28 @@ parameter-declaration-list
   | '(' ')'
 */
 ParserResult<ParamList> Parser::parseParamDeclList() {
-  assert(tok.is(TokenKind::LParen) && "not a param list!");
-  // '('
-  SourceLoc lParenLoc = consumeToken();
-  // ')'
-  if (SourceLoc rParenLoc = consumeIf(TokenKind::RParen))
-    return makeParserResult(ParamList::createEmpty(ctxt, lParenLoc, rParenLoc));
-  // parameter-declaration (',' parameter-declaration)*
+  assert(tok.is(TokenKind::LParen));
   SmallVector<ParamDecl *, 4> params;
-  bool complainedInLastIteration = false;
-  parseList([&](unsigned idx) {
-    if (tok.is(TokenKind::RParen))
-      return false;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
     if (tok.isNot(TokenKind::Identifier)) {
       diagnoseExpected(diag::expected_param_decl);
-      complainedInLastIteration = true;
       return false;
     }
     auto result = parseParamDecl();
-    complainedInLastIteration = result.isParseError();
-    if (!result.hasValue())
-      return false;
-    params.push_back(result.get());
-    return true;
-  });
-  // ')'
-  SourceLoc rParenLoc;
-  // If we already complained in the last iteration, don't emit missing RParen
-  // errors.
-  if (complainedInLastIteration)
-    rParenLoc = consumeIf(TokenKind::RParen);
-  else
-    rParenLoc = parseMatchingToken(lParenLoc, TokenKind::RParen);
-  // If we found the ')', create our ParamList & return.
-  if (rParenLoc)
-    return makeParserResult(
-        ParamList::create(ctxt, lParenLoc, params, rParenLoc));
-  // When we don't have the ')', but we have a -> or {, recover by returning the
-  // parameter list, using the SourceLoc of the lParen or the end of the last
-  // Parameter as the RParenLoc.
-  if (tok.isAny(TokenKind::Arrow, TokenKind::LCurly))
-    return makeParserErrorResult(ParamList::create(
-        ctxt, lParenLoc, params,
-        params.empty() ? lParenLoc : params.back()->getEndLoc()));
-  // Else just return an error.
-  return nullptr;
+
+    if (result.hasValue())
+      params.push_back(result.get());
+    return result.hasValue();
+  };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_param_list);
+
+  assert(rParen && "no rParenLoc!");
+
+  return makeParserResult(!success,
+                          ParamList::create(ctxt, lParen, params, rParen));
 }
 
 /*
@@ -224,6 +199,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   }
 
   auto paramListResult = parseParamDeclList();
+  bool hadParseError = paramListResult.isParseError();
   if (paramListResult.isNull())
     return nullptr;
   paramList = paramListResult.get();
@@ -233,6 +209,7 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
   if (consumeIf(TokenKind::Arrow)) {
     auto result =
         parseType([&]() { diagnoseExpected(diag::expected_fn_ret_ty); });
+    hadParseError |= result.isParseError();
     if (result.isNull())
       return nullptr;
     retTL = TypeLoc(result.get());
@@ -247,7 +224,8 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
     skipUntilTokOrNewline(TokenKind::LCurly);
     // Check if we found our LCurly
     if (tok.isNot(TokenKind::LCurly)) {
-      diagnoseExpected(diag::expected_lcurly_fn_body);
+      if (!hadParseError)
+        diagnoseExpected(diag::expected_lcurly_fn_body);
       return nullptr;
     }
   }

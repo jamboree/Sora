@@ -108,7 +108,6 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
         continue;
       }
       diagCount = *result;
-      llvm::outs() << "diagCount: " << diagCount << '\n';
       if (diagCount <= 1) {
         error(matchBegLoc, "expected diagnostic count must be greater than 1");
         continue;
@@ -196,7 +195,8 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
       error(matchBegLoc, str.str());
     }
 
-    expectedDiagnostics[diagStr].push_back({kind, buffer, line});
+    while (diagCount--)
+      expectedDiagnostics[diagStr].push_back({kind, buffer, line});
   }
   return parsingSuccessful;
 }

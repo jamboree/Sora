@@ -10,9 +10,15 @@ func whileStmt() {
   // CHECK-NEXT:  ParenExpr
   // CHECK-NEXT:   BooleanLiteralExpr
   while ((true)) {}
+  // CHECK: WhileStmt whileLoc=line:18:3
+  // CHECK-NEXT: LetDecl
+  // CHECK-NEXT:  VarPattern
+  // CHECK-NEXT:    VarDecl
+  // CHECK-NEXT:  IntegerLiteralExpr
+  while let x = 0 {}
 }
 
 func errors() {
-  while       // expect-error: expected an expression after 'while'
+  while       // expect-error: expected an expression or 'let' in 'while' condition
   while true  // expect-error: expected '{' after 'while' condition
 }

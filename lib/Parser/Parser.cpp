@@ -49,12 +49,55 @@ SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
 
 void Parser::parseList(llvm::function_ref<bool(unsigned)> callback) {
   unsigned idx = 0;
-  while (callback(idx++)) {
-    if (tok.is(TokenKind::Comma))
-      consumeToken();
-    else
+  do {
+    // eat extra commas
+    while (SourceLoc extraComma = consumeIf(TokenKind::Comma))
+      diagnose(extraComma, diag::unexpected_sep, ",");
+    // Parse
+    if (!callback(idx++))
       return;
+  } while (consumeIf(TokenKind::Comma));
+}
+
+bool Parser::parseTuple(SourceLoc &rParenLoc,
+                        llvm::function_ref<bool(unsigned)> callback,
+                        Optional<TypedDiag<>> missingRParenDiag) {
+  assert(tok.is(TokenKind::LParen));
+  SourceLoc lParen = consumeToken();
+
+  // Shortcut for empty tuples
+  if (tok.is(TokenKind::RParen)) {
+    rParenLoc = consumeToken();
+    return true;
   }
+
+  // Parse the list
+  bool lastSuccess = false;
+  parseList([&](unsigned k) -> bool {
+    // Stop at ')'
+    if (tok.is(TokenKind::RParen))
+      return false;
+    // Let the callback do the rest
+    lastSuccess = callback(k);
+    if (lastSuccess)
+      return true;
+    // If the callback failed, but the next token is a ',',
+    // return true so we can keep parsing.
+    if (tok.is(TokenKind::Comma))
+      return true;
+    // Else recover & stop parsing
+    skipUntilTokDeclStmtRCurly(TokenKind::RParen);
+    return false;
+  });
+
+  // If we had a parsing error at the last element, and the next token isn't a
+  // ')', don't complain about the missing ')' and just return.
+  if (!lastSuccess && tok.isNot(TokenKind::RParen))
+    return false;
+
+  // Try to parse the ')'
+  rParenLoc = parseMatchingToken(lParen, TokenKind::RParen, missingRParenDiag);
+  return rParenLoc.isValid();
 }
 
 SourceLoc Parser::consumeToken() {

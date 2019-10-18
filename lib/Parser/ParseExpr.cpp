@@ -409,7 +409,8 @@ ParserResult<Expr> Parser::parseMemberAccessExpr(Expr *base) {
   SourceLoc identLoc;
   switch (tok.getKind()) {
   default:
-    diagnoseExpected(diag::expected_member_name_or_index_after, ".");
+    diagnoseExpected(diag::expected_member_name_or_index_after,
+                     isArrow ? "->" : ".");
     return nullptr;
   case TokenKind::Identifier:
     identLoc = consumeIdentifier(ident);
@@ -486,60 +487,27 @@ expression-list = expression (',' expression)*
 */
 ParserResult<Expr> Parser::parseTupleExpr() {
   assert(tok.is(TokenKind::LParen));
-  // '('
-  SourceLoc lParen = consumeToken();
-
-  /*Short path for empty tuples*/
-  // ')'
-  if (SourceLoc rParen = consumeIf(TokenKind::RParen))
-    return makeParserResult(TupleExpr::createEmpty(ctxt, lParen, rParen));
-
   SmallVector<Expr *, 4> elements;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
+    auto result = parseExpr(
+        [&]() { diagnoseExpected(diag::expected_expr_after, k ? "," : "("); });
 
-  // Utility function to create a ParenExpr or a TupleExpr depending on
-  // the number of elements.
-  auto createResult = [&](SourceLoc rParen) -> Expr * {
-    if (elements.size() == 1)
-      return new (ctxt) ParenExpr(lParen, elements[0], rParen);
-    return TupleExpr::create(ctxt, lParen, elements, rParen);
+    if (result.hasValue())
+      elements.push_back(result.get());
+    return result.hasValue();
   };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_expr);
 
-  bool hadMissingExpr = false;
+  assert(rParen && "no rParenLoc!");
 
-  // expression (',' expression)*
-  do {
-    // eat extra commas
-    while (SourceLoc extraComma = consumeIf(TokenKind::Comma))
-      diagnose(extraComma, diag::unexpected_sep, ",");
-
-    // stop at )
-    if (tok.is(TokenKind::RParen))
-      break;
-
-    auto result = parseExpr([&]() {
-      hadMissingExpr = true;
-      // If we got no elements, the last thing we parsed was a '(', if we have
-      // an element, the last thing we parsed was a ','
-      diagnoseExpected(diag::expected_expr_after, elements.empty() ? "(" : ",");
-    });
-    if (!result.hasValue()) {
-      skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-      if (tok.is(TokenKind::LParen))
-        return makeParserErrorResult(createResult(consumeToken()));
-      break;
-    }
-    elements.push_back(result.get());
-  } while (consumeIf(TokenKind::Comma));
-
-  // ')'
-
-  // Don't complain about missing RParen if we already had a missing expr.
-  if (hadMissingExpr && tok.isNot(TokenKind::RParen))
-    return makeParserErrorResult(createResult(prevTokPastTheEnd));
-
-  SourceLoc rParen = parseMatchingToken(
-      lParen, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_expr);
-  if (!rParen)
-    return nullptr;
-  return makeParserResult(createResult(rParen));
+  // Create a ParenExpr or ParenTuple depending on the number of elements.
+  Expr *expr = nullptr;
+  if (elements.size() == 1)
+    expr = new (ctxt) ParenExpr(lParen, elements[0], rParen);
+  else
+    expr = TupleExpr::create(ctxt, lParen, elements, rParen);
+  return makeParserResult(!success, expr);
 }

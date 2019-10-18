@@ -25,22 +25,23 @@ class BlockStmt;
 class Expr;
 class Identifier;
 class Lexer;
+class LetDecl;
 class Pattern;
 class SourceFile;
+class StmtCondition;
 class TypeRepr;
 
 /// Sora Language Parser
 ///
-/// Note: Parsing method should return nullptr when they failed to parse
-/// something and couldn't recover, and return a value when they successfully
+/// Note: Parsing method should return nullptr when they fail to parse
+/// something and can't recover, and return a value when they successfully
 /// recovered. They can also use makeParserErrorResult to create a result
 /// with an error bit set to tell the caller that an error occured but
 /// we successfully recovered.
 /// Alternatively, parsing methods can also use makeParserResult(false, node)
 /// to create an error parser result with a value. This can be used to notify
-/// the caller that something went wrong during the parsing but we recovered
-/// successfully and can continue parsing. The error bit is usually
-/// not propagated unless needed.
+/// the caller that something went wrong during the parsing but it recovered
+/// successfully and thus parsing can continue.
 class Parser final {
   Parser(const Parser &) = delete;
   Parser &operator=(const Parser &) = delete;
@@ -88,21 +89,15 @@ public:
   bool isStartOfDecl() const;
 
   /// Parses a declaration or top-level-declaration.
-  /// \param vars for LetDecls, the vector where the vars declared by the
-  /// LetDecl will be stored.
   /// \param isTopLevel if true, only top-level-declarations are allowed, and
   /// declarations that can't appear at the top level are diagnosed.
   ///
   /// isStartOfDecl() must return true.
-  ParserResult<Decl> parseDecl(SmallVectorImpl<VarDecl *> &vars,
-                               bool isTopLevel = false);
+  ParserResult<Decl> parseDecl(bool isTopLevel = false);
 
   /// Parses a let-declaration
-  /// \param vars the vector where the vars declared by the LetDecl will be
-  /// stored.
-  ///
   /// The parser must be positioned on the "let" keyword.
-  ParserResult<Decl> parseLetDecl(SmallVectorImpl<VarDecl *> &vars);
+  ParserResult<LetDecl> parseLetDecl();
 
   /// Parses a parameter-declaration
   /// The parser must be positioned on the identifier.
@@ -233,6 +228,12 @@ public:
   /// The parser must be positioned on the 'while' keyword.
   ParserResult<Stmt> parseWhileStmt();
 
+  // Parses a condition
+  /// \param cond where the result will be stored
+  /// \param name the name of the condition (for diagnostics), e.g. "if".
+  /// \returns true if no parsing error occured, false otherwise.
+  bool parseCondition(StmtCondition& cond, StringRef name);
+
   //===- Type Parsing -----------------------------------------------------===//
 
   /// Parses a type. Calls \p onNoType if no type was found.
@@ -268,17 +269,29 @@ public:
   SourceLoc parseMatchingToken(SourceLoc lLoc, TokenKind kind,
                                Optional<TypedDiag<>> customErr = None);
 
-  /// Parses a comma-separated list of values. The callback is called to parse
-  /// elements, and the function takes care of consuming the commas.
+  /// Parses a comma-separated list of values.
+  ///
   /// \param callBack The element parsing function. Returns a boolean indicating
   /// whether parsing should continue. It takes a single argument which is the
   /// position of the element we're parsing.
   ///
   /// The callback is always called at least once.
-  ///
-  /// The callback is responsible for emitting diagnostics as this function
-  /// won't emit any on its own.
   void parseList(llvm::function_ref<bool(unsigned)> callback);
+
+  /// Parses a comma-separated list of values inside a parentheses.
+  /// The parser must be positioned on the '('
+  ///
+  /// \param rParenloc If found, the SourceLoc of the ')' will be stored in this
+  /// variable. If not found, this is set to prevTokPastTheEnd.
+  /// \param callBack The element parsing function. Returns
+  /// true on success, false on parsing error. The callback is not called when
+  /// the next token is a ')', so you don't need to handle ')' in the callback.
+  /// \param missingRParenDiag passed to parseMatchingToken
+  ///
+  /// \returns true on success, false on failure.
+  bool parseTuple(SourceLoc &rParenLoc,
+                  llvm::function_ref<bool(unsigned)> callback,
+                  Optional<TypedDiag<>> missingRParenDiag = None);
 
   //===- Diagnostic Emission ----------------------------------------------===//
 

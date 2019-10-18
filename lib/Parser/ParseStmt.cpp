@@ -83,11 +83,8 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
 
     // declaration
     if (isStartOfDecl()) {
-      SmallVector<VarDecl *, 4> vars;
-      if (Decl *decl = parseDecl(vars).getOrNull()) {
+      if (Decl *decl = parseDecl().getOrNull())
         elements.push_back(decl);
-        elements.append(vars.begin(), vars.end());
-      }
       else
         skipUntilTokDeclStmtRCurly();
     }
@@ -172,9 +169,10 @@ ParserResult<Stmt> Parser::parseIfStmt() {
   SourceLoc ifLoc = consumeToken();
 
   // condition
-  Expr *cond = parseExpr([&]() {
-                 diagnoseExpected(diag::expected_expr_after, "if");
-               }).getOrNull();
+  StmtCondition cond;
+  parseCondition(cond, "if");
+  if (!cond)
+    return nullptr;
 
   // block-statement
   if (!cond && tok.isNot(TokenKind::LCurly))
@@ -224,9 +222,10 @@ ParserResult<Stmt> Parser::parseWhileStmt() {
   SourceLoc whileLoc = consumeToken();
 
   // condition
-  Expr *cond = parseExpr([&]() {
-                 diagnoseExpected(diag::expected_expr_after, "while");
-               }).getOrNull();
+  StmtCondition cond;
+  parseCondition(cond, "while");
+  if (!cond)
+    return nullptr;
 
   // block-statement
   if (!cond && tok.isNot(TokenKind::LCurly))
@@ -241,4 +240,21 @@ ParserResult<Stmt> Parser::parseWhileStmt() {
   if (!body)
     return nullptr;
   return makeParserResult(new (ctxt) WhileStmt(whileLoc, cond, body));
+}
+
+/*
+condition = expression | let-declaration
+*/
+bool Parser::parseCondition(StmtCondition &cond, StringRef name) {
+  // let-declaration
+  if (tok.is(TokenKind::LetKw)) {
+    auto result = parseLetDecl();
+    cond = result.getOrNull();
+    return result.isParseError();
+  }
+  // expression
+  auto result =
+      parseExpr([&]() { diagnoseExpected(diag::expected_cond_in, name); });
+  cond = result.getOrNull();
+  return result.isParseError();
 }

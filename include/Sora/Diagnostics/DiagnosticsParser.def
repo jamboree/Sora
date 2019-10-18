@@ -74,6 +74,10 @@ ERROR(let_not_allowed_at_global_level,
   "'let' declarations are not allowed at the global level", ())
 ERROR(no_newline_after_decl,
   "no newline after declaration", ())
+ERROR(expected_rparen_at_end_of_param_list, 
+  "expected ')' at end of parameter list", ())
+ERROR(param_requires_explicit_type, 
+  "parameter requires an explicit type", ())
 
 // Expressions
 ERROR(expected_expr,
@@ -99,12 +103,8 @@ NOTE(indent_expr_to_silence,
   "indent the expression to silence this warning", ())
 
 // Patterns
-ERROR(expected_pat_after_let,
-  "expected a pattern after 'let'", ())
-ERROR(expected_pat_after_mut,
-  "expected a pattern after 'mut'", ())
-ERROR(expected_pat,
-  "expected a pattern", ())
+ERROR(expected_pat_after,
+  "expected a pattern after '%0'", (StringRef))
 ERROR(expected_rparen_at_end_of_tuple_pat,
   "expected ')' at end of tuple pattern", ())
 ERROR(pat_can_only_have_one_mut,
@@ -119,6 +119,8 @@ ERROR(expected_block_item,
   "expected a statement, an expression or a declaration", ())
 ERROR(expected_newline,
   "expected a newline", ())
+ERROR(expected_cond_in,
+  "expected an expression or 'let' in '%0' condition", (StringRef))
 
 //===----------------------------------------------------------------------===//
 

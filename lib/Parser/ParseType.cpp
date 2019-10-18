@@ -40,50 +40,30 @@ ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
 tuple-type = '(' (type (',' type)*)? ')'
 */
 ParserResult<TypeRepr> Parser::parseTupleType() {
-  assert(tok.is(TokenKind::LParen) && "not a tuple type");
-  // '('
-  SourceLoc lParenLoc = consumeToken();
-
-  /*Short path for empty tuple types*/
-  // ')'
-  if (SourceLoc rParenLoc = consumeIf(TokenKind::RParen))
-    return makeParserResult(
-        TupleTypeRepr::createEmpty(ctxt, lParenLoc, rParenLoc));
-
+  assert(tok.is(TokenKind::LParen));
   SmallVector<TypeRepr *, 4> elements;
+  SourceLoc lParen, rParen;
+  lParen = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
+    auto result = parseType(
+        [&]() { diagnoseExpected(diag::expected_type_after, k ? "," : "("); });
 
-  // Utility function to create a ParenTypeRepr or a TupleTypeRepr depending on
-  // the number of elements.
-  auto createResult = [&](SourceLoc rParenLoc) -> TypeRepr * {
-    if (elements.size() == 1)
-      return new (ctxt) ParenTypeRepr(lParenLoc, elements[0], rParenLoc);
-    return TupleTypeRepr::create(ctxt, lParenLoc, elements, rParenLoc);
-  };
-
-  // Utility function to try to recover and return something.
-  auto tryRecoverAndReturn = [&]() -> ParserResult<TypeRepr> {
-    skipUntilTokDeclStmtRCurly(TokenKind::LParen);
-    if (!tok.is(TokenKind::LParen))
-      return nullptr;
-    SourceLoc rParenLoc = consumeToken();
-    return makeParserErrorResult(createResult(rParenLoc));
-  };
-
-  // type (',' type)*
-  do {
-    auto result = parseType([&]() { diagnoseExpected(diag::expected_type); });
-    if (TypeRepr *type = result.getOrNull())
+    if (result.hasValue())
       elements.push_back(result.get());
-    else
-      return tryRecoverAndReturn();
-  } while (consumeIf(TokenKind::Comma));
+    return result.hasValue();
+  };
+  bool success =
+      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_type);
 
-  // ')'
-  SourceLoc rParenLoc = parseMatchingToken(
-      lParenLoc, TokenKind::RParen, diag::expected_rparen_at_end_of_tuple_type);
-  if (!rParenLoc)
-    return nullptr;
-  return makeParserResult(createResult(rParenLoc));
+  assert(rParen && "no rParenLoc!");
+
+  // Create a TupleTypeRepr or ParenTypeRepr depending on the number of elements
+  TypeRepr *type = nullptr;
+  if (elements.size() == 1)
+    type = new (ctxt) ParenTypeRepr(lParen, elements[0], rParen);
+  else
+    type = TupleTypeRepr::create(ctxt, lParen, elements, rParen);
+  return makeParserResult(!success, type);
 }
 
 /*
