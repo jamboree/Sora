@@ -11,8 +11,13 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Type.hpp"
+#include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Error.h"
+
+namespace llvm {
+class APInt;
+}
 
 namespace sora {
 class ASTContext;
@@ -53,6 +58,11 @@ public:
 
 /// Represents the width of an integer, which can be either a fixed value (e.g.
 /// 32) or an arbitrary/target-dependent value (pointer-sized).
+///
+/// FIXME: This class should know about the current build configuration in some
+/// way (for pointer sizes). Once it has access to that, we can remove
+/// getFixedWidth/getMinWidth/getMaxWidth and unify everything under a getWidth
+/// function.
 class IntegerWidth final {
 public:
   using width_t = uint16_t;
@@ -87,6 +97,10 @@ private:
   friend struct llvm::DenseMapInfo<sora::IntegerWidth>;
 
   unsigned getRaw() const { return raw; }
+
+  bool isDenseMapSpecial() const {
+    return data.kind == Kind::DMEmpty || data.kind == Kind::DMTombstone;
+  }
 
 public:
   /// \returns an IntegerWidth representing an integer with a fixed width of \p
@@ -127,6 +141,7 @@ public:
     case Kind::Pointer:
       return 32;
     }
+    llvm_unreachable("unknown IntegerWidth::Kind");
   }
 
   /// \returns the maximum width an integer of this IntegerWidth can have.
@@ -142,7 +157,22 @@ public:
     case Kind::Pointer:
       return 64;
     }
+    llvm_unreachable("unknown IntegerWidth::Kind");
   }
+
+  /// Integer Parsing Status
+  enum class Status {
+    /// Integer was parsed successfully
+    Ok,
+    /// An error occured while parsing the integer
+    Error,
+    /// The integer overflowed (can't happen on arbitrary-precision integers)
+    Overflow
+  };
+
+  /// Parses an integer according to this IntegerWidth.
+  APInt parse(StringRef str, int isNegative, unsigned radix = 0,
+              Status *status = nullptr) const;
 
   friend bool operator==(IntegerWidth lhs, IntegerWidth rhs) {
     return (lhs.data.kind == rhs.data.kind) &&
