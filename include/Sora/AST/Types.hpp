@@ -170,7 +170,9 @@ public:
     Overflow
   };
 
-  /// Parses an integer according to this IntegerWidth.
+  /// Parses an integer.
+  /// Note that for pointer-sized IntegerWidth, this uses getMaxWidth() and not
+  /// the current build target's pointer size.
   APInt parse(StringRef str, int isNegative, unsigned radix = 0,
               Status *status = nullptr) const;
 
