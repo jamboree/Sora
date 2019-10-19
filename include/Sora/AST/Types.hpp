@@ -71,19 +71,22 @@ private:
     Pointer
   };
 
-  Kind kind;
-  width_t width;
+  union {
+    uint32_t raw;
+    struct Data {
+      Data(Kind kind, width_t width) : kind(kind), width(width) {}
 
-  IntegerWidth(Kind kind, width_t width = 0) : kind(kind), width(width) {}
+      Kind kind;
+      width_t width;
+    } data;
+    static_assert(sizeof(Data) == 4, "Data must be 32 bits!");
+  };
+
+  IntegerWidth(Kind kind, width_t width = 0) : data(kind, width) {}
 
   friend struct llvm::DenseMapInfo<sora::IntegerWidth>;
 
-  unsigned getRaw() {
-    static_assert(
-        (sizeof(Kind) == 1) && (sizeof(width_t) == 2),
-        "IntegerWidth's member sizes changed - please update getRaw()!");
-    return unsigned(width) << 8 | unsigned(kind);
-  }
+  unsigned getRaw() const { return raw; }
 
 public:
   /// \returns an IntegerWidth representing an integer with a fixed width of \p
@@ -101,26 +104,26 @@ public:
   /// \returns an IntegerWidth representing a pointer-sized integer
   static IntegerWidth pointerSized() { return IntegerWidth(Kind::Pointer); }
 
-  bool isFixedWidth() const { return kind == Kind::Fixed; }
-  bool isArbitraryPrecision() const { return kind == Kind::Arbitrary; }
-  bool isPointerSized() const { return kind == Kind::Pointer; }
+  bool isFixedWidth() const { return data.kind == Kind::Fixed; }
+  bool isArbitraryPrecision() const { return data.kind == Kind::Arbitrary; }
+  bool isPointerSized() const { return data.kind == Kind::Pointer; }
 
   /// For FixedWidth integers, returns the width the integer has.
   width_t getFixedWidth() const {
     assert(isFixedWidth() && "not fixed width");
-    return width;
+    return data.width;
   }
 
   /// \returns the minimum width an integer of this IntegerWidth can have.
   width_t getMinWidth() const {
-    switch (kind) {
+    switch (data.kind) {
     case Kind::DMEmpty:
     case Kind::DMTombstone:
       llvm_unreachable("DenseMap-specific IntegerWidths don't have a width");
     case Kind::Arbitrary:
       return 1;
     case Kind::Fixed:
-      return width;
+      return data.width;
     case Kind::Pointer:
       return 32;
     }
@@ -128,21 +131,22 @@ public:
 
   /// \returns the maximum width an integer of this IntegerWidth can have.
   width_t getMaxWidth() const {
-    switch (kind) {
+    switch (data.kind) {
     case Kind::DMEmpty:
     case Kind::DMTombstone:
       llvm_unreachable("DenseMap-specific IntegerWidths don't have a width");
     case Kind::Arbitrary:
       return ~width_t(0);
     case Kind::Fixed:
-      return width;
+      return data.width;
     case Kind::Pointer:
       return 64;
     }
   }
 
   friend bool operator==(IntegerWidth lhs, IntegerWidth rhs) {
-    return (lhs.kind == rhs.kind) && (lhs.width == rhs.width);
+    return (lhs.data.kind == rhs.data.kind) &&
+           (lhs.data.width == rhs.data.width);
   }
 
   friend bool operator!=(IntegerWidth lhs, IntegerWidth rhs) {
