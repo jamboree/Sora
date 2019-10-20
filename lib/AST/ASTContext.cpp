@@ -9,6 +9,7 @@
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include <algorithm>
@@ -28,6 +29,9 @@ struct ASTContext::Impl {
 
   /// The set of cleanups that must be ran when the ASTContext is destroyed.
   SmallVector<std::function<void()>, 4> cleanups;
+
+  /// The target triple
+  Optional<llvm::Triple> targetTriple;
 
   /// Custom destructor that runs the cleanups.
   ~Impl() {
@@ -107,4 +111,18 @@ Identifier ASTContext::getIdentifier(StringRef str) {
   // strings)
   return str.size() ? getImpl().identifierTable.insert(str).first->getKeyData()
                     : Identifier();
+}
+
+void ASTContext::setTargetTriple(const llvm::Triple &triple) {
+  assert(!hasTargetTriple() && "Already has a target triple!");
+  getImpl().targetTriple = triple;
+}
+
+bool ASTContext::hasTargetTriple() const {
+  return getImpl().targetTriple.hasValue();
+}
+
+llvm::Triple ASTContext::getTargetTriple() const {
+  assert(hasTargetTriple() && "doesn't have a target triple!");
+  return *getImpl().targetTriple;
 }

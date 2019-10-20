@@ -13,6 +13,10 @@
 #include <memory>
 #include <stdint.h>
 
+namespace llvm {
+class Triple;
+}
+
 namespace sora {
 class SourceManager;
 class DiagnosticEngine;
@@ -92,6 +96,16 @@ public:
   /// Interns an identifier string
   /// \returns an identifier object for \p str
   Identifier getIdentifier(StringRef str);
+
+  /// Sets the target triple. This cannot be changed once set (hasTargetTriple
+  /// must return false).
+  void setTargetTriple(const llvm::Triple &triple);
+
+  /// \returns true if a target triple has been set
+  bool hasTargetTriple() const;
+
+  /// \returns the target triple. hasTargetTriple must return true.
+  llvm::Triple getTargetTriple() const;
 
   /// The SourceManager that owns the source buffers that created this AST.
   const SourceManager &srcMgr;
