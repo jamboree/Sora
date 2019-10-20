@@ -10,6 +10,7 @@
 #include "Sora/AST/Type.hpp"
 #include "Sora/AST/TypeRepr.hpp"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Triple.h"
 
 using namespace sora;
 
@@ -32,6 +33,19 @@ SourceLoc TypeLoc::getEndLoc() const {
 void *operator new(size_t size, ASTContext &ctxt,
                    unsigned align = alignof(TypeBase)) {
   return ctxt.allocate(size, align);
+}
+
+IntegerWidth IntegerWidth::pointerSized(const llvm::Triple &triple) {
+  width_t width = 0;
+  if (triple.isArch16Bit())
+    width = 16;
+  else if (triple.isArch32Bit())
+    width = 32;
+  else if (triple.isArch64Bit())
+    width = 64;
+  else
+    llvm_unreachable("Unknown Arch!");
+  return IntegerWidth(Kind::Pointer, width);
 }
 
 APInt IntegerWidth::parse(StringRef str, int isNegative, unsigned radix,
@@ -80,10 +94,10 @@ APInt IntegerWidth::parse(StringRef str, int isNegative, unsigned radix,
 
   // For fixed-width/pointer-sized integers, we need to be careful about
   // overflowing, so we have more processing to do.
-  unsigned maxWidth = getMaxWidth();
+  unsigned width = getWidth();
 
-  bool overflowed = (result.getActiveBits() > maxWidth);
-  result = result.zextOrTrunc(maxWidth);
+  bool overflowed = (result.getActiveBits() > width);
+  result = result.zextOrTrunc(width);
 
   Status s = overflowed ? Status::Overflow : Status::Ok;
 
@@ -93,7 +107,7 @@ APInt IntegerWidth::parse(StringRef str, int isNegative, unsigned radix,
       s = Status::Error;
   }
 
-  assert(result.getBitWidth() == maxWidth);
+  assert(result.getBitWidth() == width);
 
   return finish(s);
 }

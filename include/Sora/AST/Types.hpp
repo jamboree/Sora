@@ -17,7 +17,8 @@
 
 namespace llvm {
 class APInt;
-}
+class Triple;
+} // namespace llvm
 
 namespace sora {
 class ASTContext;
@@ -58,11 +59,6 @@ public:
 
 /// Represents the width of an integer, which can be either a fixed value (e.g.
 /// 32) or an arbitrary/target-dependent value (pointer-sized).
-///
-/// FIXME: This class should know about the current build configuration in some
-/// way (for pointer sizes). Once it has access to that, we can remove
-/// getFixedWidth/getMinWidth/getMaxWidth and unify everything under a getWidth
-/// function.
 class IntegerWidth final {
 public:
   using width_t = uint16_t;
@@ -77,7 +73,7 @@ private:
     Fixed,
     /// Arbitrary precision
     Arbitrary,
-    /// Pointer-sized (usize, either 32 or 64 bits usually)
+    /// Pointer-sized (usize, 32 or 64 bits usually)
     Pointer
   };
 
@@ -115,49 +111,20 @@ public:
     return IntegerWidth(Kind::Arbitrary);
   }
 
-  /// \returns an IntegerWidth representing a pointer-sized integer
-  static IntegerWidth pointerSized() { return IntegerWidth(Kind::Pointer); }
+  /// \returns an IntegerWidth representing a pointer-sized integer (be 16, 32
+  /// or 64 bits depending on the platform).
+  static IntegerWidth pointerSized(const llvm::Triple &triple);
 
   bool isFixedWidth() const { return data.kind == Kind::Fixed; }
   bool isArbitraryPrecision() const { return data.kind == Kind::Arbitrary; }
   bool isPointerSized() const { return data.kind == Kind::Pointer; }
 
-  /// For FixedWidth integers, returns the width the integer has.
-  width_t getFixedWidth() const {
-    assert(isFixedWidth() && "not fixed width");
+  /// For fixed-width and pointer-sized integers, returns the width the integer
+  /// has. Cannot be used on arbitrary-precision integers.
+  width_t getWidth() const {
+    assert((isFixedWidth() || isPointerSized()) &&
+           "not fixed width or pointer sized");
     return data.width;
-  }
-
-  /// \returns the minimum width an integer of this IntegerWidth can have.
-  width_t getMinWidth() const {
-    switch (data.kind) {
-    case Kind::DMEmpty:
-    case Kind::DMTombstone:
-      llvm_unreachable("DenseMap-specific IntegerWidths don't have a width");
-    case Kind::Arbitrary:
-      return 1;
-    case Kind::Fixed:
-      return data.width;
-    case Kind::Pointer:
-      return 32;
-    }
-    llvm_unreachable("unknown IntegerWidth::Kind");
-  }
-
-  /// \returns the maximum width an integer of this IntegerWidth can have.
-  width_t getMaxWidth() const {
-    switch (data.kind) {
-    case Kind::DMEmpty:
-    case Kind::DMTombstone:
-      llvm_unreachable("DenseMap-specific IntegerWidths don't have a width");
-    case Kind::Arbitrary:
-      return ~width_t(0);
-    case Kind::Fixed:
-      return data.width;
-    case Kind::Pointer:
-      return 64;
-    }
-    llvm_unreachable("unknown IntegerWidth::Kind");
   }
 
   /// Integer Parsing Status
@@ -171,8 +138,6 @@ public:
   };
 
   /// Parses an integer.
-  /// Note that for pointer-sized IntegerWidth, this uses getMaxWidth() and not
-  /// the current build target's pointer size.
   APInt parse(StringRef str, int isNegative, unsigned radix = 0,
               Status *status = nullptr) const;
 
