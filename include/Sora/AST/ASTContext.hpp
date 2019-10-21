@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/AST/Identifier.hpp"
+#include "Sora/AST/Type.hpp"
 #include "llvm/Support/Allocator.h"
 #include <functional>
 #include <memory>
@@ -97,15 +98,32 @@ public:
   /// \returns an identifier object for \p str
   Identifier getIdentifier(StringRef str);
 
-  /// Sets the target triple. This cannot be changed once set (hasTargetTriple
-  /// must return false).
-  void setTargetTriple(const llvm::Triple &triple);
+  /// Overrides the default target triple
+  void overrideTargetTriple(const llvm::Triple &triple);
 
-  /// \returns true if a target triple has been set
-  bool hasTargetTriple() const;
-
-  /// \returns the target triple. hasTargetTriple must return true.
+  /// \returns the target triple.
   llvm::Triple getTargetTriple() const;
+
+  //===- Frequently Used Types --------------------------------------------===//
+
+  const Type i8Type;    /// "i8"
+  const Type i16Type;   /// "i16"
+  const Type i32Type;   /// "i32"
+  const Type i64Type;   /// "i64"
+  const Type isizeType; /// "isize"
+
+  const Type u8Type;    /// "u8"
+  const Type u16Type;   /// "u16"
+  const Type u32Type;   /// "u32"
+  const Type u64Type;   /// "u64"
+  const Type usizeType; /// "usize"
+
+  const Type f32Type; /// "f32"
+  const Type f64Type; /// "f64"
+
+  const Type voidType; /// "void"
+
+  //===--------------------------------------------------------------------===//
 
   /// The SourceManager that owns the source buffers that created this AST.
   const SourceManager &srcMgr;

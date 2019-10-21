@@ -9,6 +9,7 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/AST/TypeRepr.hpp"
+#include "llvm/ADT/APFloat.h"
 
 using namespace sora;
 
@@ -28,7 +29,26 @@ SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
 }
 
-void *operator new(size_t size, ASTContext &ctxt,
-                   unsigned align = alignof(TypeBase)) {
+void *TypeBase::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align);
+}
+
+FloatType *FloatType::get(ASTContext &ctxt, FloatKind kind) {
+  switch (kind) {
+  case FloatKind::IEEE32:
+    return ctxt.f32Type->castTo<FloatType>();
+  case FloatKind::IEEE64:
+    return ctxt.f64Type->castTo<FloatType>();
+  }
+  llvm_unreachable("Unknown FloatKind!");
+}
+
+const llvm::fltSemantics &FloatType::getAPFloatSemantics() const {
+  switch (getFloatKind()) {
+  case FloatKind::IEEE32:
+    return APFloat::IEEEsingle();
+  case FloatKind::IEEE64:
+    return APFloat::IEEEdouble();
+  }
+  llvm_unreachable("Unknown FloatKind!");
 }

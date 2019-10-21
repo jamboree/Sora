@@ -37,22 +37,12 @@ public:
 
   bool isNull() const { return ptr == nullptr; }
 
-  TypeBase *operator->() {
+  TypeBase *operator->() const {
     assert(ptr && "cannot use this on a null pointer");
     return ptr;
   }
 
-  const TypeBase *operator->() const {
-    assert(ptr && "cannot use this on a null pointer");
-    return ptr;
-  }
-
-  TypeBase &operator*() {
-    assert(ptr && "cannot use this on a null pointer");
-    return *ptr;
-  }
-
-  const TypeBase &operator*() const {
+  TypeBase &operator*() const {
     assert(ptr && "cannot use this on a null pointer");
     return *ptr;
   }

@@ -6,10 +6,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include <algorithm>
@@ -24,14 +27,26 @@ struct ASTContext::Impl {
   /// for AllocatorKind::UnresolvedExpr
   llvm::BumpPtrAllocator unresolvedExprAllocator;
 
+  /// The Identifier Table
   /// FIXME: Is using MallocAllocator the right thing to do here?
   llvm::StringSet<> identifierTable;
 
   /// The set of cleanups that must be ran when the ASTContext is destroyed.
   SmallVector<std::function<void()>, 4> cleanups;
 
+  /// Signed Integer Types
+  llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
+  /// Unsigned Integer Types
+  llvm::DenseMap<IntegerWidth, IntegerType *> unsignedIntegerTypes;
+  /// Floating-point types
+
   /// The target triple
-  Optional<llvm::Triple> targetTriple;
+  llvm::Triple targetTriple;
+
+  Impl() {
+    // Init with a default target triple
+    targetTriple = llvm::Triple(llvm::sys::getDefaultTargetTriple());
+  }
 
   /// Custom destructor that runs the cleanups.
   ~Impl() {
@@ -40,9 +55,26 @@ struct ASTContext::Impl {
   }
 };
 
+static IntegerWidth getPointerWidth(ASTContext &ctxt) {
+  return IntegerWidth::pointer(ctxt.getTargetTriple());
+}
+
 ASTContext::ASTContext(const SourceManager &srcMgr,
                        DiagnosticEngine &diagEngine)
-    : srcMgr(srcMgr), diagEngine(diagEngine) {}
+    : srcMgr(srcMgr), diagEngine(diagEngine),
+      i8Type(IntegerType::getSigned(*this, IntegerWidth::fixed(8))),
+      i16Type(IntegerType::getSigned(*this, IntegerWidth::fixed(16))),
+      i32Type(IntegerType::getSigned(*this, IntegerWidth::fixed(32))),
+      i64Type(IntegerType::getSigned(*this, IntegerWidth::fixed(64))),
+      isizeType(IntegerType::getSigned(*this, getPointerWidth(*this))),
+      u8Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(8))),
+      u16Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(16))),
+      u32Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(32))),
+      u64Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(64))),
+      usizeType(IntegerType::getUnsigned(*this, getPointerWidth(*this))),
+      f32Type(new (*this) FloatType(FloatKind::IEEE32)),
+      f64Type(new (*this) FloatType(FloatKind::IEEE64)),
+      voidType(new (*this) VoidType()) {}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
@@ -77,10 +109,11 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
   assert((((char *)astContextMemory + sizeof(ASTContext)) <= implMemory) &&
          "ASTContext's memory overlaps the Impl's memory");
 
-  // Call the placement news
+  // Use placement new to call the constructors.
+  // Note: it is very important that the implementation is initialized first.
+  new (implMemory) Impl();
   ASTContext *astContext =
       new (astContextMemory) ASTContext(srcMgr, diagEngine);
-  new (implMemory) Impl();
 
   // And return a managed pointer.
   return std::unique_ptr<ASTContext>(astContext);
@@ -113,16 +146,26 @@ Identifier ASTContext::getIdentifier(StringRef str) {
                     : Identifier();
 }
 
-void ASTContext::setTargetTriple(const llvm::Triple &triple) {
-  assert(!hasTargetTriple() && "Already has a target triple!");
+void ASTContext::overrideTargetTriple(const llvm::Triple &triple) {
   getImpl().targetTriple = triple;
 }
 
-bool ASTContext::hasTargetTriple() const {
-  return getImpl().targetTriple.hasValue();
+llvm::Triple ASTContext::getTargetTriple() const {
+  return getImpl().targetTriple;
 }
 
-llvm::Triple ASTContext::getTargetTriple() const {
-  assert(hasTargetTriple() && "doesn't have a target triple!");
-  return *getImpl().targetTriple;
+//===- Types --------------------------------------------------------------===//
+
+IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
+  IntegerType *&ty = ctxt.getImpl().signedIntegerTypes[width];
+  if (ty)
+    return ty;
+  return ty = (new (ctxt) IntegerType(width, /*isSigned*/ true));
+}
+
+IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
+  IntegerType *&ty = ctxt.getImpl().unsignedIntegerTypes[width];
+  if (ty)
+    return ty;
+  return ty = (new (ctxt) IntegerType(width, /*isSigned*/ false));
 }
