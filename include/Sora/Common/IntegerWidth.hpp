@@ -63,19 +63,19 @@ private:
 public:
   /// \returns an IntegerWidth representing an integer with a fixed width of \p
   /// value. \p value can't be zero.
-  static IntegerWidth fixedWidth(width_t value) {
+  static IntegerWidth fixed(width_t value) {
     assert(value != 0 && "Can't create an integer of width 0");
     return IntegerWidth(Kind::Fixed, value);
   }
 
   /// \returns an IntegerWidth representing an arbitrary precision integer
-  static IntegerWidth arbitraryPrecision() {
+  static IntegerWidth arbitrary() {
     return IntegerWidth(Kind::Arbitrary);
   }
 
   /// \returns an IntegerWidth representing a pointer-sized integer (16, 32
   /// or 64 bits depending on the platform).
-  static IntegerWidth pointerSized(const llvm::Triple &triple);
+  static IntegerWidth pointer(const llvm::Triple &triple);
 
   bool isFixedWidth() const { return data.kind == Kind::Fixed; }
   bool isArbitraryPrecision() const { return data.kind == Kind::Arbitrary; }

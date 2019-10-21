@@ -11,7 +11,7 @@
 
 using namespace sora;
 
-IntegerWidth IntegerWidth::pointerSized(const llvm::Triple &triple) {
+IntegerWidth IntegerWidth::pointer(const llvm::Triple &triple) {
   width_t width = 0;
   if (triple.isArch16Bit())
     width = 16;
