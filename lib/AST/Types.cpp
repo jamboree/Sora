@@ -13,6 +13,12 @@
 
 using namespace sora;
 
+bool CanType::isValid() const {
+  if (const TypeBase *ptr = getPtr())
+    return ptr->isCanonical();
+  return true;
+}
+
 SourceRange TypeLoc::getSourceRange() const {
   return tyRepr ? tyRepr->getSourceRange() : SourceRange();
 }

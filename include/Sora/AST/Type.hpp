@@ -53,6 +53,15 @@ public:
   bool operator<(const Type other) const { return ptr < other.ptr; }
 };
 
+/// Represents a type that's statically known to be canonical (can also be
+/// null).
+class CanType final : public Type {
+  bool isValid() const;
+
+public:
+  explicit CanType(Type type) : Type(type) { assert(isValid()); }
+};
+
 /// A simple Type/TypeRepr* pair, used to represent a type as written
 /// down by the user.
 ///
@@ -99,6 +108,16 @@ public:
 
   static inline ::sora::Type getFromVoidPointer(void *ptr) {
     return (::sora::TypeBase *)ptr;
+  }
+};
+
+/// Same for CanType
+template <>
+struct PointerLikeTypeTraits<::sora::CanType>
+    : public PointerLikeTypeTraits<::sora::Type> {
+public:
+  static inline ::sora::CanType getFromVoidPointer(void *ptr) {
+    return ::sora::CanType((::sora::TypeBase *)ptr);
   }
 };
 } // namespace llvm
