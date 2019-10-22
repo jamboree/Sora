@@ -9,6 +9,7 @@
 #include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -43,8 +44,12 @@ struct ASTContext::Impl {
   llvm::DenseMap<size_t, ReferenceType *> referenceTypes;
   /// Maybe types
   llvm::DenseMap<TypeBase *, MaybeType *> maybeTypes;
+  /// Tuple types
+  llvm::FoldingSet<TupleType> tupleTypes;
   /// LValue types
   llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
+
+  TupleType *emptyTupleType = nullptr;
 
   /// The target triple
   llvm::Triple targetTriple;
@@ -231,6 +236,37 @@ MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
     return type;
   ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
   return type = new (ctxt) MaybeType(canTypeCtxt, valueType);
+}
+
+Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
+  if (elems.empty())
+    return getEmpty(ctxt);
+  void *insertPos = nullptr;
+  llvm::FoldingSetNodeID id;
+  Profile(id, elems);
+  auto &set = ctxt.getImpl().tupleTypes;
+
+  if (TupleType *type = set.FindNodeOrInsertPos(id, insertPos))
+    return type;
+
+  // Only canonical if all elements are.
+  bool isCanonical = false;
+  for (Type elem : elems)
+    isCanonical &= elem->isCanonical();
+  ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
+
+  void *mem =
+      ctxt.allocate(totalSizeToAlloc<Type>(elems.size()), alignof(TupleType));
+  TupleType *type = new (mem) TupleType(canTypeCtxt, elems);
+  set.InsertNode(type, insertPos);
+  return type;
+}
+
+TupleType *TupleType::getEmpty(ASTContext &ctxt) {
+  TupleType *&type = ctxt.getImpl().emptyTupleType;
+  if (type)
+    return type;
+  return type = new (ctxt) TupleType(&ctxt, {});
 }
 
 LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {

@@ -13,9 +13,11 @@
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/IntegerWidth.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/TrailingObjects.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -54,6 +56,10 @@ class alignas(TypeBaseAlignement) TypeBase {
     struct {
       uint8_t floatKind;
     } floatType;
+    /// TupleType bits
+    struct {
+      unsigned numElems;
+    } tupleType;
   });
   static_assert(sizeof(Bits) == 6, "Bits is too large!");
 
@@ -257,6 +263,49 @@ public:
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Maybe;
+  }
+};
+
+/// Tuple Type
+///
+/// Tuple of 0 or 2+ elements.
+///
+/// This type isn't canonical if it has 0 elements, else it's canonical only if
+/// every element inside it is. The canonical version of the empty tuple type is
+/// 'void'
+class TupleType final : public TypeBase,
+                        public llvm::FoldingSetNode,
+                        private llvm::TrailingObjects<TupleType, Type> {
+  friend llvm::TrailingObjects<TupleType, Type>;
+
+  TupleType(ASTContext *canTypeCtxt, ArrayRef<Type> elements)
+      : TypeBase(TypeKind::Tuple, canTypeCtxt) {
+    unsigned numElems = elements.size();
+    assert(numElems >= 2 || (numElems == 0 && canTypeCtxt));
+    bits.tupleType.numElems = numElems;
+    std::uninitialized_copy(elements.begin(), elements.end(),
+                            getTrailingObjects<Type>());
+  }
+
+public:
+  /// \returns the uniqued tuple type type for \p elems. If \p elems has a
+  /// single element, returns it instead.
+  static Type get(ASTContext &ctxt, ArrayRef<Type> elems);
+
+  /// \returns the empty tuple type.
+  static TupleType *getEmpty(ASTContext &ctxt);
+
+  unsigned getNumElements() const { return bits.tupleType.numElems; }
+  ArrayRef<Type> getElements() const {
+    return {getTrailingObjects<Type>(), getNumElements()};
+  }
+
+  void Profile(llvm::FoldingSetNodeID &id) { Profile(id, getElements()); }
+  static void Profile(llvm::FoldingSetNodeID &id,
+                      ArrayRef<Type> elements);
+
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Tuple;
   }
 };
 

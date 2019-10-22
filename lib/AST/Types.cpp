@@ -58,3 +58,9 @@ const llvm::fltSemantics &FloatType::getAPFloatSemantics() const {
   }
   llvm_unreachable("Unknown FloatKind!");
 }
+
+void TupleType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements) {
+  id.AddInteger(elements.size());
+  for (Type type : elements)
+    id.AddPointer(type.getPtr());
+}
