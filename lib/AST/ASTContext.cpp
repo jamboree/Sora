@@ -75,7 +75,7 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       usizeType(IntegerType::getUnsigned(*this, getPointerWidth(*this))),
       f32Type(new (*this) FloatType(FloatKind::IEEE32)),
       f64Type(new (*this) FloatType(FloatKind::IEEE64)),
-      voidType(new (*this) VoidType()) {}
+      voidType(new (*this) VoidType()), errorType(new (*this) ErrorType()) {}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));

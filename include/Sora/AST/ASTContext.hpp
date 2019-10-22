@@ -127,6 +127,8 @@ public:
 
   const Type voidType; /// "void"
 
+  const Type errorType; // The "error" type.
+
   //===--------------------------------------------------------------------===//
 
   /// The SourceManager that owns the source buffers that created this AST.

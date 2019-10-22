@@ -50,6 +50,8 @@ TEST_F(TypeTest, rtti) {
 
   EXPECT_TRUE(voidType->is<VoidType>());
   EXPECT_TRUE(voidType->is<BuiltinType>());
+
+  EXPECT_TRUE(ctxt->errorType->is<ErrorType>());
 }
 
 TEST_F(TypeTest, ASTContextSingletons) {

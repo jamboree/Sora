@@ -166,12 +166,25 @@ public:
 /// Used for 'void', and also the canonical form of '()' (empty tuple type)
 class VoidType final : public BuiltinType {
   VoidType() : BuiltinType(TypeKind::Void) {}
-
   friend ASTContext;
 
 public:
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Void;
+  }
+};
+
+/// Error Type
+///
+/// The type of an expression whose type couldn't be inferred, and the type of
+/// ErrorExprs.
+class ErrorType final : public TypeBase {
+  ErrorType() : TypeBase(TypeKind::Error) {}
+  friend ASTContext;
+
+public:
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Error;
   }
 };
 } // namespace sora
