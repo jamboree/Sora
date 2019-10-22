@@ -25,6 +25,7 @@ struct fltSemantics;
 
 namespace sora {
 class ASTContext;
+enum class AllocatorKind : uint8_t;
 
 /// Kinds of Types
 enum class TypeKind : uint8_t {
@@ -84,7 +85,7 @@ protected:
   }
 
   // Also allow allocation of Types using the ASTContext.
-  void *operator new(size_t size, ASTContext &ctxt,
+  void *operator new(size_t size, ASTContext &ctxt, AllocatorKind allocator,
                      unsigned align = alignof(TypeBase));
 
   friend ASTContext; // The ASTContext should be able to allocate types as well
@@ -301,8 +302,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &id) { Profile(id, getElements()); }
-  static void Profile(llvm::FoldingSetNodeID &id,
-                      ArrayRef<Type> elements);
+  static void Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements);
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Tuple;

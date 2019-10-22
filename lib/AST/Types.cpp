@@ -35,8 +35,9 @@ SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
 }
 
-void *TypeBase::operator new(size_t size, ASTContext &ctxt, unsigned align) {
-  return ctxt.allocate(size, align);
+void *TypeBase::operator new(size_t size, ASTContext &ctxt,
+                             AllocatorKind allocator, unsigned align) {
+  return ctxt.allocate(size, align, allocator);
 }
 
 FloatType *FloatType::get(ASTContext &ctxt, FloatKind kind) {

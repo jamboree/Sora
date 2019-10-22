@@ -104,10 +104,12 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       u32Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(32))),
       u64Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(64))),
       usizeType(IntegerType::getUnsigned(*this, getPointerWidth(*this))),
-      f32Type(new (*this) FloatType(*this, FloatKind::IEEE32)),
-      f64Type(new (*this) FloatType(*this, FloatKind::IEEE64)),
-      voidType(new (*this) VoidType(*this)),
-      errorType(new (*this) ErrorType(*this)) {}
+      f32Type(new (*this, AllocatorKind::Permanent)
+                  FloatType(*this, FloatKind::IEEE32)),
+      f64Type(new (*this, AllocatorKind::Permanent)
+                  FloatType(*this, FloatKind::IEEE64)),
+      voidType(new (*this, AllocatorKind::Permanent) VoidType(*this)),
+      errorType(new (*this, AllocatorKind::Permanent) ErrorType(*this)) {}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
@@ -225,8 +227,13 @@ Type ASTContext::getBuiltinType(StringRef str) {
   return nullptr;
 }
 
-//===- Types
-//--------------------------------------------------------------===//
+//===- Types --------------------------------------------------------------===//
+// TODO: Once TypeProperties is implemented, use a function
+// 'getTypeAllocator(TypeProperties)' to determine the AllocatorKind in which a
+// type should be allocated, instead of always using ::Permanent.
+// This is needed because the AllocatorKind depends on if the type contains
+// TypeVariableTypes or not (if it does, it must be allocated in the Typechecker
+// allocator)
 
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
@@ -234,7 +241,8 @@ IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
                          .signedIntegerTypes[width];
   if (ty)
     return ty;
-  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ true));
+  return ty = (new (ctxt, AllocatorKind::Permanent)
+                   IntegerType(ctxt, width, /*isSigned*/ true));
 }
 
 IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
@@ -243,7 +251,8 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
                          .unsignedIntegerTypes[width];
   if (ty)
     return ty;
-  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ false));
+  return ty = (new (ctxt, AllocatorKind::Permanent)
+                   IntegerType(ctxt, width, /*isSigned*/ false));
 }
 
 ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
@@ -255,7 +264,8 @@ ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
   if (type)
     return type;
   ASTContext *canTypeCtxt = pointee->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt) ReferenceType(canTypeCtxt, pointee, isMut);
+  return type = new (ctxt, AllocatorKind::Permanent)
+             ReferenceType(canTypeCtxt, pointee, isMut);
 }
 
 MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
@@ -265,7 +275,8 @@ MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
   if (type)
     return type;
   ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt) MaybeType(canTypeCtxt, valueType);
+  return type = new (ctxt, AllocatorKind::Permanent)
+             MaybeType(canTypeCtxt, valueType);
 }
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
@@ -285,8 +296,8 @@ Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
     isCanonical &= elem->isCanonical();
   ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
 
-  void *mem =
-      ctxt.allocate(totalSizeToAlloc<Type>(elems.size()), alignof(TupleType));
+  void *mem = ctxt.allocate(totalSizeToAlloc<Type>(elems.size()),
+                            alignof(TupleType), AllocatorKind::Permanent);
   TupleType *type = new (mem) TupleType(canTypeCtxt, elems);
   set.InsertNode(type, insertPos);
   return type;
@@ -296,7 +307,7 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
   TupleType *&type = ctxt.getImpl().emptyTupleType;
   if (type)
     return type;
-  return type = new (ctxt) TupleType(&ctxt, {});
+  return type = new (ctxt, AllocatorKind::Permanent) TupleType(&ctxt, {});
 }
 
 LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
@@ -306,5 +317,6 @@ LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
   if (type)
     return type;
   ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt) LValueType(canTypeCtxt, objectType);
+  return type = new (ctxt, AllocatorKind::Permanent)
+             LValueType(canTypeCtxt, objectType);
 }
