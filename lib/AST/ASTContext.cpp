@@ -39,7 +39,12 @@ struct ASTContext::Impl {
   llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
   /// Unsigned Integer Types
   llvm::DenseMap<IntegerWidth, IntegerType *> unsignedIntegerTypes;
-  /// Floating-point types
+  /// Reference types
+  llvm::DenseMap<size_t, ReferenceType *> referenceTypes;
+  /// Maybe types
+  llvm::DenseMap<TypeBase *, MaybeType *> maybeTypes;
+  /// LValue types
+  llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
 
   /// The target triple
   llvm::Triple targetTriple;
@@ -156,22 +161,6 @@ llvm::Triple ASTContext::getTargetTriple() const {
   return getImpl().targetTriple;
 }
 
-//===- Types --------------------------------------------------------------===//
-
-IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
-  IntegerType *&ty = ctxt.getImpl().signedIntegerTypes[width];
-  if (ty)
-    return ty;
-  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ true));
-}
-
-IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
-  IntegerType *&ty = ctxt.getImpl().unsignedIntegerTypes[width];
-  if (ty)
-    return ty;
-  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ false));
-}
-
 Type ASTContext::getBuiltinType(StringRef str) {
   // All builtin types currently begin with 'i', 'u'  or 'f'.
   char first = str[0];
@@ -208,4 +197,46 @@ Type ASTContext::getBuiltinType(StringRef str) {
         .Default(nullptr);
   }
   return nullptr;
+}
+
+//===- Types --------------------------------------------------------------===//
+
+IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
+  IntegerType *&ty = ctxt.getImpl().signedIntegerTypes[width];
+  if (ty)
+    return ty;
+  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ true));
+}
+
+IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
+  IntegerType *&ty = ctxt.getImpl().unsignedIntegerTypes[width];
+  if (ty)
+    return ty;
+  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ false));
+}
+
+ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
+  assert(pointee && "pointee can't be null!");
+  size_t hash = llvm::hash_combine(pointee.getPtr(), isMut);
+  ReferenceType *&type = ctxt.getImpl().referenceTypes[hash];
+  if (type)
+    return type;
+  ASTContext *canTypeCtxt = pointee->isCanonical() ? &ctxt : nullptr;
+  return type = new (ctxt) ReferenceType(canTypeCtxt, pointee, isMut);
+}
+
+MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
+  MaybeType *&type = ctxt.getImpl().maybeTypes[valueType.getPtr()];
+  if (type)
+    return type;
+  ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
+  return type = new (ctxt) MaybeType(canTypeCtxt, valueType);
+}
+
+LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
+  LValueType *&type = ctxt.getImpl().lvalueTypes[objectType.getPtr()];
+  if (type)
+    return type;
+  ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
+  return type = new (ctxt) LValueType(canTypeCtxt, objectType);
 }

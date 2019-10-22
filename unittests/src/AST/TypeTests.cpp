@@ -18,9 +18,9 @@ namespace {
 class TypeTest : public ::testing::Test {
 protected:
   TypeTest() {
-    intType = IntegerType::getSigned(*ctxt, IntegerWidth::fixed(16));
-    floatType = FloatType::get(*ctxt, FloatKind::IEEE32);
-    voidType = ctxt->voidType;
+    refType = ReferenceType::get(*ctxt, ctxt->i32Type, false);
+    maybeType = MaybeType::get(*ctxt, ctxt->i32Type);
+    lvalueType = LValueType::get(*ctxt, ctxt->i32Type);
   }
 
   IntegerType *getSignedInt(IntegerWidth width) {
@@ -31,9 +31,9 @@ protected:
     return IntegerType::getUnsigned(*ctxt, width);
   }
 
-  Type intType;
-  Type floatType;
-  Type voidType;
+  Type refType;
+  Type maybeType;
+  Type lvalueType;
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr};
@@ -42,16 +42,22 @@ protected:
 } // namespace
 
 TEST_F(TypeTest, rtti) {
-  EXPECT_TRUE(intType->is<IntegerType>());
-  EXPECT_TRUE(intType->is<BuiltinType>());
+  EXPECT_TRUE(ctxt->i32Type->is<IntegerType>());
+  EXPECT_TRUE(ctxt->i32Type->is<BuiltinType>());
 
-  EXPECT_TRUE(floatType->is<FloatType>());
-  EXPECT_TRUE(floatType->is<BuiltinType>());
+  EXPECT_TRUE(ctxt->f32Type->is<FloatType>());
+  EXPECT_TRUE(ctxt->f32Type->is<BuiltinType>());
 
-  EXPECT_TRUE(voidType->is<VoidType>());
-  EXPECT_TRUE(voidType->is<BuiltinType>());
+  EXPECT_TRUE(ctxt->voidType->is<VoidType>());
+  EXPECT_TRUE(ctxt->voidType->is<BuiltinType>());
 
   EXPECT_TRUE(ctxt->errorType->is<ErrorType>());
+
+  EXPECT_TRUE(refType->is<ReferenceType>());
+
+  EXPECT_TRUE(maybeType->is<MaybeType>());
+
+  EXPECT_TRUE(lvalueType->is<LValueType>());
 }
 
 TEST_F(TypeTest, ASTContextSingletons) {

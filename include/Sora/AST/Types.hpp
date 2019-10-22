@@ -14,6 +14,7 @@
 #include "Sora/Common/IntegerWidth.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -204,6 +205,96 @@ class VoidType final : public BuiltinType {
 public:
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Void;
+  }
+};
+
+/// Reference Type
+///
+/// Non-nullable pointer type, spelled '&T' or '&mut T'.
+///
+/// This type is canonical only if T is.
+class ReferenceType final : public TypeBase {
+  llvm::PointerIntPair<TypeBase *, 1> pointeeAndIsMut;
+
+  ReferenceType(ASTContext *canTypeCtxt, Type pointee, bool isMut)
+      : TypeBase(TypeKind::Reference, canTypeCtxt),
+        pointeeAndIsMut(pointee.getPtr(), isMut) {
+    assert(bool(canTypeCtxt) == pointee->isCanonical() &&
+           "if the type is canonical, the ASTContext* must not be null, else "
+           "it must be null.");
+  }
+
+public:
+  static ReferenceType *get(ASTContext &ctxt, Type pointee, bool isMut);
+
+  Type getPointeeType() const { return pointeeAndIsMut.getPointer(); }
+  bool isMut() const { return pointeeAndIsMut.getInt(); }
+
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Reference;
+  }
+};
+
+/// Maybe type
+///
+/// A type representing an optional value, spelled 'maybe T'
+///
+/// This type is canonical only if T is.
+class MaybeType final : public TypeBase {
+  Type valueType;
+
+  MaybeType(ASTContext *canTypeCtxt, Type valueType)
+      : TypeBase(TypeKind::Maybe, canTypeCtxt), valueType(valueType) {
+    assert(bool(canTypeCtxt) == valueType->isCanonical() &&
+           "if the type is canonical, the ASTContext* must not be null, else "
+           "it must be null.");
+  }
+
+public:
+  static MaybeType *get(ASTContext &ctxt, Type valueType);
+
+  Type getValueType() const { return valueType; }
+
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Maybe;
+  }
+};
+
+/// LValue type
+///
+/// The LValue or "left-value" (as in something that can appear to the left
+/// of an assignement) represents an handle to a physical object (something that
+/// can be written to).
+///
+/// LValues aren't really first-class types. They only exist when you access a
+/// mutable member through a mutable reference, or when you refer to a mutable
+/// variable. Example:
+///
+/// \verbatim
+///   let x = 0
+///   let mut y = 0
+///   x // has type i32
+///   y // has type LValue(i32)
+/// \endverbatim
+///
+/// This type is canonical only if T is.
+class LValueType final : public TypeBase {
+  Type objectType;
+
+  LValueType(ASTContext *canTypeCtxt, Type objectType)
+      : TypeBase(TypeKind::LValue, canTypeCtxt), objectType(objectType) {
+    assert(bool(canTypeCtxt) == objectType->isCanonical() &&
+           "if the type is canonical, the ASTContext* must not be null, else "
+           "it must be null.");
+  }
+
+public:
+  static LValueType *get(ASTContext &ctxt, Type objectType);
+
+  Type getObjectType() const { return objectType; }
+
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::LValue;
   }
 };
 
