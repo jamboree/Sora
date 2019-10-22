@@ -26,15 +26,20 @@ enum class AllocatorKind : uint8_t {
   /// The "permanent" AST allocator that holds long-lived objects such as types,
   /// resolved AST nodes, etc.
   /// This is freed when the ASTContext is deallocated.
+  /// This is the default allocator, and can be used to allocate types.
   Permanent,
   /// The AST allocator for expressions that inherit from UnresolvedExpr.
   /// This can be freed using "freeUnresolvedExprs()" once the AST has been
   /// fully typechecked.
+  /// This is the default allocator for UnresolvedExprs. This allocator can't be
+  /// used to allocate types.
   UnresolvedExpr,
   /// The Allocator used by the Typechecker. This is where TypeVariables &
   /// constraints are allocated.
   /// This allocator is not active by default, but can be used when a
   /// TypeCheckerAllocatorRAII is active.
+  /// This is allocator can be used to allocate types (usually Types containing
+  /// TypeVariables)
   TypeChecker
 };
 
