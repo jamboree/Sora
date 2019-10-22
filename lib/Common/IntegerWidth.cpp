@@ -49,7 +49,7 @@ APInt IntegerWidth::parse(StringRef str, int isNegative, unsigned radix,
     // e.g. if it returns 1111 1111 for "255", it can be interpreted as -1.
     // We must make it 0 1111 1111 for it to be properly read as 255.
     if (result.isNegative())
-      result.zext(result.getBitWidth() + 1);
+      result = result.zext(result.getBitWidth() + 1);
     assert(!result.isNegative() &&
            "Value still negative even after zero-extension");
 
