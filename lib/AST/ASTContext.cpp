@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
@@ -168,4 +169,42 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
   if (ty)
     return ty;
   return ty = (new (ctxt) IntegerType(width, /*isSigned*/ false));
+}
+
+Type ASTContext::getBuiltinType(StringRef str) {
+  // All builtin types currently begin with 'i', 'u'  or 'f'.
+  char first = str[0];
+  if (first != 'i' && first != 'u' && first != 'f')
+    return nullptr;
+
+  // They also all have a length of 2 to 3 characters.
+  if (str.size() < 2 || str.size() > 3)
+    return nullptr;
+
+  // Signed integers begin with 'i'
+  if (first == 'i') {
+    return llvm::StringSwitch<Type>(str)
+        .Case("i8", i8Type)
+        .Case("i16", i16Type)
+        .Case("i32", i32Type)
+        .Case("i64", i64Type)
+        .Default(nullptr);
+  }
+  // Unsigned integers begin with 'u'
+  if (first == 'u') {
+    return llvm::StringSwitch<Type>(str)
+        .Case("u8", u8Type)
+        .Case("u16", u16Type)
+        .Case("u32", u32Type)
+        .Case("u64", u64Type)
+        .Default(nullptr);
+  }
+  // Floats begin with 'f'
+  if (first == 'f') {
+    return llvm::StringSwitch<Type>(str)
+        .Case("f32", f32Type)
+        .Case("f64", f64Type)
+        .Default(nullptr);
+  }
+  return nullptr;
 }

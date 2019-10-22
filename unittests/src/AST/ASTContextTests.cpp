@@ -59,3 +59,29 @@ TEST_F(ASTContextTest, cleanup) {
   EXPECT_TRUE(cleanupRan) << "Cleanup did not run";
   EXPECT_TRUE(dtorRan) << "Destructor cleanup did not run";
 }
+
+TEST_F(ASTContextTest, getBuiltinType) {
+#define CHECK(STR, TY)                                                         \
+  EXPECT_EQ(ctxt->getBuiltinType(STR).getPtr(), ctxt->TY.getPtr())
+
+  CHECK("i8", i8Type);
+  CHECK("i16", i16Type);
+  CHECK("i32", i32Type);
+  CHECK("i64", i64Type);
+  CHECK("u8", u8Type);
+  CHECK("u16", u16Type);
+  CHECK("u32", u32Type);
+  CHECK("u64", u64Type);
+  CHECK("f32", f32Type);
+  CHECK("f64", f64Type);
+
+#undef CHECK
+
+  EXPECT_FALSE(ctxt->getBuiltinType("f31"));
+  EXPECT_FALSE(ctxt->getBuiltinType("f33"));
+  EXPECT_FALSE(ctxt->getBuiltinType("f8"));
+  EXPECT_FALSE(ctxt->getBuiltinType("i63"));
+  EXPECT_FALSE(ctxt->getBuiltinType("foo"));
+  EXPECT_FALSE(ctxt->getBuiltinType("i"));
+  EXPECT_FALSE(ctxt->getBuiltinType("i1"));
+}

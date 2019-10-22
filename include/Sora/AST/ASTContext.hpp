@@ -104,6 +104,10 @@ public:
   /// \returns the target triple.
   llvm::Triple getTargetTriple() const;
 
+  /// \returns the builtin type with name \p str, or null if no builtin type
+  /// with that name was found.
+  Type getBuiltinType(StringRef str);
+
   //===- Frequently Used Types --------------------------------------------===//
 
   const Type i8Type;    /// "i8"
