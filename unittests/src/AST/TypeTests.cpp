@@ -21,6 +21,7 @@ protected:
     refType = ReferenceType::get(*ctxt, ctxt->i32Type, false);
     maybeType = MaybeType::get(*ctxt, ctxt->i32Type);
     lvalueType = LValueType::get(*ctxt, ctxt->i32Type);
+    tupleType = TupleType::getEmpty(*ctxt);
   }
 
   IntegerType *getSignedInt(IntegerWidth width) {
@@ -34,6 +35,7 @@ protected:
   Type refType;
   Type maybeType;
   Type lvalueType;
+  Type tupleType;
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr};
@@ -58,6 +60,8 @@ TEST_F(TypeTest, rtti) {
   EXPECT_TRUE(maybeType->is<MaybeType>());
 
   EXPECT_TRUE(lvalueType->is<LValueType>());
+
+  EXPECT_TRUE(tupleType->is<TupleType>());
 }
 
 TEST_F(TypeTest, ASTContextSingletons) {
