@@ -73,9 +73,10 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       u32Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(32))),
       u64Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(64))),
       usizeType(IntegerType::getUnsigned(*this, getPointerWidth(*this))),
-      f32Type(new (*this) FloatType(FloatKind::IEEE32)),
-      f64Type(new (*this) FloatType(FloatKind::IEEE64)),
-      voidType(new (*this) VoidType()), errorType(new (*this) ErrorType()) {}
+      f32Type(new (*this) FloatType(*this, FloatKind::IEEE32)),
+      f64Type(new (*this) FloatType(*this, FloatKind::IEEE64)),
+      voidType(new (*this) VoidType(*this)),
+      errorType(new (*this) ErrorType(*this)) {}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
@@ -161,14 +162,14 @@ IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl().signedIntegerTypes[width];
   if (ty)
     return ty;
-  return ty = (new (ctxt) IntegerType(width, /*isSigned*/ true));
+  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ true));
 }
 
 IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl().unsignedIntegerTypes[width];
   if (ty)
     return ty;
-  return ty = (new (ctxt) IntegerType(width, /*isSigned*/ false));
+  return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ false));
 }
 
 Type ASTContext::getBuiltinType(StringRef str) {

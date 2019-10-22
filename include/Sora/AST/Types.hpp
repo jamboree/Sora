@@ -37,12 +37,13 @@ class alignas(TypeBaseAlignement) TypeBase {
   void operator delete(void *)noexcept = delete;
 
   TypeKind kind;
+  bool canonical = false;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfields.
   LLVM_PACKED(union Bits {
     Bits() : raw() {}
     // Raw bits (to zero-init the union)
-    char raw[7];
+    char raw[6];
     // IntegerType bits
     struct {
       bool isSigned;
@@ -53,11 +54,21 @@ class alignas(TypeBaseAlignement) TypeBase {
       uint8_t floatKind;
     } floatType;
   });
-  static_assert(sizeof(Bits) == 7, "Bits is too large!");
+  static_assert(sizeof(Bits) == 6, "Bits is too large!");
 
 protected:
   Bits bits;
 
+private:
+  /// This union contains the ASTContext for canonical types, and a (potentially
+  /// null (if not computed yet)) pointer to the canonical type for
+  /// non-canonical types.
+  union {
+    ASTContext *ctxt;
+    TypeBase *ptr;
+  };
+
+protected:
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
   void *operator new(size_t, void *mem) noexcept {
@@ -71,9 +82,22 @@ protected:
 
   friend ASTContext; // The ASTContext should be able to allocate types as well
 
-  TypeBase(TypeKind kind) : kind(kind) {}
+  /// \param kind the kind of type this is
+  /// \param canTypeCtxt for canonical types, the ASTContext
+  TypeBase(TypeKind kind, ASTContext *canTypeCtxt) : kind(kind), ctxt(nullptr) {
+    if (ctxt) {
+      canonical = true;
+      ctxt = canTypeCtxt;
+    }
+  }
 
 public:
+  TypeBase(const TypeBase &) = delete;
+  void operator=(const TypeBase &) = delete;
+
+  /// \returns true if this type is canonical
+  bool isCanonical() const { return canonical; }
+
   /// \returns the kind of type this is
   TypeKind getKind() const { return kind; }
 
@@ -82,13 +106,15 @@ public:
   template <typename Ty> Ty *castTo() { return cast<Ty>(this); }
 };
 
-/// TypeBase should only be one pointer in size (kind + padding bits)
-static_assert(sizeof(TypeBase) <= 8, "TypeBase is too large!");
+/// TypeBase should only be 2 pointers in size (kind + padding bits +
+/// ctxt/canonical type ptr)
+static_assert(sizeof(TypeBase) <= 16, "TypeBase is too large!");
 
 /// Common base class for builtin primitive types.
 class BuiltinType : public TypeBase {
 protected:
-  BuiltinType(TypeKind kind) : TypeBase(kind) {}
+  BuiltinType(TypeKind kind, ASTContext *canTypeCtxt)
+      : TypeBase(kind, canTypeCtxt) {}
 
 public:
   static bool classof(const TypeBase *type) {
@@ -100,9 +126,11 @@ public:
 /// Integer types
 ///
 /// Used for i8, u8, i16, u16, i32, u32, i64, u64, isize and usize.
+///
+/// This type is always canonical.
 class IntegerType final : public BuiltinType {
-  IntegerType(IntegerWidth width, bool isSigned)
-      : BuiltinType(TypeKind::Integer) {
+  IntegerType(ASTContext &ctxt, IntegerWidth width, bool isSigned)
+      : BuiltinType(TypeKind::Integer, &ctxt) {
     assert((width.isFixedWidth() || width.isPointerSized()) &&
            "Can only create fixed or pointer-sized integer types!");
     bits.integerType.width = width;
@@ -131,8 +159,11 @@ enum class FloatKind : uint8_t { IEEE32, IEEE64 };
 /// Floating-point types
 ///
 /// Used for f32 and f64.
+///
+/// This type is always canonical.
 class FloatType final : public BuiltinType {
-  FloatType(FloatKind kind) : BuiltinType(TypeKind::Float) {
+  FloatType(ASTContext &ctxt, FloatKind kind)
+      : BuiltinType(TypeKind::Float, &ctxt) {
     bits.floatType.floatKind = uint8_t(kind);
     assert(FloatKind(bits.floatType.floatKind) == kind && "bits dropped?");
   }
@@ -164,8 +195,10 @@ public:
 /// Void type
 ///
 /// Used for 'void', and also the canonical form of '()' (empty tuple type)
+///
+/// This type is always canonical.
 class VoidType final : public BuiltinType {
-  VoidType() : BuiltinType(TypeKind::Void) {}
+  VoidType(ASTContext &ctxt) : BuiltinType(TypeKind::Void, &ctxt) {}
   friend ASTContext;
 
 public:
@@ -178,8 +211,10 @@ public:
 ///
 /// The type of an expression whose type couldn't be inferred, and the type of
 /// ErrorExprs.
+///
+/// This type is always canonical.
 class ErrorType final : public TypeBase {
-  ErrorType() : TypeBase(TypeKind::Error) {}
+  ErrorType(ASTContext &ctxt) : TypeBase(TypeKind::Error, &ctxt) {}
   friend ASTContext;
 
 public:
