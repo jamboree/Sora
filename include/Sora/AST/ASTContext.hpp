@@ -108,6 +108,14 @@ public:
   /// with that name was found.
   Type getBuiltinType(StringRef str);
 
+  //===- Common Singletons ------------------------------------------------===//
+
+  /// The SourceManager that owns the source buffers that created this AST.
+  const SourceManager &srcMgr;
+
+  /// The DiagnosticEngine used to diagnose errors related to this AST.
+  DiagnosticEngine &diagEngine; 
+
   //===- Frequently Used Types --------------------------------------------===//
 
   const Type i8Type;    /// "i8"
@@ -130,11 +138,5 @@ public:
   const Type errorType; // The "error" type.
 
   //===--------------------------------------------------------------------===//
-
-  /// The SourceManager that owns the source buffers that created this AST.
-  const SourceManager &srcMgr;
-
-  /// The DiagnosticEngine used to diagnose errors related to the AST.
-  DiagnosticEngine &diagEngine;
 };
 } // namespace sora
