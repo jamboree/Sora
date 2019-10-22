@@ -43,13 +43,13 @@ protected:
 
 TEST_F(TypeTest, rtti) {
   EXPECT_TRUE(intType->is<IntegerType>());
-  EXPECT_TRUE(intType->is<PrimitiveType>());
+  EXPECT_TRUE(intType->is<BuiltinType>());
 
   EXPECT_TRUE(floatType->is<FloatType>());
-  EXPECT_TRUE(floatType->is<PrimitiveType>());
+  EXPECT_TRUE(floatType->is<BuiltinType>());
 
   EXPECT_TRUE(voidType->is<VoidType>());
-  EXPECT_TRUE(voidType->is<PrimitiveType>());
+  EXPECT_TRUE(voidType->is<BuiltinType>());
 }
 
 TEST_F(TypeTest, ASTContextSingletons) {

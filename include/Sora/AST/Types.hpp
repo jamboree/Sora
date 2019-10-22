@@ -85,24 +85,24 @@ public:
 /// TypeBase should only be one pointer in size (kind + padding bits)
 static_assert(sizeof(TypeBase) <= 8, "TypeBase is too large!");
 
-/// Common base class for primitive types.
-class PrimitiveType : public TypeBase {
+/// Common base class for builtin primitive types.
+class BuiltinType : public TypeBase {
 protected:
-  PrimitiveType(TypeKind kind) : TypeBase(kind) {}
+  BuiltinType(TypeKind kind) : TypeBase(kind) {}
 
 public:
   static bool classof(const TypeBase *type) {
-    return (type->getKind() >= TypeKind::First_Primitive) &&
-           (type->getKind() <= TypeKind::Last_Primitive);
+    return (type->getKind() >= TypeKind::First_Builtin) &&
+           (type->getKind() <= TypeKind::Last_Builtin);
   }
 };
 
 /// Integer types
 ///
 /// Used for i8, u8, i16, u16, i32, u32, i64, u64, isize and usize.
-class IntegerType final : public PrimitiveType {
+class IntegerType final : public BuiltinType {
   IntegerType(IntegerWidth width, bool isSigned)
-      : PrimitiveType(TypeKind::Integer) {
+      : BuiltinType(TypeKind::Integer) {
     assert((width.isFixedWidth() || width.isPointerSized()) &&
            "Can only create fixed or pointer-sized integer types!");
     bits.integerType.width = width;
@@ -131,8 +131,8 @@ enum class FloatKind : uint8_t { IEEE32, IEEE64 };
 /// Floating-point types
 ///
 /// Used for f32 and f64.
-class FloatType final : public PrimitiveType {
-  FloatType(FloatKind kind) : PrimitiveType(TypeKind::Float) {
+class FloatType final : public BuiltinType {
+  FloatType(FloatKind kind) : BuiltinType(TypeKind::Float) {
     bits.floatType.floatKind = uint8_t(kind);
     assert(FloatKind(bits.floatType.floatKind) == kind && "bits dropped?");
   }
@@ -164,8 +164,8 @@ public:
 /// Void type
 ///
 /// Used for 'void', and also the canonical form of '()' (empty tuple type)
-class VoidType final : public PrimitiveType {
-  VoidType() : PrimitiveType(TypeKind::Void) {}
+class VoidType final : public BuiltinType {
+  VoidType() : BuiltinType(TypeKind::Void) {}
 
   friend ASTContext;
 
