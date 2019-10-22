@@ -36,18 +36,39 @@ struct ASTContext::Impl {
   /// The set of cleanups that must be ran when the ASTContext is destroyed.
   SmallVector<std::function<void()>, 4> cleanups;
 
-  /// Signed Integer Types
-  llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
-  /// Unsigned Integer Types
-  llvm::DenseMap<IntegerWidth, IntegerType *> unsignedIntegerTypes;
-  /// Reference types
-  llvm::DenseMap<size_t, ReferenceType *> referenceTypes;
-  /// Maybe types
-  llvm::DenseMap<TypeBase *, MaybeType *> maybeTypes;
-  /// Tuple types
-  llvm::FoldingSet<TupleType> tupleTypes;
-  /// LValue types
-  llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
+  /// Contains maps to keep track of types allocated in different arenas.
+  /// There is one TypeMap per allocator, except for the UnresolvedExpr
+  /// allocator, which doesn't allocate types.
+  struct TypeMap {
+    /// Signed Integer Types
+    llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
+    /// Unsigned Integer Types
+    llvm::DenseMap<IntegerWidth, IntegerType *> unsignedIntegerTypes;
+    /// Reference types
+    llvm::DenseMap<size_t, ReferenceType *> referenceTypes;
+    /// Maybe types
+    llvm::DenseMap<TypeBase *, MaybeType *> maybeTypes;
+    /// Tuple types
+    llvm::FoldingSet<TupleType> tupleTypes;
+    /// LValue types
+    llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
+  };
+
+  /// TypeMap for the permanent allocator.
+  TypeMap permanentTypeMap;
+
+  /// \returns the TypeMap for the allocator \p kind. \p kind can't be
+  /// UnresolvedExpr!
+  TypeMap &getTypeMap(AllocatorKind kind) {
+    switch (kind) {
+    case AllocatorKind::Permanent:
+      return permanentTypeMap;
+    case AllocatorKind::UnresolvedExpr:
+      llvm_unreachable(
+          "Can't allocate types inside the UnresolvedExpr allocator!");
+    }
+    llvm_unreachable("Unknown AllocatorKind");
+  }
 
   TupleType *emptyTupleType = nullptr;
 
@@ -204,17 +225,22 @@ Type ASTContext::getBuiltinType(StringRef str) {
   return nullptr;
 }
 
-//===- Types --------------------------------------------------------------===//
+//===- Types
+//--------------------------------------------------------------===//
 
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
-  IntegerType *&ty = ctxt.getImpl().signedIntegerTypes[width];
+  IntegerType *&ty = ctxt.getImpl()
+                         .getTypeMap(AllocatorKind::Permanent)
+                         .signedIntegerTypes[width];
   if (ty)
     return ty;
   return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ true));
 }
 
 IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
-  IntegerType *&ty = ctxt.getImpl().unsignedIntegerTypes[width];
+  IntegerType *&ty = ctxt.getImpl()
+                         .getTypeMap(AllocatorKind::Permanent)
+                         .unsignedIntegerTypes[width];
   if (ty)
     return ty;
   return ty = (new (ctxt) IntegerType(ctxt, width, /*isSigned*/ false));
@@ -222,8 +248,10 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
 
 ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
   assert(pointee && "pointee can't be null!");
-  size_t hash = llvm::hash_combine(pointee.getPtr(), isMut);
-  ReferenceType *&type = ctxt.getImpl().referenceTypes[hash];
+  size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
+  ReferenceType *&type = ctxt.getImpl()
+                             .getTypeMap(AllocatorKind::Permanent)
+                             .referenceTypes[typeID];
   if (type)
     return type;
   ASTContext *canTypeCtxt = pointee->isCanonical() ? &ctxt : nullptr;
@@ -231,7 +259,9 @@ ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
 }
 
 MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
-  MaybeType *&type = ctxt.getImpl().maybeTypes[valueType.getPtr()];
+  MaybeType *&type = ctxt.getImpl()
+                         .getTypeMap(AllocatorKind::Permanent)
+                         .maybeTypes[valueType.getPtr()];
   if (type)
     return type;
   ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
@@ -244,7 +274,7 @@ Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
   void *insertPos = nullptr;
   llvm::FoldingSetNodeID id;
   Profile(id, elems);
-  auto &set = ctxt.getImpl().tupleTypes;
+  auto &set = ctxt.getImpl().getTypeMap(AllocatorKind::Permanent).tupleTypes;
 
   if (TupleType *type = set.FindNodeOrInsertPos(id, insertPos))
     return type;
@@ -270,7 +300,9 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
 }
 
 LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
-  LValueType *&type = ctxt.getImpl().lvalueTypes[objectType.getPtr()];
+  LValueType *&type = ctxt.getImpl()
+                          .getTypeMap(AllocatorKind::Permanent)
+                          .lvalueTypes[objectType.getPtr()];
   if (type)
     return type;
   ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
