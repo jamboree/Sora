@@ -26,6 +26,7 @@ ABSTRACT_TYPE(Builtin, Type)
 TYPE(Reference,	Type)
 TYPE(Maybe,     Type)
 TYPE(Tuple,		  Type)
+TYPE(Function,  Type)
 TYPE(LValue,	  Type)
 TYPE(Error,		  Type)
 
