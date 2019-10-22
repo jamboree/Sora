@@ -10,6 +10,7 @@
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -28,6 +29,8 @@ struct ASTContext::Impl {
   llvm::BumpPtrAllocator permanentAllocator;
   /// for AllocatorKind::UnresolvedExpr
   llvm::BumpPtrAllocator unresolvedExprAllocator;
+  /// for AllocatorKind::TypeChecker
+  llvm::BumpPtrAllocator typecheckerAllocator;
 
   /// The Identifier Table
   /// FIXME: Is using MallocAllocator the right thing to do here?
@@ -36,9 +39,9 @@ struct ASTContext::Impl {
   /// The set of cleanups that must be ran when the ASTContext is destroyed.
   SmallVector<std::function<void()>, 4> cleanups;
 
-  /// Contains maps to keep track of types allocated in different arenas.
+  /// Contains maps to keep track of types allocated in different allocators.
   /// There is one TypeMap per allocator, except for the UnresolvedExpr
-  /// allocator, which doesn't allocate types.
+  /// allocator, which can't allocate types.
   struct TypeMap {
     /// Signed Integer Types
     llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
@@ -57,12 +60,36 @@ struct ASTContext::Impl {
   /// TypeMap for the permanent allocator.
   TypeMap permanentTypeMap;
 
+  /// (Optional) TypeMap for the TypeChecker allocator.
+  Optional<TypeMap> typecheckerTypeMap;
+
+  void initTypeCheckerAllocator() {
+    assert(!isTypeCheckerAllocatorActive() &&
+           "TypeChecker allocator already active");
+    typecheckerTypeMap.emplace();
+  }
+
+  void destroyTypeCheckerAllocator() {
+    assert(isTypeCheckerAllocatorActive() &&
+           "TypeChecker allocator not active");
+    typecheckerAllocator.Reset();
+    typecheckerTypeMap.reset();
+  }
+
+  bool isTypeCheckerAllocatorActive() const {
+    return typecheckerTypeMap.hasValue();
+  }
+
   /// \returns the TypeMap for the allocator \p kind. \p kind can't be
   /// UnresolvedExpr!
   TypeMap &getTypeMap(AllocatorKind kind) {
     switch (kind) {
     case AllocatorKind::Permanent:
       return permanentTypeMap;
+    case AllocatorKind::TypeChecker:
+      assert(typecheckerTypeMap.hasValue() &&
+             "TypeChecker allocator isn't active!");
+      return *typecheckerTypeMap;
     case AllocatorKind::UnresolvedExpr:
       llvm_unreachable(
           "Can't allocate types inside the UnresolvedExpr allocator!");
@@ -75,6 +102,9 @@ struct ASTContext::Impl {
   /// The target triple
   llvm::Triple targetTriple;
 
+  Impl(const Impl &) = delete;
+  Impl &operator=(const Impl &) = delete;
+
   Impl() {
     // Init with a default target triple
     targetTriple = llvm::Triple(llvm::sys::getDefaultTargetTriple());
@@ -82,10 +112,22 @@ struct ASTContext::Impl {
 
   /// Custom destructor that runs the cleanups.
   ~Impl() {
+    assert(
+        !isTypeCheckerAllocatorActive() &&
+        "Destroying the ASTContext while the TypeChecker allocator is active!");
     for (auto &cleanup : cleanups)
       cleanup();
   }
 };
+
+TypeCheckerAllocatorRAII::TypeCheckerAllocatorRAII(ASTContext &ctxt)
+    : ctxt(ctxt) {
+  ctxt.getImpl().initTypeCheckerAllocator();
+}
+
+TypeCheckerAllocatorRAII::~TypeCheckerAllocatorRAII() {
+  ctxt.getImpl().destroyTypeCheckerAllocator();
+}
 
 static IntegerWidth getPointerWidth(ASTContext &ctxt) {
   return IntegerWidth::pointer(ctxt.getTargetTriple());
@@ -162,8 +204,16 @@ llvm::BumpPtrAllocator &ASTContext::getAllocator(AllocatorKind kind) {
     return getImpl().permanentAllocator;
   case AllocatorKind::UnresolvedExpr:
     return getImpl().unresolvedExprAllocator;
+  case AllocatorKind::TypeChecker:
+    assert(getImpl().isTypeCheckerAllocatorActive() &&
+           "TypeChecker allocator not active!");
+    return getImpl().typecheckerAllocator;
   }
   llvm_unreachable("unknown allocator kind");
+}
+
+bool ASTContext::isTypeCheckerAllocatorActive() const {
+  return getImpl().isTypeCheckerAllocatorActive();
 }
 
 void ASTContext::freeUnresolvedExprs() {

@@ -29,9 +29,28 @@ enum class AllocatorKind : uint8_t {
   Permanent,
   /// The AST allocator for expressions that inherit from UnresolvedExpr.
   /// This can be freed using "freeUnresolvedExprs()" once the AST has been
-  /// fully type-checked, else, it's simply freed when the ASTContext is
-  /// deallocated.
-  UnresolvedExpr
+  /// fully typechecked.
+  UnresolvedExpr,
+  /// The Allocator used by the Typechecker. This is where TypeVariables &
+  /// constraints are allocated.
+  /// This allocator is not active by default, but can be used when a
+  /// TypeCheckerAllocatorRAII is active.
+  TypeChecker
+};
+
+/// An RAII object that enables usage of the TypeChecker's allocator.
+/// Once this object is destroyed, everything within the TypeChecker allocator
+/// is freed.
+struct TypeCheckerAllocatorRAII {
+  ASTContext &ctxt;
+
+  /// This object shouldn't be copyable.
+  TypeCheckerAllocatorRAII(const TypeCheckerAllocatorRAII &) = delete;
+  TypeCheckerAllocatorRAII &
+  operator=(const TypeCheckerAllocatorRAII &) = delete;
+
+  TypeCheckerAllocatorRAII(ASTContext &ctxt);
+  ~TypeCheckerAllocatorRAII();
 };
 
 /// The ASTContext is a large object designed as the core of the AST.
@@ -80,6 +99,10 @@ public:
     return allocate(sizeof(Ty), alignof(Ty), allocator);
   }
 
+  /// \returns true if the AllocatorKind::TypeChecker allocator is active.
+  /// It is only active if there's one active TypeCheckerAllocatorRAII.
+  bool isTypeCheckerAllocatorActive() const;
+
   /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
   void freeUnresolvedExprs();
 
@@ -114,7 +137,7 @@ public:
   const SourceManager &srcMgr;
 
   /// The DiagnosticEngine used to diagnose errors related to this AST.
-  DiagnosticEngine &diagEngine; 
+  DiagnosticEngine &diagEngine;
 
   //===- Frequently Used Types --------------------------------------------===//
 
