@@ -23,7 +23,7 @@ using namespace sora;
 #include "Sora/AST/StmtNodes.def"
 
 void *Stmt::operator new(size_t size, ASTContext &ctxt, unsigned align) {
-  return ctxt.allocate(size, align, AllocatorKind::Permanent);
+  return ctxt.allocate(size, align, ArenaKind::Permanent);
 }
 
 SourceLoc Stmt::getBegLoc() const {

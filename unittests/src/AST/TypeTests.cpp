@@ -18,7 +18,7 @@ namespace {
 class TypeTest : public ::testing::Test {
 protected:
   TypeTest() {
-    typecheckAllocRAII.emplace(*ctxt);
+    tcArena.emplace(*ctxt);
 
     refType = ReferenceType::get(*ctxt, ctxt->i32Type, false);
     maybeType = MaybeType::get(*ctxt, ctxt->i32Type);
@@ -35,7 +35,7 @@ protected:
     return IntegerType::getUnsigned(*ctxt, width);
   }
 
-  Optional<TypeCheckerAllocatorRAII> typecheckAllocRAII;
+  Optional<TypeCheckerArenaRAII> tcArena;
 
   Type refType;
   Type maybeType;

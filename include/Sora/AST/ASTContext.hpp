@@ -22,40 +22,36 @@ namespace sora {
 class SourceManager;
 class DiagnosticEngine;
 
-enum class AllocatorKind : uint8_t {
-  /// The "permanent" AST allocator that holds long-lived objects such as types,
-  /// resolved AST nodes, etc.
+enum class ArenaKind : uint8_t {
+  /// The "permanent" arena that holds long-lived objects such as most
+  /// types and AST nodes.
   /// This is freed when the ASTContext is deallocated.
   /// This is the default allocator, and can be used to allocate types.
   Permanent,
-  /// The AST allocator for expressions that inherit from UnresolvedExpr.
+  /// The arena for expressions that inherit from UnresolvedExpr.
   /// This can be freed using "freeUnresolvedExprs()" once the AST has been
   /// fully typechecked.
-  /// This is the default allocator for UnresolvedExprs. This allocator can't be
-  /// used to allocate types.
+  /// This arena is never used to allocate types;
   UnresolvedExpr,
-  /// The Allocator used by the Typechecker. This is where TypeVariables &
-  /// constraints are allocated.
-  /// This allocator is not active by default, but can be used when a
-  /// TypeCheckerAllocatorRAII is active.
-  /// This is allocator can be used to allocate types (usually Types containing
-  /// TypeVariables)
+  /// The arena used by the Typechecker. This is where TypeVariables, types
+  /// containing TypeVariables & constraints are allocated.
+  /// This allocator is not active by default. It can ONLY be used when a
+  /// TypeCheckerArenaRAII is active.
   TypeChecker
 };
 
-/// An RAII object that enables usage of the TypeChecker's allocator.
-/// Once this object is destroyed, everything within the TypeChecker allocator
-/// is freed.
-struct TypeCheckerAllocatorRAII {
+/// An RAII object that enables usage of the TypeChecker's arena.
+/// Once this object is destroyed, everything within the TypeChecker arena is
+/// freed.
+struct TypeCheckerArenaRAII {
   ASTContext &ctxt;
 
   /// This object shouldn't be copyable.
-  TypeCheckerAllocatorRAII(const TypeCheckerAllocatorRAII &) = delete;
-  TypeCheckerAllocatorRAII &
-  operator=(const TypeCheckerAllocatorRAII &) = delete;
+  TypeCheckerArenaRAII(const TypeCheckerArenaRAII &) = delete;
+  TypeCheckerArenaRAII &operator=(const TypeCheckerArenaRAII &) = delete;
 
-  TypeCheckerAllocatorRAII(ASTContext &ctxt);
-  ~TypeCheckerAllocatorRAII();
+  TypeCheckerArenaRAII(ASTContext &ctxt);
+  ~TypeCheckerArenaRAII();
 };
 
 /// The ASTContext is a large object designed as the core of the AST.
@@ -70,8 +66,7 @@ class ASTContext final {
 
   ASTContext(const SourceManager &srcMgr, DiagnosticEngine &diagEngine);
 
-  llvm::BumpPtrAllocator &
-  getAllocator(AllocatorKind kind = AllocatorKind::Permanent);
+  llvm::BumpPtrAllocator &getArena(ArenaKind kind = ArenaKind::Permanent);
 
 public:
   /// Members for ASTContext.cpp
@@ -91,8 +86,8 @@ public:
   /// \returns a pointer to the allocated memory (aligned to \p align) or
   /// nullptr if \p size == 0
   void *allocate(size_t size, size_t align,
-                 AllocatorKind allocator = AllocatorKind::Permanent) {
-    return size ? getAllocator(allocator).Allocate(size, align) : nullptr;
+                 ArenaKind allocator = ArenaKind::Permanent) {
+    return size ? getArena(allocator).Allocate(size, align) : nullptr;
   }
 
   /// Allocates enough memory for an object \p Ty.
@@ -100,13 +95,13 @@ public:
   /// This does not construct the object. You'll need to use placement
   /// new for that.
   template <typename Ty>
-  void *allocate(AllocatorKind allocator = AllocatorKind::Permanent) {
+  void *allocate(ArenaKind allocator = ArenaKind::Permanent) {
     return allocate(sizeof(Ty), alignof(Ty), allocator);
   }
 
-  /// \returns true if the AllocatorKind::TypeChecker allocator is active.
-  /// It is only active if there's one active TypeCheckerAllocatorRAII.
-  bool isTypeCheckerAllocatorActive() const;
+  /// \returns true if the ArenaKind::TypeChecker allocator is active.
+  /// It is only active if there's one active TypeCheckerArenaRAII.
+  bool hasTypeCheckerArena() const;
 
   /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
   void freeUnresolvedExprs();

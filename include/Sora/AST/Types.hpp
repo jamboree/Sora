@@ -25,7 +25,7 @@ struct fltSemantics;
 
 namespace sora {
 class ASTContext;
-enum class AllocatorKind : uint8_t;
+enum class ArenaKind : uint8_t;
 
 /// Kinds of Types
 enum class TypeKind : uint8_t {
@@ -147,7 +147,7 @@ protected:
   }
 
   // Also allow allocation of Types using the ASTContext.
-  void *operator new(size_t size, ASTContext &ctxt, AllocatorKind allocator,
+  void *operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
                      unsigned align = alignof(TypeBase));
 
   friend ASTContext; // The ASTContext should be able to allocate types as well

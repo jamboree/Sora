@@ -36,7 +36,7 @@ SourceLoc TypeLoc::getEndLoc() const {
 }
 
 void *TypeBase::operator new(size_t size, ASTContext &ctxt,
-                             AllocatorKind allocator, unsigned align) {
+                             ArenaKind allocator, unsigned align) {
   return ctxt.allocate(size, align, allocator);
 }
 

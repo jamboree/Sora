@@ -32,10 +32,12 @@ struct ASTContext::Impl {
   /// The set of cleanups that must be ran when the ASTContext is destroyed.
   SmallVector<std::function<void()>, 4> cleanups;
 
-  /// Contains maps to keep track of types allocated in different allocators.
-  /// There is one TypeMap per allocator, except for the UnresolvedExpr
-  /// allocator, which can't allocate types.
-  struct TypeMap {
+  /// An arena that doesn't support type allocation.
+  using Arena = llvm::BumpPtrAllocator;
+  /// An Arena that supports type allocation
+  struct TypeArena : public Arena {
+    TypeArena() = default;
+
     /// Signed Integer Types
     llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
     /// Unsigned Integer Types
@@ -50,54 +52,41 @@ struct ASTContext::Impl {
     llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
   };
 
-  /// The TypeChecker's allocator + TypeMap combo.
-  struct TypeCheckerAllocator {
-    llvm::BumpPtrAllocator allocator;
-    TypeMap typeMap;
-  };
+  /// for ArenaKind::Permanent
+  TypeArena permanentArena;
+  ///   The empty TupleType is only allocated once inside the Permanent Arena.
+  TupleType *emptyTupleType = nullptr;
+  /// for ArenaKind::UnresolvedExpr
+  llvm::BumpPtrAllocator unresolvedExprArena;
+  /// for ArenaKind::TypeChecker
+  Optional<TypeArena> typeCheckerArena;
 
-  /// for AllocatorKind::Permanent
-  llvm::BumpPtrAllocator permanentAllocator;
-  TypeMap permanentTypeMap;
-  /// for AllocatorKind::UnresolvedExpr
-  llvm::BumpPtrAllocator unresolvedExprAllocator;
-  /// for AllocatorKind::TypeChecker
-  llvm::Optional<TypeCheckerAllocator> typeCheckerAllocator;
-
-  void initTypeCheckerAllocator() {
-    assert(!isTypeCheckerAllocatorActive() &&
-           "TypeChecker allocator already active");
-    typeCheckerAllocator.emplace();
+  void initTypeCheckerArena() {
+    assert(!hasTypeCheckerArena() && "TypeChecker arena already active");
+    typeCheckerArena.emplace();
   }
 
-  void destroyTypeCheckerAllocator() {
-    assert(isTypeCheckerAllocatorActive() &&
-           "TypeChecker allocator not active");
-    typeCheckerAllocator.reset();
+  void destroyTypeCheckerArena() {
+    assert(hasTypeCheckerArena() && "TypeChecker arena not active");
+    typeCheckerArena.reset();
   }
 
-  bool isTypeCheckerAllocatorActive() const {
-    return typeCheckerAllocator.hasValue();
-  }
+  bool hasTypeCheckerArena() const { return typeCheckerArena.hasValue(); }
 
-  /// \returns the TypeMap for the allocator \p kind. \p kind can't be
-  /// UnresolvedExpr!
-  TypeMap &getTypeMap(AllocatorKind kind) {
+  /// \returns the TypeArena for \p kind. \p kind can't be UnresolvedExpr!
+  TypeArena &getTypeArena(ArenaKind kind) {
     switch (kind) {
-    case AllocatorKind::Permanent:
-      return permanentTypeMap;
-    case AllocatorKind::TypeChecker:
-      assert(isTypeCheckerAllocatorActive() &&
-             "TypeChecker allocator isn't active!");
-      return typeCheckerAllocator->typeMap;
-    case AllocatorKind::UnresolvedExpr:
+    case ArenaKind::Permanent:
+      return permanentArena;
+    case ArenaKind::TypeChecker:
+      assert(hasTypeCheckerArena() && "TypeChecker allocator isn't active!");
+      return *typeCheckerArena;
+    case ArenaKind::UnresolvedExpr:
       llvm_unreachable(
           "Can't allocate types inside the UnresolvedExpr allocator!");
     }
-    llvm_unreachable("Unknown AllocatorKind");
+    llvm_unreachable("Unknown ArenaKind");
   }
-
-  TupleType *emptyTupleType = nullptr;
 
   /// The target triple
   llvm::Triple targetTriple;
@@ -113,20 +102,19 @@ struct ASTContext::Impl {
   /// Custom destructor that runs the cleanups.
   ~Impl() {
     assert(
-        !isTypeCheckerAllocatorActive() &&
+        !hasTypeCheckerArena() &&
         "Destroying the ASTContext while the TypeChecker allocator is active!");
     for (auto &cleanup : cleanups)
       cleanup();
   }
 };
 
-TypeCheckerAllocatorRAII::TypeCheckerAllocatorRAII(ASTContext &ctxt)
-    : ctxt(ctxt) {
-  ctxt.getImpl().initTypeCheckerAllocator();
+TypeCheckerArenaRAII::TypeCheckerArenaRAII(ASTContext &ctxt) : ctxt(ctxt) {
+  ctxt.getImpl().initTypeCheckerArena();
 }
 
-TypeCheckerAllocatorRAII::~TypeCheckerAllocatorRAII() {
-  ctxt.getImpl().destroyTypeCheckerAllocator();
+TypeCheckerArenaRAII::~TypeCheckerArenaRAII() {
+  ctxt.getImpl().destroyTypeCheckerArena();
 }
 
 static IntegerWidth getPointerWidth(ASTContext &ctxt) {
@@ -146,12 +134,12 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       u32Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(32))),
       u64Type(IntegerType::getUnsigned(*this, IntegerWidth::fixed(64))),
       usizeType(IntegerType::getUnsigned(*this, getPointerWidth(*this))),
-      f32Type(new (*this, AllocatorKind::Permanent)
+      f32Type(new (*this, ArenaKind::Permanent)
                   FloatType(*this, FloatKind::IEEE32)),
-      f64Type(new (*this, AllocatorKind::Permanent)
+      f64Type(new (*this, ArenaKind::Permanent)
                   FloatType(*this, FloatKind::IEEE64)),
-      voidType(new (*this, AllocatorKind::Permanent) VoidType(*this)),
-      errorType(new (*this, AllocatorKind::Permanent) ErrorType(*this)) {}
+      voidType(new (*this, ArenaKind::Permanent) VoidType(*this)),
+      errorType(new (*this, ArenaKind::Permanent) ErrorType(*this)) {}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
@@ -198,26 +186,25 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
 
 ASTContext::~ASTContext() { getImpl().~Impl(); }
 
-llvm::BumpPtrAllocator &ASTContext::getAllocator(AllocatorKind kind) {
+llvm::BumpPtrAllocator &ASTContext::getArena(ArenaKind kind) {
   switch (kind) {
-  case AllocatorKind::Permanent:
-    return getImpl().permanentAllocator;
-  case AllocatorKind::UnresolvedExpr:
-    return getImpl().unresolvedExprAllocator;
-  case AllocatorKind::TypeChecker:
-    assert(getImpl().isTypeCheckerAllocatorActive() &&
-           "TypeChecker allocator not active!");
-    return getImpl().typeCheckerAllocator->allocator;
+  case ArenaKind::Permanent:
+    return getImpl().permanentArena;
+  case ArenaKind::UnresolvedExpr:
+    return getImpl().unresolvedExprArena;
+  case ArenaKind::TypeChecker:
+    assert(getImpl().hasTypeCheckerArena() && "TypeChecker arena not active!");
+    return *getImpl().typeCheckerArena;
   }
   llvm_unreachable("unknown allocator kind");
 }
 
-bool ASTContext::isTypeCheckerAllocatorActive() const {
-  return getImpl().isTypeCheckerAllocatorActive();
+bool ASTContext::hasTypeCheckerArena() const {
+  return getImpl().hasTypeCheckerArena();
 }
 
 void ASTContext::freeUnresolvedExprs() {
-  getImpl().unresolvedExprAllocator.Reset();
+  getImpl().unresolvedExprArena.Reset();
 }
 
 void ASTContext::addCleanup(std::function<void()> cleanup) {
@@ -279,30 +266,29 @@ Type ASTContext::getBuiltinType(StringRef str) {
 
 //===- Types --------------------------------------------------------------===//
 
-/// \returns The AllocatorKind to use for a type using \p properties.
-static AllocatorKind getAllocator(TypeProperties properties) {
-  return (properties & TypeProperties::hasTypeVariable)
-             ? AllocatorKind::TypeChecker
-             : AllocatorKind::Permanent;
+/// \returns The ArenaKind to use for a type using \p properties.
+static ArenaKind getArena(TypeProperties properties) {
+  return (properties & TypeProperties::hasTypeVariable) ? ArenaKind::TypeChecker
+                                                        : ArenaKind::Permanent;
 }
 
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
-                         .getTypeMap(AllocatorKind::Permanent)
+                         .getTypeArena(ArenaKind::Permanent)
                          .signedIntegerTypes[width];
   if (ty)
     return ty;
-  return ty = (new (ctxt, AllocatorKind::Permanent)
+  return ty = (new (ctxt, ArenaKind::Permanent)
                    IntegerType(ctxt, width, /*isSigned*/ true));
 }
 
 IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
-                         .getTypeMap(AllocatorKind::Permanent)
+                         .getTypeArena(ArenaKind::Permanent)
                          .unsignedIntegerTypes[width];
   if (ty)
     return ty;
-  return ty = (new (ctxt, AllocatorKind::Permanent)
+  return ty = (new (ctxt, ArenaKind::Permanent)
                    IntegerType(ctxt, width, /*isSigned*/ false));
 }
 
@@ -311,28 +297,28 @@ ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
   size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
 
   auto props = pointee->getTypeProperties();
-  auto allocator = getAllocator(props);
+  auto arena = getArena(props);
 
   ReferenceType *&type =
-      ctxt.getImpl().getTypeMap(allocator).referenceTypes[typeID];
+      ctxt.getImpl().getTypeArena(arena).referenceTypes[typeID];
   if (type)
     return type;
   ASTContext *canTypeCtxt = pointee->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, allocator)
+  return type = new (ctxt, arena)
              ReferenceType(props, canTypeCtxt, pointee, isMut);
 }
 
 MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
   auto props = valueType->getTypeProperties();
-  auto allocator = getAllocator(props);
+  auto arena = getArena(props);
 
   MaybeType *&type =
-      ctxt.getImpl().getTypeMap(allocator).maybeTypes[valueType.getPtr()];
+      ctxt.getImpl().getTypeArena(arena).maybeTypes[valueType.getPtr()];
 
   if (type)
     return type;
   ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, allocator) MaybeType(props, canTypeCtxt, valueType);
+  return type = new (ctxt, arena) MaybeType(props, canTypeCtxt, valueType);
 }
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
@@ -349,20 +335,19 @@ Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
     props |= elem->getTypeProperties();
   }
 
-  auto allocator = getAllocator(props);
-
+  auto &typeArena = ctxt.getImpl().getTypeArena(getArena(props));
   void *insertPos = nullptr;
   llvm::FoldingSetNodeID id;
   Profile(id, elems);
-  auto &set = ctxt.getImpl().getTypeMap(allocator).tupleTypes;
+  auto &set = typeArena.tupleTypes;
 
   if (TupleType *type = set.FindNodeOrInsertPos(id, insertPos))
     return type;
 
   ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
 
-  void *mem = ctxt.allocate(totalSizeToAlloc<Type>(elems.size()),
-                            alignof(TupleType), allocator);
+  void *mem = typeArena.Allocate(totalSizeToAlloc<Type>(elems.size()),
+                                 alignof(TupleType));
   TupleType *type = new (mem) TupleType(props, canTypeCtxt, elems);
   set.InsertNode(type, insertPos);
   return type;
@@ -372,23 +357,22 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
   TupleType *&type = ctxt.getImpl().emptyTupleType;
   if (type)
     return type;
-  return type = new (ctxt, AllocatorKind::Permanent)
+  return type = new (ctxt, ArenaKind::Permanent)
              TupleType(TypeProperties(), &ctxt, {});
 }
 
 LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
   auto props = objectType->getTypeProperties();
-  auto allocator = getAllocator(props);
+  auto arena = getArena(props);
 
   LValueType *&type =
-      ctxt.getImpl().getTypeMap(allocator).lvalueTypes[objectType.getPtr()];
+      ctxt.getImpl().getTypeArena(arena).lvalueTypes[objectType.getPtr()];
   if (type)
     return type;
   ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
-  return type =
-             new (ctxt, allocator) LValueType(props, canTypeCtxt, objectType);
+  return type = new (ctxt, arena) LValueType(props, canTypeCtxt, objectType);
 }
 
 TypeVariableType *TypeVariableType::create(ASTContext &ctxt, unsigned id) {
-  return new (ctxt, AllocatorKind::TypeChecker) TypeVariableType(ctxt, id);
+  return new (ctxt, ArenaKind::TypeChecker) TypeVariableType(ctxt, id);
 }
