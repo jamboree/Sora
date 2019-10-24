@@ -25,13 +25,6 @@ using namespace sora;
 
 /// the ASTContext's implementation
 struct ASTContext::Impl {
-  /// for AllocatorKind::Permanent
-  llvm::BumpPtrAllocator permanentAllocator;
-  /// for AllocatorKind::UnresolvedExpr
-  llvm::BumpPtrAllocator unresolvedExprAllocator;
-  /// for AllocatorKind::TypeChecker
-  llvm::BumpPtrAllocator typecheckerAllocator;
-
   /// The Identifier Table
   /// FIXME: Is using MallocAllocator the right thing to do here?
   llvm::StringSet<> identifierTable;
@@ -57,27 +50,34 @@ struct ASTContext::Impl {
     llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
   };
 
-  /// TypeMap for the permanent allocator.
-  TypeMap permanentTypeMap;
+  /// The TypeChecker's allocator + TypeMap combo.
+  struct TypeCheckerAllocator {
+    llvm::BumpPtrAllocator allocator;
+    TypeMap typeMap;
+  };
 
-  /// (Optional) TypeMap for the TypeChecker allocator.
-  Optional<TypeMap> typecheckerTypeMap;
+  /// for AllocatorKind::Permanent
+  llvm::BumpPtrAllocator permanentAllocator;
+  TypeMap permanentTypeMap;
+  /// for AllocatorKind::UnresolvedExpr
+  llvm::BumpPtrAllocator unresolvedExprAllocator;
+  /// for AllocatorKind::TypeChecker
+  llvm::Optional<TypeCheckerAllocator> typeCheckerAllocator;
 
   void initTypeCheckerAllocator() {
     assert(!isTypeCheckerAllocatorActive() &&
            "TypeChecker allocator already active");
-    typecheckerTypeMap.emplace();
+    typeCheckerAllocator.emplace();
   }
 
   void destroyTypeCheckerAllocator() {
     assert(isTypeCheckerAllocatorActive() &&
            "TypeChecker allocator not active");
-    typecheckerAllocator.Reset();
-    typecheckerTypeMap.reset();
+    typeCheckerAllocator.reset();
   }
 
   bool isTypeCheckerAllocatorActive() const {
-    return typecheckerTypeMap.hasValue();
+    return typeCheckerAllocator.hasValue();
   }
 
   /// \returns the TypeMap for the allocator \p kind. \p kind can't be
@@ -87,9 +87,9 @@ struct ASTContext::Impl {
     case AllocatorKind::Permanent:
       return permanentTypeMap;
     case AllocatorKind::TypeChecker:
-      assert(typecheckerTypeMap.hasValue() &&
+      assert(isTypeCheckerAllocatorActive() &&
              "TypeChecker allocator isn't active!");
-      return *typecheckerTypeMap;
+      return typeCheckerAllocator->typeMap;
     case AllocatorKind::UnresolvedExpr:
       llvm_unreachable(
           "Can't allocate types inside the UnresolvedExpr allocator!");
@@ -207,7 +207,7 @@ llvm::BumpPtrAllocator &ASTContext::getAllocator(AllocatorKind kind) {
   case AllocatorKind::TypeChecker:
     assert(getImpl().isTypeCheckerAllocatorActive() &&
            "TypeChecker allocator not active!");
-    return getImpl().typecheckerAllocator;
+    return getImpl().typeCheckerAllocator->allocator;
   }
   llvm_unreachable("unknown allocator kind");
 }
@@ -278,12 +278,13 @@ Type ASTContext::getBuiltinType(StringRef str) {
 }
 
 //===- Types --------------------------------------------------------------===//
-// TODO: Once TypeProperties is implemented, use a function
-// 'getTypeAllocator(TypeProperties)' to determine the AllocatorKind in which a
-// type should be allocated, instead of always using ::Permanent.
-// This is needed because the AllocatorKind depends on if the type contains
-// TypeVariableTypes or not (if it does, it must be allocated in the Typechecker
-// allocator)
+
+/// \returns The AllocatorKind to use for a type using \p properties.
+static AllocatorKind getAllocator(TypeProperties properties) {
+  return (properties & TypeProperties::hasTypeVariable)
+             ? AllocatorKind::TypeChecker
+             : AllocatorKind::Permanent;
+}
 
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
@@ -308,47 +309,61 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
 ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
   assert(pointee && "pointee can't be null!");
   size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
-  ReferenceType *&type = ctxt.getImpl()
-                             .getTypeMap(AllocatorKind::Permanent)
-                             .referenceTypes[typeID];
+
+  auto props = pointee->getTypeProperties();
+  auto allocator = getAllocator(props);
+
+  ReferenceType *&type =
+      ctxt.getImpl().getTypeMap(allocator).referenceTypes[typeID];
   if (type)
     return type;
   ASTContext *canTypeCtxt = pointee->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, AllocatorKind::Permanent)
-             ReferenceType(canTypeCtxt, pointee, isMut);
+  return type = new (ctxt, allocator)
+             ReferenceType(props, canTypeCtxt, pointee, isMut);
 }
 
 MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
-  MaybeType *&type = ctxt.getImpl()
-                         .getTypeMap(AllocatorKind::Permanent)
-                         .maybeTypes[valueType.getPtr()];
+  auto props = valueType->getTypeProperties();
+  auto allocator = getAllocator(props);
+
+  MaybeType *&type =
+      ctxt.getImpl().getTypeMap(allocator).maybeTypes[valueType.getPtr()];
+
   if (type)
     return type;
   ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, AllocatorKind::Permanent)
-             MaybeType(canTypeCtxt, valueType);
+  return type = new (ctxt, allocator) MaybeType(props, canTypeCtxt, valueType);
 }
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
   if (elems.empty())
     return getEmpty(ctxt);
+
+  // Determine the properties of this type
+  bool isCanonical = false;
+  TypeProperties props;
+  for (Type elem : elems) {
+    // Only canonical if all elements are
+    isCanonical &= elem->isCanonical();
+    // Properties are or'd together
+    props |= elem->getTypeProperties();
+  }
+
+  auto allocator = getAllocator(props);
+
   void *insertPos = nullptr;
   llvm::FoldingSetNodeID id;
   Profile(id, elems);
-  auto &set = ctxt.getImpl().getTypeMap(AllocatorKind::Permanent).tupleTypes;
+  auto &set = ctxt.getImpl().getTypeMap(allocator).tupleTypes;
 
   if (TupleType *type = set.FindNodeOrInsertPos(id, insertPos))
     return type;
 
-  // Only canonical if all elements are.
-  bool isCanonical = false;
-  for (Type elem : elems)
-    isCanonical &= elem->isCanonical();
   ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
 
   void *mem = ctxt.allocate(totalSizeToAlloc<Type>(elems.size()),
-                            alignof(TupleType), AllocatorKind::Permanent);
-  TupleType *type = new (mem) TupleType(canTypeCtxt, elems);
+                            alignof(TupleType), allocator);
+  TupleType *type = new (mem) TupleType(props, canTypeCtxt, elems);
   set.InsertNode(type, insertPos);
   return type;
 }
@@ -357,16 +372,23 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
   TupleType *&type = ctxt.getImpl().emptyTupleType;
   if (type)
     return type;
-  return type = new (ctxt, AllocatorKind::Permanent) TupleType(&ctxt, {});
+  return type = new (ctxt, AllocatorKind::Permanent)
+             TupleType(TypeProperties(), &ctxt, {});
 }
 
 LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
-  LValueType *&type = ctxt.getImpl()
-                          .getTypeMap(AllocatorKind::Permanent)
-                          .lvalueTypes[objectType.getPtr()];
+  auto props = objectType->getTypeProperties();
+  auto allocator = getAllocator(props);
+
+  LValueType *&type =
+      ctxt.getImpl().getTypeMap(allocator).lvalueTypes[objectType.getPtr()];
   if (type)
     return type;
   ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, AllocatorKind::Permanent)
-             LValueType(canTypeCtxt, objectType);
+  return type =
+             new (ctxt, allocator) LValueType(props, canTypeCtxt, objectType);
+}
+
+TypeVariableType *TypeVariableType::create(ASTContext &ctxt, unsigned id) {
+  return new (ctxt, AllocatorKind::TypeChecker) TypeVariableType(ctxt, id);
 }

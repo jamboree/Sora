@@ -18,10 +18,13 @@ namespace {
 class TypeTest : public ::testing::Test {
 protected:
   TypeTest() {
+    typecheckAllocRAII.emplace(*ctxt);
+
     refType = ReferenceType::get(*ctxt, ctxt->i32Type, false);
     maybeType = MaybeType::get(*ctxt, ctxt->i32Type);
     lvalueType = LValueType::get(*ctxt, ctxt->i32Type);
     tupleType = TupleType::getEmpty(*ctxt);
+    tyVarType = TypeVariableType::create(*ctxt, 0);
   }
 
   IntegerType *getSignedInt(IntegerWidth width) {
@@ -32,10 +35,13 @@ protected:
     return IntegerType::getUnsigned(*ctxt, width);
   }
 
+  Optional<TypeCheckerAllocatorRAII> typecheckAllocRAII;
+
   Type refType;
   Type maybeType;
   Type lvalueType;
   Type tupleType;
+  Type tyVarType;
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr};
@@ -62,6 +68,46 @@ TEST_F(TypeTest, rtti) {
   EXPECT_TRUE(lvalueType->is<LValueType>());
 
   EXPECT_TRUE(tupleType->is<TupleType>());
+
+  EXPECT_TRUE(tyVarType->is<TypeVariableType>());
+}
+
+TEST_F(TypeTest, typeProperties) {
+  EXPECT_FALSE(ctxt->errorType->hasTypeVariable());
+  EXPECT_TRUE(ctxt->errorType->hasErrorType());
+
+  EXPECT_TRUE(tyVarType->hasTypeVariable());
+  EXPECT_FALSE(tyVarType->hasErrorType());
+}
+
+// Test for the propagation of TypeProperties on "simple" wrapper types:
+// LValueType, ReferenceType, MaybeType
+TEST_F(TypeTest, simpleTypePropertiesPropagation) {
+#define CHECK(CREATE, HAS_TV, HAS_ERR)                                         \
+  {                                                                            \
+    auto ty = CREATE;                                                          \
+    EXPECT_EQ(ty->hasTypeVariable(), HAS_TV);                                  \
+    EXPECT_EQ(ty->hasErrorType(), HAS_ERR);                                    \
+  }
+
+  // i32: no properties set
+  CHECK(LValueType::get(*ctxt, ctxt->i32Type), false, false);
+  CHECK(ReferenceType::get(*ctxt, ctxt->i32Type, false), false, false);
+  CHECK(MaybeType::get(*ctxt, ctxt->i32Type), false, false);
+
+  // TypeVariableType
+  ASSERT_TRUE(tyVarType->hasTypeVariable());
+  CHECK(LValueType::get(*ctxt, tyVarType), true, false);
+  CHECK(ReferenceType::get(*ctxt, tyVarType, false), true, false);
+  CHECK(MaybeType::get(*ctxt, tyVarType), true, false);
+
+  // ErrorType
+  ASSERT_TRUE(ctxt->errorType->hasErrorType());
+  CHECK(LValueType::get(*ctxt, ctxt->errorType), false, true);
+  CHECK(ReferenceType::get(*ctxt, ctxt->errorType, false), false, true);
+  CHECK(MaybeType::get(*ctxt, ctxt->errorType), false, true);
+
+#undef CHECK
 }
 
 TEST_F(TypeTest, ASTContextSingletons) {

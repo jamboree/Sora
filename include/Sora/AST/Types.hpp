@@ -31,8 +31,58 @@ enum class AllocatorKind : uint8_t;
 enum class TypeKind : uint8_t {
 #define TYPE(KIND, PARENT) KIND,
 #define TYPE_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
+#define LAST_TYPE(KIND) Last_Type = KIND
 #include "Sora/AST/TypeNodes.def"
 };
+
+/// Small (byte-sized) class to represent & manipulate type properties.
+class TypeProperties {
+  static TypeProperties merge() { return {}; }
+
+  using value_t = uint8_t;
+  value_t value;
+
+public:
+  enum Property : value_t { hasErrorType = 0x01, hasTypeVariable = 0x02 };
+
+  TypeProperties() : TypeProperties(0) {}
+  /*implicit*/ TypeProperties(value_t value) : value(value) {}
+
+  TypeProperties operator&(TypeProperties other) const {
+    return value_t(value & other.value);
+  }
+
+  TypeProperties operator&(value_t other) const {
+    return value_t(value & other);
+  }
+
+  TypeProperties operator|(TypeProperties other) const {
+    return value_t(value | other.value);
+  }
+
+  TypeProperties operator|(value_t other) const {
+    return value_t(value | other);
+  }
+
+  TypeProperties &operator|=(TypeProperties other) {
+    value |= other.value;
+    return *this;
+  }
+
+  TypeProperties &operator|=(value_t other) {
+    value |= other;
+    return *this;
+  }
+
+  /// \returns true if at least one property of this type is activated.
+  /// Useful in conjunction with & to check for the presence of properties
+  /// \verbatim
+  ///   if(type->getTypeProperties() & TypeProperties::foo) { /* ... */ }
+  /// \endverbatim
+  operator bool() const { return value; }
+};
+
+static_assert(sizeof(TypeProperties) == 1, "TypeProperties is too large!");
 
 /// Common base class for Types.
 class alignas(TypeBaseAlignement) TypeBase {
@@ -40,8 +90,6 @@ class alignas(TypeBaseAlignement) TypeBase {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  TypeKind kind;
-  bool canonical = false;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfields.
   LLVM_PACKED(union Bits {
@@ -61,8 +109,22 @@ class alignas(TypeBaseAlignement) TypeBase {
     struct {
       unsigned numElems;
     } tupleType;
+    /// TypeVariableType bits
+    struct {
+      unsigned id;
+    } typeVariableType;
   });
   static_assert(sizeof(Bits) == 6, "Bits is too large!");
+
+  //===--- 8 Bits ---===//
+  const TypeKind kind : 7;
+  bool canonical : 1;
+  static_assert(
+      unsigned(TypeKind::Last_Type) <= (1 << 7),
+      "Not enough bits allocated to the TypeKind to represent every Type Kind");
+  //===--------------===//
+
+  TypeProperties properties;
 
 protected:
   Bits bits;
@@ -92,7 +154,8 @@ protected:
 
   /// \param kind the kind of type this is
   /// \param canTypeCtxt for canonical types, the ASTContext
-  TypeBase(TypeKind kind, ASTContext *canTypeCtxt) : kind(kind), ctxt(nullptr) {
+  TypeBase(TypeKind kind, TypeProperties properties, ASTContext *canTypeCtxt)
+      : kind(kind), canonical(false), properties(properties), ctxt(nullptr) {
     if (ctxt) {
       canonical = true;
       ctxt = canTypeCtxt;
@@ -103,7 +166,20 @@ public:
   TypeBase(const TypeBase &) = delete;
   void operator=(const TypeBase &) = delete;
 
-  /// \returns true if this type is canonical
+  /// \returns whether this type contains an ErrorType
+  bool hasErrorType() const {
+    return properties & TypeProperties::hasErrorType;
+  }
+
+  /// \returns whether this type contains a TypeVariable
+  bool hasTypeVariable() const {
+    return properties & TypeProperties::hasTypeVariable;
+  }
+
+  /// \returns the TypeProperties of this type
+  TypeProperties getTypeProperties() const { return properties; }
+
+  /// \returns whether this type is canonical
   bool isCanonical() const { return canonical; }
 
   /// \returns the kind of type this is
@@ -121,8 +197,9 @@ static_assert(sizeof(TypeBase) <= 16, "TypeBase is too large!");
 /// Common base class for builtin primitive types.
 class BuiltinType : public TypeBase {
 protected:
+  /// BuiltinTypes have no particular properties.
   BuiltinType(TypeKind kind, ASTContext *canTypeCtxt)
-      : TypeBase(kind, canTypeCtxt) {}
+      : TypeBase(kind, TypeProperties(), canTypeCtxt) {}
 
 public:
   static bool classof(const TypeBase *type) {
@@ -223,8 +300,9 @@ public:
 class ReferenceType final : public TypeBase {
   llvm::PointerIntPair<TypeBase *, 1> pointeeAndIsMut;
 
-  ReferenceType(ASTContext *canTypeCtxt, Type pointee, bool isMut)
-      : TypeBase(TypeKind::Reference, canTypeCtxt),
+  ReferenceType(TypeProperties props, ASTContext *canTypeCtxt, Type pointee,
+                bool isMut)
+      : TypeBase(TypeKind::Reference, props, canTypeCtxt),
         pointeeAndIsMut(pointee.getPtr(), isMut) {
     assert(bool(canTypeCtxt) == pointee->isCanonical() &&
            "if the type is canonical, the ASTContext* must not be null, else "
@@ -250,8 +328,8 @@ public:
 class MaybeType final : public TypeBase {
   Type valueType;
 
-  MaybeType(ASTContext *canTypeCtxt, Type valueType)
-      : TypeBase(TypeKind::Maybe, canTypeCtxt), valueType(valueType) {
+  MaybeType(TypeProperties prop, ASTContext *canTypeCtxt, Type valueType)
+      : TypeBase(TypeKind::Maybe, prop, canTypeCtxt), valueType(valueType) {
     assert(bool(canTypeCtxt) == valueType->isCanonical() &&
            "if the type is canonical, the ASTContext* must not be null, else "
            "it must be null.");
@@ -279,8 +357,9 @@ class TupleType final : public TypeBase,
                         private llvm::TrailingObjects<TupleType, Type> {
   friend llvm::TrailingObjects<TupleType, Type>;
 
-  TupleType(ASTContext *canTypeCtxt, ArrayRef<Type> elements)
-      : TypeBase(TypeKind::Tuple, canTypeCtxt) {
+  TupleType(TypeProperties prop, ASTContext *canTypeCtxt,
+            ArrayRef<Type> elements)
+      : TypeBase(TypeKind::Tuple, prop, canTypeCtxt) {
     unsigned numElems = elements.size();
     assert(numElems >= 2 || (numElems == 0 && canTypeCtxt));
     bits.tupleType.numElems = numElems;
@@ -330,8 +409,8 @@ public:
 class LValueType final : public TypeBase {
   Type objectType;
 
-  LValueType(ASTContext *canTypeCtxt, Type objectType)
-      : TypeBase(TypeKind::LValue, canTypeCtxt), objectType(objectType) {
+  LValueType(TypeProperties prop, ASTContext *canTypeCtxt, Type objectType)
+      : TypeBase(TypeKind::LValue, prop, canTypeCtxt), objectType(objectType) {
     assert(bool(canTypeCtxt) == objectType->isCanonical() &&
            "if the type is canonical, the ASTContext* must not be null, else "
            "it must be null.");
@@ -354,12 +433,37 @@ public:
 ///
 /// This type is always canonical.
 class ErrorType final : public TypeBase {
-  ErrorType(ASTContext &ctxt) : TypeBase(TypeKind::Error, &ctxt) {}
+  ErrorType(ASTContext &ctxt)
+      : TypeBase(TypeKind::Error, TypeProperties::hasErrorType, &ctxt) {}
   friend ASTContext;
 
 public:
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Error;
+  }
+};
+
+/// Type Variable Type
+///
+/// Used by the typechecker. This type is never unique, and is always allocated
+/// in the ASTContext's TypeChecker allocator.
+///
+/// This type is always canonical.
+class TypeVariableType final : public TypeBase {
+  TypeVariableType(ASTContext &ctxt, unsigned id)
+      : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, &ctxt) {
+    bits.typeVariableType.id = id;
+  }
+
+  friend ASTContext;
+
+public:
+  static TypeVariableType *create(ASTContext &ctxt, unsigned id);
+
+  unsigned getID() const { return bits.typeVariableType.id; }
+
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::TypeVariable;
   }
 };
 } // namespace sora

@@ -17,6 +17,10 @@
 # define TYPE_RANGE(NAME, FIRST, LAST)
 #endif
 
+#ifndef LAST_TYPE
+# define LAST_TYPE(KIND)
+#endif
+
 //===----------------------------------------------------------------------===//
 ABSTRACT_TYPE(Builtin, Type)
   TYPE(Integer,   BuiltinType)
@@ -29,9 +33,13 @@ TYPE(Tuple,     Type)
 TYPE(Function,  Type)
 TYPE(LValue,    Type)
 TYPE(Error,     Type)
+TYPE(TypeVariable, Type)
+
+LAST_TYPE(TypeVariable)
 
 //===----------------------------------------------------------------------===//
 
 #undef TYPE
 #undef ABSTRACT_TYPE
 #undef TYPE_RANGE
+#undef LAST_TYPE
