@@ -1,16 +1,16 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func cond() {
-  // CHECK: ConditionalExpr type=<null type> questionLoc=line:8:5 colonLoc=line:8:9
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:8:3 str='0' rawValue=0
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:8:7 str='0' rawValue=0
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:8:11 str='0' rawValue=0
+  // CHECK: ConditionalExpr type=<null_type> questionLoc=line:8:5 colonLoc=line:8:9
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:8:3 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:8:7 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:8:11 str='0' rawValue=0
   0 ? 0 : 0
-  // CHECK: ConditionalExpr type=<null type> questionLoc=line:15:5 colonLoc=line:15:13
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:15:3 str='0' rawValue=0
-  // CHECK-NEXT: BinaryExpr type=<null type> = (Assign) opLoc=line:15:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null type> ident=a loc=line:15:7
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null type> ident=b loc=line:15:11
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:15:15 str='0' rawValue=0
+  // CHECK: ConditionalExpr type=<null_type> questionLoc=line:15:5 colonLoc=line:15:13
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:15:3 str='0' rawValue=0
+  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:15:9
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> ident=a loc=line:15:7
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> ident=b loc=line:15:11
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:15:15 str='0' rawValue=0
   0 ? a = b : 0
 }

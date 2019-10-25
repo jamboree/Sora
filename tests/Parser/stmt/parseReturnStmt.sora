@@ -4,7 +4,7 @@ func correct() {
   // CHECK: ReturnStmt loc=line:5:3
   return
   // CHECK: ReturnStmt loc=line:8:3
-  // CHECK-NEXT: TupleExpr type=<null type> numElements=0 lParenLoc=line:8:10 rParenLoc=line:8:11
+  // CHECK-NEXT: TupleExpr type=<null_type> numElements=0 lParenLoc=line:8:10 rParenLoc=line:8:11
   return ()
   // CHECK: ReturnStmt loc=line:13:3
   // CHECK-NEXT: BinaryExpr

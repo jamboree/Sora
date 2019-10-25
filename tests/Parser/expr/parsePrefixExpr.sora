@@ -1,32 +1,32 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func foo() {
-  // CHECK: UnaryExpr type=<null type> + (Plus) opLoc=line:6:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:6:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:6:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:6:4 str='0' rawValue=0
   +0
-  // CHECK: UnaryExpr type=<null type> + (Plus) opLoc=line:10:3
-  // CHECK-NEXT: UnaryExpr type=<null type> + (Plus) opLoc=line:10:4
-  // CHECK-NEXT:  IntegerLiteralExpr type=<null type> loc=line:10:5 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:10:3
+  // CHECK-NEXT: UnaryExpr type=<null_type> + (Plus) opLoc=line:10:4
+  // CHECK-NEXT:  IntegerLiteralExpr type=<null_type> loc=line:10:5 str='0' rawValue=0
   ++0
-  // CHECK: UnaryExpr type=<null type> + (Plus) opLoc=line:15:3
-  // CHECK-NEXT: UnaryExpr type=<null type> + (Plus) opLoc=line:15:4
-  // CHECK-NEXT:  UnaryExpr type=<null type> + (Plus) opLoc=line:15:5
-  // CHECK-NEXT:   IntegerLiteralExpr type=<null type> loc=line:15:6 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:15:3
+  // CHECK-NEXT: UnaryExpr type=<null_type> + (Plus) opLoc=line:15:4
+  // CHECK-NEXT:  UnaryExpr type=<null_type> + (Plus) opLoc=line:15:5
+  // CHECK-NEXT:   IntegerLiteralExpr type=<null_type> loc=line:15:6 str='0' rawValue=0
   +++0
-  // CHECK: UnaryExpr type=<null type> - (Minus) opLoc=line:18:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:18:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> - (Minus) opLoc=line:18:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:18:4 str='0' rawValue=0
   -0
-  // CHECK: UnaryExpr type=<null type> ! (LNot) opLoc=line:21:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:21:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> ! (LNot) opLoc=line:21:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:21:4 str='0' rawValue=0
   !0
-  // CHECK: UnaryExpr type=<null type> ~ (Not) opLoc=line:24:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:24:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> ~ (Not) opLoc=line:24:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:24:4 str='0' rawValue=0
   ~0
-  // CHECK: UnaryExpr type=<null type> * (Deref) opLoc=line:27:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:27:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> * (Deref) opLoc=line:27:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:27:4 str='0' rawValue=0
   *0
-  // CHECK: UnaryExpr type=<null type> & (AddressOf) opLoc=line:30:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null type> loc=line:30:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> & (AddressOf) opLoc=line:30:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:30:4 str='0' rawValue=0
   &0
 }
 
