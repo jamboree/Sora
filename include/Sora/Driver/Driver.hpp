@@ -31,7 +31,7 @@ class SourceFile;
 /// (simply because it's not needed)
 class CompilerInstance {
   friend class Driver;
-  CompilerInstance() : diagEng(srcMgr) {
+  CompilerInstance() : diagEng(srcMgr), debug_os(llvm::outs()) {
     diagEng.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
   }
   CompilerInstance(const CompilerInstance &) = delete;
@@ -57,7 +57,10 @@ public:
     bool parseOnly = false;
     /// Whether verify mode is enabled.
     /// Honored by run()
-    bool verifyModeEnabled = true;
+    bool verifyModeEnabled = false;
+    /// Whether we should regularly print the memory usage of the ASTContext &
+    /// other datastructures.
+    bool printMemUsage = false;
   } options;
 
   /// Handles command-line options
@@ -122,6 +125,13 @@ private:
   SmallVector<BufferID, 1> inputBuffers;
 
   SourceFile *createSourceFile(BufferID buffer);
+
+  /// The output stream used to print debug message/statistics.
+  /// Usually llvm::outs();
+  raw_ostream &debug_os;
+
+  /// Prints the memory usage of the ASTContext after \p step to debug_os.
+  void printASTContextMemoryUsage(Step step) const;
 
   /// Performs the parsing step on \p file
   /// \returns true if parsing was successful, false otherwise.

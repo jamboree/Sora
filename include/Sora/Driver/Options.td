@@ -15,3 +15,7 @@ def parse_only : Flag<["-"], "parse-only">,
 // Diagnostic Verification
 def verify : Flag<["-"], "verify">,
   HelpText<"Enables diagnostic verification">;
+
+// Debugging/Others
+def print_mem_usage : Flag<["-"], "print-memory-usage">,
+  HelpText<"Regularly print the memory usage of various compiler datastructures">;

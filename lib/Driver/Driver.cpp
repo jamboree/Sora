@@ -71,6 +71,7 @@ void CompilerInstance::handleOptions(InputArgList &argList) {
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
   options.parseOnly = argList.hasArg(opt::OPT_parse_only);
   options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
+  options.printMemUsage = argList.hasArg(opt::OPT_print_mem_usage);
 }
 
 bool CompilerInstance::loadInputs(llvm::opt::InputArgList &argList) {
@@ -105,6 +106,7 @@ void CompilerInstance::dump(raw_ostream &out) const {
   DUMP_BOOL(options.dumpParse);
   DUMP_BOOL(options.parseOnly);
   DUMP_BOOL(options.verifyModeEnabled);
+  DUMP_BOOL(options.printMemUsage);
 #undef DUMP_BOOL
 }
 
@@ -212,11 +214,29 @@ SourceFile *CompilerInstance::createSourceFile(BufferID buffer) {
   return SourceFile::create(*astContext, buffer, nullptr);
 }
 
+void CompilerInstance::printASTContextMemoryUsage(Step step) const {
+  debug_os << "ASTContext memory usage after ";
+  switch (step) {
+  case Step::Parsing:
+    debug_os << "parsing";
+    break;
+  case Step::Sema:
+    debug_os << "semantic analysis";
+    break;
+  }
+  debug_os << ": ";
+  llvm::write_integer(debug_os, astContext->getTotalMemoryUsed(), 0,
+                      llvm::IntegerStyle::Number);
+  debug_os << " bytes\n";
+}
+
 bool CompilerInstance::doParsing(SourceFile &file) {
   assert(astContext && "No ASTContext?");
   Parser parser(*astContext, file);
   parser.parseSourceFile();
   if (options.dumpParse)
     file.dump(llvm::outs());
+  if (options.printMemUsage)
+    printASTContextMemoryUsage(Step::Parsing);
   return true;
 }
