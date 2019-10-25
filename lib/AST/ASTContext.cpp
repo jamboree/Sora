@@ -63,6 +63,8 @@ struct ASTContext::Impl {
     llvm::DenseMap<TypeBase *, MaybeType *> maybeTypes;
     /// Tuple types
     llvm::FoldingSet<TupleType> tupleTypes;
+    /// Function types
+    llvm::FoldingSet<FunctionType> functionTypes;
     /// LValue types
     llvm::DenseMap<TypeBase *, LValueType *> lvalueTypes;
   };
@@ -327,8 +329,7 @@ Type ASTContext::getBuiltinType(StringRef str) {
   return nullptr;
 }
 
-//===- Types
-//--------------------------------------------------------------===//
+//===- Types --------------------------------------------------------------===//
 
 /// \returns The ArenaKind to use for a type using \p properties.
 static ArenaKind getArena(TypeProperties properties) {
@@ -358,8 +359,8 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
 
 ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
   assert(pointee && "pointee can't be null!");
-  size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
 
+  size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
   auto props = pointee->getTypeProperties();
   auto arena = getArena(props);
 
@@ -373,6 +374,8 @@ ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
 }
 
 MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
+  assert(valueType && "value type is null");
+
   auto props = valueType->getTypeProperties();
   auto arena = getArena(props);
 
@@ -388,11 +391,14 @@ MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
   if (elems.empty())
     return getEmpty(ctxt);
+  if (elems.size() == 1)
+    return elems[0];
 
   // Determine the properties of this type
   bool isCanonical = false;
   TypeProperties props;
   for (Type elem : elems) {
+    assert(elem && "elem is null");
     // Only canonical if all elements are
     isCanonical &= elem->isCanonical();
     // Properties are or'd together
@@ -426,6 +432,7 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
 }
 
 LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
+  assert(objectType && "object type is null");
   auto props = objectType->getTypeProperties();
   auto arena = getArena(props);
 
@@ -435,6 +442,39 @@ LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
     return type;
   ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
   return type = new (ctxt, arena) LValueType(props, canTypeCtxt, objectType);
+}
+
+FunctionType *FunctionType::get(ASTContext &ctxt, ArrayRef<Type> args,
+                                Type rtr) {
+
+  // Determine the properties of this type
+  bool isCanonical = false;
+  assert(rtr && "return type is null");
+  TypeProperties props = rtr->getTypeProperties();
+  for (Type arg : args) {
+    assert(arg && "arg type is null");
+    // Only canonical if all args + return type are
+    isCanonical &= arg->isCanonical();
+    // Properties are or'd together
+    props |= arg->getTypeProperties();
+  }
+
+  auto &typeArena = ctxt.getImpl().getTypeArena(getArena(props));
+  void *insertPos = nullptr;
+  llvm::FoldingSetNodeID id;
+  Profile(id, args, rtr);
+  auto &set = typeArena.functionTypes;
+
+  if (FunctionType *type = set.FindNodeOrInsertPos(id, insertPos))
+    return type;
+
+  ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
+
+  void *mem = typeArena.Allocate(totalSizeToAlloc<Type>(args.size()),
+                                 alignof(FunctionType));
+  FunctionType *type = new (mem) FunctionType(props, canTypeCtxt, args, rtr);
+  set.InsertNode(type, insertPos);
+  return type;
 }
 
 TypeVariableType *TypeVariableType::create(ASTContext &ctxt, unsigned id) {

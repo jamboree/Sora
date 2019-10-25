@@ -113,6 +113,10 @@ class alignas(TypeBaseAlignement) TypeBase {
     struct {
       unsigned id;
     } typeVariableType;
+    /// FunctionType bits
+    struct {
+      unsigned numArgs;
+    } functionType;
   });
   static_assert(sizeof(Bits) == 6, "Bits is too large!");
 
@@ -369,7 +373,8 @@ class TupleType final : public TypeBase,
 
 public:
   /// \returns the uniqued tuple type type for \p elems. If \p elems has a
-  /// single element, returns it instead.
+  /// single element, returns it instead. This is done to avoid creation of a
+  /// single-element tuple type, as it's not a type you can write in Sora.
   static Type get(ASTContext &ctxt, ArrayRef<Type> elems);
 
   /// \returns the empty tuple type.
@@ -385,6 +390,48 @@ public:
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Tuple;
+  }
+};
+
+/// Function Type
+///
+/// The type of a function when referenced inside an expression.
+///
+/// This class directly stores the argument types as trailing objects instead of
+/// relying on something like TupleType because it facilitates canonicalization;
+///
+/// This type is canonical only if the arguments and return type are.
+class FunctionType final : public TypeBase,
+                           private llvm::TrailingObjects<FunctionType, Type>,
+                           public llvm::FoldingSetNode {
+  friend llvm::TrailingObjects<FunctionType, Type>;
+
+  FunctionType(TypeProperties properties, ASTContext *canTypeCtxt,
+               ArrayRef<Type> args, Type rtr)
+      : TypeBase(TypeKind::Function, properties, canTypeCtxt), rtr(rtr) {
+    bits.functionType.numArgs = args.size();
+    std::uninitialized_copy(args.begin(), args.end(),
+                            getTrailingObjects<Type>());
+  }
+
+  Type rtr;
+
+public:
+  static FunctionType *get(ASTContext &ctxt, ArrayRef<Type> args, Type rtr);
+
+  unsigned getNumArgs() const { return bits.functionType.numArgs; }
+  ArrayRef<Type> getArgs() const {
+    return {getTrailingObjects<Type>(), getNumArgs()};
+  }
+
+  Type getReturnType() const { return rtr; }
+
+  void Profile(llvm::FoldingSetNodeID &id) { Profile(id, getArgs(), rtr); }
+  static void Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> args,
+                      Type rtr);
+
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Function;
   }
 };
 
@@ -451,7 +498,8 @@ public:
 /// This type is always canonical.
 class TypeVariableType final : public TypeBase {
   TypeVariableType(ASTContext &ctxt, unsigned id)
-      : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, &ctxt) {
+      : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable,
+                 &ctxt) {
     bits.typeVariableType.id = id;
   }
 

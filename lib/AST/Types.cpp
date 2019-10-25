@@ -35,8 +35,8 @@ SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
 }
 
-void *TypeBase::operator new(size_t size, ASTContext &ctxt,
-                             ArenaKind allocator, unsigned align) {
+void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
+                             unsigned align) {
   return ctxt.allocate(size, align, allocator);
 }
 
@@ -64,4 +64,11 @@ void TupleType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements) {
   id.AddInteger(elements.size());
   for (Type type : elements)
     id.AddPointer(type.getPtr());
+}
+
+void FunctionType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> args,
+                           Type rtr) {
+  for (auto arg : args)
+    id.AddPointer(arg.getPtr());
+  id.AddPointer(rtr.getPtr());
 }

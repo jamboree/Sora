@@ -25,6 +25,7 @@ protected:
     lvalueType = LValueType::get(*ctxt, ctxt->i32Type);
     tupleType = TupleType::getEmpty(*ctxt);
     tyVarType = TypeVariableType::create(*ctxt, 0);
+    fnType = FunctionType::get(*ctxt, {}, refType);
   }
 
   IntegerType *getSignedInt(IntegerWidth width) {
@@ -42,6 +43,7 @@ protected:
   Type lvalueType;
   Type tupleType;
   Type tyVarType;
+  Type fnType;
 
   SourceManager srcMgr;
   DiagnosticEngine diagEng{srcMgr};
@@ -70,6 +72,8 @@ TEST_F(TypeTest, rtti) {
   EXPECT_TRUE(tupleType->is<TupleType>());
 
   EXPECT_TRUE(tyVarType->is<TypeVariableType>());
+
+  EXPECT_TRUE(fnType->is<FunctionType>());
 }
 
 TEST_F(TypeTest, typeProperties) {
@@ -78,6 +82,15 @@ TEST_F(TypeTest, typeProperties) {
 
   EXPECT_TRUE(tyVarType->hasTypeVariable());
   EXPECT_FALSE(tyVarType->hasErrorType());
+}
+
+TEST_F(TypeTest, TupleType) {
+  Type i32 = ctxt->i32Type;
+  Type emptyTuple = TupleType::getEmpty(*ctxt);
+  EXPECT_EQ(TupleType::get(*ctxt, {}).getPtr(), emptyTuple.getPtr());
+  EXPECT_EQ(TupleType::get(*ctxt, {i32}).getPtr(), i32.getPtr());
+  EXPECT_EQ(TupleType::get(*ctxt, {i32, i32}).getPtr(),
+            TupleType::get(*ctxt, {i32, i32}).getPtr());
 }
 
 // Test for the propagation of TypeProperties on "simple" wrapper types:
