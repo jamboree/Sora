@@ -12,8 +12,17 @@
 #include "Sora/AST/TypeVisitor.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 using namespace sora;
+
+/// Check that all types are trivially destructible. This is needed
+/// because, as they are allocated in the ASTContext's arenas, their destructors
+/// are never called.
+#define TYPE(ID, PARENT)                                                       \
+  static_assert(std::is_trivially_destructible<ID##Type>::value,               \
+                #ID "Type is not trivially destructible.");
+#include "Sora/AST/TypeNodes.def"
 
 //===- TypePrinter --------------------------------------------------------===//
 
@@ -184,7 +193,7 @@ CanType TypeBase::getCanonicalType() {
     TupleType *type = cast<TupleType>(this);
     // The canonical version of '()' is 'void'.
     if (type->isEmpty()) {
-      result = getASTContext().voidType;
+      result = ctxt.voidType;
       break;
     }
     assert(type->getNumElements() != 1 &&
@@ -195,7 +204,7 @@ CanType TypeBase::getCanonicalType() {
     for (Type elem : type->getElements())
       elems.push_back(elem->getCanonicalType());
     // Create the canonical type
-    result = TupleType::get(getASTContext(), elems);
+    result = TupleType::get(ctxt, elems);
     break;
   }
   case TypeKind::Function: {
