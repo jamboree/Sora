@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TrailingObjects.h"
 
@@ -122,7 +123,7 @@ class alignas(TypeBaseAlignement) TypeBase {
 
   //===--- 8 Bits ---===//
   const TypeKind kind : 7;
-  bool canonical : 1;
+  const bool canonical : 1;
   static_assert(
       unsigned(TypeKind::Last_Type) <= (1 << 7),
       "Not enough bits allocated to the TypeKind to represent every Type Kind");
@@ -134,13 +135,11 @@ protected:
   Bits bits;
 
 private:
-  /// This union contains the ASTContext for canonical types, and a (potentially
-  /// null (if not computed yet)) pointer to the canonical type for
-  /// non-canonical types.
-  union {
-    ASTContext *ctxt;
-    TypeBase *ptr;
-  };
+  /// This union always contains the ASTContext for canonical types.
+  /// For non-canonical types, it contains the ASTContext if the canonical type
+  /// hasn't been calculated yet, else it contains a pointer to the canonical
+  /// type.
+  llvm::PointerUnion<ASTContext *, TypeBase *> ctxtOrCanType;
 
 protected:
   // Children should be able to use placement new, as it is needed for children
@@ -156,15 +155,14 @@ protected:
 
   friend ASTContext; // The ASTContext should be able to allocate types as well
 
-  /// \param kind the kind of type this is
-  /// \param canTypeCtxt for canonical types, the ASTContext
-  TypeBase(TypeKind kind, TypeProperties properties, ASTContext *canTypeCtxt)
-      : kind(kind), canonical(false), properties(properties), ctxt(nullptr) {
-    if (ctxt) {
-      canonical = true;
-      ctxt = canTypeCtxt;
-    }
-  }
+  /// \param kind the kind of type this
+  /// \param properties the properties of this type
+  /// \param ctxt the ASTContext&
+  /// \param canonical whether this type is canonical
+  TypeBase(TypeKind kind, TypeProperties properties, ASTContext &ctxt,
+           bool canonical)
+      : kind(kind), canonical(canonical), properties(properties),
+        ctxtOrCanType(&ctxt) {}
 
 public:
   TypeBase(const TypeBase &) = delete;
@@ -178,6 +176,13 @@ public:
   /// \returns whether this type contains a TypeVariable
   bool hasTypeVariable() const {
     return properties & TypeProperties::hasTypeVariable;
+  }
+
+  /// \returns the ASTContext in which this type is allocated
+  ASTContext &getASTContext() const {
+    if (ASTContext *ctxt = ctxtOrCanType.dyn_cast<ASTContext *>())
+      return *ctxt;
+    return ctxtOrCanType.get<TypeBase *>()->getASTContext();
   }
 
   /// \returns the TypeProperties of this type
@@ -210,8 +215,8 @@ static_assert(sizeof(TypeBase) <= 16, "TypeBase is too large!");
 class BuiltinType : public TypeBase {
 protected:
   /// BuiltinTypes have no particular properties.
-  BuiltinType(TypeKind kind, ASTContext *canTypeCtxt)
-      : TypeBase(kind, TypeProperties(), canTypeCtxt) {}
+  BuiltinType(TypeKind kind, ASTContext &ctxt)
+      : TypeBase(kind, TypeProperties(), ctxt, /*isCanonical*/ true) {}
 
 public:
   static bool classof(const TypeBase *type) {
@@ -227,7 +232,7 @@ public:
 /// This type is always canonical.
 class IntegerType final : public BuiltinType {
   IntegerType(ASTContext &ctxt, IntegerWidth width, bool isSigned)
-      : BuiltinType(TypeKind::Integer, &ctxt) {
+      : BuiltinType(TypeKind::Integer, ctxt) {
     assert((width.isFixedWidth() || width.isPointerSized()) &&
            "Can only create fixed or pointer-sized integer types!");
     bits.integerType.width = width;
@@ -260,7 +265,7 @@ enum class FloatKind : uint8_t { IEEE32, IEEE64 };
 /// This type is always canonical.
 class FloatType final : public BuiltinType {
   FloatType(ASTContext &ctxt, FloatKind kind)
-      : BuiltinType(TypeKind::Float, &ctxt) {
+      : BuiltinType(TypeKind::Float, ctxt) {
     bits.floatType.floatKind = uint8_t(kind);
     assert(FloatKind(bits.floatType.floatKind) == kind && "bits dropped?");
   }
@@ -295,7 +300,7 @@ public:
 ///
 /// This type is always canonical.
 class VoidType final : public BuiltinType {
-  VoidType(ASTContext &ctxt) : BuiltinType(TypeKind::Void, &ctxt) {}
+  VoidType(ASTContext &ctxt) : BuiltinType(TypeKind::Void, ctxt) {}
   friend ASTContext;
 
 public:
@@ -312,17 +317,16 @@ public:
 class ReferenceType final : public TypeBase {
   llvm::PointerIntPair<TypeBase *, 1> pointeeAndIsMut;
 
-  ReferenceType(TypeProperties props, ASTContext *canTypeCtxt, Type pointee,
-                bool isMut)
-      : TypeBase(TypeKind::Reference, props, canTypeCtxt),
+  ReferenceType(TypeProperties props, ASTContext &ctxt, bool canonical,
+                Type pointee, bool isMut)
+      : TypeBase(TypeKind::Reference, props, ctxt, canonical),
         pointeeAndIsMut(pointee.getPtr(), isMut) {
-    assert(bool(canTypeCtxt) == pointee->isCanonical() &&
-           "if the type is canonical, the ASTContext* must not be null, else "
-           "it must be null.");
+    assert(canonical == pointee->isCanonical() &&
+           "Incorrectly marked as canonical");
   }
 
 public:
-  static ReferenceType *get(ASTContext &ctxt, Type pointee, bool isMut);
+  static ReferenceType *get(Type pointee, bool isMut);
 
   Type getPointeeType() const { return pointeeAndIsMut.getPointer(); }
   bool isMut() const { return pointeeAndIsMut.getInt(); }
@@ -340,15 +344,15 @@ public:
 class MaybeType final : public TypeBase {
   Type valueType;
 
-  MaybeType(TypeProperties prop, ASTContext *canTypeCtxt, Type valueType)
-      : TypeBase(TypeKind::Maybe, prop, canTypeCtxt), valueType(valueType) {
-    assert(bool(canTypeCtxt) == valueType->isCanonical() &&
-           "if the type is canonical, the ASTContext* must not be null, else "
-           "it must be null.");
+  MaybeType(TypeProperties prop, ASTContext &ctxt, bool canonical,
+            Type valueType)
+      : TypeBase(TypeKind::Maybe, prop, ctxt, canonical), valueType(valueType) {
+    assert(canonical == valueType->isCanonical() &&
+           "Incorrectly marked as canonical");
   }
 
 public:
-  static MaybeType *get(ASTContext &ctxt, Type valueType);
+  static MaybeType *get(Type valueType);
 
   Type getValueType() const { return valueType; }
 
@@ -369,11 +373,11 @@ class TupleType final : public TypeBase,
                         private llvm::TrailingObjects<TupleType, Type> {
   friend llvm::TrailingObjects<TupleType, Type>;
 
-  TupleType(TypeProperties prop, ASTContext *canTypeCtxt,
+  TupleType(TypeProperties prop, ASTContext &ctxt, bool canonical,
             ArrayRef<Type> elements)
-      : TypeBase(TypeKind::Tuple, prop, canTypeCtxt) {
+      : TypeBase(TypeKind::Tuple, prop, ctxt, canonical) {
     unsigned numElems = elements.size();
-    assert(numElems >= 2 || (numElems == 0 && canTypeCtxt));
+    assert(numElems >= 2 || (numElems == 0 && canonical));
     bits.tupleType.numElems = numElems;
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<Type>());
@@ -414,9 +418,9 @@ class FunctionType final : public TypeBase,
                            public llvm::FoldingSetNode {
   friend llvm::TrailingObjects<FunctionType, Type>;
 
-  FunctionType(TypeProperties properties, ASTContext *canTypeCtxt,
+  FunctionType(TypeProperties properties, ASTContext &ctxt, bool canonical,
                ArrayRef<Type> args, Type rtr)
-      : TypeBase(TypeKind::Function, properties, canTypeCtxt), rtr(rtr) {
+      : TypeBase(TypeKind::Function, properties, ctxt, canonical), rtr(rtr) {
     bits.functionType.numArgs = args.size();
     std::uninitialized_copy(args.begin(), args.end(),
                             getTrailingObjects<Type>());
@@ -425,7 +429,7 @@ class FunctionType final : public TypeBase,
   Type rtr;
 
 public:
-  static FunctionType *get(ASTContext &ctxt, ArrayRef<Type> args, Type rtr);
+  static FunctionType *get(ArrayRef<Type> args, Type rtr);
 
   unsigned getNumArgs() const { return bits.functionType.numArgs; }
   ArrayRef<Type> getArgs() const {
@@ -464,15 +468,16 @@ public:
 class LValueType final : public TypeBase {
   Type objectType;
 
-  LValueType(TypeProperties prop, ASTContext *canTypeCtxt, Type objectType)
-      : TypeBase(TypeKind::LValue, prop, canTypeCtxt), objectType(objectType) {
-    assert(bool(canTypeCtxt) == objectType->isCanonical() &&
-           "if the type is canonical, the ASTContext* must not be null, else "
-           "it must be null.");
+  LValueType(TypeProperties prop, ASTContext &ctxt, bool canonical,
+             Type objectType)
+      : TypeBase(TypeKind::LValue, prop, ctxt, canonical),
+        objectType(objectType) {
+    assert(canonical == objectType->isCanonical() &&
+           "Incorrectly marked as canonical");
   }
 
 public:
-  static LValueType *get(ASTContext &ctxt, Type objectType);
+  static LValueType *get(Type objectType);
 
   Type getObjectType() const { return objectType; }
 
@@ -489,7 +494,8 @@ public:
 /// This type is always canonical.
 class ErrorType final : public TypeBase {
   ErrorType(ASTContext &ctxt)
-      : TypeBase(TypeKind::Error, TypeProperties::hasErrorType, &ctxt) {}
+      : TypeBase(TypeKind::Error, TypeProperties::hasErrorType, ctxt,
+                 /*isCanonical*/ true) {}
   friend ASTContext;
 
 public:
@@ -506,8 +512,8 @@ public:
 /// This type is always canonical.
 class TypeVariableType final : public TypeBase {
   TypeVariableType(ASTContext &ctxt, unsigned id)
-      : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable,
-                 &ctxt) {
+      : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
+                 /*isCanonical*/ true) {
     bits.typeVariableType.id = id;
   }
 

@@ -20,12 +20,12 @@ protected:
   TypeTest() {
     tcArena.emplace(*ctxt);
 
-    refType = ReferenceType::get(*ctxt, ctxt->i32Type, false);
-    maybeType = MaybeType::get(*ctxt, ctxt->i32Type);
-    lvalueType = LValueType::get(*ctxt, ctxt->i32Type);
+    refType = ReferenceType::get(ctxt->i32Type, false);
+    maybeType = MaybeType::get(ctxt->i32Type);
+    lvalueType = LValueType::get(ctxt->i32Type);
     tupleType = TupleType::getEmpty(*ctxt);
     tyVarType = TypeVariableType::create(*ctxt, 0);
-    fnType = FunctionType::get(*ctxt, {}, refType);
+    fnType = FunctionType::get({}, refType);
   }
 
   IntegerType *getSignedInt(IntegerWidth width) {
@@ -104,21 +104,21 @@ TEST_F(TypeTest, simpleTypePropertiesPropagation) {
   }
 
   // i32: no properties set
-  CHECK(LValueType::get(*ctxt, ctxt->i32Type), false, false);
-  CHECK(ReferenceType::get(*ctxt, ctxt->i32Type, false), false, false);
-  CHECK(MaybeType::get(*ctxt, ctxt->i32Type), false, false);
+  CHECK(LValueType::get(ctxt->i32Type), false, false);
+  CHECK(ReferenceType::get(ctxt->i32Type, false), false, false);
+  CHECK(MaybeType::get(ctxt->i32Type), false, false);
 
   // TypeVariableType
   ASSERT_TRUE(tyVarType->hasTypeVariable());
-  CHECK(LValueType::get(*ctxt, tyVarType), true, false);
-  CHECK(ReferenceType::get(*ctxt, tyVarType, false), true, false);
-  CHECK(MaybeType::get(*ctxt, tyVarType), true, false);
+  CHECK(LValueType::get(tyVarType), true, false);
+  CHECK(ReferenceType::get(tyVarType, false), true, false);
+  CHECK(MaybeType::get(tyVarType), true, false);
 
   // ErrorType
   ASSERT_TRUE(ctxt->errorType->hasErrorType());
-  CHECK(LValueType::get(*ctxt, ctxt->errorType), false, true);
-  CHECK(ReferenceType::get(*ctxt, ctxt->errorType, false), false, true);
-  CHECK(MaybeType::get(*ctxt, ctxt->errorType), false, true);
+  CHECK(LValueType::get(ctxt->errorType), false, true);
+  CHECK(ReferenceType::get(ctxt->errorType, false), false, true);
+  CHECK(MaybeType::get(ctxt->errorType), false, true);
 
 #undef CHECK
 }

@@ -357,35 +357,36 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
                    IntegerType(ctxt, width, /*isSigned*/ false));
 }
 
-ReferenceType *ReferenceType::get(ASTContext &ctxt, Type pointee, bool isMut) {
+ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
   assert(pointee && "pointee can't be null!");
 
   size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
   auto props = pointee->getTypeProperties();
   auto arena = getArena(props);
+  ASTContext &ctxt = pointee->getASTContext();
 
   ReferenceType *&type =
       ctxt.getImpl().getTypeArena(arena).referenceTypes[typeID];
   if (type)
     return type;
-  ASTContext *canTypeCtxt = pointee->isCanonical() ? &ctxt : nullptr;
   return type = new (ctxt, arena)
-             ReferenceType(props, canTypeCtxt, pointee, isMut);
+             ReferenceType(props, ctxt, pointee->isCanonical(), pointee, isMut);
 }
 
-MaybeType *MaybeType::get(ASTContext &ctxt, Type valueType) {
+MaybeType *MaybeType::get(Type valueType) {
   assert(valueType && "value type is null");
 
   auto props = valueType->getTypeProperties();
   auto arena = getArena(props);
+  ASTContext &ctxt = valueType->getASTContext();
 
   MaybeType *&type =
       ctxt.getImpl().getTypeArena(arena).maybeTypes[valueType.getPtr()];
 
   if (type)
     return type;
-  ASTContext *canTypeCtxt = valueType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, arena) MaybeType(props, canTypeCtxt, valueType);
+  return type = new (ctxt, arena)
+             MaybeType(props, ctxt, valueType->isCanonical(), valueType);
 }
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
@@ -414,11 +415,9 @@ Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
   if (TupleType *type = set.FindNodeOrInsertPos(id, insertPos))
     return type;
 
-  ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
-
   void *mem = typeArena.Allocate(totalSizeToAlloc<Type>(elems.size()),
                                  alignof(TupleType));
-  TupleType *type = new (mem) TupleType(props, canTypeCtxt, elems);
+  TupleType *type = new (mem) TupleType(props, ctxt, isCanonical, elems);
   set.InsertNode(type, insertPos);
   return type;
 }
@@ -428,29 +427,31 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
   if (type)
     return type;
   return type = new (ctxt, ArenaKind::Permanent)
-             TupleType(TypeProperties(), &ctxt, {});
+             TupleType(TypeProperties(), ctxt, true, {});
 }
 
-LValueType *LValueType::get(ASTContext &ctxt, Type objectType) {
+LValueType *LValueType::get(Type objectType) {
   assert(objectType && "object type is null");
   auto props = objectType->getTypeProperties();
   auto arena = getArena(props);
+  ASTContext &ctxt = objectType->getASTContext();
 
   LValueType *&type =
       ctxt.getImpl().getTypeArena(arena).lvalueTypes[objectType.getPtr()];
   if (type)
     return type;
-  ASTContext *canTypeCtxt = objectType->isCanonical() ? &ctxt : nullptr;
-  return type = new (ctxt, arena) LValueType(props, canTypeCtxt, objectType);
+  return type = new (ctxt, arena)
+             LValueType(props, ctxt, objectType->isCanonical(), objectType);
 }
 
-FunctionType *FunctionType::get(ASTContext &ctxt, ArrayRef<Type> args,
-                                Type rtr) {
+FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
 
   // Determine the properties of this type
-  bool isCanonical = false;
   assert(rtr && "return type is null");
+  ASTContext &ctxt = rtr->getASTContext();
+
   TypeProperties props = rtr->getTypeProperties();
+  bool isCanonical = false;
   for (Type arg : args) {
     assert(arg && "arg type is null");
     // Only canonical if all args + return type are
@@ -468,11 +469,10 @@ FunctionType *FunctionType::get(ASTContext &ctxt, ArrayRef<Type> args,
   if (FunctionType *type = set.FindNodeOrInsertPos(id, insertPos))
     return type;
 
-  ASTContext *canTypeCtxt = isCanonical ? &ctxt : nullptr;
-
   void *mem = typeArena.Allocate(totalSizeToAlloc<Type>(args.size()),
                                  alignof(FunctionType));
-  FunctionType *type = new (mem) FunctionType(props, canTypeCtxt, args, rtr);
+  FunctionType *type =
+      new (mem) FunctionType(props, ctxt, isCanonical, args, rtr);
   set.InsertNode(type, insertPos);
   return type;
 }
