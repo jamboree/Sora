@@ -180,10 +180,15 @@ public:
 
   /// \returns the ASTContext in which this type is allocated
   ASTContext &getASTContext() const {
-    if (ASTContext *ctxt = ctxtOrCanType.dyn_cast<ASTContext *>())
+    if (ASTContext *ctxt = ctxtOrCanType.dyn_cast<ASTContext *>()) {
+      assert(ctxt && "ASTContext pointer is null!");
       return *ctxt;
+    }
     return ctxtOrCanType.get<TypeBase *>()->getASTContext();
   }
+
+  /// \returns the canonical version of this type
+  CanType getCanonicalType();
 
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const { return properties; }
@@ -392,6 +397,7 @@ public:
   /// \returns the empty tuple type.
   static TupleType *getEmpty(ASTContext &ctxt);
 
+  bool isEmpty() const { return getNumElements() == 0; }
   unsigned getNumElements() const { return bits.tupleType.numElems; }
   ArrayRef<Type> getElements() const {
     return {getTrailingObjects<Type>(), getNumElements()};

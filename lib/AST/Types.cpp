@@ -149,6 +149,80 @@ void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
   return ctxt.allocate(size, align, allocator);
 }
 
+CanType TypeBase::getCanonicalType() {
+  // This type is already canonical:
+  if (isCanonical())
+    return CanType(this);
+  // This type has already computed its canonical version
+  if (TypeBase *canType = ctxtOrCanType.get<TypeBase *>())
+    return CanType(canType);
+  // This type hasn't calculated its canonical version.
+  assert(ctxtOrCanType.is<ASTContext *>() && "Not TypeBase*/ASTContext*?");
+
+  Type result = nullptr;
+  ASTContext &ctxt = getASTContext();
+
+  switch (getKind()) {
+  case TypeKind::Integer:
+  case TypeKind::Float:
+  case TypeKind::Void:
+  case TypeKind::Error:
+  case TypeKind::TypeVariable:
+    llvm_unreachable("Type is already canonical!");
+  case TypeKind::Reference: {
+    ReferenceType *type = cast<ReferenceType>(this);
+    result = ReferenceType::get(type->getPointeeType()->getCanonicalType(),
+                                type->isMut());
+    break;
+  }
+  case TypeKind::Maybe: {
+    MaybeType *type = cast<MaybeType>(this);
+    result = MaybeType::get(type->getValueType()->getCanonicalType());
+    break;
+  }
+  case TypeKind::Tuple: {
+    TupleType *type = cast<TupleType>(this);
+    // The canonical version of '()' is 'void'.
+    if (type->isEmpty()) {
+      result = getASTContext().voidType;
+      break;
+    }
+    assert(type->getNumElements() != 1 &&
+           "Single element tuples shouldn't exist!");
+    // Canonicalise elements
+    SmallVector<Type, 4> elems;
+    elems.reserve(type->getNumElements());
+    for (Type elem : type->getElements())
+      elems.push_back(elem->getCanonicalType());
+    // Create the canonical type
+    result = TupleType::get(getASTContext(), elems);
+    break;
+  }
+  case TypeKind::Function: {
+    FunctionType *type = cast<FunctionType>(this);
+    // Canonicalize arguments
+    SmallVector<Type, 4> args;
+    args.reserve(type->getNumArgs());
+    for (Type arg : type->getArgs())
+      args.push_back(arg->getCanonicalType());
+    // Canonicalize return type
+    Type rtr = type->getReturnType()->getCanonicalType();
+    // Create the canonical type
+    result = FunctionType::get(args, rtr);
+    break;
+  }
+  case TypeKind::LValue: {
+    LValueType *type = cast<LValueType>(this);
+    result = LValueType::get(type->getObjectType()->getCanonicalType());
+    break;
+  }
+  }
+  // Cache the canonical type & return
+  assert(result && "result is nullptr?");
+  ctxtOrCanType = result.getPtr();
+  return CanType(result);
+}
+
 FloatType *FloatType::get(ASTContext &ctxt, FloatKind kind) {
   switch (kind) {
   case FloatKind::IEEE32:
