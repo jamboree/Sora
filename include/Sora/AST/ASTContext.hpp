@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
 #include "llvm/Support/Allocator.h"
@@ -57,7 +58,7 @@ struct TypeCheckerArenaRAII {
 /// The ASTContext is a large object designed as the core of the AST.
 /// It contains the allocator for the AST, many type singletons and references
 /// to other important structures like the DiagnosticEngine & SourceManager.
-class ASTContext final {
+class alignas(ASTContextAlignement) ASTContext final {
   /// The ASTContext's implementation
   struct Impl;
 

@@ -10,6 +10,7 @@
 #include <cstddef>
 
 namespace sora {
+class ASTContext;
 class Decl;
 class DeclContext;
 class Expr;
@@ -25,6 +26,7 @@ class TypeRepr;
   constexpr std::size_t CLASS##FreeLowBits = FREE_BITS_DESIRED##u;             \
   constexpr std::size_t CLASS##Alignement = 1u << FREE_BITS_DESIRED##u
 
+DECLARE(ASTContext, 2);
 DECLARE(Decl, 3);
 DECLARE(DeclContext, 3);
 DECLARE(Expr, 3);
@@ -49,6 +51,7 @@ template <class T> struct PointerLikeTypeTraits;
     }                                                                          \
   }
 
+LLVM_DEFINE_PLTT(ASTContext, sora::ASTContextFreeLowBits);
 LLVM_DEFINE_PLTT(Expr, sora::ExprFreeLowBits);
 LLVM_DEFINE_PLTT(Decl, sora::DeclFreeLowBits);
 LLVM_DEFINE_PLTT(LetDecl, sora::DeclFreeLowBits);
