@@ -139,7 +139,7 @@ private:
   /// For non-canonical types, it contains the ASTContext if the canonical type
   /// hasn't been calculated yet, else it contains a pointer to the canonical
   /// type.
-  llvm::PointerUnion<ASTContext *, TypeBase *> ctxtOrCanType;
+  mutable llvm::PointerUnion<ASTContext *, TypeBase *> ctxtOrCanType;
 
 protected:
   // Children should be able to use placement new, as it is needed for children
@@ -188,7 +188,7 @@ public:
   }
 
   /// \returns the canonical version of this type
-  CanType getCanonicalType();
+  CanType getCanonicalType() const;
 
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const { return properties; }
@@ -322,13 +322,10 @@ public:
 class ReferenceType final : public TypeBase {
   llvm::PointerIntPair<TypeBase *, 1> pointeeAndIsMut;
 
-  ReferenceType(TypeProperties props, ASTContext &ctxt, bool canonical,
-                Type pointee, bool isMut)
-      : TypeBase(TypeKind::Reference, props, ctxt, canonical),
-        pointeeAndIsMut(pointee.getPtr(), isMut) {
-    assert(canonical == pointee->isCanonical() &&
-           "Incorrectly marked as canonical");
-  }
+  ReferenceType(TypeProperties props, ASTContext &ctxt, Type pointee,
+                bool isMut)
+      : TypeBase(TypeKind::Reference, props, ctxt, pointee->isCanonical()),
+        pointeeAndIsMut(pointee.getPtr(), isMut) {}
 
 public:
   static ReferenceType *get(Type pointee, bool isMut);
@@ -349,12 +346,9 @@ public:
 class MaybeType final : public TypeBase {
   Type valueType;
 
-  MaybeType(TypeProperties prop, ASTContext &ctxt, bool canonical,
-            Type valueType)
-      : TypeBase(TypeKind::Maybe, prop, ctxt, canonical), valueType(valueType) {
-    assert(canonical == valueType->isCanonical() &&
-           "Incorrectly marked as canonical");
-  }
+  MaybeType(TypeProperties prop, ASTContext &ctxt, Type valueType)
+      : TypeBase(TypeKind::Maybe, prop, ctxt, valueType->isCanonical()),
+        valueType(valueType) {}
 
 public:
   static MaybeType *get(Type valueType);
@@ -386,6 +380,12 @@ class TupleType final : public TypeBase,
     bits.tupleType.numElems = numElems;
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<Type>());
+#ifndef NDEBUG
+    bool shouldBeCanonical = true;
+    for (auto elem : elements)
+      shouldBeCanonical &= elem->isCanonical();
+    assert(shouldBeCanonical == canonical && "Type canonicality is incorrect");
+#endif
   }
 
 public:
@@ -430,6 +430,12 @@ class FunctionType final : public TypeBase,
     bits.functionType.numArgs = args.size();
     std::uninitialized_copy(args.begin(), args.end(),
                             getTrailingObjects<Type>());
+#ifndef NDEBUG
+    bool shouldBeCanonical = rtr->isCanonical();
+    for (auto arg : args)
+      shouldBeCanonical &= arg->isCanonical();
+    assert(shouldBeCanonical == canonical && "Type canonicality is incorrect");
+#endif
   }
 
   Type rtr;
@@ -474,13 +480,9 @@ public:
 class LValueType final : public TypeBase {
   Type objectType;
 
-  LValueType(TypeProperties prop, ASTContext &ctxt, bool canonical,
-             Type objectType)
-      : TypeBase(TypeKind::LValue, prop, ctxt, canonical),
-        objectType(objectType) {
-    assert(canonical == objectType->isCanonical() &&
-           "Incorrectly marked as canonical");
-  }
+  LValueType(TypeProperties prop, ASTContext &ctxt, Type objectType)
+      : TypeBase(TypeKind::LValue, prop, ctxt, objectType->isCanonical()),
+        objectType(objectType) {}
 
 public:
   static LValueType *get(Type objectType);

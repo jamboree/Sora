@@ -28,6 +28,11 @@ protected:
     fnType = FunctionType::get({}, refType);
   }
 
+  ~TypeTest() {
+    tcArena.reset();
+    ctxt.reset();
+  }
+
   IntegerType *getSignedInt(IntegerWidth width) {
     return IntegerType::getSigned(*ctxt, width);
   }

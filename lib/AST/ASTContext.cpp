@@ -143,7 +143,6 @@ size_t ASTContext::Impl::getTotalMemoryUsed() const {
 }
 
 size_t ASTContext::Impl::getMemoryUsed(ArenaKind arena) const {
-  size_t value = 0;
   switch (arena) {
   case ArenaKind::Permanent:
     return permanentArena.getTotalMemory();
@@ -369,8 +368,7 @@ ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
       ctxt.getImpl().getTypeArena(arena).referenceTypes[typeID];
   if (type)
     return type;
-  return type = new (ctxt, arena)
-             ReferenceType(props, ctxt, pointee->isCanonical(), pointee, isMut);
+  return type = new (ctxt, arena) ReferenceType(props, ctxt, pointee, isMut);
 }
 
 MaybeType *MaybeType::get(Type valueType) {
@@ -385,8 +383,7 @@ MaybeType *MaybeType::get(Type valueType) {
 
   if (type)
     return type;
-  return type = new (ctxt, arena)
-             MaybeType(props, ctxt, valueType->isCanonical(), valueType);
+  return type = new (ctxt, arena) MaybeType(props, ctxt, valueType);
 }
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
@@ -396,7 +393,7 @@ Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
     return elems[0];
 
   // Determine the properties of this type
-  bool isCanonical = false;
+  bool isCanonical = true;
   TypeProperties props;
   for (Type elem : elems) {
     assert(elem && "elem is null");
@@ -440,8 +437,7 @@ LValueType *LValueType::get(Type objectType) {
       ctxt.getImpl().getTypeArena(arena).lvalueTypes[objectType.getPtr()];
   if (type)
     return type;
-  return type = new (ctxt, arena)
-             LValueType(props, ctxt, objectType->isCanonical(), objectType);
+  return type = new (ctxt, arena) LValueType(props, ctxt, objectType);
 }
 
 FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
@@ -451,7 +447,7 @@ FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   ASTContext &ctxt = rtr->getASTContext();
 
   TypeProperties props = rtr->getTypeProperties();
-  bool isCanonical = false;
+  bool isCanonical = rtr->isCanonical();
   for (Type arg : args) {
     assert(arg && "arg type is null");
     // Only canonical if all args + return type are

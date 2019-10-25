@@ -1,4 +1,5 @@
 //===--- Types.cpp ----------------------------------------------*- C++ -*-===//
+//===--- Types.cpp ----------------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -121,6 +122,14 @@ public:
 
 //===- Type/CanType/TypeLoc -----------------------------------------------===//
 
+void Type::print(raw_ostream &out, const TypePrintOptions &printOptions) const {
+  getPtr()->print(out, printOptions);
+}
+
+std::string Type::getString(const TypePrintOptions &printOptions) const {
+  return getPtr()->getString(printOptions);
+}
+
 bool CanType::isValid() const {
   if (const TypeBase *ptr = getPtr())
     return ptr->isCanonical();
@@ -145,23 +154,20 @@ SourceLoc TypeLoc::getEndLoc() const {
 
 //===- TypeBase/Types -----------------------------------------------------===//
 
-void Type::print(raw_ostream &out, const TypePrintOptions &printOptions) const {
-  getPtr()->print(out, printOptions);
-}
-
-std::string Type::getString(const TypePrintOptions &printOptions) const {
-  return getPtr()->getString(printOptions);
-}
-
 void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
                              unsigned align) {
   return ctxt.allocate(size, align, allocator);
 }
 
-CanType TypeBase::getCanonicalType() {
+CanType TypeBase::getCanonicalType() const {
+  /// FIXME: This isn't ideal, but nothing here will mutate the type, so it
+  /// should be OK.
+  TypeBase *thisType = const_cast<TypeBase *>(this);
+
   // This type is already canonical:
   if (isCanonical())
-    return CanType(this);
+    /// FIXME: Ideally, there should be no const_cast here.
+    return CanType(thisType);
   // This type has already computed its canonical version
   if (TypeBase *canType = ctxtOrCanType.get<TypeBase *>())
     return CanType(canType);
@@ -179,18 +185,18 @@ CanType TypeBase::getCanonicalType() {
   case TypeKind::TypeVariable:
     llvm_unreachable("Type is already canonical!");
   case TypeKind::Reference: {
-    ReferenceType *type = cast<ReferenceType>(this);
+    ReferenceType *type = cast<ReferenceType>(thisType);
     result = ReferenceType::get(type->getPointeeType()->getCanonicalType(),
                                 type->isMut());
     break;
   }
   case TypeKind::Maybe: {
-    MaybeType *type = cast<MaybeType>(this);
+    MaybeType *type = cast<MaybeType>(thisType);
     result = MaybeType::get(type->getValueType()->getCanonicalType());
     break;
   }
   case TypeKind::Tuple: {
-    TupleType *type = cast<TupleType>(this);
+    TupleType *type = cast<TupleType>(thisType);
     // The canonical version of '()' is 'void'.
     if (type->isEmpty()) {
       result = ctxt.voidType;
@@ -208,7 +214,7 @@ CanType TypeBase::getCanonicalType() {
     break;
   }
   case TypeKind::Function: {
-    FunctionType *type = cast<FunctionType>(this);
+    FunctionType *type = cast<FunctionType>(thisType);
     // Canonicalize arguments
     SmallVector<Type, 4> args;
     args.reserve(type->getNumArgs());
@@ -221,7 +227,7 @@ CanType TypeBase::getCanonicalType() {
     break;
   }
   case TypeKind::LValue: {
-    LValueType *type = cast<LValueType>(this);
+    LValueType *type = cast<LValueType>(thisType);
     result = LValueType::get(type->getObjectType()->getCanonicalType());
     break;
   }
@@ -230,6 +236,19 @@ CanType TypeBase::getCanonicalType() {
   assert(result && "result is nullptr?");
   ctxtOrCanType = result.getPtr();
   return CanType(result);
+}
+
+void TypeBase::print(raw_ostream &out,
+                     const TypePrintOptions &printOptions) const {
+  TypePrinter(out, printOptions).visit(const_cast<TypeBase *>(this));
+}
+
+std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
+  std::string rtr;
+  llvm::raw_string_ostream out(rtr);
+  print(out, printOptions);
+  out.str();
+  return rtr;
 }
 
 FloatType *FloatType::get(ASTContext &ctxt, FloatKind kind) {
@@ -263,17 +282,4 @@ void FunctionType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> args,
   for (auto arg : args)
     id.AddPointer(arg.getPtr());
   id.AddPointer(rtr.getPtr());
-}
-
-void TypeBase::print(raw_ostream &out,
-                     const TypePrintOptions &printOptions) const {
-  TypePrinter(out, printOptions).visit(const_cast<TypeBase *>(this));
-}
-
-std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
-  std::string rtr;
-  llvm::raw_string_ostream out(rtr);
-  print(out);
-  out.str();
-  return rtr;
 }
