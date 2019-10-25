@@ -9,9 +9,108 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/AST/TypeRepr.hpp"
+#include "Sora/AST/TypeVisitor.hpp"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
+
+//===- TypePrinter --------------------------------------------------------===//
+
+namespace {
+class TypePrinter : public TypeVisitor<TypePrinter> {
+public:
+  using parent = TypeVisitor<TypePrinter>;
+
+  raw_ostream &out;
+  const TypePrintOptions &printOptions;
+
+  TypePrinter(raw_ostream &out, const TypePrintOptions &printOptions)
+      : out(out), printOptions(printOptions) {}
+
+  void visit(Type type) {
+    if (type.isNull()) {
+      if (!printOptions.allowNullTypes)
+        llvm_unreachable("Can't print a null type!");
+      out << "<null_type>";
+      return;
+    }
+    parent::visit(type);
+  }
+
+  void visitIntegerType(IntegerType *type) {
+    // Integer types have i or u as prefix, depending on their signedness, and
+    // then just have the bitwidth or 'size' for pointer-sized ints.
+    if (type->isSigned())
+      out << 'i';
+    else
+      out << 'u';
+    IntegerWidth width = type->getWidth();
+    if (width.isPointerSized())
+      out << "size";
+    else
+      out << width.getWidth();
+  }
+
+  void visitFloatType(FloatType *type) { out << 'f' << type->getWidth(); }
+
+  void visitVoidType(VoidType *type) { out << "void"; }
+
+  void visitReferenceType(ReferenceType *type) {
+    out << '&';
+    if (type->isMut())
+      out << "mut ";
+    visit(type->getPointeeType());
+  }
+
+  void visitMaybeType(MaybeType *type) {
+    out << "maybe ";
+    visit(type->getValueType());
+  }
+
+  void printTuple(ArrayRef<Type> elems) {
+    out << '(';
+    if (!elems.empty()) {
+      visit(elems[0]);
+      for (Type elem : elems.slice(1)) {
+        out << ", ";
+        visit(elem);
+      }
+    }
+    out << ')';
+  }
+
+  void visitTupleType(TupleType *type) { printTuple(type->getElements()); }
+
+  void visitFunctionType(FunctionType *type) {
+    printTuple(type->getArgs());
+    out << " -> ";
+    visit(type->getReturnType());
+  }
+
+  void visitLValueType(LValueType *type) {
+    if (printOptions.printLValues)
+      out << "@lvalue ";
+    visit(type->getObjectType());
+  }
+
+  void visitErrorType(ErrorType *) {
+    if (!printOptions.allowErrorTypes)
+      llvm_unreachable("Can't print an ErrorType");
+    out << "<error_type>";
+  }
+
+  void visitTypeVariableType(TypeVariableType *type) {
+    if (printOptions.printTypeVariablesAsUnderscore) {
+      out << '_';
+      return;
+    }
+    out << "$T" << type->getID();
+  }
+};
+} // namespace
+
+//===- Type/CanType/TypeLoc -----------------------------------------------===//
 
 bool CanType::isValid() const {
   if (const TypeBase *ptr = getPtr())
@@ -33,6 +132,16 @@ SourceLoc TypeLoc::getLoc() const {
 
 SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
+}
+
+//===- TypeBase/Types -----------------------------------------------------===//
+
+void Type::print(raw_ostream &out, const TypePrintOptions &printOptions) const {
+  getPtr()->print(out, printOptions);
+}
+
+std::string Type::getString(const TypePrintOptions &printOptions) const {
+  return getPtr()->getString(printOptions);
 }
 
 void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
@@ -71,4 +180,17 @@ void FunctionType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> args,
   for (auto arg : args)
     id.AddPointer(arg.getPtr());
   id.AddPointer(rtr.getPtr());
+}
+
+void TypeBase::print(raw_ostream &out,
+                     const TypePrintOptions &printOptions) const {
+  TypePrinter(out, printOptions).visit(const_cast<TypeBase *>(this));
+}
+
+std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
+  std::string rtr;
+  llvm::raw_string_ostream out(rtr);
+  print(out);
+  out.str();
+  return rtr;
 }

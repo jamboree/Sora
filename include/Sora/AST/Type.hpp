@@ -12,13 +12,45 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
+#include "Sora/Common/LLVM.hpp"
 #include <cassert>
+#include <string>
 
 namespace sora {
 class TypeBase;
 class TypeRepr;
 class SourceLoc;
 class SourceRange;
+
+/// Type Printing Options
+struct TypePrintOptions {
+  /// If true, null types are printed as <null_type>, if false, traps on null
+  /// type.
+  bool allowNullTypes = false;
+  /// If true, type variables are printed as '_' instead of '$Tx'
+  bool printTypeVariablesAsUnderscore = false;
+  /// If true, lvalues are printed as @lvalue T instead of being "transparent"
+  bool printLValues = false;
+  /// If true, null types are printed as <error_type>, if false, traps on error
+  /// type.
+  bool allowErrorTypes = false;
+
+  /// Creates a TypeOption for use in diagnostics
+  static TypePrintOptions forDiagnostics() {
+    TypePrintOptions opts;
+    opts.printTypeVariablesAsUnderscore = true;
+    return opts;
+  }
+
+  /// Creates a TypeOption for use in debugging. This allows null types and
+  /// error types.
+  static TypePrintOptions forDebug() {
+    TypePrintOptions opts;
+    opts.allowNullTypes = true;
+    opts.allowErrorTypes = true;
+    return opts;
+  }
+};
 
 /// Wrapper around a TypeBase* used to disable direct pointer comparison, as it
 /// can cause bugs when canonical types are involved.
@@ -48,6 +80,14 @@ public:
   }
 
   explicit operator bool() const { return ptr != nullptr; }
+
+  /// Prints this type
+  void print(raw_ostream &out,
+             const TypePrintOptions &printOptions = TypePrintOptions()) const;
+
+  /// Prints this type to a string
+  std::string
+  getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;
 
   // for STL containers
   bool operator<(const Type other) const { return ptr < other.ptr; }

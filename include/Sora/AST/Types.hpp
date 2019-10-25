@@ -186,6 +186,14 @@ public:
   /// \returns whether this type is canonical
   bool isCanonical() const { return canonical; }
 
+  /// Prints this type
+  void print(raw_ostream &out,
+             const TypePrintOptions &printOptions = TypePrintOptions()) const;
+
+  /// Prints this type to a string
+  std::string
+  getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;
+
   /// \returns the kind of type this is
   TypeKind getKind() const { return kind; }
 
