@@ -15,7 +15,7 @@ namespace sora {
 template <typename Derived, typename Rtr = void, typename... Args>
 class TypeVisitor {
 public:
-  Rtr visit(Type type) {
+  Rtr visit(Type type, Args... args) {
     assert(type && "Cannot be used on a null pointer");
     switch (type->getKind()) {
 #define TYPE(ID, PARENT)                                                       \
