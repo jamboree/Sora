@@ -488,7 +488,7 @@ expression-list = expression (',' expression)*
 ParserResult<Expr> Parser::parseTupleExpr() {
   assert(tok.is(TokenKind::LParen));
   SmallVector<Expr *, 4> elements;
-  SourceLoc lParen, rParen;
+  SourceLoc lParen;
   lParen = tok.getLoc();
   auto parseFn = [&](unsigned k) -> bool {
     auto result = parseExpr(
@@ -498,6 +498,8 @@ ParserResult<Expr> Parser::parseTupleExpr() {
       elements.push_back(result.get());
     return result.hasValue();
   };
+
+  SourceLoc rParen;
   bool success =
       parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_expr);
 

@@ -90,14 +90,22 @@ bool Parser::parseTuple(SourceLoc &rParenLoc,
     return false;
   });
 
+  auto failure = [&]() {
+    rParenLoc = prevTokPastTheEnd;
+    assert(rParenLoc && "no prevTokPastTheEnd?");
+    return false;
+  };
+
   // If we had a parsing error at the last element, and the next token isn't a
   // ')', don't complain about the missing ')' and just return.
   if (!lastSuccess && tok.isNot(TokenKind::RParen))
-    return false;
+    return failure();
 
   // Try to parse the ')'
   rParenLoc = parseMatchingToken(lParen, TokenKind::RParen, missingRParenDiag);
-  return rParenLoc.isValid();
+  if (rParenLoc)
+    return true;
+  return failure();
 }
 
 SourceLoc Parser::consumeToken() {
