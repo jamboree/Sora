@@ -177,7 +177,7 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   }
 
   void dumpType(Type type, StringRef name) {
-    out << name << "=" << (type ? "?TODO?" : "<null type>");
+    out << name << "=" << type.getString(TypePrintOptions::forDebug());
   }
 
 public:
