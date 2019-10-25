@@ -23,11 +23,12 @@
 
 using namespace sora;
 
-/// the ASTContext's implementation
+//===- ASTContext::Impl ---------------------------------------------------===//
+
 struct ASTContext::Impl {
   /// The Identifier Table
-  /// FIXME: Is using MallocAllocator the right thing to do here?
-  llvm::StringSet<> identifierTable;
+  /// FIXME: Ideally, this should use the permanent arena.
+  llvm::StringSet<llvm::BumpPtrAllocator> identifierTable;
 
   /// The set of cleanups that must be ran when the ASTContext is destroyed.
   SmallVector<std::function<void()>, 4> cleanups;
@@ -37,6 +38,20 @@ struct ASTContext::Impl {
   /// An Arena that supports type allocation
   struct TypeArena : public Arena {
     TypeArena() = default;
+
+    /// \returns the memory used (in bytes) by this Arena's contents.
+    size_t getTotalMemory() const {
+      size_t value = 0;
+      value += Arena::getTotalMemory();
+      value += llvm::capacity_in_bytes(signedIntegerTypes);
+      value += llvm::capacity_in_bytes(unsignedIntegerTypes);
+      value += llvm::capacity_in_bytes(referenceTypes);
+      value += llvm::capacity_in_bytes(maybeTypes);
+      // tupleTypes? FoldingSet doesn't provide a function to calculate the
+      // memory used.
+      value += llvm::capacity_in_bytes(lvalueTypes);
+      return value;
+    }
 
     /// Signed Integer Types
     llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
@@ -91,6 +106,12 @@ struct ASTContext::Impl {
   /// The target triple
   llvm::Triple targetTriple;
 
+  /// \returns the total memory used (in bytes) by this ASTContext::Impl and all
+  /// of its arenas.
+  size_t getTotalMemoryUsed() const;
+  /// \returns the memory used (in bytes) by \p arena.
+  size_t getMemoryUsed(ArenaKind arena) const;
+
   Impl(const Impl &) = delete;
   Impl &operator=(const Impl &) = delete;
 
@@ -109,6 +130,33 @@ struct ASTContext::Impl {
   }
 };
 
+size_t ASTContext::Impl::getTotalMemoryUsed() const {
+  size_t value = sizeof(Impl);
+  value += identifierTable.getAllocator().getTotalMemory();
+  value += llvm::capacity_in_bytes(cleanups);
+  value += getMemoryUsed(ArenaKind::Permanent);
+  value += getMemoryUsed(ArenaKind::UnresolvedExpr);
+  value += getMemoryUsed(ArenaKind::TypeChecker);
+  return value;
+}
+
+size_t ASTContext::Impl::getMemoryUsed(ArenaKind arena) const {
+  size_t value = 0;
+  switch (arena) {
+  case ArenaKind::Permanent:
+    return permanentArena.getTotalMemory();
+  case ArenaKind::UnresolvedExpr:
+    return unresolvedExprArena.getTotalMemory();
+  case ArenaKind::TypeChecker:
+    if (!typeCheckerArena)
+      return 0;
+    return typeCheckerArena->getTotalMemory();
+  }
+  llvm_unreachable("Unknown ArenaKind");
+}
+
+//===- TypeCheckerArenaRAII -----------------------------------------------===//
+
 TypeCheckerArenaRAII::TypeCheckerArenaRAII(ASTContext &ctxt) : ctxt(ctxt) {
   ctxt.getImpl().initTypeCheckerArena();
 }
@@ -120,6 +168,8 @@ TypeCheckerArenaRAII::~TypeCheckerArenaRAII() {
 static IntegerWidth getPointerWidth(ASTContext &ctxt) {
   return IntegerWidth::pointer(ctxt.getTargetTriple());
 }
+
+//===- ASTContext ---------------------------------------------------------===//
 
 ASTContext::ASTContext(const SourceManager &srcMgr,
                        DiagnosticEngine &diagEngine)
@@ -147,11 +197,12 @@ ASTContext::Impl &ASTContext::getImpl() {
 
 std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
                                                DiagnosticEngine &diagEngine) {
-  // FIXME: This could be simplified with a aligned_alloc if we had access to
-  // it.
+  // FIXME: This could be simplified with a aligned_alloc if we had access
+  // to it.
 
-  // We need to allocate enough memory to support both the ASTContext and its
-  // implementation *plus* some padding to align the addresses correctly.
+  // We need to allocate enough memory to support both the ASTContext and
+  // its implementation *plus* some padding to align the addresses
+  // correctly.
   size_t sizeToAlloc = sizeof(ASTContext) + (alignof(ASTContext) - 1);
   sizeToAlloc += sizeof(Impl) + (alignof(Impl) - 1);
 
@@ -160,8 +211,8 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
   // of the memory
   void *astContextMemory =
       reinterpret_cast<void *>(llvm::alignAddr(memory, alignof(ASTContext)));
-  // The Impl's memory begins at the first correctly aligned addres after the
-  // ASTContext's memory.
+  // The Impl's memory begins at the first correctly aligned addres after
+  // the ASTContext's memory.
   void *implMemory = (char *)astContextMemory + sizeof(ASTContext);
   implMemory =
       reinterpret_cast<void *>(llvm::alignAddr(implMemory, alignof(Impl)));
@@ -170,12 +221,14 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
   //  Check that we aren't going out of bounds and going to segfault later.
   assert(((char *)implMemory + sizeof(Impl)) < ((char *)memory + sizeToAlloc) &&
          "Going out-of-bounds of the allocated memory");
-  //  Check that the ASTContext's memory doesn't overlap the Implementation's.
+  //  Check that the ASTContext's memory doesn't overlap the
+  //  Implementation's.
   assert((((char *)astContextMemory + sizeof(ASTContext)) <= implMemory) &&
          "ASTContext's memory overlaps the Impl's memory");
 
   // Use placement new to call the constructors.
-  // Note: it is very important that the implementation is initialized first.
+  // Note: it is very important that the implementation is initialized
+  // first.
   new (implMemory) Impl();
   ASTContext *astContext =
       new (astContextMemory) ASTContext(srcMgr, diagEngine);
@@ -205,6 +258,16 @@ bool ASTContext::hasTypeCheckerArena() const {
 
 void ASTContext::freeUnresolvedExprs() {
   getImpl().unresolvedExprArena.Reset();
+}
+
+size_t ASTContext::getTotalMemoryUsed() const {
+  size_t value = getImpl().getTotalMemoryUsed();
+  value += sizeof(ASTContext);
+  return value;
+}
+
+size_t ASTContext::getMemoryUsed(ArenaKind arena) const {
+  return getImpl().getMemoryUsed(arena);
 }
 
 void ASTContext::addCleanup(std::function<void()> cleanup) {
@@ -264,7 +327,8 @@ Type ASTContext::getBuiltinType(StringRef str) {
   return nullptr;
 }
 
-//===- Types --------------------------------------------------------------===//
+//===- Types
+//--------------------------------------------------------------===//
 
 /// \returns The ArenaKind to use for a type using \p properties.
 static ArenaKind getArena(TypeProperties properties) {

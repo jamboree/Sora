@@ -106,6 +106,12 @@ public:
   /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
   void freeUnresolvedExprs();
 
+  /// \returns the total memory used (in bytes) by this ASTContext and all of
+  /// its arenas.
+  size_t getTotalMemoryUsed() const;
+  /// \returns the memory used (in bytes) by \p arena.
+  size_t getMemoryUsed(ArenaKind arena) const;
+
   /// Adds a cleanup function that'll be run when the ASTContext's memory (&
   /// Permanent Allocator) is freed.
   void addCleanup(std::function<void()> cleanup);
