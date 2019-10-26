@@ -198,21 +198,21 @@ ASTContext::Impl &ASTContext::getImpl() {
 
 std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
                                                DiagnosticEngine &diagEngine) {
-  // FIXME: This could be simplified with a aligned_alloc if we had access
-  // to it.
-
   // We need to allocate enough memory to support both the ASTContext and
   // its implementation *plus* some padding to align the addresses
   // correctly.
   size_t sizeToAlloc = sizeof(ASTContext) + (alignof(ASTContext) - 1);
   sizeToAlloc += sizeof(Impl) + (alignof(Impl) - 1);
-
+  
+  // FIXME: Replace this with aligned_alloc or similar
   void *memory = llvm::safe_malloc(sizeToAlloc);
+
   // The ASTContext's memory begins at the first correctly aligned address
-  // of the memory
+  // of the memory.
   void *astContextMemory =
       reinterpret_cast<void *>(llvm::alignAddr(memory, alignof(ASTContext)));
-  // The Impl's memory begins at the first correctly aligned addres after
+
+  // The Impl's memory begins at the first correctly aligned address after
   // the ASTContext's memory.
   void *implMemory = (char *)astContextMemory + sizeof(ASTContext);
   implMemory =
@@ -228,13 +228,12 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
          "ASTContext's memory overlaps the Impl's memory");
 
   // Use placement new to call the constructors.
-  // Note: it is very important that the implementation is initialized
-  // first.
+  // It is very important that the implementation is initialized first.
   new (implMemory) Impl();
   ASTContext *astContext =
       new (astContextMemory) ASTContext(srcMgr, diagEngine);
 
-  // And return a managed pointer.
+  // Put the pointer in an unique_ptr to avoid leaks.
   return std::unique_ptr<ASTContext>(astContext);
 }
 
@@ -276,8 +275,7 @@ void ASTContext::addCleanup(std::function<void()> cleanup) {
 }
 
 Identifier ASTContext::getIdentifier(StringRef str) {
-  // Don't intern null & empty strings (StringRef::size() returns 0 for null
-  // strings)
+  // Don't intern null & empty strings
   return str.size() ? getImpl().identifierTable.insert(str).first->getKeyData()
                     : Identifier();
 }
@@ -358,11 +356,11 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
 
 ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
   assert(pointee && "pointee can't be null!");
+  ASTContext &ctxt = pointee->getASTContext();
 
   size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
   auto props = pointee->getTypeProperties();
   auto arena = getArena(props);
-  ASTContext &ctxt = pointee->getASTContext();
 
   ReferenceType *&type =
       ctxt.getImpl().getTypeArena(arena).referenceTypes[typeID];
@@ -373,10 +371,10 @@ ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
 
 MaybeType *MaybeType::get(Type valueType) {
   assert(valueType && "value type is null");
+  ASTContext &ctxt = valueType->getASTContext();
 
   auto props = valueType->getTypeProperties();
   auto arena = getArena(props);
-  ASTContext &ctxt = valueType->getASTContext();
 
   MaybeType *&type =
       ctxt.getImpl().getTypeArena(arena).maybeTypes[valueType.getPtr()];
@@ -387,8 +385,14 @@ MaybeType *MaybeType::get(Type valueType) {
 }
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
+  // For empty tuples, don't bother doing any research, just return the
+  // singleton stored in the impl.
   if (elems.empty())
     return getEmpty(ctxt);
+  // For single-element tuples, we don't create a tuple. Just return the
+  // element.
+  // FIXME: If, in the future, something like ParenType is added, return that
+  // instead.
   if (elems.size() == 1)
     return elems[0];
 
@@ -397,9 +401,7 @@ Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
   TypeProperties props;
   for (Type elem : elems) {
     assert(elem && "elem is null");
-    // Only canonical if all elements are
     isCanonical &= elem->isCanonical();
-    // Properties are or'd together
     props |= elem->getTypeProperties();
   }
 
@@ -429,9 +431,10 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
 
 LValueType *LValueType::get(Type objectType) {
   assert(objectType && "object type is null");
+  ASTContext &ctxt = objectType->getASTContext();
+
   auto props = objectType->getTypeProperties();
   auto arena = getArena(props);
-  ASTContext &ctxt = objectType->getASTContext();
 
   LValueType *&type =
       ctxt.getImpl().getTypeArena(arena).lvalueTypes[objectType.getPtr()];
@@ -441,8 +444,6 @@ LValueType *LValueType::get(Type objectType) {
 }
 
 FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
-
-  // Determine the properties of this type
   assert(rtr && "return type is null");
   ASTContext &ctxt = rtr->getASTContext();
 
@@ -450,13 +451,12 @@ FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   bool isCanonical = rtr->isCanonical();
   for (Type arg : args) {
     assert(arg && "arg type is null");
-    // Only canonical if all args + return type are
     isCanonical &= arg->isCanonical();
-    // Properties are or'd together
     props |= arg->getTypeProperties();
   }
 
   auto &typeArena = ctxt.getImpl().getTypeArena(getArena(props));
+
   void *insertPos = nullptr;
   llvm::FoldingSetNodeID id;
   Profile(id, args, rtr);
