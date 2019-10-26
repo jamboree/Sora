@@ -89,8 +89,10 @@ public:
   std::string
   getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;
 
-  // for STL containers
-  bool operator<(const Type other) const { return ptr < other.ptr; }
+  bool operator<(const Type &other) const { return ptr < other.ptr; }
+  // Can't compare types unless they're known canonical
+  bool operator==(const Type &) const = delete;
+  bool operator!=(const Type &) const = delete;
 };
 
 /// Represents a type that's statically known to be canonical (can also be
@@ -100,6 +102,14 @@ class CanType final : public Type {
 
 public:
   explicit CanType(Type type) : Type(type) { assert(isValid()); }
+
+  // Can compare CanTypes because they're known canonical
+  bool operator==(const CanType &other) const {
+    return getPtr() == other.getPtr();
+  }
+  bool operator!=(const CanType &other) const {
+    return getPtr() != other.getPtr();
+  }
 };
 
 /// A simple Type/TypeRepr* pair, used to represent a type as written
