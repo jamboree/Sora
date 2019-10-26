@@ -31,7 +31,7 @@ func foo() {
   let a: i3
 }
 
-func err() {
+func tuplePatErr() {
   let (,i32,,i32) // expect-2-error: unexpected ',' separator
   // Don't complain about a missing ) if we got a parsing error
   let ( // expect-note: to match this opening '('
@@ -42,4 +42,12 @@ func err() {
   let (a  // expect-error: expected ')' at end of tuple pattern
           // expect-note@-1: to match this opening '('
   let (,,)// expect-2-error: unexpected ',' separator
+}
+
+func typeAnnotErr() {
+  let x: // expect-error: expected a type
+}
+
+func mutErr() {
+  let mut // expect-error: expected a pattern after 'mut'
 }
