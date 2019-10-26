@@ -94,7 +94,7 @@ ParserResult<TypeRepr> Parser::parseArrayType() {
 
   /// ']'
   SourceLoc rSquareLoc = parseMatchingToken(lSquareLoc, TokenKind::RSquare);
-  if (!rSquareLoc)
+  if (rSquareLoc.isInvalid())
     return nullptr;
 
   return makeParserResult(

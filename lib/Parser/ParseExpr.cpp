@@ -32,7 +32,7 @@ Parser::parseAssignementExpr(llvm::function_ref<void()> onNoExpr) {
   BinaryOperatorKind op;
   bool startOfLine = tok.isAtStartOfLine();
   SourceLoc opLoc = consumeAssignementOperator(op);
-  if (!opLoc)
+  if (opLoc.isInvalid())
     return result;
 
   // Binary operator can't appear at the start of a line
@@ -109,7 +109,7 @@ Parser::parseConditionalExpr(llvm::function_ref<void()> onNoExpr) {
     return nullptr;
 
   // ':'
-  if (!tok.is(TokenKind::Colon)) {
+  if (tok.isNot(TokenKind::Colon)) {
     diagnoseExpected(diag::expected_colon);
     return nullptr;
   }
@@ -122,20 +122,19 @@ Parser::parseConditionalExpr(llvm::function_ref<void()> onNoExpr) {
       }).getOrNull();
 
   // If everything parsed correctly, return a fully-formed ConditionalExpr,
-  // else, return a partial result.
-  if (!thenExpr || !elseExpr) {
-    // If we got a then but no else, return a cond with an ErrorExpr in the
-    // middle.
-    if (!thenExpr && elseExpr) {
-      return makeParserErrorResult(new (ctxt) ConditionalExpr(
-          cond, questionLoc, new (ctxt) ErrorExpr({}), colonLoc, elseExpr));
-    }
-    return makeParserErrorResult(cond);
+  if (thenExpr && elseExpr) {
+    Expr *expr = new (ctxt)
+        ConditionalExpr(cond, questionLoc, thenExpr, colonLoc, elseExpr);
+    return makeParserResult(expr);
   }
-
-  Expr *expr = new (ctxt)
-      ConditionalExpr(cond, questionLoc, thenExpr, colonLoc, elseExpr);
-  return makeParserResult(expr);
+  // If we got a then but no else, return a cond with an ErrorExpr in the
+  // middle.
+  if (!thenExpr && elseExpr) {
+    return makeParserErrorResult(new (ctxt) ConditionalExpr(
+        cond, questionLoc, new (ctxt) ErrorExpr({}), colonLoc, elseExpr));
+  }
+  // Else just return the condition with the error bit set.
+  return makeParserErrorResult(cond);
 }
 
 /*
@@ -164,7 +163,7 @@ ParserResult<Expr> Parser::parseBinaryExpr(llvm::function_ref<void()> onNoExpr,
     // Parse the operator, break if we can't parse it
     bool startOfLine = tok.isAtStartOfLine();
     SourceLoc opLoc = consumeBinaryOperator(op, precedence);
-    if (!opLoc)
+    if (opLoc.isInvalid())
       break;
 
     // Binary operators can't appear at the start of a line
@@ -299,7 +298,7 @@ ParserResult<Expr>
 Parser::parsePrefixExpr(llvm::function_ref<void()> onNoExpr) {
   UnaryOperatorKind op;
   SourceLoc opLoc = consumePrefixOperator(op);
-  if (!opLoc)
+  if (opLoc.isInvalid())
     return parsePostfixExpr(onNoExpr);
 
   auto result = parsePrefixExpr(
@@ -505,7 +504,7 @@ ParserResult<Expr> Parser::parseTupleExpr() {
 
   assert(rParen && "no rParenLoc!");
 
-  // Create a ParenExpr or ParenTuple depending on the number of elements.
+  // Create a ParenExpr or TupleExpr depending on the number of elements.
   Expr *expr = nullptr;
   if (elements.size() == 1)
     expr = new (ctxt) ParenExpr(lParen, elements[0], rParen);

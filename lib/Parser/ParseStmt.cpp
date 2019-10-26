@@ -112,7 +112,7 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
   // If we couldn't find the rCurly and we got no elements, return an error,
   // else, use prevTokPastTheEnd as } loc to recover.
   // FIXME: Is this the right thing to do?
-  if (!rCurly) {
+  if (rCurly.isInvalid()) {
     if (elements.empty())
       return nullptr;
     rCurly = prevTokPastTheEnd;

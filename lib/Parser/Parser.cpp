@@ -27,12 +27,11 @@ const Token &Parser::peek() const { return lexer.peek(); }
 SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
                                      Optional<TypedDiag<>> customErr) {
   auto doIt = [&](TypedDiag<> defaultErr, TypedDiag<> note) {
-    SourceLoc loc = consumeIf(kind);
-    if (!loc) {
-      diagnoseExpected(customErr ? *customErr : defaultErr);
-      diagnose(lLoc, note);
-    }
-    return loc;
+    if (SourceLoc loc = consumeIf(kind))
+      return loc;
+    diagnoseExpected(customErr ? *customErr : defaultErr);
+    diagnose(lLoc, note);
+    return SourceLoc();
   };
 
   switch (kind) {

@@ -45,7 +45,6 @@ source-file = top-level-declaration+
 top-level-declaration = function-declaration
 */
 void Parser::parseSourceFile() {
-  auto recover = [&]() { skipUntilDecl(); };
   // Once parsing of a member is done, adds to it to the source file and checks
   // that we got a newline after it.
   auto addMember = [&](Decl *decl) {
@@ -62,7 +61,7 @@ void Parser::parseSourceFile() {
       if (FuncDecl *func = parseFuncDecl().getOrNull())
         addMember(func);
       else
-        recover();
+        skipUntilDecl();
       break;
     }
     // Trying to declare global variables is a relatively common mistake, so
@@ -72,13 +71,13 @@ void Parser::parseSourceFile() {
       // LetDecl?
       diagnose(tok, diag::let_not_allowed_at_global_level);
       if (parseLetDecl().isParseError())
-        recover();
+        skipUntilDecl();
       break;
     }
     default:
       if (tok.isNot(TokenKind::Unknown))
         diagnose(tok, diag::expected_fn_decl);
-      recover();
+      skipUntilDecl();
       break;
     }
   }
@@ -95,7 +94,7 @@ ParserResult<LetDecl> Parser::parseLetDecl() {
   auto result = parsePattern(
       [&]() { diagnoseExpected(diag::expected_pat_after, "let"); });
 
-  if (!result.hasValue())
+  if (result.isNull())
     return nullptr;
 
   Pattern *pattern = result.get();
@@ -125,7 +124,7 @@ ParserResult<ParamDecl> Parser::parseParamDecl() {
   SourceLoc identLoc = consumeIdentifier(ident);
   auto paramDecl = new (ctxt) ParamDecl(declContext, identLoc, ident, {});
   //  ':'
-  if (!consumeIf(TokenKind::Colon)) {
+  if (consumeIf(TokenKind::Colon).isInvalid()) {
     diagnoseExpected(diag::param_requires_explicit_type)
         .fixitInsert(prevTokPastTheEnd, ": <type>");
     return makeParserErrorResult(paramDecl);
