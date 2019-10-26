@@ -1,5 +1,4 @@
 //===--- Types.cpp ----------------------------------------------*- C++ -*-===//
-//===--- Types.cpp ----------------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
