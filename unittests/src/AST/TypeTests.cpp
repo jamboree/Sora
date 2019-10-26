@@ -166,3 +166,30 @@ TEST_F(TypeTest, integerTypes) {
 
 #undef CHECK
 }
+
+TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
+#define CHECK_ALWAYS_CANONICAL(T)                                              \
+  {                                                                            \
+    auto can = T->getCanonicalType();                                          \
+    EXPECT_EQ(can.getPtr(), T.getPtr());                                       \
+    ASSERT_TRUE(can->isCanonical());                                           \
+    ASSERT_TRUE(T->isCanonical());                                             \
+  }
+  CHECK_ALWAYS_CANONICAL(ctxt->f32Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->f64Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->i8Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->i16Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->i32Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->i64Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->isizeType)
+  CHECK_ALWAYS_CANONICAL(ctxt->u8Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->u16Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->u32Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->u64Type)
+  CHECK_ALWAYS_CANONICAL(ctxt->usizeType)
+  CHECK_ALWAYS_CANONICAL(ctxt->voidType)
+  CHECK_ALWAYS_CANONICAL(ctxt->errorType)
+  Type tyVar = TypeVariableType::create(*ctxt, 0);
+  CHECK_ALWAYS_CANONICAL(tyVar)
+#undef CHECK_ALWAYS_CANONICAL
+}
