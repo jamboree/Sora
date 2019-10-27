@@ -65,8 +65,7 @@ public:
   /// Creates a Type from a TypeBase pointer
   /*implicit*/ Type(TypeBase *ptr) : ptr(ptr) {}
 
-  TypeBase *getPtr() { return ptr; }
-  const TypeBase *getPtr() const { return ptr; }
+  TypeBase *getPtr() const { return ptr; }
 
   bool isNull() const { return ptr == nullptr; }
 
