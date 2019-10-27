@@ -376,12 +376,12 @@ class TupleType final : public TypeBase,
             ArrayRef<Type> elements)
       : TypeBase(TypeKind::Tuple, prop, ctxt, canonical) {
     unsigned numElems = elements.size();
-    assert(numElems >= 2 || (numElems == 0 && canonical));
+    assert(numElems >= 2 || (numElems == 0 && !canonical));
     bits.tupleType.numElems = numElems;
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<Type>());
 #ifndef NDEBUG
-    bool shouldBeCanonical = true;
+    bool shouldBeCanonical = !elements.empty();
     for (auto elem : elements)
       shouldBeCanonical &= elem->isCanonical();
     assert(shouldBeCanonical == canonical && "Type canonicality is incorrect");

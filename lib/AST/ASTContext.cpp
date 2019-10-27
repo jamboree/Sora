@@ -203,7 +203,7 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
   // correctly.
   size_t sizeToAlloc = sizeof(ASTContext) + (alignof(ASTContext) - 1);
   sizeToAlloc += sizeof(Impl) + (alignof(Impl) - 1);
-  
+
   // FIXME: Replace this with aligned_alloc or similar
   void *memory = llvm::safe_malloc(sizeToAlloc);
 
@@ -426,7 +426,7 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
   if (type)
     return type;
   return type = new (ctxt, ArenaKind::Permanent)
-             TupleType(TypeProperties(), ctxt, true, {});
+             TupleType(TypeProperties(), ctxt, /*isCanonical*/ false, {});
 }
 
 LValueType *LValueType::get(Type objectType) {

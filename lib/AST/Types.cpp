@@ -168,13 +168,13 @@ CanType TypeBase::getCanonicalType() const {
     /// FIXME: Ideally, there should be no const_cast here.
     return CanType(thisType);
   // This type has already computed its canonical version
-  if (TypeBase *canType = ctxtOrCanType.get<TypeBase *>())
+  if (TypeBase *canType = ctxtOrCanType.dyn_cast<TypeBase *>())
     return CanType(canType);
   // This type hasn't calculated its canonical version.
   assert(ctxtOrCanType.is<ASTContext *>() && "Not TypeBase*/ASTContext*?");
 
   Type result = nullptr;
-  ASTContext &ctxt = getASTContext();
+  ASTContext &ctxt = *ctxtOrCanType.get<ASTContext *>();
 
   switch (getKind()) {
   case TypeKind::Integer:
