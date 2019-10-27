@@ -167,6 +167,12 @@ TEST_F(TypeTest, integerTypes) {
 #undef CHECK
 }
 
+TEST_F(TypeTest, tupleTypes) {
+  ASSERT_EQ(TupleType::getEmpty(*ctxt), TupleType::get(*ctxt, {}).getPtr());
+  ASSERT_EQ(ctxt->f32Type.getPtr(),
+            TupleType::get(*ctxt, {ctxt->f32Type}).getPtr());
+}
+
 TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
 #define CHECK_ALWAYS_CANONICAL(T)                                              \
   {                                                                            \
@@ -192,4 +198,112 @@ TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
   Type tyVar = TypeVariableType::create(*ctxt, 0);
   CHECK_ALWAYS_CANONICAL(tyVar)
 #undef CHECK_ALWAYS_CANONICAL
+}
+
+TEST_F(TypeTest, canonicalTypes) {
+  auto emptyTuple = TupleType::getEmpty(*ctxt);
+  auto voidTy = ctxt->voidType;
+
+#define CHECK(NON_CAN, CAN)                                                    \
+  EXPECT_EQ(NON_CAN->getCanonicalType().getPtr(), CAN);
+
+  CHECK(MaybeType::get(emptyTuple), MaybeType::get(voidTy));
+  CHECK(LValueType::get(emptyTuple), LValueType::get(voidTy));
+
+  CHECK(ReferenceType::get(emptyTuple, true), ReferenceType::get(voidTy, true));
+  CHECK(ReferenceType::get(emptyTuple, false),
+        ReferenceType::get(voidTy, false));
+
+  CHECK(TupleType::getEmpty(*ctxt), ctxt->voidType.getPtr());
+  CHECK(TupleType::get(*ctxt, {emptyTuple, emptyTuple}),
+        TupleType::get(*ctxt, {ctxt->voidType, ctxt->voidType}).getPtr());
+
+  CHECK(FunctionType::get({}, emptyTuple), FunctionType::get({}, voidTy));
+  CHECK(FunctionType::get({emptyTuple}, emptyTuple),
+        FunctionType::get({voidTy}, voidTy));
+  CHECK(FunctionType::get({emptyTuple, emptyTuple}, emptyTuple),
+        FunctionType::get({voidTy, voidTy}, voidTy));
+#undef CHECK
+}
+
+TEST_F(TypeTest, printingTest_simple) {
+  TypePrintOptions opts = TypePrintOptions::forDebug();
+#define CHECK(T, STR) EXPECT_EQ(T.getString(opts), STR)
+  CHECK(ctxt->f32Type, "f32");
+  CHECK(ctxt->f64Type, "f64");
+  CHECK(ctxt->i8Type, "i8");
+  CHECK(ctxt->i16Type, "i16");
+  CHECK(ctxt->i32Type, "i32");
+  CHECK(ctxt->i64Type, "i64");
+  CHECK(ctxt->isizeType, "isize");
+  CHECK(ctxt->u8Type, "u8");
+  CHECK(ctxt->u16Type, "u16");
+  CHECK(ctxt->u32Type, "u32");
+  CHECK(ctxt->u64Type, "u64");
+  CHECK(ctxt->usizeType, "usize");
+  CHECK(ctxt->voidType, "void");
+  CHECK(ctxt->errorType, "<error_type>");
+  Type tyVar = TypeVariableType::create(*ctxt, 0);
+  CHECK(tyVar, "$T0");
+  CHECK(Type(nullptr), "<null_type>");
+#undef CHECK
+}
+
+TEST_F(TypeTest, printingTest_lvalues) {
+  Type lvalue = LValueType::get(ctxt->f32Type);
+  EXPECT_EQ(lvalue->getString(TypePrintOptions::forDebug()), "@lvalue f32");
+  EXPECT_EQ(lvalue->getString(TypePrintOptions::forDiagnostics()), "f32");
+}
+
+TEST_F(TypeTest, printingTest_references) {
+  Type mutRef = ReferenceType::get(ctxt->f32Type, true);
+  Type ref = ReferenceType::get(ctxt->f32Type, false);
+
+  EXPECT_EQ(mutRef->getString(TypePrintOptions::forDebug()), "&mut f32");
+  EXPECT_EQ(mutRef->getString(TypePrintOptions::forDiagnostics()), "&mut f32");
+
+  EXPECT_EQ(ref->getString(TypePrintOptions::forDebug()), "&f32");
+  EXPECT_EQ(ref->getString(TypePrintOptions::forDiagnostics()), "&f32");
+}
+
+TEST_F(TypeTest, printingTest_maybe) {
+  Type maybe = MaybeType::get(ctxt->f32Type);
+  EXPECT_EQ(maybe->getString(TypePrintOptions::forDebug()), "maybe f32");
+  EXPECT_EQ(maybe->getString(TypePrintOptions::forDiagnostics()), "maybe f32");
+}
+
+TEST_F(TypeTest, printingTest_tuple) {
+  Type t0 = TupleType::getEmpty(*ctxt);
+  Type t2 = TupleType::get(*ctxt, {ctxt->f32Type, ctxt->f64Type});
+  Type t3 =
+      TupleType::get(*ctxt, {ctxt->f32Type, ctxt->f64Type, ctxt->isizeType});
+
+  EXPECT_EQ(t0->getString(TypePrintOptions::forDebug()), "()");
+  EXPECT_EQ(t0->getString(TypePrintOptions::forDiagnostics()), "()");
+
+  EXPECT_EQ(t2->getString(TypePrintOptions::forDebug()), "(f32, f64)");
+  EXPECT_EQ(t2->getString(TypePrintOptions::forDiagnostics()), "(f32, f64)");
+
+  EXPECT_EQ(t3->getString(TypePrintOptions::forDebug()), "(f32, f64, isize)");
+  EXPECT_EQ(t3->getString(TypePrintOptions::forDiagnostics()),
+            "(f32, f64, isize)");
+}
+
+TEST_F(TypeTest, printingTest_func) {
+  Type f0 = FunctionType::get({}, ctxt->voidType);
+  Type f1 = FunctionType::get({ctxt->f32Type, ctxt->f64Type}, ctxt->voidType);
+  Type f2 = FunctionType::get({ctxt->f32Type, ctxt->f64Type, ctxt->isizeType},
+                              ctxt->voidType);
+
+  EXPECT_EQ(f0->getString(TypePrintOptions::forDebug()), "() -> void");
+  EXPECT_EQ(f0->getString(TypePrintOptions::forDiagnostics()), "() -> void");
+
+  EXPECT_EQ(f1->getString(TypePrintOptions::forDebug()), "(f32, f64) -> void");
+  EXPECT_EQ(f1->getString(TypePrintOptions::forDiagnostics()),
+            "(f32, f64) -> void");
+
+  EXPECT_EQ(f2->getString(TypePrintOptions::forDebug()),
+            "(f32, f64, isize) -> void");
+  EXPECT_EQ(f2->getString(TypePrintOptions::forDiagnostics()),
+            "(f32, f64, isize) -> void");
 }
