@@ -26,19 +26,21 @@ class SourceRange;
 struct TypePrintOptions {
   /// If true, null types are printed as <null_type>, if false, traps on null
   /// type.
-  bool allowNullTypes = false;
+  bool allowNullTypes = true;
   /// If true, type variables are printed as '_' instead of '$Tx'
   bool printTypeVariablesAsUnderscore = false;
   /// If true, lvalues are printed as @lvalue T instead of being "transparent"
   bool printLValues = false;
   /// If true, null types are printed as <error_type>, if false, traps on error
   /// type.
-  bool allowErrorTypes = false;
+  bool allowErrorTypes = true;
 
   /// Creates a TypeOption for use in diagnostics
   static TypePrintOptions forDiagnostics() {
     TypePrintOptions opts;
     opts.printTypeVariablesAsUnderscore = true;
+    opts.allowErrorTypes = false;
+    opts.allowNullTypes = false;
     return opts;
   }
 
@@ -46,8 +48,7 @@ struct TypePrintOptions {
   /// error types.
   static TypePrintOptions forDebug() {
     TypePrintOptions opts;
-    opts.allowNullTypes = true;
-    opts.allowErrorTypes = true;
+    opts.printLValues = true;
     return opts;
   }
 };
