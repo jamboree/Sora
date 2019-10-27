@@ -233,6 +233,7 @@ CanType TypeBase::getCanonicalType() const {
   }
   // Cache the canonical type & return
   assert(result && "result is nullptr?");
+  assert(result->isCanonical() && "result isn't canonical?");
   ctxtOrCanType = result.getPtr();
   return CanType(result);
 }
