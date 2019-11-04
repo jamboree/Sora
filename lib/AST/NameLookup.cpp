@@ -22,8 +22,18 @@ void *ASTScope::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ArenaKind::Permanent);
 }
 
-ASTScope *ASTScope::create(ASTContext &ctxt, ASTScope *parent, ASTNode node) {
-  return new (ctxt) ASTScope(parent, node);
+ASTScope *ASTScope::createChild(ASTScope *parent, ASTNode node) {
+  assert(parent && "Parent can't be null");
+  ASTScope *result = new (parent->getASTContext()) ASTScope(parent, node);
+  parent->addChild(result);
+  return result;
+}
+
+ASTScope *ASTScope::createContinuation(ASTScope *parent, ASTNode node) {
+  assert(parent && "Parent can't be null");
+  ASTScope *result = new (parent->getASTContext()) ASTScope(parent, node);
+  parent->addContinuation(result);
+  return result;
 }
 
 ASTScope *ASTScope::createRoot(ASTContext &ctxt, ASTNode node) {
@@ -31,10 +41,12 @@ ASTScope *ASTScope::createRoot(ASTContext &ctxt, ASTNode node) {
 }
 
 void ASTScope::addChild(ASTScope *scope) {
+  assert(!hasContinuation &&
+         "Can't add another child if we have a continuation");
   children.push_back(scope);
-  if (needsCleanup() && !hasRegisteredCleanup) {
+  if (needsCleanup() && !cleanupRegistered) {
     getASTContext().addDestructorCleanup(*this);
-    hasRegisteredCleanup = true;
+    cleanupRegistered = true;
   }
 }
 
@@ -83,24 +95,82 @@ const char *getASTNodeKind(ASTNode node) {
 }
 } // namespace
 
-void ASTScope::dumpImpl(raw_ostream &out, unsigned indent,
-                        unsigned curIndent) const {
+void ASTScope::dumpImpl(raw_ostream &out, unsigned indent, unsigned curIndent,
+                        bool isContinuation) const {
+  out.indent(curIndent);
+  if (isContinuation)
+    out << "(cont) ";
   out << "ASTScope<" << getASTNodeKind(node) << ">\n";
   for (ASTScope *child : children)
-    child->dumpImpl(out, indent, curIndent + indent);
+    child->dumpImpl(out, indent, curIndent + indent, /*isContinuation*/ false);
+  if (hasContinuation())
+    getContinuation()->dumpImpl(out, indent, curIndent + indent,
+                                /*isContinuation*/ true);
 }
 
-//===- ASTScope Builder ---------------------------------------------------===//
+//===- ASTScope ChildrenBuilder -------------------------------------------===//
 
-/// The AST Scope builder, which is tasked with building the AST Scopes of an
-/// AST.
-class ASTScope::Builder : public SimpleASTVisitor<Builder> {};
+/// The ASTScope ChildrenBuilder, which expands the children of an ASTScope.
+/// This will create the children ASTScopes and continuations in some cases.
+class ASTScope::ChildrenBuilder
+    : public SimpleASTVisitor<ChildrenBuilder, void, ASTScope *> {
+public:
+  using Parent = SimpleASTVisitor<ChildrenBuilder, void, ASTScope *>;
+
+  void visit(ASTScope *scope) {
+    assert(!scope->childrenAreExpanded &&
+           "Children have already been expanded");
+    Parent::visit(scope->node, scope);
+  }
+
+#define VISIT_IMPOSSIBLE(T)                                                    \
+  void visit##T(T *, ASTScope *) {                                             \
+    llvm_unreachable(#T " doesn't have children scopes!");                     \
+  }
+
+  VISIT_IMPOSSIBLE(Expr)
+
+  void visitFuncDecl(FuncDecl *decl, ASTScope *scope);
+  VISIT_IMPOSSIBLE(ParamDecl)
+  VISIT_IMPOSSIBLE(LetDecl)
+  VISIT_IMPOSSIBLE(VarDecl)
+
+  VISIT_IMPOSSIBLE(ContinueStmt)
+  VISIT_IMPOSSIBLE(BreakStmt)
+  VISIT_IMPOSSIBLE(ReturnStmt)
+
+  void visitBlockStmt(BlockStmt *stmt, ASTScope *scope);
+  void visitIfStmt(IfStmt *stmt, ASTScope *scope);
+  void visitWhileStmt(WhileStmt *stmt, ASTScope *scope);
+
+#undef VISIT_IMPOSSIBLE
+};
+
+/// For FuncDecls, we just create a BraceStmt children
+void ASTScope::ChildrenBuilder::visitFuncDecl(FuncDecl *decl, ASTScope *scope) {
+  assert(decl->getBody() && "no func body?");
+  ASTScope::createChild(scope, decl->getBody());
+}
+
+void ASTScope::ChildrenBuilder::visitBlockStmt(BlockStmt *stmt,
+                                               ASTScope *scope) {}
+
+void ASTScope::ChildrenBuilder::visitIfStmt(IfStmt *stmt, ASTScope *scope) {
+
+}
+
+void ASTScope::ChildrenBuilder::visitWhileStmt(WhileStmt *stmt,
+                                               ASTScope *scope) {
+  // If the condition is a Decl, create a continuation
+  if (LetDecl *cond = stmt->getCond().getLetDeclOrNull())
+    scope = ASTScope::createContinuation(scope, stmt);
+  // Create a scope for the body
+  ASTScope::createChild(scope, stmt->getBody());
+}
 
 //===- ASTScope -----------------------------------------------------------===//
 
-void ASTScope::expandChildren() {
-  // TODO
-}
+void ASTScope::expandChildren() { ChildrenBuilder().visit(this); }
 
 // Plan:
 //  -> Provide an entry point to create the AST Scope of a source file
