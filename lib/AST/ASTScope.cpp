@@ -36,40 +36,16 @@ void ASTScope::fullyExpand() {
     child->fullyExpand();
 }
 
-void ASTScope::expand() { /* todo*/ }
-
-namespace {
-const char *getASTNodeKind(ASTNode node) {
-  if (Expr *expr = node.dyn_cast<Expr *>()) {
-    switch (expr->getKind()) {
-#define EXPR(KIND, PARENT)                                                     \
-  case ExprKind::KIND:                                                         \
-    return #KIND "Expr";
-#include "Sora/AST/ExprNodes.def"
-    }
-    llvm_unreachable("unknown Expr");
-  }
-  if (Stmt *stmt = node.dyn_cast<Stmt *>()) {
-    switch (stmt->getKind()) {
-#define STMT(KIND, PARENT)                                                     \
-  case StmtKind::KIND:                                                         \
-    return #KIND "Stmt";
-#include "Sora/AST/StmtNodes.def"
-    }
-    llvm_unreachable("unknown Stmt");
-  }
-  if (Decl *decl = node.dyn_cast<Decl *>()) {
-    switch (decl->getKind()) {
-#define DECL(KIND, PARENT)                                                     \
-  case DeclKind::KIND:                                                         \
-    return #KIND "decl";
-#include "Sora/AST/DeclNodes.def"
-    }
-    llvm_unreachable("unknown Decl");
-  }
-  llvm_unreachable("unknown ASTNode");
+ASTContext &ASTScope::getASTContext() const {
+  if (const SourceFileScope *scope = dyn_cast<const SourceFileScope>(this))
+    return scope->getSourceFile().astContext;
+  ASTScope *parent = getParent();
+  assert(parent && "ASTScope should always have a parent");
+  return parent->getASTContext();
 }
-} // namespace
+
+void ASTScope::expand() { /* todo*/
+}
 
 static const char *getKindStr(ASTScopeKind kind) {
   switch (kind) {

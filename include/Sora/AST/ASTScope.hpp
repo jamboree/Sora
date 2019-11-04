@@ -10,7 +10,7 @@
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/ASTNode.hpp"
 #include "Sora/Common/LLVM.hpp"
-#include "llvm/ADT/PointerIntpair.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace sora {
@@ -40,8 +40,8 @@ enum class ASTScopeKind : uint8_t {
 
 /// Base class for AST Scopes.
 ///
-/// ASTScopes form a tree and represent every scope in the AST in some way, and
-/// the root is always a SourceFileScope.
+/// ASTScopes form a tree and represent every scope in the AST.
+/// The root of an ASTScope is always a SourceFileScope.
 class alignas(ASTScopeAlignement) ASTScope {
   // ASTScopes shouldn't be copyable
   ASTScope(const ASTScope &) = delete;
@@ -53,17 +53,18 @@ class alignas(ASTScopeAlignement) ASTScope {
   // Disable placement new as well
   void *operator new(size_t, void *mem) noexcept = delete;
 
-  // The parent ASTScope, or the ASTContext for root ASTScopes.
+  /// The Parent ASTScope, and the kind of ASTScope this is.
+  llvm::PointerIntPair<ASTScope *, 3, ASTScopeKind> parentAndKind;
   static_assert(
       unsigned(ASTScopeKind::Last_Kind) <= (1 << 3),
       "Not enough bits in parentAndKind to represent every ASTScopeKind");
-  llvm::PointerIntPair<ASTScope *, 3, ASTScopeKind> parentAndKind;
+  /// The Children Scopes
   SmallVector<ASTScope *, 4> children;
+  /// Whether a cleanup for this ASTScope has been registered
   bool hasCleanup = false;
   /// Whether this scope has built its children scope.
   bool expanded = true;
 
-protected:
   /// \returns true if this ASTScope needs cleanup
   bool needsCleanup() const {
     const char *beg = reinterpret_cast<const char *>(this);
@@ -79,12 +80,13 @@ protected:
     return false;
   }
 
+protected:
   ASTScope(ASTScopeKind kind, ASTScope *parent) : parentAndKind(parent, kind) {
     assert((parent || (kind == ASTScopeKind::SourceFile)) &&
            "Every scope except SourceFileScopes must have a parent");
   }
 
-  // Allow allocation of ASTScopes using the ASTContext.
+  // Allow derived classes to allocate ASTScopes using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(ASTScope));
 
@@ -92,8 +94,13 @@ public:
   /// \returns the kind of scope this is
   ASTScopeKind getKind() const { return parentAndKind.getInt(); }
 
+  /// Adds a new child scope
   void addChild(ASTScope *scope);
+
+  /// \returns the children scopes of this ASTScope.
+  /// This will never expand this ASTScope if it's not expanded.
   ArrayRef<ASTScope *> getChildren() const { return children; }
+
   /// \param canExpand if true, the ASTScope will expand if needed.
   /// \returns the children of this ASTScope
   MutableArrayRef<ASTScope *> getChildren(bool canExpand = false) {
@@ -116,13 +123,10 @@ public:
   /// scope.
   void expand();
 
-  /// Recursively expand the scope until the full ASTScope tree has been
-  /// generated. This is expensive, and should be used only for testing
-  /// purposes.
+  /// Recursively expand the scope until the full ASTScope map has been
+  /// generated for the subtree. This is expensive, and should be used only for
+  /// testing purposes.
   void fullyExpand();
-
-  /// \returns true if this ASTScope represents a FuncDecl's scope.
-  bool isFuncDecl() const;
 
   /// Dumps this ASTScope to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const {
@@ -145,12 +149,13 @@ public:
 
   SourceFile &getSourceFile() const { return sourceFile; }
 
-  static bool classof(ASTScope *scope) {
+  static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::SourceFile;
   }
 };
 
 /// Represents the scope of a FuncDecl
+/// This should only have a single child: the BraceStmtScope of the body.
 class FuncDeclScope final : public ASTScope {
   FuncDeclScope(FuncDecl *decl, ASTScope *parent)
       : ASTScope(ASTScopeKind::FuncDecl, parent), decl(decl) {
@@ -165,15 +170,17 @@ public:
 
   FuncDecl *getFuncDecl() const { return decl; }
 
-  static bool classof(ASTScope *scope) {
+  static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::FuncDecl;
   }
 };
 
 /// Represents the scope of a local LetDecl.
-/// This is needed because order matters inside the body of functions.
-/// For example, the following code
+/// Local LetDecls always introduce a new scope: they close the scope that
+/// included everything before them and open a new scope for everything that
+/// comes after them.
 /// \verbatim
+/// // code
 ///   func foo() {
 ///     let (a, b)
 ///     if false {}
@@ -181,12 +188,9 @@ public:
 ///     let c
 ///     let d
 ///     { a }
+///     if false {}
 ///   }
-/// \endverbatim
-///
-/// will have this scope map
-///
-/// \verbatim
+/// /// scopes
 ///   FuncDeclScope
 ///     LocalLetDeclScope
 ///       IfStmtScope
@@ -194,9 +198,8 @@ public:
 ///       LocalLetDeclScope
 ///         LocalLetDeclScope
 ///           BraceStmtScope
+///           IfStmtScope
 /// \endverbatim
-///
-/// Note that LocalLetDecls implicitly introduce a new scope.
 ///
 /// That way, when we perform lookup for 'a', we correctly look at all of the
 /// 'let's (as they are the parents of the BraceStmtScope)
@@ -217,13 +220,13 @@ public:
 
   LetDecl *getLetDecl() const { return decl; }
 
-  static bool classof(ASTScope *scope) {
+  static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::LocalLetDecl;
   }
 };
 
 /// Represents the scope of a BlockStmt.
-/// This can have any number of children and may have a continuation.
+/// This can have any number of children scopes.
 class BlockStmtScope final : public ASTScope {
   BlockStmtScope(BlockStmt *stmt, ASTScope *parent)
       : ASTScope(ASTScopeKind::BlockStmt, parent), stmt(stmt) {
@@ -239,14 +242,27 @@ public:
 
   BlockStmt *getBlockStmt() const { return stmt; }
 
-  static bool classof(ASTScope *scope) {
+  static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::BlockStmt;
   }
 };
 
 /// Represents the scope of a IfStmt
-/// This can have at most 2 children scopes: the body of the if, and, perhaps,
-/// the body of the else.
+/// This can have at most 2 children scopes: the body of the if (or the
+/// condition's declaration), and the body of the else.
+/// \verbatim
+/// // code
+/// if false {} else {}
+/// if let x = x {} else {}
+/// // scopes
+/// IfStmtScope
+///   BlockStmtScope
+///   BlockStmtScope
+/// IfStmtScope
+///   LocalLetDeclScope
+///     BlockStmtScope
+///   BlockStmtScope
+/// \endverbatim
 class IfStmtScope final : public ASTScope {
   IfStmtScope(IfStmt *stmt, ASTScope *parent)
       : ASTScope(ASTScopeKind::BlockStmt, parent), stmt(stmt) {
@@ -261,13 +277,26 @@ public:
 
   IfStmt *getIfStmt() const { return stmt; }
 
-  static bool classof(ASTScope *scope) {
+  static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::BlockStmt;
   }
 };
 
 /// Represents the scope of a WhileStmt
-/// This can have a single child: the body of the while.
+/// This will usually have a single child, which will be the body of the while
+/// or the condition's declaration.
+///
+/// \verbatim
+/// // code
+/// while false {}
+/// while let x = x {}
+/// // scopes
+/// WhileStmtScope
+///   BlockStmtScope
+/// WhileStmtScope
+///   LocalLetDeclScope
+///     BlockStmtScope
+/// \endverbatim
 class WhileStmtScope final : public ASTScope {
   WhileStmtScope(WhileStmt *stmt, ASTScope *parent)
       : ASTScope(ASTScopeKind::WhileStmt, parent), stmt(stmt) {
@@ -283,7 +312,7 @@ public:
 
   WhileStmt *getWhileStmt() const { return stmt; }
 
-  static bool classof(ASTScope *scope) {
+  static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::WhileStmt;
   }
 };
