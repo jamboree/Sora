@@ -25,17 +25,9 @@ class SourceFile;
 
 /// Kinds of ASTScope
 enum class ASTScopeKind : uint8_t {
-  /// SourceFile
-  SourceFile,
-  /// Decl
-  FuncDecl,
-  LocalLetDecl,
-  /// Stmt
-  BlockStmt,
-  IfStmt,
-  WhileStmt,
-
-  Last_Kind = WhileStmt
+#define SCOPE(KIND) KIND,
+#define LAST_SCOPE(KIND) Last_Scope = KIND
+#include "Sora/AST/ASTScopeKinds.def"
 };
 
 /// Base class for AST Scopes.
@@ -56,7 +48,7 @@ class alignas(ASTScopeAlignement) ASTScope {
   /// The Parent ASTScope, and the kind of ASTScope this is.
   llvm::PointerIntPair<ASTScope *, 3, ASTScopeKind> parentAndKind;
   static_assert(
-      unsigned(ASTScopeKind::Last_Kind) <= (1 << 3),
+      unsigned(ASTScopeKind::Last_Scope) <= (1 << 3),
       "Not enough bits in parentAndKind to represent every ASTScopeKind");
   /// The Children Scopes
   SmallVector<ASTScope *, 4> children;
@@ -229,18 +221,29 @@ public:
 /// This can have any number of children scopes.
 class BlockStmtScope final : public ASTScope {
   BlockStmtScope(BlockStmt *stmt, ASTScope *parent)
-      : ASTScope(ASTScopeKind::BlockStmt, parent), stmt(stmt) {
+      : ASTScope(ASTScopeKind::BlockStmt, parent),
+        bodyAndLookupKind(stmt, LookupKind::Unknown) {
     assert(parent && "BlockStmtScope must have a valid parent");
     assert(stmt && "BlockStmtScope must have a non-null BlockStmt*");
   }
 
-  BlockStmt *const stmt;
+  enum class LookupKind {
+    /// This BlockStmt has interesting declarations (other than LetDecl) that we
+    /// need to consider (e.g. FuncDecl, types, etc.)
+    Mandatory,
+    /// This BlockStmt isn't interesting and we don't need to lookup into it
+    Skippable,
+    /// Unknown LookupKind
+    Unknown
+  };
+
+  llvm::PointerIntPair<BlockStmt *, 2, LookupKind> bodyAndLookupKind;
 
 public:
   static BlockStmtScope *create(ASTContext &ctxt, BlockStmt *stmt,
                                 ASTScope *parent);
 
-  BlockStmt *getBlockStmt() const { return stmt; }
+  BlockStmt *getBlockStmt() const { return bodyAndLookupKind.getPointer(); }
 
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::BlockStmt;

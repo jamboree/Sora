@@ -1,0 +1,29 @@
+//===--- ASTScopeKind.def - Kinds of AST Scopes x-macros --------*- C++ -*-===//
+// Part of the Sora project, licensed under the MIT license.
+// See LICENSE.txt in the project root for license information.
+//
+// Copyright (c) 2019 Pierre van Houtryve
+//===----------------------------------------------------------------------===//
+
+#ifndef SCOPE
+# define SCOPE(KIND)
+#endif
+
+#ifndef LAST_SCOPE
+# define LAST_SCOPE(KIND)
+#endif
+
+//===----------------------------------------------------------------------===//
+
+SCOPE(SourceFile)
+SCOPE(FuncDecl)
+SCOPE(LocalLetDecl)
+SCOPE(BlockStmt)
+SCOPE(IfStmt)
+SCOPE(WhileStmt)
+LAST_SCOPE(WhileStmt)
+
+//===----------------------------------------------------------------------===//
+
+#undef SCOPE
+#undef LAST_SCOPE

@@ -49,18 +49,10 @@ void ASTScope::expand() { /* todo*/
 
 static const char *getKindStr(ASTScopeKind kind) {
   switch (kind) {
-  case ASTScopeKind::SourceFile:
-    return "SourceFileScope";
-  case ASTScopeKind::FuncDecl:
-    return "FuncDeclScope";
-  case ASTScopeKind::LocalLetDecl:
-    return "LocalLetDeclScope";
-  case ASTScopeKind::BlockStmt:
-    return "BlockStmtScope";
-  case ASTScopeKind::IfStmt:
-    return "IfStmtScope";
-  case ASTScopeKind::WhileStmt:
-    return "WhileStmtScope";
+#define SCOPE(KIND)                                                            \
+  case ASTScopeKind::KIND:                                                     \
+    return #KIND;
+#include "Sora/AST/ASTScopeKinds.def"
   }
   llvm_unreachable("unknown ASTScope kind");
 }
@@ -68,7 +60,7 @@ static const char *getKindStr(ASTScopeKind kind) {
 void ASTScope::dumpImpl(raw_ostream &out, unsigned indent,
                         unsigned curIndent) const {
   out.indent(curIndent);
-  out << getKindStr(getKind()) << "\n";
+  out << getKindStr(getKind()) << "Scope \n";
 }
 
 SourceFileScope *SourceFileScope::create(SourceFile &sf) {
