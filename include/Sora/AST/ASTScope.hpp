@@ -10,6 +10,7 @@
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/ASTNode.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -120,6 +121,13 @@ public:
   /// testing purposes.
   void fullyExpand();
 
+  /// \returns the SourceLoc of the first token of this scope
+  SourceLoc getBegLoc() const;
+  /// \returns the SourceLoc of the last token of this scope
+  SourceLoc getEndLoc() const;
+  /// \returns the full range of this scope
+  SourceRange getSourceRange() const;
+
   /// Dumps this ASTScope to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const {
     dumpImpl(out, indent, 0);
@@ -141,6 +149,9 @@ public:
 
   SourceFile &getSourceFile() const { return sourceFile; }
 
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
+
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::SourceFile;
   }
@@ -161,6 +172,9 @@ public:
   static FuncDeclScope *create(FuncDecl *decl, ASTScope *parent);
 
   FuncDecl *getFuncDecl() const { return decl; }
+
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
 
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::FuncDecl;
@@ -195,9 +209,12 @@ public:
 ///
 /// That way, when we perform lookup for 'a', we correctly look at all of the
 /// 'let's (as they are the parents of the BraceStmtScope)
+///
+/// Note that this also means that the end loc of the scope isn't the end loc of
+/// the LetDecl.
 class LocalLetDeclScope final : public ASTScope {
-  LocalLetDeclScope(LetDecl *decl, ASTScope *parent)
-      : ASTScope(ASTScopeKind::LocalLetDecl, parent), decl(decl) {
+  LocalLetDeclScope(LetDecl *decl, ASTScope *parent, SourceLoc end)
+      : ASTScope(ASTScopeKind::LocalLetDecl, parent), decl(decl), end(end) {
     assert(parent && "LocalLetDeclScope must have a valid parent");
     assert(isLocalAndNonNull() &&
            "LocalLetDeclScope must have a non-null, local LetDecl*");
@@ -206,11 +223,17 @@ class LocalLetDeclScope final : public ASTScope {
   bool isLocalAndNonNull() const;
 
   LetDecl *const decl;
+  // The actual end of the implicit scope of the LetDecl.
+  SourceLoc end;
 
 public:
-  static LocalLetDeclScope *create(LetDecl *decl, ASTScope *parent);
+  static LocalLetDeclScope *create(LetDecl *decl, ASTScope *parent,
+                                   SourceLoc end);
 
   LetDecl *getLetDecl() const { return decl; }
+
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
 
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::LocalLetDecl;
@@ -244,6 +267,9 @@ public:
                                 ASTScope *parent);
 
   BlockStmt *getBlockStmt() const { return bodyAndLookupKind.getPointer(); }
+
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
 
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::BlockStmt;
@@ -280,6 +306,9 @@ public:
 
   IfStmt *getIfStmt() const { return stmt; }
 
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
+
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::BlockStmt;
   }
@@ -314,6 +343,9 @@ public:
                                 ASTScope *parent);
 
   WhileStmt *getWhileStmt() const { return stmt; }
+
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
 
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::WhileStmt;

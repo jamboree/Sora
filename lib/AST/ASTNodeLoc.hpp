@@ -24,14 +24,14 @@ constexpr bool isOverriden(Rtr (Ty::*)() const) {
 }
 } // namespace detail
 
-template <typename Base, typename Derived> struct ASTNodeLoc {
+template <typename Base, typename Derived, bool usesGetLoc = true>
+struct ASTNodeLoc {
   static constexpr bool hasGetRange =
       detail::isOverriden<Base>(&Derived::getSourceRange);
   static constexpr bool hasGetBeg =
       detail::isOverriden<Base>(&Derived::getBegLoc);
   static constexpr bool hasGetEnd =
       detail::isOverriden<Base>(&Derived::getEndLoc);
-  static constexpr bool hasGetLoc = detail::isOverriden<Base>(&Derived::getLoc);
 
   /// Nodes must override (getSourceRange) or (getBegLoc & getEndLoc) or both
   static_assert(hasGetRange || (hasGetBeg && hasGetEnd),
@@ -47,7 +47,10 @@ template <typename Base, typename Derived> struct ASTNodeLoc {
     return hasGetBeg ? node->getBegLoc() : node->getSourceRange().begin;
   }
 
+  template <typename = std::enable_if<usesGetLoc, void>>
   static SourceLoc getLoc(const Derived *node) {
+    static constexpr bool hasGetLoc =
+        detail::isOverriden<Base>(&Derived::getLoc);
     // Prefer to use the override if it exists, else use getBegLoc.
     return hasGetLoc ? node->getLoc() : getBegLoc(node);
   }
