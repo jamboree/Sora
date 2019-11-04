@@ -6,6 +6,7 @@ add_source(ast_src
   "Decl.cpp"
   "Expr.cpp"
   "Identifier.cpp"
+  "NameLookup.cpp"
   "OperatorKinds.cpp"
   "Pattern.cpp"
   "SourceFile.cpp"
