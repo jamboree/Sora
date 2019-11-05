@@ -269,9 +269,7 @@ public:
   static BlockStmtScope *create(ASTContext &ctxt, BlockStmt *stmt,
                                 ASTScope *parent);
 
-  BlockStmt *getBlockStmt() const {
-    return cast<BlockStmt>(bodyAndLookupKind.getPointer());
-  }
+  BlockStmt *getBlockStmt() const;
 
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;
