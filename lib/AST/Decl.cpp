@@ -129,6 +129,12 @@ SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
 
 SourceLoc FuncDecl::getEndLoc() const { return body->getEndLoc(); }
 
+void PatternBindingDecl::forEachVarDecl(
+    llvm::function_ref<void(VarDecl *)> fn) const {
+  assert(pattern && "no pattern");
+  return pattern->forEachVarDecl(fn);
+}
+
 SourceLoc LetDecl::getBegLoc() const { return letLoc; }
 
 SourceLoc LetDecl::getEndLoc() const {

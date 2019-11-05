@@ -381,12 +381,19 @@ protected:
         init(init) {}
 
 public:
+  /// Call \p fn on each VarDecl in this PatternBindingDecl.
+  void forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const;
+
+  /// \returns the initializer of this PBD, if it has one.
   Expr *getInitializer() const { return init; }
+  /// Replaces the initializer of this PBD.
   void setInitializer(Expr *expr) { init = expr; }
+  /// \returns whether this PBD has an initializer.
   bool hasInitializer() const { return init; }
 
+  /// \returns the Pattern of this PBD
   Pattern *getPattern() const { return pattern; }
-
+  /// \returns the SourceLoc of the '=' if there's an initializer.
   SourceLoc getEqualLoc() const { return equalLoc; }
 
   static bool classof(const Decl *decl) {
