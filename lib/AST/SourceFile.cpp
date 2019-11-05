@@ -7,6 +7,7 @@
 
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/ASTScope.hpp"
 #include "Sora/AST/Decl.hpp"
 
 using namespace sora;
@@ -32,6 +33,12 @@ bool SourceFile::walk(ASTWalker &walker) {
       return false;
   }
   return true;
+}
+
+SourceFileScope *SourceFile::getScopeMap(bool canLazilyBuild) {
+  if (!fileScope && canLazilyBuild)
+    fileScope = SourceFileScope::create(*this);
+  return fileScope;
 }
 
 SourceLoc SourceFile::getBegLoc() const {

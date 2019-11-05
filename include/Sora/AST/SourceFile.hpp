@@ -19,10 +19,12 @@ namespace sora {
 class ASTWalker;
 class ASTContext;
 class Decl;
+class SourceFileScope;
 
 /// Represents a source file.
 class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
   SmallVector<Decl *, 4> members;
+  SourceFileScope *fileScope = nullptr;
   BufferID bufferID;
 
   SourceFile(ASTContext &astContext, BufferID bufferID, DeclContext *parent)
@@ -54,6 +56,13 @@ public:
 
   /// Dumps this source file to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const;
+
+  /// \returns whether this SourceFile has a ASTScope describing it.
+  bool hasScopeMap() const { return fileScope != nullptr; }
+  /// \param canLazilyBuild if true, the SourceFileScope will be constructed
+  /// (but not expanded) if needed. Default is true.
+  /// \returns this file's SourceFileScope (scope map)
+  SourceFileScope *getScopeMap(bool canLazilyBuild = true);
 
   /// Traverse this SourceFile using \p walker.
   /// \returns true if the walk completed successfully, false if it ended
