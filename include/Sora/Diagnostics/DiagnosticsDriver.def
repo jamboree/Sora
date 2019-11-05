@@ -32,6 +32,9 @@
 ERROR(unknown_arg, "unknown argument '%0'", (StringRef))
 ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)", 
   (StringRef, unsigned))
+ERROR(unknown_argv_for, "unknown argument value '%0' for '%1'", 
+  (StringRef, StringRef))
+
 // Input files loading
 ERROR(couldnt_load_input_file, "could not load input file '%0'", (StringRef))
 ERROR(no_input_files, "no input files", ())

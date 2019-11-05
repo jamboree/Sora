@@ -7,6 +7,10 @@
 // This file contains the Driver and CompilerInstance classes.
 // Essentially, the driver is the glue holding all the parts of the compiler
 // together. It orchestrates compilation, handles command-line options, etc.
+//
+// The driver is still in a prototyping stage. It's rapidly changing, and thus
+// the code is clearly not ideal. The driver should be completely rewritten once
+// the full compiler pipeline is implemented.
 //===----------------------------------------------------------------------===//
 
 #pragma once
@@ -48,10 +52,23 @@ public:
     Last = Sema
   };
 
+  /// Scope Maps printing mode
+  enum class ScopeMapPrintingMode : uint8_t {
+    /// Don't print scope maps
+    None,
+    /// Print scope maps as they are
+    Lazy,
+    /// Fully expand the scope map and print it
+    Expanded
+  };
+
   struct {
-    /// If "true", dumps the AST after parsing.
+    /// If "true", dumps the raw AST after parsing.
     /// Honored by doParsing()
     bool dumpParse = false;
+    /// If "true", dumps the typechecked AST after Sema
+    /// Honored by doSema()
+    bool dumpAST = false;
     /// If "true", the compiler will stop after the parsing step.
     /// Honored by run()
     bool parseOnly = false;
@@ -61,10 +78,15 @@ public:
     /// Whether we should regularly print the memory usage of the ASTContext &
     /// other datastructures.
     bool printMemUsage = false;
+    /// Scope Maps printing mode.
+    /// Scope maps are printed by dumpScopeMaps().
+    /// dumpScopeMaps is called by doSema or by doParsing if parseOnly is true.
+    ScopeMapPrintingMode scopeMapPrintingMode = ScopeMapPrintingMode::None;
   } options;
 
   /// Handles command-line options
-  void handleOptions(llvm::opt::InputArgList &argList);
+  /// \returns false if an error occured while handling the options
+  bool handleOptions(llvm::opt::InputArgList &argList);
 
   /// Loads each input file in \p argList
   /// \returns false if an error occured while loading a file.
@@ -115,6 +137,12 @@ private:
   /// \returns the installed DV, or nullptr if no DV was installed.
   DiagnosticVerifier *installDiagnosticVerifierIfNeeded();
 
+  /// Creates a SourceFile instance for \p buffer
+  SourceFile &createSourceFile(BufferID buffer);
+
+  /// Honors options.scopeMapPrintingMode for \p file.
+  void dumpScopeMaps(raw_ostream &out, SourceFile &file);
+
   /// Creates the ASTContext (if needed)
   void createASTContext();
 
@@ -123,8 +151,6 @@ private:
 
   /// The BufferIDs of the input files.
   SmallVector<BufferID, 1> inputBuffers;
-
-  SourceFile *createSourceFile(BufferID buffer);
 
   /// The output stream used to print debug message/statistics.
   /// Usually llvm::outs();
@@ -136,6 +162,10 @@ private:
   /// Performs the parsing step on \p file
   /// \returns true if parsing was successful, false otherwise.
   bool doParsing(SourceFile &file);
+
+  /// Performs the semantic analysis step on \p file
+  /// \returns true if semantic analysis was successful, false otherwise.
+  bool doSema(SourceFile &file);
 };
 
 /// This is a high-level compiler driver. It handles command-line options and

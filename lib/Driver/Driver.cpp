@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Driver/Driver.hpp"
+#include "Sora/AST/ASTScope.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
@@ -62,25 +63,41 @@ Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &argList) {
     using CompilerInstance::CompilerInstance;
   };
   auto CI = std::make_unique<CompilerInstanceCreator>();
-  CI->handleOptions(argList);
-  CI->loadInputs(argList);
+  if (!CI->handleOptions(argList))
+    return nullptr;
+  if (!CI->loadInputs(argList))
+    return nullptr;
   return std::move(CI);
 }
 
-void CompilerInstance::handleOptions(InputArgList &argList) {
+bool CompilerInstance::handleOptions(InputArgList &argList) {
+  bool success = true;
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
+  options.dumpAST = argList.hasArg(opt::OPT_dump_ast);
   options.parseOnly = argList.hasArg(opt::OPT_parse_only);
   options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
   options.printMemUsage = argList.hasArg(opt::OPT_print_mem_usage);
+  if (Arg *arg = argList.getLastArg(opt::OPT_dump_scope_maps)) {
+    StringRef value = arg->getValue();
+    if (value == "lazy")
+      options.scopeMapPrintingMode = ScopeMapPrintingMode::Lazy;
+    else if (value == "expanded")
+      options.scopeMapPrintingMode = ScopeMapPrintingMode::Expanded;
+    else {
+      success = false;
+      diagnose(diag::unknown_argv_for, value, arg->getSpelling());
+    }
+  }
+  return success;
 }
 
 bool CompilerInstance::loadInputs(llvm::opt::InputArgList &argList) {
-  bool result = true;
+  bool success = true;
   for (const Arg *arg : argList.filtered(opt::OPT_INPUT)) {
-    result &= !loadFile(arg->getValue()).isNull();
+    success &= !loadFile(arg->getValue()).isNull();
     arg->claim();
   }
-  return result;
+  return success;
 }
 
 void CompilerInstance::dump(raw_ostream &out) const {
@@ -104,9 +121,23 @@ void CompilerInstance::dump(raw_ostream &out) const {
   }
   /// Dump options
   DUMP_BOOL(options.dumpParse);
+  DUMP_BOOL(options.dumpAST);
   DUMP_BOOL(options.parseOnly);
   DUMP_BOOL(options.verifyModeEnabled);
   DUMP_BOOL(options.printMemUsage);
+  out << "options.scopeMapPrintingMode: ";
+  switch (options.scopeMapPrintingMode) {
+  case ScopeMapPrintingMode::None:
+    out << "None";
+    break;
+  case ScopeMapPrintingMode::Lazy:
+    out << "Lazy";
+    break;
+  case ScopeMapPrintingMode::Expanded:
+    out << "Expanded";
+    break;
+  }
+  out << "\n";
 #undef DUMP_BOOL
 }
 
@@ -178,15 +209,20 @@ bool CompilerInstance::run(Step stopAfter) {
 
   // Create the ASTContext
   createASTContext();
+  assert(astContext && "no ASTContext?");
 
   // Create the source file
-  SourceFile *sf = createSourceFile(inputBuffers[0]);
+  SourceFile &sf = createSourceFile(inputBuffers[0]);
 
-  // Perform parsing
-  success = doParsing(*sf);
-  if (canContinue(Step::Parsing))
+  // Perform Parsing
+  success = doParsing(sf);
+  if (!canContinue(Step::Parsing))
     return finish();
-  // TODO: Perform Sema/IRGen/etc.
+  // Perform Semantic Analysis
+  success = doSema(sf);
+  if (!canContinue(Step::Sema))
+    return finish();
+  // TODO: Other steps
   return finish();
 }
 
@@ -204,14 +240,28 @@ DiagnosticVerifier *CompilerInstance::installDiagnosticVerifierIfNeeded() {
   return ptr;
 }
 
+SourceFile &CompilerInstance::createSourceFile(BufferID buffer) {
+  assert(astContext && "No ASTContext?");
+  return *SourceFile::create(*astContext, buffer, nullptr);
+}
+
+void CompilerInstance::dumpScopeMaps(raw_ostream &out, SourceFile &file) {
+  auto mode = options.scopeMapPrintingMode;
+  if (mode == ScopeMapPrintingMode::None)
+    return;
+  SourceFileScope *scopeMap = file.getScopeMap();
+  assert(scopeMap && "no scope map?!");
+  if (mode == ScopeMapPrintingMode::Expanded)
+    scopeMap->fullyExpand();
+  else
+    assert((mode == ScopeMapPrintingMode::Lazy) &&
+           "Unknown ScopeMapPrintingMode");
+  scopeMap->dump(out);
+}
+
 void CompilerInstance::createASTContext() {
   if (!astContext)
     astContext = ASTContext::create(srcMgr, diagEng);
-}
-
-SourceFile *CompilerInstance::createSourceFile(BufferID buffer) {
-  assert(astContext && "No ASTContext?");
-  return SourceFile::create(*astContext, buffer, nullptr);
 }
 
 void CompilerInstance::printASTContextMemoryUsage(Step step) const {
@@ -231,12 +281,22 @@ void CompilerInstance::printASTContextMemoryUsage(Step step) const {
 }
 
 bool CompilerInstance::doParsing(SourceFile &file) {
-  assert(astContext && "No ASTContext?");
   Parser parser(*astContext, file);
   parser.parseSourceFile();
   if (options.dumpParse)
     file.dump(llvm::outs());
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Parsing);
+  if (options.parseOnly)
+    dumpScopeMaps(llvm::outs(), file);
+  return true;
+}
+
+bool CompilerInstance::doSema(SourceFile &file) {
+  if (options.dumpAST)
+    file.dump(llvm::outs());
+  if (options.printMemUsage)
+    printASTContextMemoryUsage(Step::Parsing);
+  dumpScopeMaps(llvm::outs(), file);
   return true;
 }
