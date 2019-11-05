@@ -56,7 +56,7 @@ class alignas(ASTScopeAlignement) ASTScope {
   /// Whether a cleanup for this ASTScope has been registered
   bool hasCleanup = false;
   /// Whether this scope has built its children scope.
-  bool expanded = true;
+  bool expanded = false;
 
   /// \returns true if this ASTScope needs cleanup
   bool needsCleanup() const {
@@ -216,6 +216,7 @@ class LocalLetDeclScope final : public ASTScope {
   LocalLetDeclScope(LetDecl *decl, ASTScope *parent, SourceLoc end)
       : ASTScope(ASTScopeKind::LocalLetDecl, parent), decl(decl), end(end) {
     assert(parent && "LocalLetDeclScope must have a valid parent");
+    assert(end && "end loc isn't valid");
     assert(isLocalAndNonNull() &&
            "LocalLetDeclScope must have a non-null, local LetDecl*");
   }
@@ -245,7 +246,7 @@ public:
 class BlockStmtScope final : public ASTScope {
   BlockStmtScope(BlockStmt *stmt, ASTScope *parent)
       : ASTScope(ASTScopeKind::BlockStmt, parent),
-        bodyAndLookupKind(stmt, LookupKind::Unknown) {
+        bodyAndLookupKind((Stmt *)stmt, LookupKind::Unknown) {
     assert(parent && "BlockStmtScope must have a valid parent");
     assert(stmt && "BlockStmtScope must have a non-null BlockStmt*");
   }
@@ -254,19 +255,23 @@ class BlockStmtScope final : public ASTScope {
     /// This BlockStmt has interesting declarations (other than LetDecl) that we
     /// need to consider (e.g. FuncDecl, types, etc.)
     Mandatory,
-    /// This BlockStmt isn't interesting and we don't need to lookup into it
+    /// This BlockStmt isn't interesting and we don't need to look inside it
     Skippable,
     /// Unknown LookupKind
     Unknown
   };
 
-  llvm::PointerIntPair<BlockStmt *, 2, LookupKind> bodyAndLookupKind;
+  // The body is stored as a Stmt because the definition of BlockStmt isn't
+  // visible here.
+  llvm::PointerIntPair<Stmt *, 2, LookupKind> bodyAndLookupKind;
 
 public:
   static BlockStmtScope *create(ASTContext &ctxt, BlockStmt *stmt,
                                 ASTScope *parent);
 
-  BlockStmt *getBlockStmt() const { return bodyAndLookupKind.getPointer(); }
+  BlockStmt *getBlockStmt() const {
+    return cast<BlockStmt>(bodyAndLookupKind.getPointer());
+  }
 
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;
@@ -294,7 +299,7 @@ public:
 /// \endverbatim
 class IfStmtScope final : public ASTScope {
   IfStmtScope(IfStmt *stmt, ASTScope *parent)
-      : ASTScope(ASTScopeKind::BlockStmt, parent), stmt(stmt) {
+      : ASTScope(ASTScopeKind::IfStmt, parent), stmt(stmt) {
     assert(parent && "IfStmtScope must have a valid parent");
     assert(stmt && "IfStmtScope must have a non-null BlockStmt*");
   }
@@ -310,7 +315,7 @@ public:
   SourceLoc getEndLoc() const;
 
   static bool classof(const ASTScope *scope) {
-    return scope->getKind() == ASTScopeKind::BlockStmt;
+    return scope->getKind() == ASTScopeKind::IfStmt;
   }
 };
 
