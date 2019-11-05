@@ -64,6 +64,10 @@ void SourceLoc::print(raw_ostream &out, const SourceManager &srcMgr,
 
 void SourceRange::print(raw_ostream &out, const SourceManager &srcMgr,
                         bool printFileName) {
+  if (isInvalid()) {
+    out << "<invalid>";
+    return;
+  }
   // Note: SourceRange is a pair of SourceLoc that point at the beginning
   // of the tokens. We can't know the end of the token without using the Lexer,
   // so we just print it as a pair of SourceLocs in the format [first, last].
@@ -76,6 +80,10 @@ void SourceRange::print(raw_ostream &out, const SourceManager &srcMgr,
 
 void CharSourceRange::print(raw_ostream &out, const SourceManager &srcMgr,
                             bool printFileName, bool printText) {
+  if (isInvalid()) {
+    out << "<invalid>";
+    return;
+  }
   // We print this as [first, last) or [first, last)="text"
   out << "[";
   begin.print(out, srcMgr, printFileName);
