@@ -311,25 +311,25 @@ public:
 /// /*etc*/
 /// \endverbatim
 class IfStmt final : public ConditionalStmt {
-  Stmt *thenStmt = nullptr;
+  BlockStmt *thenStmt = nullptr;
   Stmt *elseStmt = nullptr;
   SourceLoc ifLoc;
   SourceLoc elseLoc;
 
 public:
-  IfStmt(SourceLoc ifLoc, StmtCondition cond, Stmt *thenStmt, SourceLoc elseLoc,
-         Stmt *elseStmt)
+  IfStmt(SourceLoc ifLoc, StmtCondition cond, BlockStmt *thenStmt,
+         SourceLoc elseLoc, Stmt *elseStmt)
       : ConditionalStmt(StmtKind::If, cond), thenStmt(thenStmt),
         elseStmt(elseStmt), ifLoc(ifLoc), elseLoc(elseLoc) {}
 
-  IfStmt(SourceLoc ifLoc, StmtCondition cond, Stmt *thenStmt)
+  IfStmt(SourceLoc ifLoc, StmtCondition cond, BlockStmt *thenStmt)
       : IfStmt(ifLoc, cond, thenStmt, SourceLoc(), nullptr) {}
 
   SourceLoc getIfLoc() const { return ifLoc; }
   SourceLoc getElseLoc() const { return elseLoc; }
 
-  Stmt *getThen() const { return thenStmt; }
-  void setThen(Stmt *stmt) { thenStmt = stmt; }
+  BlockStmt *getThen() const { return thenStmt; }
+  void setThen(BlockStmt *stmt) { thenStmt = stmt; }
 
   Stmt *getElse() const { return elseStmt; }
   void setElse(Stmt *stmt) { elseStmt = stmt; }
@@ -355,17 +355,17 @@ public:
 /// \endverbatim
 class WhileStmt final : public ConditionalStmt {
   SourceLoc whileLoc;
-  Stmt *body = nullptr;
+  BlockStmt *body = nullptr;
 
 public:
-  WhileStmt(SourceLoc whileLoc, StmtCondition cond, Stmt *body)
+  WhileStmt(SourceLoc whileLoc, StmtCondition cond, BlockStmt *body)
       : ConditionalStmt(StmtKind::While, cond), whileLoc(whileLoc), body(body) {
   }
 
   SourceLoc getWhileLoc() const { return whileLoc; }
 
-  Stmt *getBody() const { return body; }
-  void setBody(Stmt *body) { this->body = body; }
+  BlockStmt *getBody() const { return body; }
+  void setBody(BlockStmt *body) { this->body = body; }
 
   /// \returns the SourceLoc of the first token of the statement
   SourceLoc getBegLoc() const { return whileLoc; }

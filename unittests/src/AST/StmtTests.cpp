@@ -29,9 +29,10 @@ protected:
     breakStmt = new (*ctxt) BreakStmt(beg);
     returnStmt = new (*ctxt) ReturnStmt(beg);
     blockStmt = BlockStmt::createEmpty(*ctxt, beg, end);
-    ifStmt = new (*ctxt) IfStmt(beg, nullptr, new (*ctxt) ContinueStmt(mid));
-    whileStmt =
-        new (*ctxt) WhileStmt(beg, nullptr, new (*ctxt) ContinueStmt(end));
+    ifStmt = new (*ctxt)
+        IfStmt(beg, nullptr, BlockStmt::createEmpty(*ctxt, beg, mid));
+    whileStmt = new (*ctxt)
+        WhileStmt(beg, nullptr, BlockStmt::createEmpty(*ctxt, beg, end));
   }
 
   SourceManager srcMgr;
