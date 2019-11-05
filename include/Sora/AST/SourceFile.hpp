@@ -49,6 +49,8 @@ public:
   void addMember(Decl *decl) { return members.push_back(decl); }
   /// \returns the buffer id of this SourceFile
   BufferID getBufferID() const { return bufferID; }
+  /// \returns true if this SourceFile is empty
+  bool empty() const { return members.empty(); }
 
   /// Dumps this source file to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const;
@@ -57,6 +59,13 @@ public:
   /// \returns true if the walk completed successfully, false if it ended
   /// prematurely.
   bool walk(ASTWalker &walker);
+
+  /// \returns the SourceLoc of the first token in the SourceFile.
+  SourceLoc getBegLoc() const;
+  /// \returns the SourceLoc of the last token in the SourceFile
+  SourceLoc getEndLoc() const;
+  /// \returns the SourceRange of the SourceFile.
+  SourceRange getSourceRange() const;
 
   static bool classof(const DeclContext *dc) {
     return dc->getDeclContextKind() == DeclContextKind::SourceFile;

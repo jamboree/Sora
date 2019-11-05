@@ -33,3 +33,19 @@ bool SourceFile::walk(ASTWalker &walker) {
   }
   return true;
 }
+
+SourceLoc SourceFile::getBegLoc() const {
+  if (empty())
+    return {};
+  return members.front()->getBegLoc();
+}
+
+SourceLoc SourceFile::getEndLoc() const {
+  if (empty())
+    return {};
+  return members.back()->getEndLoc();
+}
+
+SourceRange SourceFile::getSourceRange() const {
+  return {getBegLoc(), getEndLoc()};
+}

@@ -240,15 +240,9 @@ SourceFileScope *SourceFileScope::create(SourceFile &sf) {
   return new (sf.astContext) SourceFileScope(sf);
 }
 
-SourceLoc SourceFileScope::getBegLoc() const {
-  // FIXME: SourceFile should have getBegLoc()
-  return sourceFile.getMembers().front()->getBegLoc();
-}
+SourceLoc SourceFileScope::getBegLoc() const { return sourceFile.getBegLoc(); }
 
-SourceLoc SourceFileScope::getEndLoc() const {
-  // FIXME: SourceFile should have getEndLoc()
-  return sourceFile.getMembers().front()->getEndLoc();
-}
+SourceLoc SourceFileScope::getEndLoc() const { return sourceFile.getEndLoc(); }
 
 FuncDeclScope *FuncDeclScope::create(FuncDecl *func, ASTScope *parent) {
   return new (func->getASTContext()) FuncDeclScope(func, parent);
