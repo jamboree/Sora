@@ -42,12 +42,13 @@ StringRef SourceManager::getBufferStr(BufferID id) const {
 
 void SourceLoc::print(raw_ostream &out, const SourceManager &srcMgr,
                       bool printFileName) {
-  if (!isValid()) {
+  if (isInvalid()) {
     out << "<invalid>";
     return;
   }
 
   BufferID buffer = srcMgr.findBufferContainingLoc(*this);
+  assert(buffer && "Invalid Buffer?!");
 
   if (printFileName) {
     auto name = srcMgr.getBufferIdentifier(buffer);
