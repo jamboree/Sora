@@ -230,7 +230,7 @@ void ASTScope::dumpImpl(raw_ostream &out, unsigned indent,
   out << getKindStr(getKind()) << "Scope range:";
   // Only print the source file for SourceFileScopes.
   getSourceRange().print(out, srcMgr, isa<SourceFileScope>(this));
-  out << " numChildren:" << getChildren().size() << '\n';
+  out << (expanded ? " expanded" : "") << "\n";
   // visit the children
   for (ASTScope *child : getChildren())
     child->dumpImpl(out, indent, curIndent + indent);
