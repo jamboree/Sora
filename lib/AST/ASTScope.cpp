@@ -94,8 +94,12 @@ static const char *getKindStr(ASTScopeKind kind) {
 void ASTScope::dumpImpl(raw_ostream &out, unsigned indent,
                         unsigned curIndent) const {
   out.indent(curIndent);
-  out << getKindStr(getKind()) << "Scope \n";
-  // TODO: Dump SourceRanges as well
+  const SourceManager &srcMgr = getASTContext().srcMgr;
+  // Add a "Scope" suffix to the kind string, and print the range as well.
+  out << getKindStr(getKind()) << "Scope range:";
+  // Only print the source file for SourceFileScopes.
+  getSourceRange().print(out, srcMgr, isa<SourceFileScope>(this));
+  out << '\n';
 }
 
 SourceFileScope *SourceFileScope::create(SourceFile &sf) {
