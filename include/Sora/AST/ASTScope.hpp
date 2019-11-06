@@ -51,7 +51,7 @@ class alignas(ASTScopeAlignement) ASTScope {
   static_assert(
       unsigned(ASTScopeKind::Last_Scope) <= (1 << 3),
       "Not enough bits in parentAndKind to represent every ASTScopeKind");
-  /// The Children Scopes
+  /// The sorted vector of children scopes
   SmallVector<ASTScope *, 4> children;
   /// Whether a cleanup for this ASTScope has been registered
   bool hasCleanup = false;
@@ -87,15 +87,25 @@ public:
   /// \returns the kind of scope this is
   ASTScopeKind getKind() const { return parentAndKind.getInt(); }
 
-  /// Adds a new child scope
+  /// \returns the innermost scope around \p loc, or this if no this is the
+  /// innermost scope.
+  /// \p loc must be within this scope's SourceRange.
+  ASTScope *findInnermostScope(SourceLoc loc);
+
+  /// \returns true if this scope overlaps \p other
+  bool overlaps(const ASTScope *other) const;
+
+  /// Adds a new child scope.
+  /// \p scope can't be null and its range must not overlap with other existing
+  /// scopes' range.
   void addChild(ASTScope *scope);
 
-  /// \returns the children scopes of this ASTScope.
-  /// This will never expand this ASTScope if it's not expanded.
+  /// \returns the sorted array of children scopes
+  /// This won't expand this ASTScope if it's not expanded.
   ArrayRef<ASTScope *> getChildren() const { return children; }
 
   /// \param canExpand if true, the ASTScope will expand if needed.
-  /// \returns the children of this ASTScope
+  /// \returns the sorted array of children scopes
   MutableArrayRef<ASTScope *> getChildren(bool canExpand = false) {
     if (expanded && canExpand)
       expand();

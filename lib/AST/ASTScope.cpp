@@ -10,7 +10,6 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Decl.hpp"
-#include "Sora/AST/Expr.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "llvm/Support/Error.h"
@@ -24,12 +23,66 @@ void *ASTScope::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ArenaKind::Permanent);
 }
 
+bool ASTScope::overlaps(const ASTScope *other) const {
+  assert(other && "other is null");
+  SourceRange thisRange = getSourceRange();
+  SourceRange otherRange = other->getSourceRange();
+  // Check that the beginning of otherRange isn't inside thisRange.
+  if (thisRange.begin <= otherRange.begin && otherRange.begin <= thisRange.end)
+    return true;
+  // Check that the beginning of thisRange isn't inside otherRange.
+  if (otherRange.begin <= thisRange.begin && thisRange.begin <= otherRange.end)
+    return true;
+  return false;
+}
+
 void ASTScope::addChild(ASTScope *scope) {
-  children.push_back(scope);
+  assert(scope && "adding an empty scope!");
+  // \returns true if the range of \p first comes before \p second.
+  // This also checks that the ranges don't overlap.
+  static auto comparator = [](const ASTScope *first, const ASTScope *second) {
+    assert(lhs && rhs && "Null scope!");
+    SourceRange firstRange = first->getSourceRange();
+    SourceRange secondRange = second->getSourceRange();
+    assert(!first->overlaps(second) && "Scopes can't overlap!");
+    return firstRange.end < secondRange.begin;
+  };
+  auto it = children.end();
+  // If there are children in the vector and if the scope we're inserting
+  // doesn't come after the last element, use std::upper_bound to find the
+  // correct insertion position.
+  if (!children.empty() && !comparator(children.back(), scope))
+    std::upper_bound(children.begin(), children.end(), scope, comparator);
+  children.insert(it, scope);
   if (!hasCleanup && needsCleanup()) {
     getASTContext().addDestructorCleanup(*this);
     hasCleanup = true;
   }
+}
+
+ASTScope *ASTScope::findInnermostScope(SourceLoc loc) {
+  // Find the children in which loc belongs.
+  // We can use std::lower_bound for this with a custom comparator.
+  // This comparator returns true if scope->getSourceRange().end() < loc.
+  // FIXME: Is this ok?
+  static auto comparator = [](ASTScope *scope, SourceLoc loc) {
+    return scope->getSourceRange().end < loc;
+  };
+  // Find a candidate
+  ASTScope *candidate = nullptr;
+  auto it = std::lower_bound(children.begin(), children.end(), loc, comparator);
+  if (it != children.end())
+    candidate = *it;
+  // If we got a candidate, check that loc is inside it.
+  // FIXME: Is this extra check needed? Won't the candidate always have the loc
+  // inside it?
+  if (candidate) {
+    SourceRange range = candidate->getSourceRange();
+    if (range.begin <= loc && loc <= range.end)
+      return candidate->findInnermostScope(loc);
+  }
+  // If there's no candidate, or if the candidate didn't fit, just return this.
+  return this;
 }
 
 void ASTScope::fullyExpand() {
