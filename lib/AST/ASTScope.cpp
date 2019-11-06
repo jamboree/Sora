@@ -41,7 +41,7 @@ void ASTScope::addChild(ASTScope *scope) {
   // \returns true if the range of \p first comes before \p second.
   // This also checks that the ranges don't overlap.
   static auto comparator = [](const ASTScope *first, const ASTScope *second) {
-    assert(lhs && rhs && "Null scope!");
+    assert(first && second && "Null scope!");
     SourceRange firstRange = first->getSourceRange();
     SourceRange secondRange = second->getSourceRange();
     assert(!first->overlaps(second) && "Scopes can't overlap!");
