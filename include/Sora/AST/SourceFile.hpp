@@ -18,12 +18,12 @@
 namespace sora {
 class ASTWalker;
 class ASTContext;
-class Decl;
+class ValueDecl;
 class SourceFileScope;
 
 /// Represents a source file.
 class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
-  SmallVector<Decl *, 4> members;
+  SmallVector<ValueDecl*, 4> members;
   SourceFileScope *fileScope = nullptr;
   BufferID bufferID;
 
@@ -46,9 +46,9 @@ public:
   /// \returns the number of members in this source file
   size_t getNumMembers() const { return members.size(); }
   /// \returns the members of this source file
-  ArrayRef<Decl *> getMembers() const { return members; }
+  ArrayRef<ValueDecl *> getMembers() const { return members; }
   /// Adds a member to this source file
-  void addMember(Decl *decl) { return members.push_back(decl); }
+  void addMember(ValueDecl *decl) { return members.push_back(decl); }
   /// \returns the buffer id of this SourceFile
   BufferID getBufferID() const { return bufferID; }
   /// \returns true if this SourceFile is empty

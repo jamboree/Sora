@@ -47,7 +47,7 @@ top-level-declaration = function-declaration
 void Parser::parseSourceFile() {
   // Once parsing of a member is done, adds to it to the source file and checks
   // that we got a newline after it.
-  auto addMember = [&](Decl *decl) {
+  auto addMember = [&](ValueDecl *decl) {
     // Add it to the file
     sourceFile.addMember(decl);
     // Check that we got a newline after the declaration, else, complain.
