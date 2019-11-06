@@ -325,10 +325,6 @@ BlockStmtScope *BlockStmtScope::create(ASTContext &ctxt, BlockStmt *stmt,
   return new (ctxt) BlockStmtScope(stmt, parent);
 }
 
-BlockStmt *BlockStmtScope::getBlockStmt() const {
-  return cast<BlockStmt>(bodyAndLookupKind.getPointer());
-}
-
 SourceLoc BlockStmtScope::getBegLoc() const {
   return getBlockStmt()->getBegLoc();
 }

@@ -9,9 +9,11 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/ASTNode.hpp"
+#include "Sora/AST/Identifier.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace sora {
@@ -23,6 +25,7 @@ class IfStmt;
 class WhileStmt;
 class LetDecl;
 class SourceFile;
+class ValueDecl;
 
 /// Kinds of ASTScope
 enum class ASTScopeKind : uint8_t {
@@ -86,6 +89,23 @@ protected:
 public:
   /// \returns the kind of scope this is
   ASTScopeKind getKind() const { return parentAndKind.getInt(); }
+
+  /// A Lookup Result Consider, which is called once per AST Scope with the list
+  /// of candidates found in the scope and the scope in which the results were
+  /// found. This isn't called when there are no results.
+  /// If the consumer returns true, lookup stops.
+  using LookupResultConsumer =
+      llvm::function_ref<bool(ArrayRef<ValueDecl *>, const ASTScope *)>;
+
+  /// Performs lookup in this scope and parent scopes.
+  /// \param consumer the consumer function, which is called once per scope.
+  /// When it returns true, lookup stops.
+  /// \param ident the identifier to look for. If it's null, simply returns
+  /// a list of every decl visible in the scope. When an identifier is provided,
+  /// this will try to use cached lookup maps when possible, making the search
+  /// more efficient.
+  void lookup(LookupResultConsumer consumer,
+              Identifier ident = Identifier()) const;
 
   /// \returns the innermost scope around \p loc, or this if no this is the
   /// innermost scope.
@@ -255,31 +275,18 @@ public:
 /// This can have any number of children scopes.
 class BlockStmtScope final : public ASTScope {
   BlockStmtScope(BlockStmt *stmt, ASTScope *parent)
-      : ASTScope(ASTScopeKind::BlockStmt, parent),
-        bodyAndLookupKind((Stmt *)stmt, LookupKind::Unknown) {
+      : ASTScope(ASTScopeKind::BlockStmt, parent), block(stmt) {
     assert(parent && "BlockStmtScope must have a valid parent");
     assert(stmt && "BlockStmtScope must have a non-null BlockStmt*");
   }
 
-  enum class LookupKind {
-    /// This BlockStmt has interesting declarations (other than LetDecl) that we
-    /// need to consider (e.g. FuncDecl, types, etc.)
-    Mandatory,
-    /// This BlockStmt isn't interesting and we don't need to look inside it
-    Skippable,
-    /// Unknown LookupKind
-    Unknown
-  };
-
-  // The body is stored as a Stmt because the definition of BlockStmt isn't
-  // visible here.
-  llvm::PointerIntPair<Stmt *, 2, LookupKind> bodyAndLookupKind;
+  BlockStmt *const block;
 
 public:
   static BlockStmtScope *create(ASTContext &ctxt, BlockStmt *stmt,
                                 ASTScope *parent);
 
-  BlockStmt *getBlockStmt() const;
+  BlockStmt *getBlockStmt() const { return block; }
 
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;
