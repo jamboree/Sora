@@ -4,8 +4,7 @@
 //
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
-// Defines types used to represent source locations and ranges across the
-// compiler.
+// Defines types used to represent source locations and ranges.
 //===----------------------------------------------------------------------===//
 
 #pragma once
@@ -17,9 +16,11 @@
 namespace sora {
 class SourceManager;
 
-/// Represents a source location which is generally the first char of a token.
+/// Represents the location of a byte in a source file owned by a SourceManager.
+/// Generally, the byte will be the first byte of a token.
 ///
-/// This is simply a wrapper around a llvm::SMLoc.
+/// This is simply a wrapper around a llvm::SMLoc (which is essentially a
+/// wrapper const char*)
 ///
 /// Comparison operators (>, >=, <=, <, ==, !=) can be used to compare the
 /// underyling pointers of 2 SourceLocs. Iff the SourceLocs come from the same
