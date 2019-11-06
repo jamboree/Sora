@@ -51,7 +51,7 @@ struct ASTScopeLookup {
     return considerEveryResult() ? true : decl->getIdentifier() == ident;
   }
 
-  /// \returns whether we should consider every result
+  /// \returns true if we are looking for any decl, no matter the name.
   bool considerEveryResult() const { return !ident.isValid(); }
 
   //===- Visit Methods ----------------------------------------------------===//
@@ -77,7 +77,8 @@ struct ASTScopeLookup {
   }
 
   bool visitLocalLetDecl(const LocalLetDeclScope *scope) {
-    // Collect the VarDecls
+    // Collect every variable declared in the "let" and feed them to the
+    // consumer.
     SmallVector<ValueDecl *, 4> decls;
     scope->getLetDecl()->forEachVarDecl([&](VarDecl *var) {
       if (shouldConsider(var))
@@ -87,7 +88,7 @@ struct ASTScopeLookup {
   }
 
   bool visitFuncDecl(const FuncDeclScope *scope) {
-    // Check the params of the function
+    // Consider the params of the function
     // FIXME: Can this be made more efficient?
     FuncDecl *fn = scope->getFuncDecl();
     SmallVector<ValueDecl *, 4> decls;
@@ -102,28 +103,28 @@ struct ASTScopeLookup {
     // We only need to search for local func declarations.
     // FIXME: Can this be made more efficient? e.g. by automatically skipping
     // BlockStmts known to contain no FuncDecls.
+    // Perhaps it'd be a good idea to add a "hasFuncDecl" flag to BlockStmt
+    // (which would be extended to "hasFuncOrTypeDecl") later.
     SmallVector<ValueDecl *, 4> decls;
     for (ASTNode node : scope->getBlockStmt()->getElements()) {
       Decl *decl = node.dyn_cast<Decl *>();
       if (!decl)
         continue;
       FuncDecl *func = dyn_cast<FuncDecl>(decl);
-      if (!func)
-        continue;
-      if (shouldConsider(func))
+      if (func && shouldConsider(func))
         decls.push_back(func);
     }
     return consume(decls, scope);
   }
 
   bool visitIfStmt(const IfStmtScope *scope) {
-    // Nothing to do (if the cond declares something, it'll be handled by
+    // Nothing to do (if the cond declares something, it'll be handled by the
     // implicit LocalLetDeclScope)
     return false;
   }
 
   bool visitWhileStmt(const WhileStmtScope *scope) {
-    // Nothing to do (if the cond declares something, it'll be handled by
+    // Nothing to do (if the cond declares something, it'll be handled by the
     // implicit LocalLetDeclScope)
     return false;
   }
