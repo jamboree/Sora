@@ -42,7 +42,7 @@ SORA_FWD_DECL(class Identifier)
 
 //===- Name Binding -------------------------------------------------------===//
 
-ERROR(use_undeclared_ident, "use of undeclared identifier '%0'", ())
+ERROR(use_undeclared_ident, "use of undeclared identifier '%0'", (Identifier))
 
 //===----------------------------------------------------------------------===//
 
