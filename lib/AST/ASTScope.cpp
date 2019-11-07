@@ -190,14 +190,13 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
 
 ASTScope *createConditionBodyScope(ASTContext &ctxt, ASTScope *parent,
                                    StmtCondition cond, BlockStmt *body) {
-  ASTScope *scope = BlockStmtScope::create(ctxt, body, parent);
-  // If the condition is a declaration, insert a LocalLetDeclScope before the
-  // body's scope.
+  ASTScope *scope = nullptr;
   if (LetDecl *let = cond.getLetDeclOrNull()) {
-    auto *letScope = LocalLetDeclScope::create(let, parent, body->getEndLoc());
-    letScope->addChild(scope);
-    scope = letScope;
+    scope = LocalLetDeclScope::create(let, parent, body->getEndLoc());
+    scope->addChild(BlockStmtScope::create(ctxt, body, scope));
   }
+  else
+    scope = BlockStmtScope::create(ctxt, body, parent);
   return scope;
 }
 
