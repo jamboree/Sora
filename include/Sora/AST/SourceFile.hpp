@@ -68,6 +68,7 @@ public:
   /// \returns true if the walk completed successfully, false if it ended
   /// prematurely.
   bool walk(ASTWalker &walker);
+  bool walk(ASTWalker &&walker) { return walk(walker); }
 
   /// \returns the SourceLoc of the first token in the SourceFile.
   SourceLoc getBegLoc() const;
