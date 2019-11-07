@@ -38,10 +38,11 @@ void Sema::performSema(SourceFile &file) {
       if (!udre)
         return {true, expr};
       UnqualifiedLookup ul(file);
-      ul.performLookup(udre->getLoc(), udre->getIdentifier());
       llvm::outs() << "-----------------------------------\n";
       llvm::outs() << "Expression:\n";
       udre->dump(llvm::outs(), sema.ctxt.srcMgr);
+      llvm::outs() << "Performing lookup...\n";
+      ul.performLookup(udre->getLoc(), udre->getIdentifier());
       llvm::outs() << "Results found: " << ul.results.size() << "\n";
       unsigned k = 0;
       for (ValueDecl *result : ul.results) {
