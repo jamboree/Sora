@@ -146,7 +146,7 @@ void ASTScope::lookup(ASTScope::LookupResultConsumer consumer,
 void UnqualifiedValueLookup::lookupImpl(SourceLoc loc, Identifier ident) {
   assert(loc && "SourceLoc can't be invalid!");
   assert(sourceFile.contains(loc) && "loc doesn't belong to this file!");
-  assert(results.size() &&
+  assert(results.empty() &&
          "Consecutive lookups using the same object aren't supported");
   ASTScope *innermostScope = sourceFile.getScopeMap()->findInnermostScope(loc);
   assert(innermostScope && "findInnermostScope shouldn't return null!");
@@ -165,7 +165,7 @@ void UnqualifiedValueLookup::lookupImpl(SourceLoc loc, Identifier ident) {
 void UnqualifiedTypeLookup::lookupImpl(SourceLoc loc, Identifier ident) {
   assert(loc && "SourceLoc can't be invalid!");
   assert(sourceFile.contains(loc) && "loc doesn't belong to this file!");
-  assert(results.size() &&
+  assert(results.empty() &&
          "Consecutive lookups using the same object aren't supported");
   // For now, we don't have much work to do since we only have builtin types.
   // Just use ASTContext::lookupBuiltinType if we have an identifier, or use
