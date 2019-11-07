@@ -68,6 +68,8 @@ struct ASTScopeLookup {
 
     // If we can't consider everything, remove everything that can't be
     // considered.
+    // FIXME: Ideally, the SourceFile should have a dedicated lookup cache &
+    // lookup function.
     SmallVector<ValueDecl *, 4> decls;
     for (ValueDecl *decl : sf.getMembers()) {
       if (shouldConsider(decl))
@@ -134,4 +136,33 @@ struct ASTScopeLookup {
 //===- ASTScope::lookup ---------------------------------------------------===//
 
 void ASTScope::lookup(ASTScope::LookupResultConsumer consumer,
-                      Identifier ident) const {}
+                      Identifier ident) const {
+  ASTScopeLookup(consumer, ident).visit(this);
+}
+
+//===- UnqualifiedLookup --------------------------------------------------===//
+
+namespace {
+bool unqualifiedLookupConsumer(SmallVectorImpl<ValueDecl *> &results,
+                               ArrayRef<ValueDecl *> candidates,
+                               const ASTScope *scope) {
+  assert(!candidates.empty() && "Candidates set shouldn't be empty");
+  // Simply add the candidates to the set of results
+  results.append(candidates.begin(), candidates.end());
+  // Now, since we got results, see if we can stop the lookup.
+  // We only stop lookup when we reach a BlockStmtScope, a FuncDeclScope or a
+  // SourceFileScope.
+  return isa<SourceFileScope>(scope) || isa<BlockStmtScope>(scope) ||
+         isa<FuncDeclScope>(scope);
+}
+} // namespace
+
+void UnqualifiedLookup::lookupImpl(SourceLoc loc, Identifier ident) {
+  ASTScope *innermostScope = sourceFile.getScopeMap()->findInnermostScope(loc);
+  assert(innermostScope && "findInnermostScope shouldn't return null!");
+  auto consumer = [&](ArrayRef<ValueDecl *> candidates,
+                      const ASTScope *scope) -> bool {
+    return unqualifiedLookupConsumer(results, candidates, scope);
+  };
+  ASTScopeLookup(consumer, ident).visit(innermostScope);
+}
