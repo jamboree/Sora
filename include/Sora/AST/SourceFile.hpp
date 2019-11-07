@@ -23,7 +23,7 @@ class SourceFileScope;
 
 /// Represents a source file.
 class alignas(SourceFileAlignement) SourceFile final : public DeclContext {
-  SmallVector<ValueDecl*, 4> members;
+  SmallVector<ValueDecl *, 4> members;
   SourceFileScope *fileScope = nullptr;
   BufferID bufferID;
 
@@ -53,6 +53,9 @@ public:
   BufferID getBufferID() const { return bufferID; }
   /// \returns true if this SourceFile is empty
   bool empty() const { return members.empty(); }
+
+  /// \returns true if \p loc belongs to this file
+  bool contains(SourceLoc loc) const;
 
   /// Dumps this source file to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const;

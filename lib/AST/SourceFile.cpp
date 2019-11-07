@@ -35,6 +35,10 @@ bool SourceFile::walk(ASTWalker &walker) {
   return true;
 }
 
+bool SourceFile::contains(SourceLoc loc) const {
+  return bufferID == astContext.srcMgr.findBufferContainingLoc(loc);
+}
+
 SourceFileScope *SourceFile::getScopeMap(bool canLazilyBuild) {
   if (!fileScope && canLazilyBuild)
     fileScope = SourceFileScope::create(*this);
