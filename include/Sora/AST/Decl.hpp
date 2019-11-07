@@ -163,7 +163,7 @@ public:
   /// \returns the SourceLoc of the identifier
   SourceLoc getIdentifierLoc() const { return identifierLoc; }
 
-  /// \returns the type this value has
+  /// \returns the type of this value
   Type getValueType() const;
 
   /// \returns the preffered SourceLoc for diagnostics.
@@ -183,9 +183,10 @@ public:
 /// LetDecl. This also means that getBegLoc/getEndLoc/getRange will only
 /// return the loc of the identifier, ignoring the TypeLoc entirely.
 ///
-/// Please note that the TypeLoc won't have a TypeRepr* if the type wasn't
-/// explicitely written down. However, the TypeLoc should always have a
-/// valid Type after semantic analysis.
+/// Please note that the TypeLoc will be null until Semantic Analysis completes.
+/// After Semantic Analysis, it should always have a type (even if it's
+/// ErrorType), but it won't always have a TypeRepr (when the type wasn't
+/// explicitly written down)
 ///
 /// \verbatim
 ///   let x : i32 // has valid TypeRepr*
@@ -212,7 +213,7 @@ public:
   /// However, the type should be valid after semantic analysis.
   TypeLoc getTypeLoc() const { return tyLoc; }
 
-  /// \returns the type this value has (the type of the variable)
+  /// \returns the type of this value (the type of the variable)
   Type getValueType() const { return tyLoc.getType(); }
 
   bool isMutable() const { return bits.varDecl.isMutable; }
@@ -245,7 +246,7 @@ public:
   /// The type should be valid after semantic analysis.
   TypeLoc getTypeLoc() const { return tyLoc; }
 
-  /// \returns the type this value has (the type of the parameter)
+  /// \returns the type of this value (the type of the parameter)
   Type getValueType() const { return tyLoc.getType(); }
 
   SourceLoc getBegLoc() const;
@@ -334,7 +335,7 @@ public:
   /// \returns true if the user wrote a return type for this function
   bool hasReturnType() const { return returnTypeLoc.hasLocation(); }
 
-  /// \returns the type this value has (the type of the function)
+  /// \returns the type of this value (the type of the function)
   Type getValueType() const { return type; }
 
   /// \returns the SourceLoc of the "func" keyword
