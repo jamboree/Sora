@@ -18,17 +18,9 @@ class SourceFile;
 class SourceLoc;
 class ValueDecl;
 
-/// Class used to configure and execute an unqualified lookup inside a source
-/// file. This class also represents the result of the lookup!
-///
-/// An important thing to note is that name lookup DOES NOT look after built-in
-/// types. It just cares about the user-defined names.
-/// FIXME: Should it also care about built-in types? Maybe.
-///
-/// FIXME: Currently, this class doesn't offer much. In the future, it should
-/// contain helpers to configure the lookup, e.g. to only see types, only see
-/// local things, etc.
-class UnqualifiedLookup final {
+/// Class used to configure and execute an unqualified value lookup inside a
+/// SourceFile.
+class UnqualifiedValueLookup final {
   void lookupImpl(SourceLoc loc, Identifier ident);
 
   llvm::DenseSet<ValueDecl *> ignoredDecls;
@@ -47,11 +39,11 @@ class UnqualifiedLookup final {
   }
 
 public:
-  UnqualifiedLookup(SourceFile &sourceFile) : sourceFile(sourceFile) {}
+  UnqualifiedValueLookup(SourceFile &sourceFile) : sourceFile(sourceFile) {}
 
   /// Adds \p decls to the list of decls that should be ignored during the
   /// lookup.
-  UnqualifiedLookup ignore(ArrayRef<ValueDecl *> decls) {
+  UnqualifiedValueLookup ignore(ArrayRef<ValueDecl *> decls) {
     ignoredDecls.insert(decls.begin(), decls.end());
     return *this;
   }
@@ -68,7 +60,7 @@ public:
   /// \returns whether the set of results is empty
   bool isEmpty() const { return results.empty(); }
   /// \returns whether the set of results contains a single result
-  bool isUnique() const { return results.size() == 1; }
+  bool isResultUnique() const { return results.size() == 1; }
   /// \returns the single result of the lookup, or nullptr if there are 0 or 2+
   /// results.
   ValueDecl *getUniqueResult() const {

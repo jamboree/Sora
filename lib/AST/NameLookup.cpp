@@ -140,9 +140,9 @@ void ASTScope::lookup(ASTScope::LookupResultConsumer consumer,
   ASTScopeLookup(consumer, ident).visit(this);
 }
 
-//===- UnqualifiedLookup --------------------------------------------------===//
+//===- UnqualifiedValueLookup --------------------------------------------------===//
 
-void UnqualifiedLookup::lookupImpl(SourceLoc loc, Identifier ident) {
+void UnqualifiedValueLookup::lookupImpl(SourceLoc loc, Identifier ident) {
   ASTScope *innermostScope = sourceFile.getScopeMap()->findInnermostScope(loc);
   assert(innermostScope && "findInnermostScope shouldn't return null!");
   auto consumer = [&](ArrayRef<ValueDecl *> candidates,
