@@ -1,7 +1,7 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func foo() {
-  // CHECK: UnresolvedDeclRefExpr type=<null_type> ident=foo loc=line:5:3
+  // CHECK: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:5:3
   foo
   // CHECK-NEXT: DiscardExpr type=<null_type> loc=line:7:3
   _

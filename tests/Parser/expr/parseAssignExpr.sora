@@ -3,25 +3,25 @@
 func assign() {
   // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:7:5
   // CHECK-NEXT: DiscardExpr type=<null_type> loc=line:7:3
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> ident=a loc=line:7:7
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:7:7
   _ = a
   // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:11:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> ident=a loc=line:11:3
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> ident=b loc=line:11:7
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:11:3
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:11:7
   a = b
   // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:17:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> ident=a loc=line:17:3
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:17:3
   // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:17:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> ident=b loc=line:17:7
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> ident=c loc=line:17:11
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:17:7
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:17:11
   a = b = c
   // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:25:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> ident=a loc=line:25:3
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:25:3
   // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:25:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> ident=b loc=line:25:7
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:25:7
   // CHECK-NEXT:  BinaryExpr type=<null_type> = (Assign) opLoc=line:25:13
-  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> ident=c loc=line:25:11
-  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> ident=d loc=line:25:15
+  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:25:11
+  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=d loc=line:25:15
   a = b = c = d
 }
 
