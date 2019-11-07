@@ -270,7 +270,7 @@ public:
   void visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
     dumpCommon(expr);
     out << ' ';
-    dumpIdent(expr->getIdentifier(), "ident");
+    dumpIdent(expr->getIdentifier(), "identifier");
     out << ' ';
     dumpLoc(expr->getLoc(), "loc");
     out << '\n';
@@ -442,7 +442,7 @@ public:
     out << ' ';
     dumpLoc(pattern->getLoc(), "loc");
     out << ' ';
-    dumpIdent(pattern->getIdentifier(), "ident");
+    dumpIdent(pattern->getIdentifier(), "identifier");
     out << '\n';
 
     auto indent = increaseIndent();
