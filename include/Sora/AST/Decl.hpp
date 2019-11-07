@@ -175,25 +175,13 @@ public:
   }
 };
 
-/// Represents a *single* variable declaration. This is usually the child
+/// Represents a *single* variable declaration. This is always the child
 /// of a VarPattern.
 ///
 /// This DOES NOT represent something such as "let x" entirely, it only
-/// represents the "x". "let x" as a whole would be represented by
-/// LetDecl. This also means that getBegLoc/getEndLoc/getRange will only
-/// return the loc of the identifier, ignoring the TypeLoc entirely.
-///
-/// Please note that the TypeLoc will be null until Semantic Analysis completes.
-/// After Semantic Analysis, it should always have a type (even if it's
-/// ErrorType), but it won't always have a TypeRepr (when the type wasn't
-/// explicitly written down)
-///
-/// \verbatim
-///   let x : i32 // has valid TypeRepr*
-///   let (y, x) : (i32, i32) // has valid TypeRepr* (of the
-/// \endverbatim
+/// represents the "x".
 class VarDecl final : public ValueDecl {
-  TypeLoc tyLoc;
+  Type type;
 
 public:
   VarDecl(DeclContext *declContext, SourceLoc identifierLoc,
@@ -202,19 +190,10 @@ public:
     bits.varDecl.isMutable = false;
   }
 
-  /// \returns the TypeLoc of the VarDecl.
-  /// This may or may not have a valid TypeRepr (it won't have one
-  /// if the type was inferred).
-  /// However, the type should be valid after semantic analysis.
-  TypeLoc &getTypeLoc() { return tyLoc; }
-  /// \returns the TypeLoc of the VarDecl.
-  /// This may or may not have a valid TypeRepr (it won't have one
-  /// if the type was inferred).
-  /// However, the type should be valid after semantic analysis.
-  TypeLoc getTypeLoc() const { return tyLoc; }
-
+  /// Sets the type of this value (the type of the variable)
+  void setValueType(Type type) { this->type = type; }
   /// \returns the type of this value (the type of the variable)
-  Type getValueType() const { return tyLoc.getType(); }
+  Type getValueType() const { return type; }
 
   bool isMutable() const { return bits.varDecl.isMutable; }
   void setIsMutable(bool value = true) { bits.varDecl.isMutable = value; }

@@ -54,7 +54,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
   //===- Decl -------------------------------------------------------------===//
 
-  void visitVarDecl(VarDecl *decl) { doIt(decl->getTypeLoc()); }
+  TRIVIAL_VISIT(VarDecl)
 
   void visitParamDecl(ParamDecl *decl) { doIt(decl->getTypeLoc()); }
 
@@ -139,9 +139,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
   //===- Pattern ----------------------------------------------------------===//
 
-  void visitVarPattern(VarPattern *pattern) {
-    doIt(pattern->getVarDecl());
-  }
+  void visitVarPattern(VarPattern *pattern) { doIt(pattern->getVarDecl()); }
 
   TRIVIAL_VISIT(DiscardPattern)
 

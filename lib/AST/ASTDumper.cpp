@@ -210,11 +210,6 @@ public:
   void visitVarDecl(VarDecl *decl) {
     dumpCommon(decl);
     out << ' ' << (decl->isMutable() ? "mutable" : "immutable") << '\n';
-
-    if (TypeRepr *tyRepr = decl->getTypeLoc().getTypeRepr()) {
-      auto indent = increaseIndent();
-      visit(tyRepr);
-    }
   }
 
   void visitParamDecl(ParamDecl *decl) {
