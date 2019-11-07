@@ -10,6 +10,7 @@
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace sora {
@@ -30,8 +31,30 @@ class ValueDecl;
 class UnqualifiedLookup final {
   void lookupImpl(SourceLoc loc, Identifier ident);
 
+  llvm::DenseSet<ValueDecl *> ignoredDecls;
+
+  /// Adds \p decls to the list of results.
+  /// \returns true if at least one result was added.
+  bool addResults(ArrayRef<ValueDecl *> decls) {
+    bool added = false;
+    for (ValueDecl *decl : decls) {
+      if (ignoredDecls.find(decl) == ignoredDecls.end()) {
+        results.push_back(decl);
+        added = true;
+      }
+    }
+    return added;
+  }
+
 public:
   UnqualifiedLookup(SourceFile &sourceFile) : sourceFile(sourceFile) {}
+
+  /// Adds \p decls to the list of decls that should be ignored during the
+  /// lookup.
+  UnqualifiedLookup ignore(ArrayRef<ValueDecl *> decls) {
+    ignoredDecls.insert(decls.begin(), decls.end());
+    return *this;
+  }
 
   /// Lookup for decls with name \p ident in \p loc
   void performLookup(SourceLoc loc, Identifier ident) {

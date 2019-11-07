@@ -142,28 +142,15 @@ void ASTScope::lookup(ASTScope::LookupResultConsumer consumer,
 
 //===- UnqualifiedLookup --------------------------------------------------===//
 
-namespace {
-/// The lookup results consumer for UnqualifiedLookup
-/// \returns true if lookup can stop, false otherwise.
-bool unqualifiedLookupConsumer(SmallVectorImpl<ValueDecl *> &results,
-                               ArrayRef<ValueDecl *> candidates,
-                               const ASTScope *scope, bool stopAtFirstResults) {
-  assert(!candidates.empty() && "Candidates set shouldn't be empty");
-  // Simply add the candidates to the set of results
-  results.append(candidates.begin(), candidates.end());
-  // Stop looking unless we are told to keep going (e.g. when we're trying to
-  // find every visible names)
-  return stopAtFirstResults;
-}
-} // namespace
-
 void UnqualifiedLookup::lookupImpl(SourceLoc loc, Identifier ident) {
   ASTScope *innermostScope = sourceFile.getScopeMap()->findInnermostScope(loc);
   assert(innermostScope && "findInnermostScope shouldn't return null!");
   auto consumer = [&](ArrayRef<ValueDecl *> candidates,
                       const ASTScope *scope) -> bool {
-    return unqualifiedLookupConsumer(results, candidates, scope,
-                                     /*stopAtFirstResults*/ ident.isValid());
+    // If we have at least one result, and we're not trying to find every
+    // visible name, we can stop the lookup.
+    // Else, keep looking.
+    return addResults(candidates) && ident.isValid();
   };
   ASTScopeLookup(consumer, ident).visit(innermostScope);
 }
