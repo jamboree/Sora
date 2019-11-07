@@ -14,6 +14,7 @@
 #include "Sora/Driver/DiagnosticVerifier.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "Sora/Parser/Parser.hpp"
+#include "Sora/Sema/Sema.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -293,6 +294,8 @@ bool CompilerInstance::doParsing(SourceFile &file) {
 }
 
 bool CompilerInstance::doSema(SourceFile &file) {
+  Sema sema(*astContext);
+  sema.performSema(file);
   if (options.dumpAST)
     file.dump(llvm::outs());
   if (options.printMemUsage)
