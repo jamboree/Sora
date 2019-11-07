@@ -69,6 +69,8 @@ class alignas(ASTContextAlignement) ASTContext final {
 
   llvm::BumpPtrAllocator &getArena(ArenaKind kind = ArenaKind::Permanent);
 
+  void buildBuiltinTypesLookupMap();
+
 public:
   /// Members for ASTContext.cpp
   Impl &getImpl();
@@ -134,9 +136,12 @@ public:
   /// \returns the target triple.
   llvm::Triple getTargetTriple() const;
 
-  /// \returns the builtin type with name \p str, or null if no builtin type
-  /// with that name was found.
-  Type getBuiltinType(StringRef str);
+  /// \returns the builtin type with name \p ident, or nullptr if nothing was
+  /// found.
+  Type lookupBuiltinType(Identifier ident) const;
+
+  /// Puts a list of every available builtin type in \p results.
+  void getAllBuiltinTypes(SmallVectorImpl<Type> &results) const;
 
   //===- Common Singletons ------------------------------------------------===//
 

@@ -60,28 +60,39 @@ TEST_F(ASTContextTest, cleanup) {
   EXPECT_TRUE(dtorRan) << "Destructor cleanup did not run";
 }
 
-TEST_F(ASTContextTest, getBuiltinType) {
+TEST_F(ASTContextTest, lookupBuiltinType) {
 #define CHECK(STR, TY)                                                         \
-  EXPECT_EQ(ctxt->getBuiltinType(STR).getPtr(), ctxt->TY.getPtr())
+  EXPECT_EQ(ctxt->lookupBuiltinType(ctxt->getIdentifier(STR)).getPtr(),          \
+            ctxt->TY.getPtr())
 
   CHECK("i8", i8Type);
   CHECK("i16", i16Type);
   CHECK("i32", i32Type);
   CHECK("i64", i64Type);
+  CHECK("isize", isizeType);
   CHECK("u8", u8Type);
   CHECK("u16", u16Type);
   CHECK("u32", u32Type);
   CHECK("u64", u64Type);
+  CHECK("usize", usizeType);
   CHECK("f32", f32Type);
   CHECK("f64", f64Type);
+  CHECK("void", voidType);
 
 #undef CHECK
 
-  EXPECT_FALSE(ctxt->getBuiltinType("f31"));
-  EXPECT_FALSE(ctxt->getBuiltinType("f33"));
-  EXPECT_FALSE(ctxt->getBuiltinType("f8"));
-  EXPECT_FALSE(ctxt->getBuiltinType("i63"));
-  EXPECT_FALSE(ctxt->getBuiltinType("foo"));
-  EXPECT_FALSE(ctxt->getBuiltinType("i"));
-  EXPECT_FALSE(ctxt->getBuiltinType("i1"));
+#define CHECK_NULL(STR)                                                        \
+  EXPECT_EQ(ctxt->lookupBuiltinType(ctxt->getIdentifier(STR)).getPtr(), nullptr)
+  CHECK_NULL("i");
+  CHECK_NULL("viod");
+  CHECK_NULL("i33");
+  CHECK_NULL("i31");
+  CHECK_NULL("u31");
+  CHECK_NULL("u42");
+  CHECK_NULL("f54");
+#undef CHECK_NULL
+}
+
+TEST_F(ASTContextTest, getAllBuiltinTypes) {
+  // TODO
 }

@@ -78,6 +78,9 @@ struct ASTContext::Impl {
   /// for ArenaKind::TypeChecker
   Optional<TypeArena> typeCheckerArena;
 
+  // Built-in types lookup map
+  llvm::DenseMap<Identifier, Type> builtinTypesLookupMap;
+
   void initTypeCheckerArena() {
     assert(!hasTypeCheckerArena() && "TypeChecker arena already active");
     typeCheckerArena.emplace();
@@ -190,7 +193,34 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       f64Type(new (*this, ArenaKind::Permanent)
                   FloatType(*this, FloatKind::IEEE64)),
       voidType(new (*this, ArenaKind::Permanent) VoidType(*this)),
-      errorType(new (*this, ArenaKind::Permanent) ErrorType(*this)) {}
+      errorType(new (*this, ArenaKind::Permanent) ErrorType(*this)) {
+  // Build the BuiltinTypes lookup map
+  // FIXME: Can't this be built lazily?
+  buildBuiltinTypesLookupMap();
+}
+
+void ASTContext::buildBuiltinTypesLookupMap() {
+  auto &map = getImpl().builtinTypesLookupMap;
+  assert(map.empty() && "BuiltinTypes lookup map already created");
+#define BUILTIN_TYPE(T) map.insert({getIdentifier(#T), T##Type})
+  BUILTIN_TYPE(i8);
+  BUILTIN_TYPE(i16);
+  BUILTIN_TYPE(i32);
+  BUILTIN_TYPE(i64);
+  BUILTIN_TYPE(isize);
+
+  BUILTIN_TYPE(u8);
+  BUILTIN_TYPE(u16);
+  BUILTIN_TYPE(u32);
+  BUILTIN_TYPE(u64);
+  BUILTIN_TYPE(usize);
+
+  BUILTIN_TYPE(f32);
+  BUILTIN_TYPE(f64);
+
+  BUILTIN_TYPE(void);
+#undef BUILTIN_TYPE
+}
 
 ASTContext::Impl &ASTContext::getImpl() {
   return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
@@ -288,42 +318,21 @@ llvm::Triple ASTContext::getTargetTriple() const {
   return getImpl().targetTriple;
 }
 
-Type ASTContext::getBuiltinType(StringRef str) {
-  // All builtin types currently begin with 'i', 'u'  or 'f'.
-  char first = str[0];
-  if (first != 'i' && first != 'u' && first != 'f')
+Type ASTContext::lookupBuiltinType(Identifier ident) const {
+  if (!ident)
     return nullptr;
-
-  // They also all have a length of 2 to 3 characters.
-  if (str.size() < 2 || str.size() > 3)
+  auto &map = getImpl().builtinTypesLookupMap;
+  auto it = map.find(ident);
+  if (it == map.end())
     return nullptr;
+  return it->second;
+}
 
-  // Signed integers begin with 'i'
-  if (first == 'i') {
-    return llvm::StringSwitch<Type>(str)
-        .Case("i8", i8Type)
-        .Case("i16", i16Type)
-        .Case("i32", i32Type)
-        .Case("i64", i64Type)
-        .Default(nullptr);
-  }
-  // Unsigned integers begin with 'u'
-  if (first == 'u') {
-    return llvm::StringSwitch<Type>(str)
-        .Case("u8", u8Type)
-        .Case("u16", u16Type)
-        .Case("u32", u32Type)
-        .Case("u64", u64Type)
-        .Default(nullptr);
-  }
-  // Floats begin with 'f'
-  if (first == 'f') {
-    return llvm::StringSwitch<Type>(str)
-        .Case("f32", f32Type)
-        .Case("f64", f64Type)
-        .Default(nullptr);
-  }
-  return nullptr;
+void ASTContext::getAllBuiltinTypes(SmallVectorImpl<Type> &results) const {
+  auto &map = getImpl().builtinTypesLookupMap;
+  results.reserve(map.size());
+  for (auto entry : map)
+    results.push_back(entry.second);
 }
 
 //===- Types --------------------------------------------------------------===//
