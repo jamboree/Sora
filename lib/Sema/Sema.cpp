@@ -45,7 +45,7 @@ void Sema::performSema(SourceFile &file) {
       llvm::outs() << "Results found: " << ul.results.size() << "\n";
       unsigned k = 0;
       for (ValueDecl *result : ul.results) {
-        llvm::outs() << "Result #" << k++ << ":";
+        llvm::outs() << "Result #" << k++ << ":\n";
         result->dump(llvm::outs());
         llvm::outs() << "\n";
       }
