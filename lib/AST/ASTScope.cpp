@@ -61,6 +61,9 @@ void ASTScope::addChild(ASTScope *scope) {
 }
 
 ASTScope *ASTScope::findInnermostScope(SourceLoc loc) {
+  // Important: try to expand
+  expand();
+
   // Find the children in which loc belongs.
   // We can use std::lower_bound for this with a custom comparator.
   // This comparator returns true if scope->getSourceRange().end() < loc.
