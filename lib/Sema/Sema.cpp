@@ -37,15 +37,15 @@ void Sema::performSema(SourceFile &file) {
       auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr);
       if (!udre)
         return {true, expr};
-      UnqualifiedLookup ul(file);
+      UnqualifiedValueLookup uvl(file);
       llvm::outs() << "-----------------------------------\n";
       llvm::outs() << "Expression:\n";
       udre->dump(llvm::outs(), sema.ctxt.srcMgr);
       llvm::outs() << "Performing lookup...\n";
-      ul.performLookup(udre->getLoc(), udre->getIdentifier());
-      llvm::outs() << "Results found: " << ul.results.size() << "\n";
+      uvl.performLookup(udre->getLoc(), udre->getIdentifier());
+      llvm::outs() << "Results found: " << uvl.results.size() << "\n";
       unsigned k = 0;
-      for (ValueDecl *result : ul.results) {
+      for (ValueDecl *result : uvl.results) {
         llvm::outs() << "Result #" << k++ << ":\n";
         result->dump(llvm::outs());
         llvm::outs() << "\n";

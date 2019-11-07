@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/NameLookup.hpp"
+#include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/ASTScope.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/SourceFile.hpp"
@@ -140,9 +141,13 @@ void ASTScope::lookup(ASTScope::LookupResultConsumer consumer,
   ASTScopeLookup(consumer, ident).visit(this);
 }
 
-//===- UnqualifiedValueLookup --------------------------------------------------===//
+//===- UnqualifiedValueLookup ---------------------------------------------===//
 
 void UnqualifiedValueLookup::lookupImpl(SourceLoc loc, Identifier ident) {
+  assert(loc && "SourceLoc can't be invalid!");
+  assert(sourceFile.contains(loc) && "loc doesn't belong to this file!");
+  assert(results.size() &&
+         "Consecutive lookups using the same object aren't supported");
   ASTScope *innermostScope = sourceFile.getScopeMap()->findInnermostScope(loc);
   assert(innermostScope && "findInnermostScope shouldn't return null!");
   auto consumer = [&](ArrayRef<ValueDecl *> candidates,
@@ -153,4 +158,24 @@ void UnqualifiedValueLookup::lookupImpl(SourceLoc loc, Identifier ident) {
     return addResults(candidates) && ident.isValid();
   };
   ASTScopeLookup(consumer, ident).visit(innermostScope);
+}
+
+//===- UnqualifiedTypeLookup ----------------------------------------------===//
+
+void UnqualifiedTypeLookup::lookupImpl(SourceLoc loc, Identifier ident) {
+  assert(loc && "SourceLoc can't be invalid!");
+  assert(sourceFile.contains(loc) && "loc doesn't belong to this file!");
+  assert(results.size() &&
+         "Consecutive lookups using the same object aren't supported");
+  // For now, we don't have much work to do since we only have builtin types.
+  // Just use ASTContext::lookupBuiltinType if we have an identifier, or use
+  // getAllBuiltinTypes if we don't have one (= the caller wants every visible
+  // type)
+  ASTContext &ctxt = sourceFile.astContext;
+  if (ident) {
+    if (Type type = ctxt.lookupBuiltinType(ident))
+      results.push_back(type);
+  }
+  else
+    ctxt.getAllBuiltinTypes(results);
 }

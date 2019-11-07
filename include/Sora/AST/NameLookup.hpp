@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/AST/Identifier.hpp"
+#include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/DenseSet.h"
@@ -18,12 +19,11 @@ class SourceFile;
 class SourceLoc;
 class ValueDecl;
 
-/// Class used to configure and execute an unqualified value lookup inside a
-/// SourceFile.
+/// Class used to configure, execute and collect the results of an unqualified
+/// value lookup inside a SourceFile.
 class UnqualifiedValueLookup final {
-  void lookupImpl(SourceLoc loc, Identifier ident);
 
-  llvm::DenseSet<ValueDecl *> ignoredDecls;
+  void lookupImpl(SourceLoc loc, Identifier ident);
 
   /// Adds \p decls to the list of results.
   /// \returns true if at least one result was added.
@@ -38,6 +38,8 @@ class UnqualifiedValueLookup final {
     return added;
   }
 
+  llvm::DenseSet<ValueDecl *> ignoredDecls;
+
 public:
   UnqualifiedValueLookup(SourceFile &sourceFile) : sourceFile(sourceFile) {}
 
@@ -48,13 +50,13 @@ public:
     return *this;
   }
 
-  /// Lookup for decls with name \p ident in \p loc
+  /// Lookup for values with name \p ident at \p loc
   void performLookup(SourceLoc loc, Identifier ident) {
     assert(ident && "identifier is invalid!");
     lookupImpl(loc, ident);
   }
 
-  /// Finds every decl visible at \p loc
+  /// Finds every value visible at \p loc
   void findDeclsAt(SourceLoc loc) { lookupImpl(loc, Identifier()); }
 
   /// \returns whether the set of results is empty
@@ -70,6 +72,29 @@ public:
   /// The SourceFile in which we are looking
   SourceFile &sourceFile;
   /// The list of results
-  SmallVector<ValueDecl *, 8> results;
+  SmallVector<ValueDecl *, 4> results;
+};
+
+/// Class used to configure, execute and collect the results of an unqualified
+/// type lookup inside a SourceFile.
+class UnqualifiedTypeLookup {
+  void lookupImpl(SourceLoc loc, Identifier ident);
+
+public:
+  UnqualifiedTypeLookup(SourceFile &sourceFile) : sourceFile(sourceFile) {}
+
+  /// Lookup for types with name \p ident in \p loc
+  void performLookup(SourceLoc loc, Identifier ident) {
+    assert(ident && "identifier is invalid!");
+    lookupImpl(loc, ident);
+  }
+
+  /// Finds every type visible at \p loc
+  void findTypesAt(SourceLoc loc) { lookupImpl(loc, Identifier()); }
+
+  /// The SourceFile in which we are looking
+  SourceFile &sourceFile;
+  /// The list of results
+  SmallVector<Type, 4> results;
 };
 } // namespace sora
