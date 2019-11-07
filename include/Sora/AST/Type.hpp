@@ -101,6 +101,7 @@ class CanType final : public Type {
   bool isValid() const;
 
 public:
+  explicit CanType(std::nullptr_t) : CanType(Type(nullptr)) {}
   explicit CanType(Type type) : Type(type) { assert(isValid()); }
 
   // Can compare CanTypes because they're known canonical
