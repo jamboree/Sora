@@ -79,7 +79,7 @@ struct ASTContext::Impl {
   Optional<TypeArena> typeCheckerArena;
 
   // Built-in types lookup map
-  llvm::DenseMap<Identifier, Type> builtinTypesLookupMap;
+  llvm::DenseMap<Identifier, CanType> builtinTypesLookupMap;
 
   void initTypeCheckerArena() {
     assert(!hasTypeCheckerArena() && "TypeChecker arena already active");
@@ -318,17 +318,24 @@ llvm::Triple ASTContext::getTargetTriple() const {
   return getImpl().targetTriple;
 }
 
-Type ASTContext::lookupBuiltinType(Identifier ident) const {
+CanType ASTContext::lookupBuiltinType(Identifier ident) const {
   if (!ident)
-    return nullptr;
+    return CanType(nullptr);
   auto &map = getImpl().builtinTypesLookupMap;
   auto it = map.find(ident);
   if (it == map.end())
-    return nullptr;
+    return CanType(nullptr);
   return it->second;
 }
 
 void ASTContext::getAllBuiltinTypes(SmallVectorImpl<Type> &results) const {
+  auto &map = getImpl().builtinTypesLookupMap;
+  results.reserve(map.size());
+  for (auto entry : map)
+    results.push_back(entry.second);
+}
+
+void ASTContext::getAllBuiltinTypes(SmallVectorImpl<CanType> &results) const {
   auto &map = getImpl().builtinTypesLookupMap;
   results.reserve(map.size());
   for (auto entry : map)

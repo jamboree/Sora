@@ -138,10 +138,13 @@ public:
 
   /// \returns the builtin type with name \p ident, or nullptr if nothing was
   /// found.
-  Type lookupBuiltinType(Identifier ident) const;
+  CanType lookupBuiltinType(Identifier ident) const;
 
   /// Puts a list of every available builtin type in \p results.
   void getAllBuiltinTypes(SmallVectorImpl<Type> &results) const;
+
+  /// Puts a list of every available builtin type in \p results.
+  void getAllBuiltinTypes(SmallVectorImpl<CanType> &results) const;
 
   //===- Common Singletons ------------------------------------------------===//
 
@@ -153,24 +156,24 @@ public:
 
   //===- Frequently Used Types --------------------------------------------===//
 
-  const Type i8Type;    /// "i8"
-  const Type i16Type;   /// "i16"
-  const Type i32Type;   /// "i32"
-  const Type i64Type;   /// "i64"
-  const Type isizeType; /// "isize"
+  const CanType i8Type;    /// "i8"
+  const CanType i16Type;   /// "i16"
+  const CanType i32Type;   /// "i32"
+  const CanType i64Type;   /// "i64"
+  const CanType isizeType; /// "isize"
 
-  const Type u8Type;    /// "u8"
-  const Type u16Type;   /// "u16"
-  const Type u32Type;   /// "u32"
-  const Type u64Type;   /// "u64"
-  const Type usizeType; /// "usize"
+  const CanType u8Type;    /// "u8"
+  const CanType u16Type;   /// "u16"
+  const CanType u32Type;   /// "u32"
+  const CanType u64Type;   /// "u64"
+  const CanType usizeType; /// "usize"
 
-  const Type f32Type; /// "f32"
-  const Type f64Type; /// "f64"
+  const CanType f32Type; /// "f32"
+  const CanType f64Type; /// "f64"
 
-  const Type voidType; /// "void"
+  const CanType voidType; /// "void"
 
-  const Type errorType; // The "error" type.
+  const CanType errorType; // The "error" type.
 
   //===--------------------------------------------------------------------===//
 };
