@@ -205,8 +205,6 @@ public:
 } // namespace sora
 
 namespace llvm {
-template <typename Ty> struct DenseMapInfo;
-
 template <> struct DenseMapInfo<sora::SourceLoc> {
   static sora::SourceLoc getEmptyKey() {
     return sora::SourceLoc::fromPointer(
