@@ -11,6 +11,7 @@
 
 namespace sora {
 class ASTContext;
+class SourceFile;
 
 /// Main interface of Sora's semantic analyzer.
 class Sema final {
@@ -20,13 +21,17 @@ class Sema final {
 public:
   Sema(ASTContext &ctxt);
 
+  /// Main entry point of semantic analysis: performs semantic analysis on \p
+  /// file.
+  void performSema(SourceFile &file);
+
   /// Emits a diagnostic at \p loc
   template <typename... Args>
   InFlightDiagnostic
   diagnose(SourceLoc loc, TypedDiag<Args...> diag,
            typename detail::PassArgument<Args>::type... args) {
     assert(loc && "Sema can't emit diagnostics without valid SourceLocs");
-    return diagEng.diagnose<Args...>(loc, diag, args...);
+    return diagEngine.diagnose<Args...>(loc, diag, args...);
   }
 
   ASTContext &ctxt;
