@@ -14,6 +14,9 @@
 using namespace sora;
 
 namespace sora {
+#define SORA_FWD_DECL(X) X;
+#include "Sora/Diagnostics/DiagnosticsAll.def"
+
 // Define the DiagID enum.
 enum class DiagID : uint32_t {
 #define DIAG(KIND, ID, TEXT, SIGNATURE) ID,

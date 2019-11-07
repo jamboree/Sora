@@ -5,9 +5,13 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#if !(defined(DIAG)\
+#if !(defined(DIAG) || defined(SORA_FWD_DECL)\
   || (defined(REMARK) && defined(NOTE) && defined(WARNING) && defined(ERROR)))
-# error "Must define DIAG or {REMARK, NOTE, WARNING, ERROR}"
+# error "Must define DIAG, SORA_FWD_DECL or {REMARK, NOTE, WARNING, ERROR}"
+#endif
+
+#ifndef DIAG
+# define DIAG(KIND, ID, TEXT, SIGNATURE)
 #endif
 
 #ifndef REMARK
@@ -24,6 +28,10 @@
 
 #ifndef ERROR
 # define ERROR(ID, TEXT, SIGNATURE) DIAG(Error, ID, TEXT, SIGNATURE)
+#endif
+
+#ifndef SORA_FWD_DECL
+# define SORA_FWD_DECL(X)
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -45,11 +53,10 @@ ERROR(only_one_file_accepted,
 //===----------------------------------------------------------------------===//
 
 #ifndef KEEP_DIAG_MACROS
-# ifdef DIAG
-#   undef DIAG
-# endif
+# undef DIAG
 # undef REMARK
 # undef NOTE
 # undef WARNING
 # undef ERROR
+# undef SORA_FWD_DECL
 #endif
