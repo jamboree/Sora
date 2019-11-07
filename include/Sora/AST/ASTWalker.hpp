@@ -69,10 +69,7 @@ public:
   /// node. If the former is false, the remaining walk is cancelled and returns
   /// failure.
   /// NOTE: \p expr is only replaced if the Expr* is not nullptr, and
-  /// if the replacement is valid. For example, the if you're visiting the
-  /// TupleExpr (args) of a CallExpr and you try to replace it with an
-  /// ErrorExpr, the replacement will not be performed. The default
-  /// implementation returns {true, nullptr}
+  /// if the replacement is valid.
   virtual std::pair<bool, Expr *> walkToExprPost(Expr *expr) {
     return {true, nullptr};
   }
