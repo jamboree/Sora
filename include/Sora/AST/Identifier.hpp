@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/Common/LLVM.hpp"
+#include <string>
 
 namespace sora {
 /// Represents a unique'd language identifier.
@@ -46,4 +47,10 @@ public:
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &out, Identifier ident);
+
+template <typename Ty> struct DiagnosticArgumentFormatter;
+
+template <> struct DiagnosticArgumentFormatter<Identifier> {
+  static std::string format(Identifier ident) { return ident.c_str(); }
+};
 } // namespace sora
