@@ -62,13 +62,11 @@ public:
 
     decl->setValueType(FunctionType::get(paramTypes, returnType));
 
-    if (decl->hasBody()) {
-      // Check the body directly for local functions, else delay it.
-      if (decl->isLocal())
-        tc.typecheckFunctionBody(decl);
-      else
-        tc.definedFunctions.push_back(decl);
-    }
+    // Check the body directly for local functions, else delay it.
+    if (decl->isLocal())
+      tc.typecheckFunctionBody(decl);
+    else
+      tc.definedFunctions.push_back(decl);
   }
 
   void visitLetDecl(LetDecl *decl) {
@@ -94,8 +92,6 @@ void TypeChecker::typecheckDecl(Decl *decl) {
 }
 
 void TypeChecker::typecheckFunctionBody(FuncDecl *func) {
-  if (!func->hasBody())
-    return;
   typecheckStmt(func->getBody(), func);
 }
 

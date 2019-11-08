@@ -304,7 +304,6 @@ public:
         paramList(params), returnTypeLoc(returnTypeLoc) {}
 
   BlockStmt *getBody() const { return body; }
-  bool hasBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
 
   ParamList *getParamList() const { return paramList; }
