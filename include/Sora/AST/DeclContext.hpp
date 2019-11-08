@@ -47,26 +47,12 @@ public:
     return getDeclContextKind() <= DeclContextKind::Last_LocalDeclContext;
   }
 
-  /// If this is a declaration, returns this DeclContext as a Decl*, else,
-  /// returns nullptr.
-  Decl *getAsDecl();
-  /// If this is a declaration, returns this DeclContext as a Decl*, else,
-  /// returns nullptr.
-  const Decl *getAsDecl() const {
-    return const_cast<DeclContext *>(this)->getAsDecl();
-  }
-
-  /// If this is a source file, returns this DeclContext as a SourceFile*, else,
-  /// returns nullptr.
-  SourceFile *getAsSourceFile();
-  /// If this is a source file, returns this DeclContext as a SourceFile*, else,
-  /// returns nullptr.
-  const SourceFile *getAsSourceFile() const {
-    return const_cast<DeclContext *>(this)->getAsSourceFile();
-  }
-
   /// \returns the parent of this DeclContext
   DeclContext *getParent() const { return parentAndKind.getPointer(); }
+
+  /// \returns the parent SourceFile of this DeclContext, or nullptr if not
+  /// found.
+  SourceFile *getParentSourceFile() const;
 
   /// \returns true if this DeclContext has a parent
   bool hasParent() const { return getParent(); }

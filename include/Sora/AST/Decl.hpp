@@ -304,6 +304,7 @@ public:
         paramList(params), returnTypeLoc(returnTypeLoc) {}
 
   BlockStmt *getBody() const { return body; }
+  bool hasBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
 
   ParamList *getParamList() const { return paramList; }
@@ -314,6 +315,8 @@ public:
   /// \returns true if the user wrote a return type for this function
   bool hasReturnType() const { return returnTypeLoc.hasLocation(); }
 
+  /// Sets the type of this value (the type of this function)
+  void setValueType(Type type) { this->type = type; }
   /// \returns the type of this value (the type of the function)
   Type getValueType() const { return type; }
 

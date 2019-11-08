@@ -142,12 +142,3 @@ SourceLoc LetDecl::getEndLoc() const {
     return getInitializer()->getEndLoc();
   return getPattern()->getEndLoc();
 }
-
-Decl *DeclContext::getAsDecl() {
-  switch (getDeclContextKind()) {
-  case DeclContextKind::FuncDecl:
-    return cast<FuncDecl>(this);
-  default:
-    return nullptr;
-  }
-}

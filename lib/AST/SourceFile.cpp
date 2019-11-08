@@ -23,10 +23,6 @@ SourceFile *SourceFile::create(ASTContext &ctxt, BufferID bufferID,
   return sf;
 }
 
-SourceFile *DeclContext::getAsSourceFile() {
-  return dyn_cast<SourceFile>(this);
-}
-
 bool SourceFile::walk(ASTWalker &walker) {
   for (Decl *decl : members) {
     if (!decl->walk(walker))
@@ -59,4 +55,12 @@ SourceLoc SourceFile::getEndLoc() const {
 
 SourceRange SourceFile::getSourceRange() const {
   return {getBegLoc(), getEndLoc()};
+}
+
+SourceFile *DeclContext::getParentSourceFile() const {
+  if (isa<SourceFile>(this))
+    return const_cast<SourceFile *>(cast<SourceFile>(this));
+  if (DeclContext *parent = getParent())
+    return parent->getParentSourceFile();
+  return nullptr;
 }
