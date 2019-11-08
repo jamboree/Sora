@@ -151,6 +151,10 @@ SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
 }
 
+std::string DiagnosticArgumentFormatter<Type>::format(Type type) {
+  return type.getString();
+}
+
 //===- TypeBase/Types -----------------------------------------------------===//
 
 void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,

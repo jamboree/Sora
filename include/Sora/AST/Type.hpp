@@ -144,6 +144,18 @@ public:
   Type getType() const { return type; }
   void setType(Type type) { this->type = type; }
 };
+
+template <typename Ty> struct DiagnosticArgumentFormatter;
+
+template <> struct DiagnosticArgumentFormatter<Type> {
+  static std::string format(Type type);
+};
+
+template <> struct DiagnosticArgumentFormatter<CanType> {
+  static std::string format(CanType type) {
+    return DiagnosticArgumentFormatter<Type>::format(type);
+  }
+};
 } // namespace sora
 
 namespace llvm {
