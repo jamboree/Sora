@@ -1,4 +1,4 @@
-//===--- Sema.cpp ------------------------------------------*- C++ -*-===//
+//===--- Sema.cpp -----------------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -6,7 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Sema/Sema.hpp"
+
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Decl.hpp"
+#include "Sora/AST/SourceFile.hpp"
 
 using namespace sora;
 
@@ -18,41 +21,8 @@ Sema::Sema(ASTContext &ctxt) : ctxt(ctxt), diagEngine(ctxt.diagEngine) {}
 // the source file.
 //===----------------------------------------------------------------------===//
 
-#include "Sora/AST/ASTWalker.hpp"
-#include "Sora/AST/Decl.hpp"
-#include "Sora/AST/Expr.hpp"
-#include "Sora/AST/NameLookup.hpp"
-#include "Sora/AST/SourceFile.hpp"
-#include "Sora/Diagnostics/DiagnosticsSema.hpp"
-#include "llvm/Support/raw_ostream.h"
-
 void Sema::performSema(SourceFile &file) {
-  struct Impl : ASTWalker {
-    Sema &sema;
-    SourceFile &file;
-
-    Impl(Sema &sema, SourceFile &file) : sema(sema), file(file) {}
-
-    std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
-      auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr);
-      if (!udre)
-        return {true, expr};
-      UnqualifiedValueLookup uvl(file);
-      llvm::outs() << "-----------------------------------\n";
-      llvm::outs() << "Expression:\n";
-      udre->dump(llvm::outs(), sema.ctxt.srcMgr);
-      llvm::outs() << "Performing lookup...\n";
-      uvl.performLookup(udre->getLoc(), udre->getIdentifier());
-      llvm::outs() << "Results found: " << uvl.results.size() << "\n";
-      unsigned k = 0;
-      for (ValueDecl *result : uvl.results) {
-        llvm::outs() << "Result #" << k++ << ":\n";
-        result->dump(llvm::outs());
-        llvm::outs() << "\n";
-      }
-      return {true, expr};
-    }
-  };
-  llvm::outs() << "Attempting to find candidates\n";
-  file.walk(Impl(*this, file));
+  for (ValueDecl *decl : file.getMembers())
+    typecheckDecl(decl);
+  typecheckFunctionBodies();
 }
