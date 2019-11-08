@@ -1,4 +1,4 @@
-//===--- SemaDecl.cpp -------------------------------------------*- C++ -*-===//
+//===--- TypeCheckDecl.cpp --------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -7,23 +7,23 @@
 //  Declaration Semantic Analysis
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Sema/Sema.hpp"
+#include "TypeChecker.hpp"
 
-#include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Types.hpp"
 
 using namespace sora;
 
-//===- DeclChecker --------------------------------------------------------===//
+//===- TypeChecker::DeclChecker -------------------------------------------===//
 
+namespace {
 /// Performs semantic analysis of declarations in a file.
-class Sema::DeclChecker : public DeclVisitor<DeclChecker> {
+class DeclChecker : public DeclVisitor<DeclChecker> {
 public:
-  Sema &sema;
+  TypeChecker &tc;
 
-  DeclChecker(Sema &sema) : sema(sema) {}
+  DeclChecker(TypeChecker &tc) : tc(tc) {}
 
   void visitVarDecl(VarDecl *decl) {
     // Nothing to do here.
@@ -32,7 +32,7 @@ public:
 
   void visitParamDecl(ParamDecl *decl) {
     // Resolve the type of the ParamDecl
-    sema.resolveTypeLoc(decl->getTypeLoc());
+    tc.resolveTypeLoc(decl->getTypeLoc());
   }
 
   void visitFuncDecl(FuncDecl *decl) {
@@ -40,13 +40,13 @@ public:
     // Resolve the return type if present
     if (decl->hasReturnType()) {
       TypeLoc &tyLoc = decl->getReturnTypeLoc();
-      sema.resolveTypeLoc(tyLoc);
+      tc.resolveTypeLoc(tyLoc);
       assert(tyLoc.hasType());
       returnType = tyLoc.getType();
     }
     // If the function doesn't have a return type, it returns void.
     else
-      returnType = sema.ctxt.voidType;
+      returnType = tc.ctxt.voidType;
 
     ParamList *params = decl->getParamList();
     SmallVector<Type, 8> paramTypes;
@@ -59,35 +59,46 @@ public:
 
     decl->setValueType(FunctionType::get(paramTypes, returnType));
 
-    if (decl->hasBody())
-      sema.definedFunctions.push_back(decl);
+    if (decl->hasBody()) {
+      // Check local bodies directly, but delay checking of the body of global
+      // functions.
+      if (decl->isLocal())
+        tc.typecheckFunctionBody(decl);
+      else
+        tc.definedFunctions.push_back(decl);
+    }
   }
 
   void visitLetDecl(LetDecl *decl) {
-    sema.typecheckPattern(decl->getPattern());
+    tc.typecheckPattern(decl->getPattern());
 
     if (decl->hasInitializer()) {
-      assert(sema.ignoredDecls.empty() &&
-             "ignoredDecls vector should be empty!");
+      assert(tc.ignoredDecls.empty() && "ignoredDecls vector should be empty!");
       decl->forEachVarDecl(
-          [&](VarDecl *var) { sema.ignoredDecls.push_back(var); });
+          [&](VarDecl *var) { tc.ignoredDecls.push_back(var); });
       decl->setInitializer(
-          sema.typecheckExpr(decl->getInitializer(), decl->getDeclContext()));
-      sema.ignoredDecls.clear();
+          tc.typecheckExpr(decl->getInitializer(), decl->getDeclContext()));
+      tc.ignoredDecls.clear();
     }
   }
 };
+} // namespace
 
-//===- Sema ---------------------------------------------------------------===//
+//===- TypeChecker --------------------------------------------------------===//
 
-void Sema::typecheckDecl(Decl *decl) {
+void TypeChecker::typecheckDecl(Decl *decl) {
   assert(decl);
   DeclChecker(*this).visit(decl);
 }
 
-void Sema::typecheckFunctionBodies() {
-  for (FuncDecl *func : definedFunctions)
-    typecheckStmt(func->getBody(), func);
+void TypeChecker::typecheckFunctionBody(FuncDecl *func) {
+  if (!func->hasBody())
+    return;
+  typecheckStmt(func->getBody(), func);
+}
 
+void TypeChecker::typecheckDefinedFunctions() {
+  for (FuncDecl *func : definedFunctions)
+    typecheckFunctionBody(func);
   definedFunctions.clear();
 }

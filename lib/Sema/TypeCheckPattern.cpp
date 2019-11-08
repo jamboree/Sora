@@ -1,4 +1,4 @@
-//===--- SemaPattern.cpp ----------------------------------------*- C++ -*-===//
+//===--- TypeCheckPattern.cpp -----------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -7,11 +7,13 @@
 //  Pattern Semantic Analysis
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Sema/Sema.hpp"
+#include "TypeChecker.hpp"
 
 using namespace sora;
 
-void Sema::typecheckPattern(Pattern *pat) {
+//===- TypeChecker --------------------------------------------------------===//
+
+void TypeChecker::typecheckPattern(Pattern *pat) {
   assert(pat);
   // TODO
 }

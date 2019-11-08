@@ -1,4 +1,4 @@
-//===--- SemaExpr.cpp -------------------------------------------*- C++ -*-===//
+//===--- TypeCheckExpr.cpp --------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -7,9 +7,8 @@
 //  Expression Semantic Analysis
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Sema/Sema.hpp"
+#include "TypeChecker.hpp"
 
-#include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/ASTWalker.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
@@ -20,13 +19,16 @@
 
 using namespace sora;
 
-Expr *Sema::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
+//===- TypeChecker --------------------------------------------------------===//
+
+Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
+  // NOTE: THIS IS ONLY TEST CODE
   assert(expr && dc);
   struct Impl : ASTWalker {
-    Sema &sema;
+    TypeChecker &tc;
     DeclContext *dc;
 
-    Impl(Sema &sema, DeclContext *dc) : sema(sema), dc(dc) {}
+    Impl(TypeChecker &tc, DeclContext *dc) : tc(tc), dc(dc) {}
 
     SourceFile &getSourceFile() const {
       assert(dc && "no DeclContext?");
@@ -42,7 +44,7 @@ Expr *Sema::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
       UnqualifiedValueLookup uvl(getSourceFile());
       llvm::outs() << "-----------------------------------\n";
       llvm::outs() << "Expression:\n";
-      udre->dump(llvm::outs(), sema.ctxt.srcMgr);
+      udre->dump(llvm::outs(), tc.ctxt.srcMgr);
       llvm::outs() << "Performing lookup...\n";
       uvl.performLookup(udre->getLoc(), udre->getIdentifier());
       llvm::outs() << "Results found: " << uvl.results.size() << "\n";

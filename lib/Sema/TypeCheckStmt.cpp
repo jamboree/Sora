@@ -1,4 +1,4 @@
-//===--- SemaStmt.cpp -------------------------------------------*- C++ -*-===//
+//===--- TypeCheckStmt.cpp --------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -7,7 +7,7 @@
 //  Statement Semantic Analysis
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Sema/Sema.hpp"
+#include "TypeChecker.hpp"
 
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Stmt.hpp"
@@ -16,16 +16,17 @@ using namespace sora;
 
 //===- StmtChecker --------------------------------------------------------===//
 
-class Sema::StmtChecker : public StmtVisitor<StmtChecker> {
+namespace {
+class StmtChecker : public StmtVisitor<StmtChecker> {
 public:
-  Sema &sema;
+  TypeChecker &tc;
   DeclContext *dc;
 
-  StmtChecker(Sema &sema, DeclContext *dc) : sema(sema), dc(dc) {}
+  StmtChecker(TypeChecker &tc, DeclContext *dc) : tc(tc), dc(dc) {}
 
-  void visitDecl(Decl *decl) { sema.typecheckDecl(decl); }
+  void visitDecl(Decl *decl) { tc.typecheckDecl(decl); }
 
-  void visitExpr(Expr *expr) { sema.typecheckExpr(expr, dc); }
+  void visitExpr(Expr *expr) { tc.typecheckExpr(expr, dc); }
 
   void visitContinueStmt(ContinueStmt *stmt) {
     // TODO
@@ -38,16 +39,16 @@ public:
   void visitReturnStmt(ReturnStmt *stmt) {
     // TODO
     if (stmt->hasResult())
-      stmt->setResult(sema.typecheckExpr(stmt->getResult(), dc));
+      stmt->setResult(tc.typecheckExpr(stmt->getResult(), dc));
   }
 
   ASTNode checkNode(ASTNode node) {
     if (node.is<Stmt *>())
-      sema.typecheckStmt(node.get<Stmt *>(), dc);
+      tc.typecheckStmt(node.get<Stmt *>(), dc);
     else if (node.is<Expr *>())
-      sema.typecheckExpr(node.get<Expr *>(), dc);
+      tc.typecheckExpr(node.get<Expr *>(), dc);
     else if (node.is<Decl *>())
-      sema.typecheckDecl(node.get<Decl *>());
+      tc.typecheckDecl(node.get<Decl *>());
     else
       llvm_unreachable("unknown ASTNode kind");
     return node;
@@ -61,11 +62,11 @@ public:
   void checkCondition(ConditionalStmt *stmt) {
     StmtCondition cond = stmt->getCond();
     if (Expr *expr = cond.getExprOrNull()) {
-      cond = sema.typecheckExpr(expr, dc);
+      cond = tc.typecheckExpr(expr, dc);
       stmt->setCond(cond);
     }
     else if (LetDecl *decl = cond.getLetDecl())
-      sema.typecheckDecl(decl);
+      tc.typecheckDecl(decl);
   }
 
   void visitIfStmt(IfStmt *stmt) {
@@ -80,10 +81,11 @@ public:
     visitBlockStmt(stmt->getBody());
   }
 };
+} // namespace
 
-//===- Sema ---------------------------------------------------------------===//
+//===- TypeChecker --------------------------------------------------------===//
 
-void Sema::typecheckStmt(Stmt *stmt, DeclContext *dc) {
+void TypeChecker::typecheckStmt(Stmt *stmt, DeclContext *dc) {
   assert(stmt && dc);
   StmtChecker(*this, dc).visit(stmt);
 }

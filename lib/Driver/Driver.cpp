@@ -294,8 +294,7 @@ bool CompilerInstance::doParsing(SourceFile &file) {
 }
 
 bool CompilerInstance::doSema(SourceFile &file) {
-  Sema sema(*astContext);
-  sema.performSema(file);
+  performSema(file);
   if (options.dumpAST)
     file.dump(llvm::outs());
   if (options.printMemUsage)
