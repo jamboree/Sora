@@ -10,9 +10,8 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
-#include "Sora/Diagnostics/DiagnosticEngine.hpp"
+#include "Sora/Diagnostics/DiagnosticsSema.hpp"
 #include "llvm/ADT/SmallVector.h"
-#include <vector>
 
 namespace sora {
 class Decl;
@@ -72,7 +71,9 @@ public:
 
   /// Resolves a TypeLoc, giving it a type from its TypeRepr.
   /// This can only be used if the TypeLoc has a TypeRepr.
-  void resolveTypeLoc(TypeLoc &tyLoc);
+  /// \param tyLoc the TypeLoc to resolve (must have a TypeRepr* but no Type)
+  /// \param file the file in which this TypeLoc lives
+  void resolveTypeLoc(TypeLoc &tyLoc, SourceFile &file);
 
   /// The list of non-local functions that have a body (=have been defined).
   /// See \p typecheckFunctionBodies()

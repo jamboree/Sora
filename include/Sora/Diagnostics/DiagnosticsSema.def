@@ -40,9 +40,15 @@
 
 SORA_FWD_DECL(class Identifier)
 
-//===- Name Binding -------------------------------------------------------===//
+//===- Exprs --------------------------------------------------------------===//
 
-ERROR(use_undeclared_ident, "use of undeclared identifier '%0'", (Identifier))
+ERROR(cannot_find_value_in_scope, 
+  "cannot find value '%0' in this scope", (Identifier))
+
+//===- Types --------------------------------------------------------------===//
+
+ERROR(cannot_find_type_in_scope, 
+  "cannot find type '%0' in this scope", (Identifier))
 
 //===----------------------------------------------------------------------===//
 

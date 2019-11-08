@@ -22,8 +22,9 @@ namespace {
 class DeclChecker : public DeclVisitor<DeclChecker> {
 public:
   TypeChecker &tc;
+  SourceFile &file;
 
-  DeclChecker(TypeChecker &tc) : tc(tc) {}
+  DeclChecker(TypeChecker &tc, SourceFile &file) : tc(tc), file(file) {}
 
   void visitVarDecl(VarDecl *decl) {
     // Nothing to do here.
@@ -33,7 +34,7 @@ public:
   void visitParamDecl(ParamDecl *decl) {
     assert(decl->getValueType().isNull() && "Decl checked twice!");
     // Resolve the type of the ParamDecl
-    tc.resolveTypeLoc(decl->getTypeLoc());
+    tc.resolveTypeLoc(decl->getTypeLoc(), file);
   }
 
   void visitFuncDecl(FuncDecl *decl) {
@@ -42,7 +43,7 @@ public:
     // Resolve the return type if present
     if (decl->hasReturnType()) {
       TypeLoc &tyLoc = decl->getReturnTypeLoc();
-      tc.resolveTypeLoc(tyLoc);
+      tc.resolveTypeLoc(tyLoc, file);
       assert(tyLoc.hasType());
       returnType = tyLoc.getType();
     }
@@ -89,7 +90,7 @@ public:
 
 void TypeChecker::typecheckDecl(Decl *decl) {
   assert(decl);
-  DeclChecker(*this).visit(decl);
+  DeclChecker(*this, decl->getSourceFile()).visit(decl);
 }
 
 void TypeChecker::typecheckFunctionBody(FuncDecl *func) {
