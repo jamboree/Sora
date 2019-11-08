@@ -23,13 +23,11 @@
 
 //===----------------------------------------------------------------------===//
 
-
 ABSTRACT_DECL(Value, Decl)
   VALUE_DECL(Var, ValueDecl)
   VALUE_DECL(Param, ValueDecl)
   VALUE_DECL(Func, ValueDecl)
   DECL_RANGE(Value, Var, Func)
-
 
 ABSTRACT_DECL(PatternBinding, Decl)
   DECL(Let, PatternBindingDecl)

@@ -22,9 +22,7 @@
 STMT(Continue, Stmt)
 STMT(Break, Stmt)
 STMT(Return, Stmt)
-
 STMT(Block, Stmt)
-
 ABSTRACT_STMT(Conditional, Stmt)
   STMT(If, ConditionalStmt)
   STMT(While, ConditionalStmt)
