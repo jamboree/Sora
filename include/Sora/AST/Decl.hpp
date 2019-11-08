@@ -313,7 +313,7 @@ public:
   TypeLoc &getReturnTypeLoc() { return returnTypeLoc; }
   const TypeLoc &getReturnTypeLoc() const { return returnTypeLoc; }
   /// \returns true if the user wrote a return type for this function
-  bool hasReturnType() const { return returnTypeLoc.hasLocation(); }
+  bool hasReturnType() const { return returnTypeLoc.hasTypeRepr(); }
 
   /// Sets the type of this value (the type of this function)
   void setValueType(Type type) { this->type = type; }
