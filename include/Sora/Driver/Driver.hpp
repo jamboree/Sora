@@ -111,10 +111,8 @@ public:
   ///
   /// This can only be called once per CompilerInstance.
   ///
-  /// \param stopAfter stops the compilation process after that step (default =
-  /// Step::Last)
   /// \returns true if compilation was successful, false otherwise.
-  bool run(Step stopAfter = Step::Last);
+  bool run();
 
   /// \returns the set of input buffers
   ArrayRef<BufferID> getInputBuffers() const;

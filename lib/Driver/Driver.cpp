@@ -165,8 +165,9 @@ bool CompilerInstance::isLoaded(StringRef filePath, bool isAbsolute) {
   return false;
 }
 
-bool CompilerInstance::run(Step stopAfter) {
+bool CompilerInstance::run() {
   assert(!ran && "already ran this CompilerInstance!");
+  Step stopAfter = options.parseOnly ? Step::Parsing : Step::Last;
   ran = true;
   // Check if we have input files
   if (inputBuffers.empty()) {
