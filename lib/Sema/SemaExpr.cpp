@@ -20,7 +20,8 @@
 
 using namespace sora;
 
-Expr *Sema::typecheckExpr(Expr *expr, DeclContext *dc) {
+Expr *Sema::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
+  assert(expr && dc);
   struct Impl : ASTWalker {
     Sema &sema;
     DeclContext *dc;

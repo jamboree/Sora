@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "llvm/ADT/SmallVector.h"
@@ -21,7 +22,6 @@ class FuncDecl;
 class Pattern;
 class Stmt;
 class SourceFile;
-class Type;
 class TypeLoc;
 class TypeRepr;
 class ValueDecl;
@@ -45,7 +45,8 @@ class Sema final {
   /// Expression typechecking entry point
   /// \param expr the expression to typecheck
   /// \param dc th DeclContext in which this Expr lives. Cannot be null.
-  Expr *typecheckExpr(Expr *expr, DeclContext *dc);
+  /// \param ofType If valid, the expected type of the expression.
+  Expr *typecheckExpr(Expr *expr, DeclContext *dc, Type ofType = Type());
 
   /// Statement typechecking entry point
   /// \param stmt the statement to typecheck

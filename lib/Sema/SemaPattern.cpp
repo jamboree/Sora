@@ -12,5 +12,6 @@
 using namespace sora;
 
 void Sema::typecheckPattern(Pattern *pat) {
+  assert(pat);
   // TODO
 }
