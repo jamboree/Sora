@@ -31,11 +31,13 @@ public:
   }
 
   void visitParamDecl(ParamDecl *decl) {
+    assert(decl->getValueType().isNull() && "Decl checked twice!");
     // Resolve the type of the ParamDecl
     tc.resolveTypeLoc(decl->getTypeLoc());
   }
 
   void visitFuncDecl(FuncDecl *decl) {
+    assert(decl->getValueType().isNull() && "Decl checked twice!");
     Type returnType;
     // Resolve the return type if present
     if (decl->hasReturnType()) {
@@ -60,8 +62,7 @@ public:
     decl->setValueType(FunctionType::get(paramTypes, returnType));
 
     if (decl->hasBody()) {
-      // Check local bodies directly, but delay checking of the body of global
-      // functions.
+      // Check the body directly for local functions, else delay it.
       if (decl->isLocal())
         tc.typecheckFunctionBody(decl);
       else

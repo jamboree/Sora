@@ -10,6 +10,7 @@
 #include "TypeChecker.hpp"
 
 #include "Sora/AST/ASTVisitor.hpp"
+#include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Stmt.hpp"
 
 using namespace sora;
@@ -54,9 +55,40 @@ public:
     return node;
   }
 
+  FuncDecl *getAsFuncDecl(ASTNode node) {
+    if (Decl *decl = node.dyn_cast<Decl *>())
+      if (FuncDecl *fn = dyn_cast<FuncDecl>(decl))
+        return fn;
+    return nullptr;
+  }
+
+  /// Typechecking a BlockStmt is done in 2 passes.
+  /// The first one checks FuncDecls only. The second one checks the rest.
+  /// This is needed to support forward-referencing declarations, e.g.
+  /// \verbatim
+  /// func foo(x: i32) -> i32 {
+  ///   return bar(x)
+  ///   func bar(x: i32) -> i32 { return x*2 }
+  /// }
+  /// \endverbatim
+  ////
+  /// If we were to typecheck everything in one pass, we'd crash because bar
+  /// hasn't been checked yet (= doesn't have a type) when we check the return
+  /// statement.
   void visitBlockStmt(BlockStmt *stmt) {
-    for (ASTNode node : stmt->getElements())
-      node = checkNode(node);
+    // Do a first pass where we typecheck FuncDecls only.
+
+    for (ASTNode node : stmt->getElements()) {
+      if (FuncDecl *fn = getAsFuncDecl(node)) {
+        assert(fn->isLocal() && "Function should be local!");
+        tc.typecheckDecl(fn);
+      }
+    }
+    // And do another one where we typecheck the rest
+    for (ASTNode &node : stmt->getElements()) {
+      if (!getAsFuncDecl(node))
+        node = checkNode(node);
+    }
   }
 
   void checkCondition(ConditionalStmt *stmt) {

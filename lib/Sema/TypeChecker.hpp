@@ -74,7 +74,7 @@ public:
   /// This can only be used if the TypeLoc has a TypeRepr.
   void resolveTypeLoc(TypeLoc &tyLoc);
 
-  /// The list of functions that have been defined.
+  /// The list of non-local functions that have a body (=have been defined).
   /// See \p typecheckFunctionBodies()
   SmallVector<FuncDecl *, 4> definedFunctions;
 
