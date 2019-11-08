@@ -65,6 +65,8 @@ public:
 
   void visitVoidType(VoidType *type) { out << "void"; }
 
+  void visitBoolType(BoolType *type) { out << "bool"; }
+
   void visitReferenceType(ReferenceType *type) {
     out << '&';
     if (type->isMut())
@@ -184,9 +186,10 @@ CanType TypeBase::getCanonicalType() const {
   case TypeKind::Integer:
   case TypeKind::Float:
   case TypeKind::Void:
+  case TypeKind::Bool:
   case TypeKind::Error:
   case TypeKind::TypeVariable:
-    llvm_unreachable("Type is already canonical!");
+    llvm_unreachable("Type is always canonical!");
   case TypeKind::Reference: {
     ReferenceType *type = cast<ReferenceType>(thisType);
     result = ReferenceType::get(type->getPointeeType()->getCanonicalType(),

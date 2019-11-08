@@ -193,6 +193,7 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       f64Type(new (*this, ArenaKind::Permanent)
                   FloatType(*this, FloatKind::IEEE64)),
       voidType(new (*this, ArenaKind::Permanent) VoidType(*this)),
+      boolType(new (*this, ArenaKind::Permanent) BoolType(*this)),
       errorType(new (*this, ArenaKind::Permanent) ErrorType(*this)) {
   // Build the BuiltinTypes lookup map
   // FIXME: Can't this be built lazily?
@@ -219,6 +220,7 @@ void ASTContext::buildBuiltinTypesLookupMap() {
   BUILTIN_TYPE(f64);
 
   BUILTIN_TYPE(void);
+  BUILTIN_TYPE(bool);
 #undef BUILTIN_TYPE
 }
 

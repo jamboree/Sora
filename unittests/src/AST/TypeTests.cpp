@@ -66,6 +66,9 @@ TEST_F(TypeTest, rtti) {
   EXPECT_TRUE(ctxt->voidType->is<VoidType>());
   EXPECT_TRUE(ctxt->voidType->is<BuiltinType>());
 
+  EXPECT_TRUE(ctxt->boolType->is<BoolType>());
+  EXPECT_TRUE(ctxt->boolType->is<BuiltinType>());
+
   EXPECT_TRUE(ctxt->errorType->is<ErrorType>());
 
   EXPECT_TRUE(refType->is<ReferenceType>());
@@ -194,6 +197,7 @@ TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
   CHECK_ALWAYS_CANONICAL(ctxt->u64Type)
   CHECK_ALWAYS_CANONICAL(ctxt->usizeType)
   CHECK_ALWAYS_CANONICAL(ctxt->voidType)
+  CHECK_ALWAYS_CANONICAL(ctxt->boolType)
   CHECK_ALWAYS_CANONICAL(ctxt->errorType)
   Type tyVar = TypeVariableType::create(*ctxt, 0);
   CHECK_ALWAYS_CANONICAL(tyVar)
@@ -242,6 +246,7 @@ TEST_F(TypeTest, printingTest_simple) {
   CHECK(ctxt->u64Type, "u64");
   CHECK(ctxt->usizeType, "usize");
   CHECK(ctxt->voidType, "void");
+  CHECK(ctxt->boolType, "bool");
   CHECK(ctxt->errorType, "<error_type>");
   Type tyVar = TypeVariableType::create(*ctxt, 0);
   CHECK(tyVar, "$T0");

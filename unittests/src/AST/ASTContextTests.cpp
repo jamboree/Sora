@@ -78,6 +78,7 @@ TEST_F(ASTContextTest, lookupBuiltinType) {
   CHECK("f32", f32Type);
   CHECK("f64", f64Type);
   CHECK("void", voidType);
+  CHECK("bool", boolType);
 
 #undef CHECK
 
@@ -90,6 +91,7 @@ TEST_F(ASTContextTest, lookupBuiltinType) {
   CHECK_NULL("u31");
   CHECK_NULL("u42");
   CHECK_NULL("f54");
+  CHECK_NULL("baal");
 #undef CHECK_NULL
 }
 

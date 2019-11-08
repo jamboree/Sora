@@ -299,9 +299,7 @@ public:
   }
 };
 
-/// Void type
-///
-/// Used for 'void', and also the canonical form of '()' (empty tuple type)
+/// 'void' type, also the canonical form of '()' (the empty tuple type)
 ///
 /// This type is always canonical.
 class VoidType final : public BuiltinType {
@@ -311,6 +309,19 @@ class VoidType final : public BuiltinType {
 public:
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Void;
+  }
+};
+
+/// 'bool' type
+//
+/// This type is always canonical.
+class BoolType final : public BuiltinType {
+  BoolType(ASTContext &ctxt) : BuiltinType(TypeKind::Bool, ctxt) {}
+  friend ASTContext;
+
+public:
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Bool;
   }
 };
 
