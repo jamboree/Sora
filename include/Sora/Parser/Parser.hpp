@@ -243,12 +243,6 @@ public:
   /// The parser must be positioned on the "("
   ParserResult<TypeRepr> parseTupleType();
 
-  /// Parses an array type.
-  /// The parser must be positioned on the "["
-  /// NOTE: ArrayTypes are currenlty unsupported by Sora, so this method
-  /// is currently disabled. Do not use it.
-  ParserResult<TypeRepr> parseArrayType();
-
   /// Parses a reference type.
   /// The parser must be positioned on the "&".
   ParserResult<TypeRepr> parseReferenceType();

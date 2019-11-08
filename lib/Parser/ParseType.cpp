@@ -67,41 +67,6 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
 }
 
 /*
-array-type = '[' type (';' expr)? ']'
-*/
-ParserResult<TypeRepr> Parser::parseArrayType() {
-  llvm_unreachable("Currently, ArrayTypes are not supported by Sora");
-  assert(tok.is(TokenKind::LSquare) && "not an array type");
-  // '['
-  SourceLoc lSquareLoc = consumeToken();
-
-  // type
-  auto subTypeResult =
-      parseType([&]() { diagnoseExpected(diag::expected_type); });
-  if (subTypeResult.isNull())
-    return nullptr;
-  TypeRepr *subTyRepr = subTypeResult.get();
-
-  /// (';' expr)?
-  Expr *sizeExpr = nullptr;
-  if (consumeIf(TokenKind::Semicolon)) {
-    auto result = parseExpr([&]() { diagnoseExpected(diag::expected_expr); });
-    if (result.isNull())
-      return nullptr;
-
-    sizeExpr = result.get();
-  }
-
-  /// ']'
-  SourceLoc rSquareLoc = parseMatchingToken(lSquareLoc, TokenKind::RSquare);
-  if (rSquareLoc.isInvalid())
-    return nullptr;
-
-  return makeParserResult(
-      new (ctxt) ArrayTypeRepr(lSquareLoc, subTyRepr, sizeExpr, rSquareLoc));
-}
-
-/*
 reference-type = '&' "mut"? type
 */
 ParserResult<TypeRepr> Parser::parseReferenceType() {

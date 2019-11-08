@@ -216,43 +216,6 @@ public:
   }
 };
 
-/// Represents an array type.
-///
-/// \verbatim
-/// [T, 5]
-/// [T] // only valid in slices
-/// \endverbatim
-class ArrayTypeRepr final : public TypeRepr {
-  TypeRepr *subTyRepr;
-  Expr *sizeExpr;
-  SourceLoc lSquareLoc, rSquareLoc;
-
-public:
-  ArrayTypeRepr(SourceLoc lSquareLoc, TypeRepr *subTyRepr, SourceLoc rSquareLoc)
-      : ArrayTypeRepr(lSquareLoc, subTyRepr, nullptr, rSquareLoc) {}
-
-  ArrayTypeRepr(SourceLoc lSquareLoc, TypeRepr *subTyRepr, Expr *sizeExpr,
-                SourceLoc rSquareLoc)
-      : TypeRepr(TypeReprKind::Array), subTyRepr(subTyRepr), sizeExpr(sizeExpr),
-        lSquareLoc(lSquareLoc), rSquareLoc(rSquareLoc) {}
-
-  TypeRepr *getSubTypeRepr() const { return subTyRepr; }
-
-  bool hasSizeExpr() const { return (bool)sizeExpr; }
-  Expr *getSizeExpr() const { return sizeExpr; }
-  void setSizeExpr(Expr *expr) { sizeExpr = expr; }
-
-  SourceLoc getLSquareLoc() const { return lSquareLoc; }
-  SourceLoc getRSquareLoc() const { return rSquareLoc; }
-
-  SourceLoc getBegLoc() const { return lSquareLoc; }
-  SourceLoc getEndLoc() const { return rSquareLoc; }
-
-  static bool classof(const TypeRepr *typeRepr) {
-    return typeRepr->getKind() == TypeReprKind::Array;
-  }
-};
-
 /// Represents a reference type.
 ///
 /// \verbatim
