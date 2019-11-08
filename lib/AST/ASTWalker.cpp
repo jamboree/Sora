@@ -127,7 +127,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
   void visitBinaryExpr(BinaryExpr *expr) {
     if (Expr *lhs = doIt(expr->getLHS()))
-      expr->setLHS(expr);
+      expr->setLHS(lhs);
     if (Expr *rhs = doIt(expr->getRHS()))
       expr->setRHS(rhs);
   }
