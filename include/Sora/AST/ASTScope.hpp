@@ -215,9 +215,7 @@ public:
 };
 
 /// Represents the scope of a local LetDecl.
-/// Local LetDecls always introduce a new scope: they close the scope that
-/// included everything before them and open a new scope for everything that
-/// comes after them.
+///
 /// \verbatim
 /// // code
 ///   func foo() {
@@ -240,16 +238,29 @@ public:
 ///           IfStmtScope
 /// \endverbatim
 ///
-/// That way, when we perform lookup for 'a', we correctly look at all of the
-/// 'let's (as they are the parents of the BraceStmtScope)
+/// This is needed so order is respected when performing local lookup (can't use
+/// the var before it has been declared).
 ///
-/// Note that this also means that the end loc of the scope isn't the end loc of
-/// the LetDecl.
+/// Note that the range of a LocalLetDeclScope doesn't depend in any way on the
+/// range of the LetDecl. The range of the scope is given by the parent.
+///
+/// For LetDecls inside BlockStmts, the range of the scope is a range that
+/// begins at the next element in the block (or at the '}') and ends at the '}'.
+///
+/// \verbatim
+///   {
+///     let x
+///     x = 0 // scope begins at the beginning of this expr
+///   }       // scope ends at the '}'
+/// \endverbatim
+///
+/// For LetDecls inside conditions, the range of the scope is the range of the
+/// body (the "then" block for IfStmts and the loop's body for WhileStmts)
 class LocalLetDeclScope final : public ASTScope {
-  LocalLetDeclScope(LetDecl *decl, ASTScope *parent, SourceLoc end)
-      : ASTScope(ASTScopeKind::LocalLetDecl, parent), decl(decl), end(end) {
+  LocalLetDeclScope(LetDecl *decl, ASTScope *parent, SourceRange range)
+      : ASTScope(ASTScopeKind::LocalLetDecl, parent), decl(decl), range(range) {
     assert(parent && "LocalLetDeclScope must have a valid parent");
-    assert(end && "end loc isn't valid");
+    assert(range && "range isn't valid");
     assert(isLocalAndNonNull() &&
            "LocalLetDeclScope must have a non-null, local LetDecl*");
   }
@@ -257,17 +268,15 @@ class LocalLetDeclScope final : public ASTScope {
   bool isLocalAndNonNull() const;
 
   LetDecl *const decl;
-  // The actual end of the implicit scope of the LetDecl.
-  SourceLoc end;
+  SourceRange range;
 
 public:
   static LocalLetDeclScope *create(LetDecl *decl, ASTScope *parent,
-                                   SourceLoc end);
+                                   SourceRange range);
 
   LetDecl *getLetDecl() const { return decl; }
 
-  SourceLoc getBegLoc() const;
-  SourceLoc getEndLoc() const;
+  SourceRange getSourceRange() const { return range; }
 
   static bool classof(const ASTScope *scope) {
     return scope->getKind() == ASTScopeKind::LocalLetDecl;

@@ -23,21 +23,28 @@ void *ASTScope::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ArenaKind::Permanent);
 }
 
+/// \returns true if \p other's range doesn't begin or end inside this scope's
+/// range.
 bool ASTScope::overlaps(const ASTScope *other) const {
   assert(other && "other is null");
   SourceRange thisRange = getSourceRange();
   SourceRange otherRange = other->getSourceRange();
-  // Check that the beginning of otherRange isn't inside thisRange.
+  // Check that the beginning of otherRange isn't inside this range
   if (thisRange.begin <= otherRange.begin && otherRange.begin <= thisRange.end)
     return true;
-  // Check that the beginning of thisRange isn't inside otherRange.
-  if (otherRange.begin <= thisRange.begin && thisRange.begin <= otherRange.end)
+  // Check that the end of otherRange isn't inside this range
+  if (thisRange.begin <= otherRange.end && otherRange.end <= thisRange.end)
     return true;
   return false;
 }
 
 void ASTScope::addChild(ASTScope *scope) {
   assert(scope && "adding an empty scope!");
+#ifndef NDEBUG
+  assert((scope->getBegLoc() >= getBegLoc()) &&
+         (scope->getEndLoc() <= getEndLoc() &&
+          "Children scope's range is greater than its parent's"));
+#endif
   // \returns true if the range of \p first comes before \p second.
   // This also checks that the ranges don't overlap.
   static auto comparator = [](const ASTScope *first, const ASTScope *second) {
@@ -48,12 +55,13 @@ void ASTScope::addChild(ASTScope *scope) {
     return firstRange.end < secondRange.begin;
   };
   auto it = children.end();
-  // If there are children in the vector and if the scope we're inserting
-  // doesn't come after the last element, use std::upper_bound to find the
-  // correct insertion position.
+  // If the element must be inserted somewhere else than at the end of the
+  // vector, use std::lower_bound to find the insertion position
   if (!children.empty() && !comparator(children.back(), scope))
     std::upper_bound(children.begin(), children.end(), scope, comparator);
   children.insert(it, scope);
+
+  // Check if we now need cleanups
   if (!hasCleanup && needsCleanup()) {
     getASTContext().addDestructorCleanup(*this);
     hasCleanup = true;
@@ -61,17 +69,13 @@ void ASTScope::addChild(ASTScope *scope) {
 }
 
 ASTScope *ASTScope::findInnermostScope(SourceLoc loc) {
-  // Important: try to expand
   expand();
 
   // Find the children in which loc belongs.
   // We can use std::lower_bound for this with a custom comparator.
-  // This comparator returns true if scope->getSourceRange().end() < loc.
-  // FIXME: Is this ok?
   static auto comparator = [](ASTScope *scope, SourceLoc loc) {
     return scope->getSourceRange().end < loc;
   };
-  // Find a candidate
   ASTScope *candidate = nullptr;
   auto it = std::lower_bound(children.begin(), children.end(), loc, comparator);
   if (it != children.end())
@@ -84,7 +88,7 @@ ASTScope *ASTScope::findInnermostScope(SourceLoc loc) {
     if (range.begin <= loc && loc <= range.end)
       return candidate->findInnermostScope(loc);
   }
-  // If there's no candidate, or if the candidate didn't fit, just return this.
+  // If there's no candidate just return this.
   return this;
 }
 
@@ -151,7 +155,10 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
   ASTScope *curParent = scope;
   SourceLoc blockEnd = block->getEndLoc();
 
-  for (ASTNode node : block->getElements()) {
+  ArrayRef<ASTNode> elems = block->getElements();
+  ASTNode node;
+  for (unsigned k = 0, size = elems.size(); k < size; ++k) {
+    node = elems[k];
     // We want to create scopes for everything interesting inside
     // the body:
     if (Stmt *stmt = node.dyn_cast<Stmt *>()) {
@@ -179,9 +186,21 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
         continue;
       // For LetDecls, create a new scope and add it to the parent.
       assert(let->isLocal() && "not local?!");
-      ASTScope *scope = LocalLetDeclScope::create(let, curParent, blockEnd);
+      SourceRange range;
+      // If we're the last element of the block, just create a range that only
+      // contains the '}' 's loc.
+      if (k + 1 == elems.size())
+        range = SourceRange(blockEnd, blockEnd);
+      // Else, if there's an element after the current one, use that element's
+      // getBegLoc as the beginning of the range.
+      // FIXME: Ideally, the range should begin after the last element in the
+      // range, however it's impossible to properly increment node.getEndLoc()
+      // without the Lexer.
+      else
+        range = SourceRange(elems[k + 1].getBegLoc(), blockEnd);
+      assert(range && "range is invalid");
+      ASTScope *scope = LocalLetDeclScope::create(let, curParent, range);
       curParent->addChild(scope);
-      // and make the LetDecl the parent of subsequent scopes.
       curParent = scope;
     }
     // exprs aren't interesting
@@ -192,7 +211,7 @@ ASTScope *createConditionBodyScope(ASTContext &ctxt, ASTScope *parent,
                                    StmtCondition cond, BlockStmt *body) {
   ASTScope *scope = nullptr;
   if (LetDecl *let = cond.getLetDeclOrNull()) {
-    scope = LocalLetDeclScope::create(let, parent, body->getEndLoc());
+    scope = LocalLetDeclScope::create(let, parent, body->getSourceRange());
     scope->addChild(BlockStmtScope::create(ctxt, body, scope));
   }
   else
@@ -312,15 +331,9 @@ bool LocalLetDeclScope::isLocalAndNonNull() const {
 }
 
 LocalLetDeclScope *LocalLetDeclScope::create(LetDecl *decl, ASTScope *parent,
-                                             SourceLoc end) {
-  return new (decl->getASTContext()) LocalLetDeclScope(decl, parent, end);
+                                             SourceRange range) {
+  return new (decl->getASTContext()) LocalLetDeclScope(decl, parent, range);
 }
-
-SourceLoc LocalLetDeclScope::getBegLoc() const {
-  return getLetDecl()->getBegLoc();
-}
-
-SourceLoc LocalLetDeclScope::getEndLoc() const { return end; }
 
 BlockStmtScope *BlockStmtScope::create(ASTContext &ctxt, BlockStmt *stmt,
                                        ASTScope *parent) {
