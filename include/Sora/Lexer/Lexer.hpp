@@ -49,6 +49,11 @@ public:
   /// \returns the token that begins at \p loc
   static Token getTokenAtLoc(const SourceManager &srcMgr, SourceLoc loc);
 
+  static SourceLoc getLocPastTheEndOfTokenAtLoc(const SourceManager &srcMgr,
+                                                SourceLoc loc) {
+    return getTokenAtLoc(srcMgr, loc).getCharRange().getEnd();
+  }
+
   /// Converst a SourceRange/Loc to a CharSourceRange.
   static CharSourceRange toCharSourceRange(const SourceManager &srcMgr,
                                            SourceRange range) {
