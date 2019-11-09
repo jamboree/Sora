@@ -20,11 +20,13 @@ namespace {
 struct ASTScopeLookup {
   using LookupResultConsumer = ASTScope::LookupResultConsumer;
 
-  ASTScopeLookup(LookupResultConsumer consumer, Identifier ident)
-      : consumerFunc(consumer), ident(ident) {}
+  ASTScopeLookup(LookupResultConsumer consumer, Identifier ident,
+                 const UnqualifiedLookupOptions &options)
+      : consumerFunc(consumer), ident(ident), options(options) {}
 
   LookupResultConsumer consumerFunc;
   Identifier ident;
+  const UnqualifiedLookupOptions &options;
 
   void visit(const ASTScope *scope) {
     bool stop;
@@ -117,7 +119,8 @@ struct ASTScopeLookup {
       if (func && shouldConsider(func))
         decls.push_back(func);
     }
-    return consume(decls, scope);
+    // Stop if the consumer wishes to, or if we have to.
+    return consume(decls, scope) || options.onlyLookInCurrentBlock;
   }
 
   bool visitIfStmt(const IfStmtScope *scope) {
@@ -137,8 +140,9 @@ struct ASTScopeLookup {
 //===- ASTScope::lookup ---------------------------------------------------===//
 
 void ASTScope::lookup(ASTScope::LookupResultConsumer consumer,
+                      const UnqualifiedLookupOptions &options,
                       Identifier ident) const {
-  ASTScopeLookup(consumer, ident).visit(this);
+  ASTScopeLookup(consumer, ident, options).visit(this);
 }
 
 //===- UnqualifiedValueLookup ---------------------------------------------===//
@@ -157,7 +161,7 @@ void UnqualifiedValueLookup::lookupImpl(SourceLoc loc, Identifier ident) {
     // Else, keep looking.
     return addResults(candidates) && ident.isValid();
   };
-  ASTScopeLookup(consumer, ident).visit(innermostScope);
+  ASTScopeLookup(consumer, ident, options).visit(innermostScope);
 }
 
 //===- UnqualifiedTypeLookup ----------------------------------------------===//

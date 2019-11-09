@@ -25,6 +25,7 @@ class IfStmt;
 class WhileStmt;
 class LetDecl;
 class SourceFile;
+struct UnqualifiedLookupOptions;
 class ValueDecl;
 
 /// Kinds of ASTScope
@@ -103,11 +104,13 @@ public:
   /// \param consumer the consumer function, which is called once per scope.
   /// When it returns true, lookup stops. Note that the consumer is never called
   /// with an empty array.
+  /// \param options the lookup options to use
   /// \param ident the identifier to look for. If it's null, simply returns a
   /// list of every decl visible in the scope. When an identifier is provided,
   /// this will try to use cached lookup maps when possible, making the search
   /// more efficient.
   void lookup(LookupResultConsumer consumer,
+              const UnqualifiedLookupOptions &options,
               Identifier ident = Identifier()) const;
 
   /// \returns the innermost scope around \p loc, or this if no this is the

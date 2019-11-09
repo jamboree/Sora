@@ -19,6 +19,13 @@ class SourceFile;
 class SourceLoc;
 class ValueDecl;
 
+struct UnqualifiedLookupOptions {
+  /// If set to true, lookup will stop after looking into the first
+  /// BlockStmtScope it finds, whether it has results or not;
+  /// This has no effect if the code isn't contained inside a BlockStmt.
+  bool onlyLookInCurrentBlock = false;
+};
+
 /// Class used to configure, execute and collect the results of an unqualified
 /// value lookup inside a SourceFile.
 class UnqualifiedValueLookup final {
@@ -69,6 +76,8 @@ public:
     return (results.size() == 1) ? results[0] : nullptr;
   }
 
+  /// The lookup options used
+  UnqualifiedLookupOptions options;
   /// The SourceFile in which we are looking
   SourceFile &sourceFile;
   /// The list of results
