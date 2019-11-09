@@ -12,6 +12,7 @@
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/Lexer/Lexer.hpp"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -155,10 +156,7 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
   ASTScope *curParent = scope;
   SourceLoc blockEnd = block->getEndLoc();
 
-  ArrayRef<ASTNode> elems = block->getElements();
-  ASTNode node;
-  for (unsigned k = 0, size = elems.size(); k < size; ++k) {
-    node = elems[k];
+  for (ASTNode node : block->getElements()) {
     // We want to create scopes for everything interesting inside
     // the body:
     if (Stmt *stmt = node.dyn_cast<Stmt *>()) {
@@ -184,22 +182,14 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
       LetDecl *let = dyn_cast<LetDecl>(decl);
       if (!let)
         continue;
-      // For LetDecls, create a new scope and add it to the parent.
+      // For LetDecls, create a new scope and make that scope the current
+      // parent.
       assert(let->isLocal() && "not local?!");
-      SourceRange range;
-      // If we're the last element of the block, just create a range that only
-      // contains the '}' 's loc.
-      if (k + 1 == elems.size())
-        range = SourceRange(blockEnd, blockEnd);
-      // Else, if there's an element after the current one, use that element's
-      // getBegLoc as the beginning of the range.
-      // FIXME: Ideally, the range should begin after the last element in the
-      // range, however it's impossible to properly increment node.getEndLoc()
-      // without the Lexer.
-      else
-        range = SourceRange(elems[k + 1].getBegLoc(), blockEnd);
-      assert(range && "range is invalid");
-      ASTScope *scope = LocalLetDeclScope::create(let, curParent, range);
+      // The beg loc of the scope will be the token past-the-end of the LetDecl.
+      SourceLoc begLoc =
+          Lexer::getLocPastTheEndOfTokenAtLoc(ctxt.srcMgr, let->getEndLoc());
+      ASTScope *scope =
+          LocalLetDeclScope::create(let, curParent, {begLoc, blockEnd});
       curParent->addChild(scope);
       curParent = scope;
     }

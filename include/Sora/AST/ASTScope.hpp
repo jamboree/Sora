@@ -245,13 +245,13 @@ public:
 /// range of the LetDecl. The range of the scope is given by the parent.
 ///
 /// For LetDecls inside BlockStmts, the range of the scope is a range that
-/// begins at the next element in the block (or at the '}') and ends at the '}'.
+/// begins past-the-end of the LetDecl and ends at the '}'.
 ///
 /// \verbatim
 ///   {
-///     let x
-///     x = 0 // scope begins at the beginning of this expr
-///   }       // scope ends at the '}'
+///     let x: i32 // scope begins on the whitespace after the 'i32' token
+///     x = 0
+///   }           // scope ends at the '}'
 /// \endverbatim
 ///
 /// For LetDecls inside conditions, the range of the scope is the range of the
