@@ -48,10 +48,17 @@ class alignas(DeclAlignement) Decl {
     Bits() : raw() {}
     // Raw bits (to zero-init the union)
     char raw[7];
-    // VarDecl bits
+    // ValueDecl bits
     struct {
-      bool isMutable;
-    } varDecl;
+      bool isChecked : 1;
+      bool isIllegalRedeclaration : 1;
+      union {
+        // VarDecl bits
+        struct {
+          bool isMutable : 1;
+        } varDecl;
+      };
+    } valueDecl;
   });
   static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
@@ -154,9 +161,26 @@ protected:
   ValueDecl(DeclKind kind, DeclContext *declContext, SourceLoc identifierLoc,
             Identifier identifier)
       : Decl(kind, declContext), identifierLoc(identifierLoc),
-        identifier(identifier) {}
+        identifier(identifier) {
+    bits.valueDecl.isChecked = false;
+    bits.valueDecl.isIllegalRedeclaration = false;
+  }
 
 public:
+  /// \returns whether this ValueDecl has been type-checked
+  bool isChecked() const { return bits.valueDecl.isChecked; }
+  /// Sets the flag indicating whether this ValueDecl has been type-checked
+  void setChecked(bool value = true) { bits.valueDecl.isChecked = value; }
+
+  /// \returns whether this ValueDecl is an illegal redeclaration or not.
+  /// Returns false if \c isChecked returns false.
+  bool isIllegalRedeclaration() const { return bits.valueDecl.isChecked; }
+  /// Sets the flag indicating whether this ValueDecl is an illegal
+  /// redeclaration.
+  void setIsIllegalRedeclaration(bool value = true) {
+    bits.valueDecl.isChecked = value;
+  }
+
   /// \returns the identifier (name) of this decl
   Identifier getIdentifier() const { return identifier; }
 
@@ -187,7 +211,7 @@ public:
   VarDecl(DeclContext *declContext, SourceLoc identifierLoc,
           Identifier identifier)
       : ValueDecl(DeclKind::Var, declContext, identifierLoc, identifier) {
-    bits.varDecl.isMutable = false;
+    bits.valueDecl.varDecl.isMutable = false;
   }
 
   /// Sets the type of this value (the type of the variable)
@@ -195,8 +219,10 @@ public:
   /// \returns the type of this value (the type of the variable)
   Type getValueType() const { return type; }
 
-  bool isMutable() const { return bits.varDecl.isMutable; }
-  void setIsMutable(bool value = true) { bits.varDecl.isMutable = value; }
+  bool isMutable() const { return bits.valueDecl.varDecl.isMutable; }
+  void setIsMutable(bool value = true) {
+    bits.valueDecl.varDecl.isMutable = value;
+  }
 
   SourceLoc getBegLoc() const { return getIdentifierLoc(); }
   SourceLoc getEndLoc() const { return getIdentifierLoc(); }
