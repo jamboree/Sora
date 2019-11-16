@@ -40,7 +40,9 @@ class alignas(DeclAlignement) Decl {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  DeclContext *declContext;
+  // The parent DeclContext and a flag indicating whether this decl has been
+  // checked.
+  llvm::PointerIntPair<DeclContext *, 1> declCtxtAndIsChecked;
   DeclKind kind;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfields.
@@ -50,13 +52,16 @@ class alignas(DeclAlignement) Decl {
     char raw[7];
     // ValueDecl bits
     struct {
-      bool isChecked : 1;
-      bool isIllegalRedeclaration : 1;
+      bool illegalRedeclaration : 1;
       union {
         // VarDecl bits
         struct {
           bool isMutable : 1;
         } varDecl;
+        // FuncDecl bits
+        struct {
+          bool bodyChecked : 1;
+        } funcDecl;
       };
     } valueDecl;
   });
@@ -73,12 +78,17 @@ protected:
   }
 
   Decl(DeclKind kind, DeclContext *declContext)
-      : declContext(declContext), kind(kind) {}
+      : declCtxtAndIsChecked(declContext, false), kind(kind) {}
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Decl));
+
+  /// \returns whether this Decl has been type-checked
+  bool isChecked() const { return declCtxtAndIsChecked.getInt(); }
+  /// Sets the flag indicating whether this Decl has been type-checked
+  void setChecked(bool value = true) { declCtxtAndIsChecked.setInt(value); }
 
   /// Fetches the parent source file using the parents.
   /// This requires a well-formed parent chain.
@@ -97,7 +107,9 @@ public:
   bool isLocal() const;
 
   /// \returns the DeclContext in which this Decl is contained
-  DeclContext *getDeclContext() const { return declContext; }
+  DeclContext *getDeclContext() const {
+    return declCtxtAndIsChecked.getPointer();
+  }
 
   /// If this Decl is also a DeclContext, returns it as a DeclContext*, else
   /// returns nullptr.
@@ -162,23 +174,19 @@ protected:
             Identifier identifier)
       : Decl(kind, declContext), identifierLoc(identifierLoc),
         identifier(identifier) {
-    bits.valueDecl.isChecked = false;
-    bits.valueDecl.isIllegalRedeclaration = false;
+    bits.valueDecl.illegalRedeclaration = false;
   }
 
 public:
-  /// \returns whether this ValueDecl has been type-checked
-  bool isChecked() const { return bits.valueDecl.isChecked; }
-  /// Sets the flag indicating whether this ValueDecl has been type-checked
-  void setChecked(bool value = true) { bits.valueDecl.isChecked = value; }
-
   /// \returns whether this ValueDecl is an illegal redeclaration or not.
   /// Returns false if \c isChecked returns false.
-  bool isIllegalRedeclaration() const { return bits.valueDecl.isChecked; }
+  bool isIllegalRedeclaration() const {
+    return bits.valueDecl.illegalRedeclaration;
+  }
   /// Sets the flag indicating whether this ValueDecl is an illegal
   /// redeclaration.
   void setIsIllegalRedeclaration(bool value = true) {
-    bits.valueDecl.isChecked = value;
+    bits.valueDecl.illegalRedeclaration = value;
   }
 
   /// \returns the identifier (name) of this decl
@@ -327,10 +335,18 @@ public:
            Identifier ident, ParamList *params, TypeLoc returnTypeLoc)
       : ValueDecl(DeclKind::Func, declContext, identLoc, ident),
         DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc),
-        paramList(params), returnTypeLoc(returnTypeLoc) {}
+        paramList(params), returnTypeLoc(returnTypeLoc) {
+    bits.valueDecl.funcDecl.bodyChecked = false;
+  }
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
+
+  /// \returns whether the body of this function has been type-checked or not
+  bool isBodyChecked() const { return bits.valueDecl.funcDecl.bodyChecked; }
+  void setBodyChecked(bool value = true) {
+    bits.valueDecl.funcDecl.bodyChecked = value;
+  }
 
   ParamList *getParamList() const { return paramList; }
   void setParamList(ParamList *params) { this->paramList = params; }
