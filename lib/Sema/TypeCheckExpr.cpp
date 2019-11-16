@@ -37,10 +37,7 @@ Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
       return *sf;
     }
 
-    std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
-      auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr);
-      if (!udre)
-        return {true, expr};
+    std::pair<bool, Expr *> handleUDRE(UnresolvedDeclRefExpr *udre) {
       UnqualifiedValueLookup uvl(getSourceFile());
       llvm::outs() << "-----------------------------------\n";
       llvm::outs() << "Expression:\n";
@@ -54,6 +51,20 @@ Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
         result->dump(llvm::outs());
         llvm::outs() << "\n";
       }
+      return {true, udre};
+    }
+
+    std::pair<bool, Expr *> handleCast(CastExpr *cast) {
+      // Just resolve the cast's typeloc.
+      tc.resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
+      return {true, cast};
+    }
+
+    std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
+      if (auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr))
+        return handleUDRE(udre);
+      if (auto *cast = dyn_cast<CastExpr>(expr))
+        return handleCast(cast);
       return {true, expr};
     }
   };
