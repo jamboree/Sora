@@ -88,15 +88,27 @@ public:
 
 void TypeChecker::typecheckDecl(Decl *decl) {
   assert(decl);
+  if (decl->isChecked())
+    return;
   DeclChecker(*this, decl->getSourceFile()).visit(decl);
+  decl->setChecked();
 }
 
 void TypeChecker::typecheckFunctionBody(FuncDecl *func) {
+  if (func->isBodyChecked())
+    return;
   typecheckStmt(func->getBody(), func);
+  func->setBodyChecked();
 }
 
 void TypeChecker::typecheckDefinedFunctions() {
+#ifndef NDEBUG
+  unsigned numDefinedFunc = definedFunctions.size();
+#endif
   for (FuncDecl *func : definedFunctions)
     typecheckFunctionBody(func);
+  assert((numDefinedFunc == definedFunctions.size()) &&
+         "Extra functions were found while checking the bodies "
+         "of defined non-local functions");
   definedFunctions.clear();
 }

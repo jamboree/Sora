@@ -77,7 +77,7 @@ public:
   /// statement.
   void visitBlockStmt(BlockStmt *stmt) {
     // Do a first pass where we typecheck FuncDecls only.
-
+    // Their body will be checked right away.
     for (ASTNode node : stmt->getElements()) {
       if (FuncDecl *fn = getAsFuncDecl(node)) {
         assert(fn->isLocal() && "Function should be local!");
