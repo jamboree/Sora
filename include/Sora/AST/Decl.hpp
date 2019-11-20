@@ -50,7 +50,7 @@ class alignas(DeclAlignement) Decl {
     Bits() : raw() {}
     // Raw bits (to zero-init the union)
     char raw[7];
-    // ValueDecl bits
+    // NamedDecl bits
     struct {
       bool illegalRedeclaration : 1;
       union {
@@ -63,7 +63,7 @@ class alignas(DeclAlignement) Decl {
           bool bodyChecked : 1;
         } funcDecl;
       };
-    } valueDecl;
+    } namedDecl;
   });
   static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
@@ -156,6 +156,47 @@ inline bool DeclContext::classof(const Decl *decl) {
   }
 }
 
+/// Common base class for named declarations (= declarations that introduce a
+/// new name).
+class NamedDecl : public Decl {
+  SourceLoc identifierLoc;
+  Identifier identifier;
+
+protected:
+  NamedDecl(DeclKind kind, DeclContext *declContext, SourceLoc identifierLoc,
+            Identifier identifier)
+      : Decl(kind, declContext), identifierLoc(identifierLoc),
+        identifier(identifier) {
+    bits.namedDecl.illegalRedeclaration = false;
+  }
+
+public:
+  /// \returns whether this NamedDecl is an illegal redeclaration or not.
+  /// Returns false if \c isChecked returns false.
+  bool isIllegalRedeclaration() const {
+    return bits.namedDecl.illegalRedeclaration;
+  }
+  /// Sets the flag indicating whether this NamedDecl is an illegal
+  /// redeclaration.
+  void setIsIllegalRedeclaration(bool value = true) {
+    bits.namedDecl.illegalRedeclaration = value;
+  }
+
+  /// \returns the identifier (name) of this decl
+  Identifier getIdentifier() const { return identifier; }
+
+  /// \returns the SourceLoc of the identifier
+  SourceLoc getIdentifierLoc() const { return identifierLoc; }
+
+  /// \returns the preffered SourceLoc for diagnostics.
+  SourceLoc getLoc() const { return identifierLoc; }
+
+  static bool classof(const Decl *decl) {
+    return decl->getKind() >= DeclKind::First_Named &&
+           decl->getKind() <= DeclKind::Last_Named;
+  }
+};
+
 /// Base class for declarations that declare a value of some type with a
 /// given name.
 ///
@@ -165,41 +206,16 @@ inline bool DeclContext::classof(const Decl *decl) {
 /// copy of the type in this class. e.g. VarDecl needs to store a TypeLoc,
 /// and we don't want to store the type in the TypeLoc AND in the ValueDecl,
 /// it'd waste space for nothing.
-class ValueDecl : public Decl {
-  SourceLoc identifierLoc;
-  Identifier identifier;
+class ValueDecl : public NamedDecl {
 
 protected:
   ValueDecl(DeclKind kind, DeclContext *declContext, SourceLoc identifierLoc,
             Identifier identifier)
-      : Decl(kind, declContext), identifierLoc(identifierLoc),
-        identifier(identifier) {
-    bits.valueDecl.illegalRedeclaration = false;
-  }
+      : NamedDecl(kind, declContext, identifierLoc, identifier) {}
 
 public:
-  /// \returns whether this ValueDecl is an illegal redeclaration or not.
-  /// Returns false if \c isChecked returns false.
-  bool isIllegalRedeclaration() const {
-    return bits.valueDecl.illegalRedeclaration;
-  }
-  /// Sets the flag indicating whether this ValueDecl is an illegal
-  /// redeclaration.
-  void setIsIllegalRedeclaration(bool value = true) {
-    bits.valueDecl.illegalRedeclaration = value;
-  }
-
-  /// \returns the identifier (name) of this decl
-  Identifier getIdentifier() const { return identifier; }
-
-  /// \returns the SourceLoc of the identifier
-  SourceLoc getIdentifierLoc() const { return identifierLoc; }
-
   /// \returns the type of this value
   Type getValueType() const;
-
-  /// \returns the preffered SourceLoc for diagnostics.
-  SourceLoc getLoc() const { return identifierLoc; }
 
   static bool classof(const Decl *decl) {
     return decl->getKind() >= DeclKind::First_Value &&
@@ -219,7 +235,7 @@ public:
   VarDecl(DeclContext *declContext, SourceLoc identifierLoc,
           Identifier identifier)
       : ValueDecl(DeclKind::Var, declContext, identifierLoc, identifier) {
-    bits.valueDecl.varDecl.isMutable = false;
+    bits.namedDecl.varDecl.isMutable = false;
   }
 
   /// Sets the type of this value (the type of the variable)
@@ -227,9 +243,9 @@ public:
   /// \returns the type of this value (the type of the variable)
   Type getValueType() const { return type; }
 
-  bool isMutable() const { return bits.valueDecl.varDecl.isMutable; }
+  bool isMutable() const { return bits.namedDecl.varDecl.isMutable; }
   void setIsMutable(bool value = true) {
-    bits.valueDecl.varDecl.isMutable = value;
+    bits.namedDecl.varDecl.isMutable = value;
   }
 
   SourceLoc getBegLoc() const { return getIdentifierLoc(); }
@@ -336,16 +352,16 @@ public:
       : ValueDecl(DeclKind::Func, declContext, identLoc, ident),
         DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc),
         paramList(params), returnTypeLoc(returnTypeLoc) {
-    bits.valueDecl.funcDecl.bodyChecked = false;
+    bits.namedDecl.funcDecl.bodyChecked = false;
   }
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
 
   /// \returns whether the body of this function has been type-checked or not
-  bool isBodyChecked() const { return bits.valueDecl.funcDecl.bodyChecked; }
+  bool isBodyChecked() const { return bits.namedDecl.funcDecl.bodyChecked; }
   void setBodyChecked(bool value = true) {
-    bits.valueDecl.funcDecl.bodyChecked = value;
+    bits.namedDecl.funcDecl.bodyChecked = value;
   }
 
   ParamList *getParamList() const { return paramList; }

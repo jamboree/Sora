@@ -55,10 +55,16 @@ protected:
 TEST_F(DeclTest, rtti) {
   EXPECT_TRUE(isa<VarDecl>(varDecl));
   EXPECT_TRUE(isa<ValueDecl>(varDecl));
+  EXPECT_TRUE(isa<NamedDecl>(varDecl));
+
   EXPECT_TRUE(isa<ParamDecl>(paramDecl));
   EXPECT_TRUE(isa<ValueDecl>(paramDecl));
+  EXPECT_TRUE(isa<NamedDecl>(paramDecl));
+
   EXPECT_TRUE(isa<FuncDecl>(funcDecl));
   EXPECT_TRUE(isa<ValueDecl>(funcDecl));
+  EXPECT_TRUE(isa<NamedDecl>(funcDecl));
+
   EXPECT_TRUE(isa<LetDecl>(letDecl));
   EXPECT_TRUE(isa<PatternBindingDecl>(letDecl));
 }
