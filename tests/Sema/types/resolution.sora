@@ -25,12 +25,12 @@ func x(
   x10:  u32,
   // CHECK: ParamDecl type=u64 identifier=x11 identifierLoc=line:27:3
   x11:  u64,
-  // CHECK: ParamDecl type=usize identifier=x11 identifierLoc=line:29:3
-  x11:  usize,
-  // CHECK: ParamDecl type=bool identifier=x12 identifierLoc=line:31:3
-  x12:  bool,
-  // CHECK: ParamDecl type=void identifier=x13 identifierLoc=line:33:3
-  x13:  void,
+  // CHECK: ParamDecl type=usize identifier=x12 identifierLoc=line:29:3
+  x12:  usize,
+  // CHECK: ParamDecl type=bool identifier=x13 identifierLoc=line:31:3
+  x13:  bool,
+  // CHECK: ParamDecl type=void identifier=x14 identifierLoc=line:33:3
+  x14:  void,
   // CHECK: ParamDecl type=(i8, i8) identifier=c1 identifierLoc=line:35:3
   c1 : (i8, i8),
   // CHECK: ParamDecl type=&(bool, bool, bool) identifier=c2 identifierLoc=line:37:3
