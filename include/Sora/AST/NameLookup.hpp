@@ -20,10 +20,17 @@ class SourceLoc;
 class ValueDecl;
 
 struct UnqualifiedLookupOptions {
+  /// FIXME: Can't onlyLookInCurrentBlock and onlyLookInCurrentFile be merged?
+  /// Maybe, but onlyLookInCurrentScope wouldn't be good enough (because of
+  /// LocalLetDeclScopes).
+
   /// If set to true, lookup will stop after looking into the first
   /// BlockStmtScope it finds, whether it has results or not;
   /// This has no effect if the code isn't contained inside a BlockStmt.
   bool onlyLookInCurrentBlock = false;
+  /// If set to true, lookup will stop after looking into the first
+  /// SourceFile it finds, whether it has results or not;
+  bool onlyLookInCurrentFile = false;
 };
 
 /// Class used to configure, execute and collect the results of an unqualified
@@ -50,10 +57,23 @@ class UnqualifiedValueLookup final {
 public:
   UnqualifiedValueLookup(SourceFile &sourceFile) : sourceFile(sourceFile) {}
 
+  // Since this object is quite large, make it noncopyable.
+  UnqualifiedValueLookup(const UnqualifiedValueLookup &) = delete;
+  UnqualifiedValueLookup &operator=(const UnqualifiedValueLookup &) = delete;
+
   /// Adds \p decls to the list of decls that should be ignored during the
   /// lookup.
-  UnqualifiedValueLookup ignore(ArrayRef<ValueDecl *> decls) {
+  UnqualifiedValueLookup &ignore(ArrayRef<ValueDecl *> decls) {
     ignoredDecls.insert(decls.begin(), decls.end());
+    return *this;
+  }
+
+  /// Filters the result set, removing every results for which \p filter returns
+  /// true.
+  UnqualifiedValueLookup &
+  filterResults(llvm::function_ref<bool(ValueDecl *)> filter) {
+    results.erase(std::remove_if(results.begin(), results.end(), filter),
+                  results.end());
     return *this;
   }
 

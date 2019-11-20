@@ -64,21 +64,25 @@ struct ASTScopeLookup {
   bool visitSourceFile(const SourceFileScope *scope) {
     // Check the contents of the file
 
+    auto finish = [&](ArrayRef<ValueDecl *> decls, const ASTScope *scope) {
+      // Stop if the consumer wishes to, or if we have to.
+      return consume(decls, scope) || options.onlyLookInCurrentFile;
+    };
+
     // If we can consider every result, just feed everything to consume()
     SourceFile &sf = scope->getSourceFile();
     if (considerEveryResult())
-      return consume(sf.getMembers(), scope);
+      return finish(sf.getMembers(), scope);
 
     // If we can't consider everything, remove everything that can't be
     // considered.
     // FIXME: Ideally, the SourceFile should have a dedicated lookup cache &
     // lookup function.
     SmallVector<ValueDecl *, 4> decls;
-    for (ValueDecl *decl : sf.getMembers()) {
+    for (ValueDecl *decl : sf.getMembers())
       if (shouldConsider(decl))
         decls.push_back(decl);
-    }
-    return consume(decls, scope);
+    return finish(decls, scope);
   }
 
   bool visitLocalLetDecl(const LocalLetDeclScope *scope) {
