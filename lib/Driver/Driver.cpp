@@ -201,12 +201,10 @@ bool CompilerInstance::run() {
   };
 
   // Helper function to finish processing. Returns true on success, false on
-  // failure. Always call this before returning from this function past this
-  // point.
+  // failure.
   auto finish = [&]() {
-    if (verifier)
-      return verifier->finish() && success;
-    return success;
+    // When the verifier is active, its output will be our return value.
+    return verifier ? verifier->finish() : success;
   };
 
   // Create the ASTContext

@@ -158,11 +158,11 @@ private:
   void printASTContextMemoryUsage(Step step) const;
 
   /// Performs the parsing step on \p file
-  /// \returns true if parsing was successful, false otherwise.
+  /// \returns false if errors were emitted during parsing
   bool doParsing(SourceFile &file);
 
   /// Performs the semantic analysis step on \p file
-  /// \returns true if semantic analysis was successful, false otherwise.
+  /// \returns false if errors were emitted during semantic analysis
   bool doSema(SourceFile &file);
 };
 
