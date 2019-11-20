@@ -291,7 +291,7 @@ bool CompilerInstance::doParsing(SourceFile &file) {
     printASTContextMemoryUsage(Step::Parsing);
   if (options.parseOnly)
     dumpScopeMaps(llvm::outs(), file);
-  return true;
+  return !diagEng.hadAnyError();
 }
 
 bool CompilerInstance::doSema(SourceFile &file) {
@@ -301,5 +301,5 @@ bool CompilerInstance::doSema(SourceFile &file) {
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Parsing);
   dumpScopeMaps(llvm::outs(), file);
-  return true;
+  return !diagEng.hadAnyError();
 }
