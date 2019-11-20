@@ -30,6 +30,11 @@ class SourceLoc {
 
   llvm::SMLoc value;
 
+  bool isComparisonLegal(SourceLoc rhs) const {
+    // They must be both valid or invalid.
+    return isValid() == rhs.isValid();
+  }
+
 public:
   SourceLoc() = default;
   explicit SourceLoc(llvm::SMLoc value) : value(value) {}
@@ -72,19 +77,34 @@ public:
              bool printFileName = true);
 
   bool operator<(const SourceLoc other) const {
+    assert(isComparisonLegal(other) && "illegal comparison");
     return value.getPointer() < other.value.getPointer();
   }
+
   bool operator<=(const SourceLoc other) const {
+    assert(isComparisonLegal(other) && "illegal comparison");
     return value.getPointer() <= other.value.getPointer();
   }
+
   bool operator>(const SourceLoc other) const {
+    assert(isComparisonLegal(other) && "illegal comparison");
     return value.getPointer() > other.value.getPointer();
   }
+
   bool operator>=(const SourceLoc other) const {
+    assert(isComparisonLegal(other) && "illegal comparison");
     return value.getPointer() >= other.value.getPointer();
   }
-  bool operator==(const SourceLoc other) const { return value == other.value; }
-  bool operator!=(const SourceLoc other) const { return value != other.value; }
+
+  bool operator==(const SourceLoc other) const {
+    assert(isComparisonLegal(other) && "illegal comparison");
+    return value == other.value;
+  }
+
+  bool operator!=(const SourceLoc other) const {
+    assert(isComparisonLegal(other) && "illegal comparison");
+    return value != other.value;
+  }
 };
 
 /// Represents a source range. 'begin' is the loc of the first character
