@@ -11,6 +11,7 @@
 
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/NameLookup.hpp"
 #include "Sora/AST/Types.hpp"
 
 using namespace sora;
@@ -18,27 +19,38 @@ using namespace sora;
 //===- TypeChecker::DeclChecker -------------------------------------------===//
 
 namespace {
-/// Performs semantic analysis of declarations in a file.
-class DeclChecker : public DeclVisitor<DeclChecker> {
+/// Performs semantic analysis of a declaration.
+/// Note that this doesn't check if a declaration is an illegal redeclaration -
+/// that's handled by checkForRedeclaration which is usually called after this
+/// class.
+class DeclChecker : DeclVisitor<DeclChecker> {
+  friend DeclVisitor<DeclChecker>;
+
 public:
   TypeChecker &tc;
   SourceFile &file;
 
   DeclChecker(TypeChecker &tc, SourceFile &file) : tc(tc), file(file) {}
 
-  void visitVarDecl(VarDecl *decl) {
-    // Nothing to do here.
-    // VarDecls are checked through their VarPattern.
-  }
+  void check(Decl *decl) { visit(decl); }
+
+private:
+  void visitVarDecl(VarDecl *decl) { tc.checkForRedeclaration(decl); }
 
   void visitParamDecl(ParamDecl *decl) {
     assert(decl->getValueType().isNull() && "Decl checked twice!");
+
+    tc.checkForRedeclaration(decl);
+
     // Resolve the type of the ParamDecl
     tc.resolveTypeLoc(decl->getTypeLoc(), file);
   }
 
   void visitFuncDecl(FuncDecl *decl) {
     assert(decl->getValueType().isNull() && "Decl checked twice!");
+
+    tc.checkForRedeclaration(decl);
+
     Type returnType;
     // Resolve the return type if present
     if (decl->hasReturnType()) {
@@ -90,7 +102,8 @@ void TypeChecker::typecheckDecl(Decl *decl) {
   assert(decl);
   if (decl->isChecked())
     return;
-  DeclChecker(*this, decl->getSourceFile()).visit(decl);
+  // Check the semantics of the declaration
+  DeclChecker(*this, decl->getSourceFile()).check(decl);
   decl->setChecked();
 }
 
@@ -111,4 +124,42 @@ void TypeChecker::typecheckDefinedFunctions() {
          "Extra functions were found while checking the bodies "
          "of defined non-local functions");
   definedFunctions.clear();
+}
+
+void TypeChecker::checkForRedeclaration(ValueDecl *decl) {
+  assert(decl && "decl is null!");
+  UnqualifiedValueLookup uvl(decl->getSourceFile());
+
+  // Limit lookup to the current block & file so shadowing rules are respected.
+  uvl.options.onlyLookInCurrentBlock = true;
+  uvl.options.onlyLookInCurrentFile = true;
+
+  // This decl shouldn't part of the result set
+  uvl.ignore(decl);
+
+  // Perform the lookup
+  uvl.performLookup(decl->getIdentifierLoc(), decl->getIdentifier());
+  // Remove every result that come *after* us
+  uvl.filterResults([&](ValueDecl *result) {
+    return (result->getBegLoc() > decl->getBegLoc());
+  });
+
+  // If there are no results, this is a valid declaration
+  if (uvl.isEmpty())
+    return decl->setIsIllegalRedeclaration(false);
+  decl->setIsIllegalRedeclaration(true);
+
+  // Else, find the earliest result.
+  ValueDecl *earliest = nullptr;
+  for (ValueDecl *result : uvl.results)
+    if (!earliest || (earliest->getBegLoc() > result->getBegLoc()))
+      earliest = result;
+  assert(earliest && "no earliest result found?");
+  assert(earliest != decl);
+
+  // Emit the diagnostic, pointing at the earliest result.
+  diagnose(decl->getIdentifierLoc(), diag::value_already_declared_in_scope,
+           decl->getIdentifier());
+  diagnose(earliest->getIdentifierLoc(), diag::previously_declared_here,
+           earliest->getIdentifier());
 }

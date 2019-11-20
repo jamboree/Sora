@@ -50,6 +50,13 @@ ERROR(cannot_find_value_in_scope,
 ERROR(cannot_find_type_in_scope, 
   "cannot find type '%0' in this scope", (Identifier))
 
+//===- Decls --------------------------------------------------------------===//
+
+ERROR(value_already_declared_in_scope,
+  "value '%0' already declared in this scope", (Identifier))
+NOTE(previously_declared_here,
+  "'%0' previously declared here", (Identifier))
+
 //===----------------------------------------------------------------------===//
 
 #ifndef KEEP_DIAG_MACROS

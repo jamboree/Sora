@@ -43,6 +43,13 @@ public:
     return diagEngine.diagnose<Args...>(loc, diag, args...);
   }
 
+  /// Checks if a ValueDecl is a legal declaration, and not an invalid declaration.
+  /// \verbatim
+  ///   func foo() {} // this foo is valid, it's the first one
+  ///   func foo() {} // this one isn't
+  /// \endverbatim
+  void checkForRedeclaration(ValueDecl *decl);
+
   /// Declaration typechecking entry point
   ///
   /// NOTE: This doesn't check
