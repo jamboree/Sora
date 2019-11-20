@@ -157,7 +157,6 @@ Optional<DiagnosticKind> DiagnosticEngine::getDiagnosticKind(DiagID id) {
     return None;
   // Find the default kind of this diagnostic.
   auto kind = getDefaultDiagnosticKind(id);
-  ;
   // Promote to error if needed.
   if (warningsAreErrors && (kind == DiagnosticKind::Warning))
     return DiagnosticKind::Error;
@@ -233,6 +232,7 @@ void DiagnosticEngine::emit() {
   // Feed it to the consumer if there's one
   if (consumer)
     consumer->handle(srcMgr, diag);
+  actOnDiagnosticEmission(diag.kind);
   activeDiagnostic.reset();
 }
 
