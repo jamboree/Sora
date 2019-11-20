@@ -1,0 +1,42 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func x(
+  // error cases
+  // CHECK: ParamDecl type=<error_type> identifier=x1 identifierLoc=line:6:3
+  x1: i,    // expect-error: cannot find type 'i' in this scope
+  // CHECK: ParamDecl type=<error_type> identifier=x2 identifierLoc=line:8:3
+  x2:   i1, // expect-error: cannot find type 'i1' in this scope
+  // Valid types
+  // CHECK: ParamDecl type=i8 identifier=x3 identifierLoc=line:11:3
+  x3:   i8,
+  // CHECK: ParamDecl type=i16 identifier=x4 identifierLoc=line:13:3
+  x4:   i16,
+  // CHECK: ParamDecl type=i32 identifier=x5 identifierLoc=line:15:3
+  x5:   i32,
+  // CHECK: ParamDecl type=i64 identifier=x6 identifierLoc=line:17:3
+  x6:   i64,
+  // CHECK: ParamDecl type=isize identifier=x7 identifierLoc=line:19:3
+  x7:   isize,
+  // CHECK: ParamDecl type=u8 identifier=x8 identifierLoc=line:21:3
+  x8:   u8,
+  // CHECK: ParamDecl type=u16 identifier=x9 identifierLoc=line:23:3
+  x9:   u16,
+  // CHECK: ParamDecl type=u32 identifier=x10 identifierLoc=line:25:3
+  x10:  u32,
+  // CHECK: ParamDecl type=u64 identifier=x11 identifierLoc=line:27:3
+  x11:  u64,
+  // CHECK: ParamDecl type=usize identifier=x11 identifierLoc=line:29:3
+  x11:  usize,
+  // CHECK: ParamDecl type=bool identifier=x12 identifierLoc=line:31:3
+  x12:  bool,
+  // CHECK: ParamDecl type=void identifier=x13 identifierLoc=line:33:3
+  x13:  void,
+  // CHECK: ParamDecl type=(i8, i8) identifier=c1 identifierLoc=line:35:3
+  c1 : (i8, i8),
+  // CHECK: ParamDecl type=&(bool, bool, bool) identifier=c2 identifierLoc=line:37:3
+  c2 : &(bool, bool, bool),
+  // CHECK: ParamDecl type=&mut bool identifier=c3 identifierLoc=line:39:3
+  c3 : &mut bool,
+  // CHECK: ParamDecl type=maybe bool identifier=c4 identifierLoc=line:41:3
+  c4 : maybe bool
+) {}
