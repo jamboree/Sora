@@ -12,6 +12,7 @@
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/Lexer/Lexer.hpp"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -184,9 +185,11 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
       // For LetDecls, create a new scope and make that scope the current
       // parent.
       assert(let->isLocal() && "not local?!");
-      // The beg loc of the scope will be the begin loc of the 'let'.
-      ASTScope *scope = LocalLetDeclScope::create(let, curParent,
-                                                  {let->getBegLoc(), blockEnd});
+      // The beg loc of the scope will be the token past-the-end of the LetDecl.
+      SourceLoc begLoc =
+          Lexer::getLocPastTheEndOfTokenAtLoc(ctxt.srcMgr, let->getEndLoc());
+      ASTScope *scope =
+          LocalLetDeclScope::create(let, curParent, {begLoc, blockEnd});
       curParent->addChild(scope);
       curParent = scope;
     }

@@ -248,13 +248,13 @@ public:
 /// range of the LetDecl. The range of the scope is given by the parent.
 ///
 /// For LetDecls inside BlockStmts, the range of the scope is a range that
-/// begins at the 'let' and ends at the '}'.
+/// begins past-the-end of the LetDecl and ends at the '}'.
 ///
 /// \verbatim
 ///   {
-///     let x: i32  // scope begins at the 'let'
+///     let x: i32 // scope begins on the whitespace after the 'i32' token
 ///     x = 0
-///   }             // scope ends at the '}'
+///   }           // scope ends at the '}'
 /// \endverbatim
 ///
 /// For LetDecls inside conditions, the range of the scope is the range of the
@@ -271,7 +271,6 @@ class LocalLetDeclScope final : public ASTScope {
   bool isLocalAndNonNull() const;
 
   LetDecl *const decl;
-  // FIXME: Just store the end loc and fetch the beg loc from the decl.
   SourceRange range;
 
 public:
