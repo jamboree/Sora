@@ -8,14 +8,15 @@ func foo( // expect-note: previous definition of 'foo' is here
 ) {}
 
 func foo() { // expect-error: value 'foo' is already defined in this scope
-    let ((a, a, a), b, b) // expect-2-error: identifier 'a' is bound multiple times in the same pattern
-                          // expect-note@-1: identifier 'a' is bound for the first time here
-                          // expect-error@-2: identifier 'b' is bound multiple times in the same pattern
-                          // expect-note@-3: identifier 'b' is bound for the first time here
+    let ((a, a, a), b, b) = ((0, 0, 0), 0, 0) 
+                          // expect-2-error@-1: identifier 'a' is bound multiple times in the same pattern
+                          // expect-note@-2: identifier 'a' is bound for the first time here
+                          // expect-error@-3: identifier 'b' is bound multiple times in the same pattern
+                          // expect-note@-4: identifier 'b' is bound for the first time here
     func foo() {}
     {
-        let a       // expect-note: previous definition of 'a' is here
-        let (a, a)  // expect-error: identifier 'a' is bound multiple times in the same pattern
+        let a = 0             // expect-note: previous definition of 'a' is here
+        let (a, a) = (0, 1)   // expect-error: identifier 'a' is bound multiple times in the same pattern
                     // expect-note@-1: identifier 'a' is bound for the first time here
                     // expect-error@-2: value 'a' is already defined in this scope
         func foo() {}
@@ -24,3 +25,5 @@ func foo() { // expect-error: value 'foo' is already defined in this scope
         }
     }
 }
+
+func bar(bar: i32) {} // this is allowed, but not really useful. 
