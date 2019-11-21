@@ -153,9 +153,9 @@ private:
 
     // Type-check the initializer
     if (decl->hasInitializer()) {
-      assert(tc.ignoredDecls.empty() && "ignoredDecls vector should be empty!");
-      decl->setInitializer(
-          tc.typecheckExpr(decl->getInitializer(), decl->getDeclContext()));
+      Expr *init = decl->getInitializer();
+      init = tc.typecheckExpr(init, decl->getDeclContext());
+      decl->setInitializer(init);
     }
   }
 };
