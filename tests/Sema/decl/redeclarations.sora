@@ -1,0 +1,26 @@
+// RUN: %sorac-typecheck -verify %s
+
+func foo( // expect-note: previous definition of 'foo' is here
+  a: i32, // expect-note: identifier 'a' is bound for the first time here
+  b: i32, // expect-note: identifier 'b' is bound for the first time here
+  a: i32, // expect-error: identifier 'a' is bound multiple times in the same parameter list
+  b: i32  // expect-error: identifier 'b' is bound multiple times in the same parameter list
+) {}
+
+func foo() { // expect-error: value 'foo' is already defined in this scope
+    let ((a, a, a), b, b) // expect-2-error: identifier 'a' is bound multiple times in the same pattern
+                          // expect-note@-1: identifier 'a' is bound for the first time here
+                          // expect-error@-2: identifier 'b' is bound multiple times in the same pattern
+                          // expect-note@-3: identifier 'b' is bound for the first time here
+    func foo() {}
+    {
+        let a       // expect-note: previous definition of 'a' is here
+        let (a, a)  // expect-error: identifier 'a' is bound multiple times in the same pattern
+                    // expect-note@-1: identifier 'a' is bound for the first time here
+                    // expect-error@-2: value 'a' is already defined in this scope
+        func foo() {}
+        {
+            func foo() {}
+        }
+    }
+}

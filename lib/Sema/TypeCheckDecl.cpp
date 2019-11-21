@@ -88,7 +88,7 @@ private:
         // noteFirstBinding
         [&](ValueDecl *decl) {
           tc.diagnose(decl->getIdentifierLoc(),
-                      diag::identifier_first_bound_here, decl->getIdentifier());
+                      diag::identifier_bound_first_here, decl->getIdentifier());
         });
 
     // Resolve the return type of the function
@@ -145,7 +145,7 @@ private:
         // noteFirstBinding
         [&](ValueDecl *decl) {
           tc.diagnose(decl->getIdentifierLoc(),
-                      diag::identifier_first_bound_here, decl->getIdentifier());
+                      diag::identifier_bound_first_here, decl->getIdentifier());
         });
 
     // Type-check the pattern.

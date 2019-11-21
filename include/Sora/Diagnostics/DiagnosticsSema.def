@@ -63,8 +63,8 @@ ERROR(identifier_bound_multiple_times_in_same_pat,
 ERROR(identifier_bound_multiple_times_in_same_paramlist, 
   "identifier '%0' is bound multiple times in the same parameter list", 
   (Identifier))
-NOTE(identifier_first_bound_here,
-  "identifier '%0' is first bound here", (Identifier))
+NOTE(identifier_bound_first_here,
+  "identifier '%0' is bound for the first time here", (Identifier))
 
 //===----------------------------------------------------------------------===//
 
