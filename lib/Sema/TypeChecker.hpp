@@ -11,6 +11,7 @@
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Diagnostics/DiagnosticsSema.hpp"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace sora {
@@ -43,16 +44,36 @@ public:
     return diagEngine.diagnose<Args...>(loc, diag, args...);
   }
 
-  /// Checks if a ValueDecl is a legal declaration, and not an invalid declaration.
+  /// Checks if a single ValueDecl is a legal declaration, and not an invalid
+  /// redeclaration.
+  /// This sets the decl's 'isIllegalRedeclaration' flag.
+  /// This will not check the decl if it's already marked as being an illegal
+  /// redeclaration.
   /// \verbatim
   ///   func foo() {} // this foo is valid, it's the first one
   ///   func foo() {} // this one isn't
   /// \endverbatim
-  void checkForRedeclaration(ValueDecl *decl);
+  void checkIsIllegalRedeclaration(ValueDecl *decl);
+
+  /// Checks that a declaration list doesn't bind an identifier more than once.
+  ///
+  /// First, this checks that an identifier isn't bound more than once in
+  /// \p decls. Else, \p noteFirst is called for the first binding, and
+  /// \p diagnoseDuplicateBinding for each duplicate binding.
+  ///
+  /// This also sets the 'isIllegalRedeclaration' flag on each duplicate
+  /// binding.
+  ///
+  /// Finally, note that diagnoseDuplicateBinding/noteFirst are called in
+  /// groups. For example, in 'let (a, b, a, b)', they're both called for 'a'
+  /// first and then for 'b' (or for 'b' then for 'a' - that ordering isn't
+  /// guaranteed)
+  void checkForDuplicateBindingsInList(
+      ArrayRef<ValueDecl *> decls,
+      llvm::function_ref<void(ValueDecl *)> diagnoseDuplicateBinding,
+      llvm::function_ref<void(ValueDecl *)> noteFirstBinding);
 
   /// Declaration typechecking entry point
-  ///
-  /// NOTE: This doesn't check
   void typecheckDecl(Decl *decl);
 
   /// Typechecks the body of the functions in \c definedFunctions
@@ -85,9 +106,6 @@ public:
   /// The list of non-local functions that have a body (=have been defined).
   /// See \p typecheckFunctionBodies()
   SmallVector<FuncDecl *, 4> definedFunctions;
-
-  /// The set of declarations that are ignored during lookup
-  SmallVector<ValueDecl *, 8> ignoredDecls;
 
   ASTContext &ctxt;
   DiagnosticEngine &diagEngine;

@@ -52,13 +52,17 @@ ERROR(cannot_find_type_in_scope,
 
 //===- Decls --------------------------------------------------------------===//
 
-ERROR(value_already_declared_in_scope,
-  "value '%0' already declared in this scope", (Identifier))
-NOTE(previously_declared_here,
-  "'%0' previously declared here", (Identifier))
+ERROR(value_already_defined_in_scope,
+  "value '%0' is already defined in this scope", (Identifier))
+NOTE(previous_def_is_here,
+  "previous definition of '%0' is here", (Identifier))
 
-ERROR(identifier_bound_multiple_times_in_pat, 
-  "identifier '%0' is bound multiple times in the same pattern", (Identifier))
+ERROR(identifier_bound_multiple_times_in_same_pat, 
+  "identifier '%0' is bound multiple times in the same pattern",
+  (Identifier))
+ERROR(identifier_bound_multiple_times_in_same_paramlist, 
+  "identifier '%0' is bound multiple times in the same parameter list", 
+  (Identifier))
 NOTE(identifier_first_bound_here,
   "identifier '%0' is first bound here", (Identifier))
 

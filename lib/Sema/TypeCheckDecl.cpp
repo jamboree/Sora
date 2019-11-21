@@ -14,7 +14,6 @@
 #include "Sora/AST/NameLookup.hpp"
 #include "Sora/AST/Types.hpp"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace sora;
@@ -38,35 +37,74 @@ public:
   void check(Decl *decl) { visit(decl); }
 
 private:
-  void visitVarDecl(VarDecl *decl) { tc.checkForRedeclaration(decl); }
+  // An RAII object that marks a declaratin as being checked on destruction.
+  class RAIIDeclChecking {
+    Decl *const decl = nullptr;
 
+  public:
+    RAIIDeclChecking(Decl *decl) : decl(decl) {}
+    ~RAIIDeclChecking() { decl->setChecked(); }
+  };
+
+  void visitVarDecl(VarDecl *decl) {
+    RAIIDeclChecking declChecking(decl);
+    tc.checkIsIllegalRedeclaration(decl);
+  }
+
+  // Called by visitFuncDecl
+  //
+  // Only resolves the ParamDecl's type.
   void visitParamDecl(ParamDecl *decl) {
-    assert(decl->getValueType().isNull() && "Decl checked twice!");
-
-    tc.checkForRedeclaration(decl);
-
-    // Resolve the type of the ParamDecl
+    RAIIDeclChecking declChecking(decl);
+    // Only resolve the type.
+    // We don't need to call tc.checkIsIllegalRedeclaration since
+    // ParamDecls can shadow anything. Duplicate parameter names in the same
+    // parameter list are handled by visitFuncDecl.
     tc.resolveTypeLoc(decl->getTypeLoc(), file);
   }
 
   void visitFuncDecl(FuncDecl *decl) {
-    assert(decl->getValueType().isNull() && "Decl checked twice!");
+    RAIIDeclChecking declChecking(decl);
 
-    tc.checkForRedeclaration(decl);
+    // Check if this function isn't an illegal redeclaration
+    tc.checkIsIllegalRedeclaration(decl);
 
+    // Collect the parameters in an array of ValueDecl*s, as
+    // tc.checkForDuplicateBindingsInList wants an ArrayRef<ValueDecl*>
+    SmallVector<ValueDecl *, 4> paramBindings;
+    ParamList *params = decl->getParamList();
+    for (ParamDecl *param : *params)
+      paramBindings.push_back(param);
+
+    // Check that all parameter names are unique.
+    tc.checkForDuplicateBindingsInList(
+        paramBindings,
+        // diagnoseDuplicateBinding
+        [&](ValueDecl *decl) {
+          tc.diagnose(decl->getIdentifierLoc(),
+                      diag::identifier_bound_multiple_times_in_same_paramlist,
+                      decl->getIdentifier());
+        },
+        // noteFirstBinding
+        [&](ValueDecl *decl) {
+          tc.diagnose(decl->getIdentifierLoc(),
+                      diag::identifier_first_bound_here, decl->getIdentifier());
+        });
+
+    // Resolve the return type of the function
     Type returnType;
-    // Resolve the return type if present
     if (decl->hasReturnType()) {
+      // If there's an explicit return type, resolve it.
       TypeLoc &tyLoc = decl->getReturnTypeLoc();
       tc.resolveTypeLoc(tyLoc, file);
       assert(tyLoc.hasType());
       returnType = tyLoc.getType();
     }
-    // If the function doesn't have a return type, it returns void.
     else
+      // If there's no explicit return type, the return type is void.
       returnType = tc.ctxt.voidType;
 
-    ParamList *params = decl->getParamList();
+    // Visit the parameters and collect their type.
     SmallVector<Type, 8> paramTypes;
     for (ParamDecl *param : *params) {
       visit(param);
@@ -75,6 +113,7 @@ private:
       paramTypes.push_back(paramType);
     }
 
+    // Compute the function type and assign it to the function
     decl->setValueType(FunctionType::get(paramTypes, returnType));
 
     // Check the body directly for local functions, else delay it.
@@ -85,88 +124,38 @@ private:
   }
 
   void visitLetDecl(LetDecl *decl) {
+    RAIIDeclChecking declChecking(decl);
+
     Pattern *pattern = decl->getPattern();
     assert(pattern && "LetDecl doesn't have a pattern");
 
-    // Check that this pattern doesn't bind the variables inside it more than
-    // once.
-    checkPatternBindings(pattern);
+    // Collect the variables declared inside the pattern
+    SmallVector<ValueDecl *, 4> vars;
+    decl->forEachVarDecl([&](VarDecl *var) { vars.push_back(var); });
 
-    // Type-check the pattern
+    // Check if the pattern doesn't contain duplicate bindings
+    tc.checkForDuplicateBindingsInList(
+        vars,
+        // diagnoseDuplicateBinding
+        [&](ValueDecl *decl) {
+          tc.diagnose(decl->getIdentifierLoc(),
+                      diag::identifier_bound_multiple_times_in_same_pat,
+                      decl->getIdentifier());
+        },
+        // noteFirstBinding
+        [&](ValueDecl *decl) {
+          tc.diagnose(decl->getIdentifierLoc(),
+                      diag::identifier_first_bound_here, decl->getIdentifier());
+        });
+
+    // Type-check the pattern.
     tc.typecheckPattern(pattern);
 
+    // Type-check the initializer
     if (decl->hasInitializer()) {
       assert(tc.ignoredDecls.empty() && "ignoredDecls vector should be empty!");
-      decl->forEachVarDecl(
-          [&](VarDecl *var) { tc.ignoredDecls.push_back(var); });
       decl->setInitializer(
           tc.typecheckExpr(decl->getInitializer(), decl->getDeclContext()));
-      tc.ignoredDecls.clear();
-    }
-  }
-
-  /// Checks that the same identifier isn't bound more than once in \p decls.
-  /// FIXME: This function isn't really efficient, but since it's only ran once
-  /// per LetDecl and it usually works with 1 to 5 vars, it should be ok.
-  void checkPatternBindings(Pattern *pat) {
-    // The map of identifiers -> first VarDecl* that binds it
-    llvm::DenseMap<Identifier, VarDecl *> boundIdentifiers;
-    // The map of identifiers -> bad (duplicate) var decls
-    // FIXME: Is a DenseMap of SmallPtrSet efficient?
-    llvm::DenseMap<Identifier, llvm::SmallPtrSet<VarDecl *, 2>> badVarDecls;
-
-    // Adds a VarDecl to \c badVarDecls, asserting that it's wasn't added to the
-    // set before.
-    auto addBadVarDecl = [&](VarDecl *var) {
-      auto result = badVarDecls[var->getIdentifier()].insert(var);
-      assert(result.second && "Var already known bad!");
-    };
-
-    // Removes a VarDecl from \c badVarDecls.
-    auto removeBadVarDecl = [&](VarDecl *var) {
-      badVarDecls[var->getIdentifier()].erase(var);
-    };
-
-    // Iterate over the the VarDecls in the Pattern
-    pat->forEachVarDecl([&](VarDecl *var) {
-      VarDecl *&firstBound = boundIdentifiers[var->getIdentifier()];
-      // If it's the first time this identifier is bound in this pattern, just
-      // store it.
-      if (!firstBound) {
-        firstBound = var;
-        return;
-      }
-      // Else, store it in the erroneous VarDecls set.
-      // If var comes after the VarDecl that first binds the identifier,
-      // just put it in the set.
-      // This is the most likely scenario as forEachVarDecl should be iterating
-      // the VarDecls in order of appearance in a well-formed AST.
-      if (var->getBegLoc() > firstBound->getBegLoc())
-        addBadVarDecl(var);
-      // Else, var must become the firstBound var, and add firstBound to the
-      // set of bad VarDecls instead.
-      else {
-        addBadVarDecl(firstBound);
-        removeBadVarDecl(var);
-        firstBound = var;
-      }
-    });
-
-    // Now, if we must emit any diagnostics, do so.
-    if (badVarDecls.empty())
-      return;
-
-    for (auto entry : badVarDecls) {
-      Identifier ident = entry.first;
-      // Diagnose each variable
-      for (VarDecl *badVar : entry.second) {
-        tc.diagnose(badVar->getIdentifierLoc(),
-                    diag::identifier_bound_multiple_times_in_pat, ident);
-      }
-      // And finally note the first variable declared.
-      VarDecl *first = boundIdentifiers[ident];
-      tc.diagnose(first->getIdentifierLoc(), diag::identifier_first_bound_here,
-                  ident);
     }
   }
 };
@@ -178,9 +167,9 @@ void TypeChecker::typecheckDecl(Decl *decl) {
   assert(decl);
   if (decl->isChecked())
     return;
-  // Check the semantics of the declaration
   DeclChecker(*this, decl->getSourceFile()).check(decl);
-  decl->setChecked();
+  assert(decl->isChecked() &&
+         "Decl isn't marked as checked after being checked");
 }
 
 void TypeChecker::typecheckFunctionBody(FuncDecl *func) {
@@ -202,7 +191,7 @@ void TypeChecker::typecheckDefinedFunctions() {
   definedFunctions.clear();
 }
 
-void TypeChecker::checkForRedeclaration(ValueDecl *decl) {
+void TypeChecker::checkIsIllegalRedeclaration(ValueDecl *decl) {
   assert(decl && "decl is null!");
 
   // If it's an illegal redeclaration, don't re-check.
@@ -238,9 +227,47 @@ void TypeChecker::checkForRedeclaration(ValueDecl *decl) {
   assert(earliest && "no earliest result found?");
   assert(earliest != decl);
 
-  // Emit the diagnostic, pointing at the earliest result.
-  diagnose(decl->getIdentifierLoc(), diag::value_already_declared_in_scope,
+  // Emit the diagnostics
+  diagnose(decl->getIdentifierLoc(), diag::value_already_defined_in_scope,
            decl->getIdentifier());
-  diagnose(earliest->getIdentifierLoc(), diag::previously_declared_here,
+  diagnose(earliest->getIdentifierLoc(), diag::previous_def_is_here,
            earliest->getIdentifier());
+}
+
+void TypeChecker::checkForDuplicateBindingsInList(
+    ArrayRef<ValueDecl *> decls,
+    llvm::function_ref<void(ValueDecl *)> diagnoseDuplicateBinding,
+    llvm::function_ref<void(ValueDecl *)> noteFirstBinding) {
+  // The map of identifiers -> list of bindings.
+  llvm::DenseMap<Identifier, SmallVector<ValueDecl *, 2>> bindingsMap;
+
+  // Collect the bindings
+  for (ValueDecl *decl : decls)
+    bindingsMap[decl->getIdentifier()].push_back(decl);
+
+  // Check them
+  for (auto entry : bindingsMap) {
+    SmallVectorImpl<ValueDecl *> &bindings = entry.second;
+    assert(!bindings.empty() && "Empty set of bindings?");
+
+    // If we got more than one binding for this identifier in the list, we must
+    // emit diagnostics.
+    if (bindings.size() > 1) {
+      // First, sort the vector
+      std::sort(bindings.begin(), bindings.end(),
+                [&](ValueDecl *lhs, ValueDecl *rhs) {
+                  return lhs->getBegLoc() < rhs->getBegLoc();
+                });
+
+      // Call diagnoseDuplicateBinding on each decl except the first one.
+      for (auto it = bindings.begin() + 1, end = bindings.end(); it != end;
+           ++it) {
+        diagnoseDuplicateBinding(*it);
+        (*it)->setIsIllegalRedeclaration();
+      }
+
+      // Call noteFirstBinding on the first one
+      noteFirstBinding(bindings.front());
+    }
+  }
 }
