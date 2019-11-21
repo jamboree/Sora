@@ -13,6 +13,9 @@
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/NameLookup.hpp"
 #include "Sora/AST/Types.hpp"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace sora;
 
@@ -82,7 +85,15 @@ private:
   }
 
   void visitLetDecl(LetDecl *decl) {
-    tc.typecheckPattern(decl->getPattern());
+    Pattern *pattern = decl->getPattern();
+    assert(pattern && "LetDecl doesn't have a pattern");
+
+    // Check that this pattern doesn't bind the variables inside it more than
+    // once.
+    checkPatternBindings(pattern);
+
+    // Type-check the pattern
+    tc.typecheckPattern(pattern);
 
     if (decl->hasInitializer()) {
       assert(tc.ignoredDecls.empty() && "ignoredDecls vector should be empty!");
@@ -91,6 +102,71 @@ private:
       decl->setInitializer(
           tc.typecheckExpr(decl->getInitializer(), decl->getDeclContext()));
       tc.ignoredDecls.clear();
+    }
+  }
+
+  /// Checks that the same identifier isn't bound more than once in \p decls.
+  /// FIXME: This function isn't really efficient, but since it's only ran once
+  /// per LetDecl and it usually works with 1 to 5 vars, it should be ok.
+  void checkPatternBindings(Pattern *pat) {
+    // The map of identifiers -> first VarDecl* that binds it
+    llvm::DenseMap<Identifier, VarDecl *> boundIdentifiers;
+    // The map of identifiers -> bad (duplicate) var decls
+    // FIXME: Is a DenseMap of SmallPtrSet efficient?
+    llvm::DenseMap<Identifier, llvm::SmallPtrSet<VarDecl *, 2>> badVarDecls;
+
+    // Adds a VarDecl to \c badVarDecls, asserting that it's wasn't added to the
+    // set before.
+    auto addBadVarDecl = [&](VarDecl *var) {
+      auto result = badVarDecls[var->getIdentifier()].insert(var);
+      assert(result.second && "Var already known bad!");
+    };
+
+    // Removes a VarDecl from \c badVarDecls.
+    auto removeBadVarDecl = [&](VarDecl *var) {
+      badVarDecls[var->getIdentifier()].erase(var);
+    };
+
+    // Iterate over the the VarDecls in the Pattern
+    pat->forEachVarDecl([&](VarDecl *var) {
+      VarDecl *&firstBound = boundIdentifiers[var->getIdentifier()];
+      // If it's the first time this identifier is bound in this pattern, just
+      // store it.
+      if (!firstBound) {
+        firstBound = var;
+        return;
+      }
+      // Else, store it in the erroneous VarDecls set.
+      // If var comes after the VarDecl that first binds the identifier,
+      // just put it in the set.
+      // This is the most likely scenario as forEachVarDecl should be iterating
+      // the VarDecls in order of appearance in a well-formed AST.
+      if (var->getBegLoc() > firstBound->getBegLoc())
+        addBadVarDecl(var);
+      // Else, var must become the firstBound var, and add firstBound to the
+      // set of bad VarDecls instead.
+      else {
+        addBadVarDecl(firstBound);
+        removeBadVarDecl(var);
+        firstBound = var;
+      }
+    });
+
+    // Now, if we must emit any diagnostics, do so.
+    if (badVarDecls.empty())
+      return;
+
+    for (auto entry : badVarDecls) {
+      Identifier ident = entry.first;
+      // Diagnose each variable
+      for (VarDecl *badVar : entry.second) {
+        tc.diagnose(badVar->getIdentifierLoc(),
+                    diag::identifier_bound_multiple_times_in_pat, ident);
+      }
+      // And finally note the first variable declared.
+      VarDecl *first = boundIdentifiers[ident];
+      tc.diagnose(first->getIdentifierLoc(), diag::identifier_first_bound_here,
+                  ident);
     }
   }
 };
@@ -128,6 +204,11 @@ void TypeChecker::typecheckDefinedFunctions() {
 
 void TypeChecker::checkForRedeclaration(ValueDecl *decl) {
   assert(decl && "decl is null!");
+
+  // If it's an illegal redeclaration, don't re-check.
+  if (decl->isIllegalRedeclaration())
+    return;
+
   UnqualifiedValueLookup uvl(decl->getSourceFile());
 
   // Limit lookup to the current block & file so shadowing rules are respected.
@@ -147,7 +228,7 @@ void TypeChecker::checkForRedeclaration(ValueDecl *decl) {
   // If there are no results, this is a valid declaration
   if (uvl.isEmpty())
     return decl->setIsIllegalRedeclaration(false);
-  decl->setIsIllegalRedeclaration(true);
+  decl->setIsIllegalRedeclaration();
 
   // Else, find the earliest result.
   ValueDecl *earliest = nullptr;
