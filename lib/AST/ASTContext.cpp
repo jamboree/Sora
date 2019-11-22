@@ -491,6 +491,19 @@ FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   return type;
 }
 
-TypeVariableType *TypeVariableType::create(ASTContext &ctxt, unsigned id) {
-  return new (ctxt, ArenaKind::TypeChecker) TypeVariableType(ctxt, id);
+TypeVariableType *TypeVariableType::createGeneral(ASTContext &ctxt,
+                                                  unsigned id) {
+  return new (ctxt, ArenaKind::TypeChecker)
+      TypeVariableType(ctxt, id, TypeVariableKind::General);
+}
+
+TypeVariableType *TypeVariableType::createInteger(ASTContext &ctxt,
+                                                  unsigned id) {
+  return new (ctxt, ArenaKind::TypeChecker)
+      TypeVariableType(ctxt, id, TypeVariableKind::Integer);
+}
+
+TypeVariableType *TypeVariableType::createFloat(ASTContext &ctxt, unsigned id) {
+  return new (ctxt, ArenaKind::TypeChecker)
+      TypeVariableType(ctxt, id, TypeVariableKind::Float);
 }

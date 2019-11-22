@@ -24,7 +24,9 @@ protected:
     maybeType = MaybeType::get(ctxt->i32Type);
     lvalueType = LValueType::get(ctxt->i32Type);
     tupleType = TupleType::getEmpty(*ctxt);
-    tyVarType = TypeVariableType::create(*ctxt, 0);
+    generalTyVarType = TypeVariableType::createGeneral(*ctxt, 0);
+    intTyVarType = TypeVariableType::createInteger(*ctxt, 0);
+    fltTyVarType = TypeVariableType::createFloat(*ctxt, 0);
     fnType = FunctionType::get({}, refType);
   }
 
@@ -47,7 +49,9 @@ protected:
   Type maybeType;
   Type lvalueType;
   Type tupleType;
-  Type tyVarType;
+  Type generalTyVarType;
+  Type intTyVarType;
+  Type fltTyVarType;
   Type fnType;
 
   SourceManager srcMgr;
@@ -79,7 +83,9 @@ TEST_F(TypeTest, rtti) {
 
   EXPECT_TRUE(tupleType->is<TupleType>());
 
-  EXPECT_TRUE(tyVarType->is<TypeVariableType>());
+  EXPECT_TRUE(generalTyVarType->is<TypeVariableType>());
+  EXPECT_TRUE(intTyVarType->is<TypeVariableType>());
+  EXPECT_TRUE(fltTyVarType->is<TypeVariableType>());
 
   EXPECT_TRUE(fnType->is<FunctionType>());
 }
@@ -88,8 +94,8 @@ TEST_F(TypeTest, typeProperties) {
   EXPECT_FALSE(ctxt->errorType->hasTypeVariable());
   EXPECT_TRUE(ctxt->errorType->hasErrorType());
 
-  EXPECT_TRUE(tyVarType->hasTypeVariable());
-  EXPECT_FALSE(tyVarType->hasErrorType());
+  EXPECT_TRUE(generalTyVarType->hasTypeVariable());
+  EXPECT_FALSE(generalTyVarType->hasErrorType());
 }
 
 TEST_F(TypeTest, TupleType) {
@@ -117,10 +123,10 @@ TEST_F(TypeTest, simpleTypePropertiesPropagation) {
   CHECK(MaybeType::get(ctxt->i32Type), false, false);
 
   // TypeVariableType
-  ASSERT_TRUE(tyVarType->hasTypeVariable());
-  CHECK(LValueType::get(tyVarType), true, false);
-  CHECK(ReferenceType::get(tyVarType, false), true, false);
-  CHECK(MaybeType::get(tyVarType), true, false);
+  ASSERT_TRUE(generalTyVarType->hasTypeVariable());
+  CHECK(LValueType::get(generalTyVarType), true, false);
+  CHECK(ReferenceType::get(generalTyVarType, false), true, false);
+  CHECK(MaybeType::get(generalTyVarType), true, false);
 
   // ErrorType
   ASSERT_TRUE(ctxt->errorType->hasErrorType());
@@ -199,7 +205,7 @@ TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
   CHECK_ALWAYS_CANONICAL(ctxt->voidType)
   CHECK_ALWAYS_CANONICAL(ctxt->boolType)
   CHECK_ALWAYS_CANONICAL(ctxt->errorType)
-  Type tyVar = TypeVariableType::create(*ctxt, 0);
+  Type tyVar = TypeVariableType::createGeneral(*ctxt, 0);
   CHECK_ALWAYS_CANONICAL(tyVar)
 #undef CHECK_ALWAYS_CANONICAL
 }
@@ -230,6 +236,21 @@ TEST_F(TypeTest, canonicalTypes) {
 #undef CHECK
 }
 
+TEST_F(TypeTest, typeVariableKind) {
+  TypeVariableType *general = generalTyVarType->castTo<TypeVariableType>();
+  TypeVariableType *flt = fltTyVarType->castTo<TypeVariableType>();
+  TypeVariableType *integer = intTyVarType->castTo<TypeVariableType>();
+
+  EXPECT_EQ(general->getTypeVariableKind(), TypeVariableKind::General);
+  EXPECT_TRUE(general->isGeneral());
+
+  EXPECT_EQ(flt->getTypeVariableKind(), TypeVariableKind::Float);
+  EXPECT_TRUE(flt->isFloat());
+
+  EXPECT_EQ(integer->getTypeVariableKind(), TypeVariableKind::Integer);
+  EXPECT_TRUE(integer->isInteger());
+}
+
 TEST_F(TypeTest, printingTest_simple) {
   TypePrintOptions opts = TypePrintOptions::forDebug();
 #define CHECK(T, STR) EXPECT_EQ(T.getString(opts), STR)
@@ -248,7 +269,7 @@ TEST_F(TypeTest, printingTest_simple) {
   CHECK(ctxt->voidType, "void");
   CHECK(ctxt->boolType, "bool");
   CHECK(ctxt->errorType, "<error_type>");
-  Type tyVar = TypeVariableType::create(*ctxt, 0);
+  Type tyVar = TypeVariableType::createGeneral(*ctxt, 0);
   CHECK(tyVar, "$T0");
   CHECK(Type(nullptr), "<null_type>");
 #undef CHECK

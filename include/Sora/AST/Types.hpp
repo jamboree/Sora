@@ -113,6 +113,7 @@ class alignas(TypeBaseAlignement) TypeBase {
     /// TypeVariableType bits
     struct {
       unsigned id;
+      uint8_t tyVarKind : 3;
     } typeVariableType;
     /// FunctionType bits
     struct {
@@ -523,6 +524,15 @@ public:
   }
 };
 
+enum class TypeVariableKind {
+  /// General type variables, which can be unified with anything
+  General,
+  /// Integer type variables, which can only be unified with an integer types.
+  Integer,
+  /// Float type variables, which can only be unified with float types.
+  Float
+};
+
 /// Type Variable Type
 ///
 /// Used by the typechecker. This type is never unique, and is always allocated
@@ -530,18 +540,43 @@ public:
 ///
 /// This type is always canonical.
 class TypeVariableType final : public TypeBase {
-  TypeVariableType(ASTContext &ctxt, unsigned id)
+  TypeVariableType(ASTContext &ctxt, unsigned id, TypeVariableKind kind)
       : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
                  /*isCanonical*/ true) {
     bits.typeVariableType.id = id;
+    bits.typeVariableType.tyVarKind = (unsigned)kind;
+    assert(TypeVariableKind(bits.typeVariableType.tyVarKind) == kind &&
+           "bits dropped!");
   }
 
   friend ASTContext;
 
 public:
-  static TypeVariableType *create(ASTContext &ctxt, unsigned id);
+  /// Creates a General Type Variable
+  static TypeVariableType *createGeneral(ASTContext &ctxt, unsigned id);
+  /// Creates an Integer Type Variable
+  static TypeVariableType *createInteger(ASTContext &ctxt, unsigned id);
+  /// Creates a Float Type Variable
+  static TypeVariableType *createFloat(ASTContext &ctxt, unsigned id);
 
+  /// \returns the ID of this type variable
   unsigned getID() const { return bits.typeVariableType.id; }
+
+  TypeVariableKind getTypeVariableKind() const {
+    return (TypeVariableKind)bits.typeVariableType.tyVarKind;
+  }
+
+  bool isGeneral() const {
+    return getTypeVariableKind() == TypeVariableKind::General;
+  }
+
+  bool isFloat() const {
+    return getTypeVariableKind() == TypeVariableKind::Float;
+  }
+
+  bool isInteger() const {
+    return getTypeVariableKind() == TypeVariableKind::Integer;
+  }
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::TypeVariable;
