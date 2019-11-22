@@ -10,14 +10,6 @@
 
 using namespace sora;
 
-TypeVariableType *ConstraintSystem::createGeneralTypeVariable() {
-  return TypeVariableType::createGeneral(ctxt, nextTypeVariableID++);
-}
-
-TypeVariableType *ConstraintSystem::createIntegerTypeVariable() {
-  return TypeVariableType::createInteger(ctxt, nextTypeVariableID++);
-}
-
-TypeVariableType *ConstraintSystem::createFloatTypeVariable() {
-  return TypeVariableType::createFloat(ctxt, nextTypeVariableID++);
+TypeVariableType *ConstraintSystem::createTypeVariable() {
+  return TypeVariableType::create(ctxt, nextTypeVariableID++);
 }

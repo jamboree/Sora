@@ -38,12 +38,7 @@ private:
   unsigned nextTypeVariableID = 0;
 
 public:
-  /// Creates a new general type variable, which can be unified with anything.
-  TypeVariableType *createGeneralTypeVariable();
-  /// Creates a new integer type variable, which can only be unified with
-  /// integers.
-  TypeVariableType *createIntegerTypeVariable();
-  /// Creates a new float type variable, which can only be unified with floats.
-  TypeVariableType *createFloatTypeVariable();
+  /// Creates a new type variable.
+  TypeVariableType *createTypeVariable();
 };
 } // namespace sora
