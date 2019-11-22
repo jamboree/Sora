@@ -109,8 +109,8 @@ public:
 
   /// Traverse this Expr using \p walker.
   /// \returns a pair, the first element indicates whether the walk completed
-  /// successfully (true = success), and the second element, if non-null, is the
-  /// Expr that should replace this Expr in the tree.
+  /// successfully (true = success), and the second element is this Expr or the
+  /// Expr that should replace it in the tree. It is never null.
   std::pair<bool, Expr *> walk(ASTWalker &walker);
   std::pair<bool, Expr *> walk(ASTWalker &&walker) { return walk(walker); }
 

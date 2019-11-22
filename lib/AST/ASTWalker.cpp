@@ -36,8 +36,10 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   }
 
   std::pair<bool, Expr *> walk(Expr *expr) {
-    Expr *replacement = doIt(expr);
-    return {!stopped, replacement};
+    if (Expr *replacement = doIt(expr))
+      expr = replacement;
+    assert(expr);
+    return {!stopped, expr};
   }
 
   //===- Visit Methods ----------------------------------------------------===//
