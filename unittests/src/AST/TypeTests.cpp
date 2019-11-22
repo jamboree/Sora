@@ -243,8 +243,6 @@ TEST_F(TypeTest, printingTest_simple) {
   CHECK(ctxt->boolType, "bool");
   CHECK(ctxt->errorType, "<error_type>");
   CHECK(tyVar, "$T0");
-  opts.typeVariablePrefix = "__type_var__$";
-  CHECK(tyVar, "__type_var__$0");
   CHECK(Type(nullptr), "<null_type>");
 #undef CHECK
 }

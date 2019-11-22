@@ -34,12 +34,6 @@ struct TypePrintOptions {
   /// If true, null types are printed as <error_type>, if false, traps on error
   /// type.
   bool allowErrorTypes = true;
-  /// The prefix used to print TypeVariables.
-  /// The default is '$T', so for instance, if the TV's id ID 42, it prints
-  /// "$T42". Note that printTypeVariablesAsUnderscore takes priority over this:
-  /// if it's enabled, this is ignored and TVs are always printed as '_'.
-  /// FIXME: Can't printTypeVariablesAsUnderscore and this be unified?
-  const char *typeVariablePrefix = "$T";
 
   /// Creates a TypeOption for use in diagnostics
   static TypePrintOptions forDiagnostics() {
