@@ -116,7 +116,7 @@ public:
       out << '_';
       return;
     }
-    out << "$T" << type->getID();
+    out << printOptions.typeVariablePrefix << type->getID();
   }
 };
 } // namespace
