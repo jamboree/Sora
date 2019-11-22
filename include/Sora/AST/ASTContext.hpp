@@ -57,9 +57,9 @@ private:
 
 public:
   RAIIConstraintSystemArena(RAIIConstraintSystemArena &&) = default;
-  RAIIConstraintSystemArena &operator=(RAIIConstraintSystemArena &&) = default;
 
   ASTContext &ctxt;
+
   ~RAIIConstraintSystemArena();
 };
 
