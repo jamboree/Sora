@@ -83,7 +83,7 @@ public:
   /// body.
   void typecheckFunctionBody(FuncDecl *func);
 
-  /// Expression typechecking entry point
+  /// Expression typechecking entry point.
   /// \param expr the expression to typecheck
   /// \param dc th DeclContext in which this Expr lives. Cannot be null.
   /// \param ofType If valid, the expected type of the expression.

@@ -19,55 +19,64 @@
 
 using namespace sora;
 
+//===- ExprTypeCheckingPrologue -------------------------------------------===//
+
+namespace {
+/// The Prologue of Expression Type-Checking, which prepares the expression for
+/// constraint solving.
+///
+/// Resolves UnresolvedDeclRefExprs and asExpr types.
+class ExprPrologue : public ASTWalker {
+public:
+  TypeChecker &tc;
+  DeclContext *dc;
+
+  ExprPrologue(TypeChecker &tc, DeclContext *dc) : tc(tc), dc(dc) {}
+
+  SourceFile &getSourceFile() const {
+    assert(dc && "no DeclContext?");
+    SourceFile *sf = dc->getParentSourceFile();
+    assert(sf && "no source file");
+    return *sf;
+  }
+
+  std::pair<bool, Expr *> resolveUDRE(UnresolvedDeclRefExpr *udre) {
+    UnqualifiedValueLookup uvl(getSourceFile());
+    llvm::outs() << "-----------------------------------\n";
+    llvm::outs() << "Expression:\n";
+    udre->dump(llvm::outs(), tc.ctxt.srcMgr);
+    llvm::outs() << "Performing lookup...\n";
+    uvl.performLookup(udre->getLoc(), udre->getIdentifier());
+    llvm::outs() << "Results found: " << uvl.results.size() << "\n";
+    unsigned k = 0;
+    for (ValueDecl *result : uvl.results) {
+      llvm::outs() << "Result #" << k++ << ":\n";
+      result->dump(llvm::outs());
+      llvm::outs() << "\n";
+    }
+    return {true, udre};
+  }
+
+  std::pair<bool, Expr *> resolveCast(CastExpr *cast) {
+    // Just resolve the cast's typeloc.
+    tc.resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
+    return {true, cast};
+  }
+
+  std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
+    if (auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr))
+      return resolveUDRE(udre);
+    if (auto *cast = dyn_cast<CastExpr>(expr))
+      return resolveCast(cast);
+    return {true, expr};
+  }
+};
+} // namespace
+
 //===- TypeChecker --------------------------------------------------------===//
 
 Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
-  // NOTE: THIS IS ONLY TEST CODE
   assert(expr && dc);
-  struct Impl : ASTWalker {
-    TypeChecker &tc;
-    DeclContext *dc;
-
-    Impl(TypeChecker &tc, DeclContext *dc) : tc(tc), dc(dc) {}
-
-    SourceFile &getSourceFile() const {
-      assert(dc && "no DeclContext?");
-      SourceFile *sf = dc->getParentSourceFile();
-      assert(sf && "no source file");
-      return *sf;
-    }
-
-    std::pair<bool, Expr *> handleUDRE(UnresolvedDeclRefExpr *udre) {
-      UnqualifiedValueLookup uvl(getSourceFile());
-      llvm::outs() << "-----------------------------------\n";
-      llvm::outs() << "Expression:\n";
-      udre->dump(llvm::outs(), tc.ctxt.srcMgr);
-      llvm::outs() << "Performing lookup...\n";
-      uvl.performLookup(udre->getLoc(), udre->getIdentifier());
-      llvm::outs() << "Results found: " << uvl.results.size() << "\n";
-      unsigned k = 0;
-      for (ValueDecl *result : uvl.results) {
-        llvm::outs() << "Result #" << k++ << ":\n";
-        result->dump(llvm::outs());
-        llvm::outs() << "\n";
-      }
-      return {true, udre};
-    }
-
-    std::pair<bool, Expr *> handleCast(CastExpr *cast) {
-      // Just resolve the cast's typeloc.
-      tc.resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
-      return {true, cast};
-    }
-
-    std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
-      if (auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr))
-        return handleUDRE(udre);
-      if (auto *cast = dyn_cast<CastExpr>(expr))
-        return handleCast(cast);
-      return {true, expr};
-    }
-  };
-  Expr *replacement = expr->walk(Impl(*this, dc)).second;
-  return replacement ? replacement : expr;
+  expr = expr->walk(ExprPrologue(*this, dc)).second;
+  return expr;
 }
