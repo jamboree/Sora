@@ -1,4 +1,5 @@
-add_source(sema_src 
+add_source(sema_src
+  "ConstraintSystem.cpp"
   "TypeChecker.cpp"
   "TypeCheckDecl.cpp"
   "TypeCheckExpr.cpp"
