@@ -124,11 +124,15 @@ public:
 //===- Type/CanType/TypeLoc -----------------------------------------------===//
 
 void Type::print(raw_ostream &out, const TypePrintOptions &printOptions) const {
-  getPtr()->print(out, printOptions);
+  TypePrinter(out, printOptions).visit(*this);
 }
 
 std::string Type::getString(const TypePrintOptions &printOptions) const {
-  return getPtr()->getString(printOptions);
+  std::string rtr;
+  llvm::raw_string_ostream out(rtr);
+  print(out, printOptions);
+  out.str();
+  return rtr;
 }
 
 bool CanType::isValid() const {
@@ -247,15 +251,11 @@ CanType TypeBase::getCanonicalType() const {
 
 void TypeBase::print(raw_ostream &out,
                      const TypePrintOptions &printOptions) const {
-  TypePrinter(out, printOptions).visit(const_cast<TypeBase *>(this));
+  Type(const_cast<TypeBase *>(this)).print(out, printOptions);
 }
 
 std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
-  std::string rtr;
-  llvm::raw_string_ostream out(rtr);
-  print(out, printOptions);
-  out.str();
-  return rtr;
+  return Type(const_cast<TypeBase *>(this)).getString(printOptions);
 }
 
 FloatType *FloatType::get(ASTContext &ctxt, FloatKind kind) {
