@@ -75,32 +75,36 @@ struct ASTContext::Impl {
   TupleType *emptyTupleType = nullptr;
   /// for ArenaKind::UnresolvedExpr
   llvm::BumpPtrAllocator unresolvedExprArena;
-  /// for ArenaKind::TypeChecker
-  Optional<TypeArena> typeCheckerArena;
+  /// for ArenaKind::ConstraintSystem
+  Optional<TypeArena> constraintSystemArena;
 
   // Built-in types lookup map
   llvm::DenseMap<Identifier, CanType> builtinTypesLookupMap;
 
-  void initTypeCheckerArena() {
-    assert(!hasTypeCheckerArena() && "TypeChecker arena already active");
-    typeCheckerArena.emplace();
+  void initConstraintSystemArena() {
+    assert(!hasConstraintSystemArena() &&
+           "ConstraintSystem arena already active");
+    constraintSystemArena.emplace();
   }
 
-  void destroyTypeCheckerArena() {
-    assert(hasTypeCheckerArena() && "TypeChecker arena not active");
-    typeCheckerArena.reset();
+  void destroyConstraintSystemArena() {
+    assert(hasConstraintSystemArena() && "ConstraintSystem arena not active");
+    constraintSystemArena.reset();
   }
 
-  bool hasTypeCheckerArena() const { return typeCheckerArena.hasValue(); }
+  bool hasConstraintSystemArena() const {
+    return constraintSystemArena.hasValue();
+  }
 
   /// \returns the TypeArena for \p kind. \p kind can't be UnresolvedExpr!
   TypeArena &getTypeArena(ArenaKind kind) {
     switch (kind) {
     case ArenaKind::Permanent:
       return permanentArena;
-    case ArenaKind::TypeChecker:
-      assert(hasTypeCheckerArena() && "TypeChecker allocator isn't active!");
-      return *typeCheckerArena;
+    case ArenaKind::ConstraintSystem:
+      assert(hasConstraintSystemArena() &&
+             "ConstraintSystem allocator isn't active!");
+      return *constraintSystemArena;
     case ArenaKind::UnresolvedExpr:
       llvm_unreachable(
           "Can't allocate types inside the UnresolvedExpr allocator!");
@@ -127,9 +131,9 @@ struct ASTContext::Impl {
 
   /// Custom destructor that runs the cleanups.
   ~Impl() {
-    assert(
-        !hasTypeCheckerArena() &&
-        "Destroying the ASTContext while the TypeChecker allocator is active!");
+    assert(!hasConstraintSystemArena() &&
+           "Destroying the ASTContext while the ConstraintSystem allocator is "
+           "active!");
     for (auto &cleanup : cleanups)
       cleanup();
   }
@@ -141,7 +145,7 @@ size_t ASTContext::Impl::getTotalMemoryUsed() const {
   value += llvm::capacity_in_bytes(cleanups);
   value += getMemoryUsed(ArenaKind::Permanent);
   value += getMemoryUsed(ArenaKind::UnresolvedExpr);
-  value += getMemoryUsed(ArenaKind::TypeChecker);
+  value += getMemoryUsed(ArenaKind::ConstraintSystem);
   return value;
 }
 
@@ -151,23 +155,26 @@ size_t ASTContext::Impl::getMemoryUsed(ArenaKind arena) const {
     return permanentArena.getTotalMemory();
   case ArenaKind::UnresolvedExpr:
     return unresolvedExprArena.getTotalMemory();
-  case ArenaKind::TypeChecker:
-    if (!typeCheckerArena)
+  case ArenaKind::ConstraintSystem:
+    if (!constraintSystemArena)
       return 0;
-    return typeCheckerArena->getTotalMemory();
+    return constraintSystemArena->getTotalMemory();
   }
   llvm_unreachable("Unknown ArenaKind");
 }
 
-//===- TypeCheckerArenaRAII -----------------------------------------------===//
+//===- RAIIConstraintSystemArena ------------------------------------------===//
 
-TypeCheckerArenaRAII::TypeCheckerArenaRAII(ASTContext &ctxt) : ctxt(ctxt) {
-  ctxt.getImpl().initTypeCheckerArena();
+RAIIConstraintSystemArena::RAIIConstraintSystemArena(ASTContext &ctxt)
+    : ctxt(ctxt) {
+  ctxt.getImpl().initConstraintSystemArena();
 }
 
-TypeCheckerArenaRAII::~TypeCheckerArenaRAII() {
-  ctxt.getImpl().destroyTypeCheckerArena();
+RAIIConstraintSystemArena::~RAIIConstraintSystemArena() {
+  ctxt.getImpl().destroyConstraintSystemArena();
 }
+
+//===- Utilities ----------------------------------------------------------===//
 
 static IntegerWidth getPointerWidth(ASTContext &ctxt) {
   return IntegerWidth::pointer(ctxt.getTargetTriple());
@@ -277,15 +284,22 @@ llvm::BumpPtrAllocator &ASTContext::getArena(ArenaKind kind) {
     return getImpl().permanentArena;
   case ArenaKind::UnresolvedExpr:
     return getImpl().unresolvedExprArena;
-  case ArenaKind::TypeChecker:
-    assert(getImpl().hasTypeCheckerArena() && "TypeChecker arena not active!");
-    return *getImpl().typeCheckerArena;
+  case ArenaKind::ConstraintSystem:
+    assert(getImpl().hasConstraintSystemArena() &&
+           "ConstraintSystem arena not active!");
+    return *getImpl().constraintSystemArena;
   }
   llvm_unreachable("unknown allocator kind");
 }
 
-bool ASTContext::hasTypeCheckerArena() const {
-  return getImpl().hasTypeCheckerArena();
+bool ASTContext::hasConstraintSystemArena() const {
+  return getImpl().hasConstraintSystemArena();
+}
+
+RAIIConstraintSystemArena ASTContext::createConstraintSystemArena() {
+  if (hasConstraintSystemArena())
+    llvm_unreachable("Only one ConstraintSystem Arena can exist at a time!");
+  return {*this};
 }
 
 void ASTContext::freeUnresolvedExprs() {
@@ -348,8 +362,9 @@ void ASTContext::getAllBuiltinTypes(SmallVectorImpl<CanType> &results) const {
 
 /// \returns The ArenaKind to use for a type using \p properties.
 static ArenaKind getArena(TypeProperties properties) {
-  return (properties & TypeProperties::hasTypeVariable) ? ArenaKind::TypeChecker
-                                                        : ArenaKind::Permanent;
+  return (properties & TypeProperties::hasTypeVariable)
+             ? ArenaKind::ConstraintSystem
+             : ArenaKind::Permanent;
 }
 
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
@@ -493,17 +508,17 @@ FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
 
 TypeVariableType *TypeVariableType::createGeneral(ASTContext &ctxt,
                                                   unsigned id) {
-  return new (ctxt, ArenaKind::TypeChecker)
+  return new (ctxt, ArenaKind::ConstraintSystem)
       TypeVariableType(ctxt, id, TypeVariableKind::General);
 }
 
 TypeVariableType *TypeVariableType::createInteger(ASTContext &ctxt,
                                                   unsigned id) {
-  return new (ctxt, ArenaKind::TypeChecker)
+  return new (ctxt, ArenaKind::ConstraintSystem)
       TypeVariableType(ctxt, id, TypeVariableKind::Integer);
 }
 
 TypeVariableType *TypeVariableType::createFloat(ASTContext &ctxt, unsigned id) {
-  return new (ctxt, ArenaKind::TypeChecker)
+  return new (ctxt, ArenaKind::ConstraintSystem)
       TypeVariableType(ctxt, id, TypeVariableKind::Float);
 }

@@ -17,8 +17,7 @@ using namespace sora;
 namespace {
 class TypeTest : public ::testing::Test {
 protected:
-  TypeTest() {
-    tcArena.emplace(*ctxt);
+  TypeTest() : csArena(ctxt->createConstraintSystemArena()) {
 
     refType = ReferenceType::get(ctxt->i32Type, false);
     maybeType = MaybeType::get(ctxt->i32Type);
@@ -30,11 +29,6 @@ protected:
     fnType = FunctionType::get({}, refType);
   }
 
-  ~TypeTest() {
-    tcArena.reset();
-    ctxt.reset();
-  }
-
   IntegerType *getSignedInt(IntegerWidth width) {
     return IntegerType::getSigned(*ctxt, width);
   }
@@ -43,7 +37,11 @@ protected:
     return IntegerType::getUnsigned(*ctxt, width);
   }
 
-  Optional<TypeCheckerArenaRAII> tcArena;
+  SourceManager srcMgr;
+  DiagnosticEngine diagEng{srcMgr};
+  std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
+
+  RAIIConstraintSystemArena csArena;
 
   Type refType;
   Type maybeType;
@@ -53,10 +51,6 @@ protected:
   Type intTyVarType;
   Type fltTyVarType;
   Type fnType;
-
-  SourceManager srcMgr;
-  DiagnosticEngine diagEng{srcMgr};
-  std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 };
 } // namespace
 

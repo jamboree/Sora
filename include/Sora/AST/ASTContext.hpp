@@ -34,25 +34,33 @@ enum class ArenaKind : uint8_t {
   /// fully typechecked.
   /// This arena is never used to allocate types;
   UnresolvedExpr,
-  /// The arena used by the Typechecker. This is where TypeVariables, types
-  /// containing TypeVariables & constraints are allocated.
-  /// This allocator is not active by default. It can ONLY be used when a
-  /// TypeCheckerArenaRAII is active.
-  TypeChecker
+  /// The arena used by the Typechecker's ConstraintSystem. This is where
+  /// TypeVariables, types containing TypeVariables & constraints themselves are
+  /// allocated. This allocator is not active by default. It can ONLY be used
+  /// when a RAIIConstraintSystemArena object is alive.
+  ConstraintSystem
 };
 
-/// An RAII object that enables usage of the TypeChecker's arena.
-/// Once this object is destroyed, everything within the TypeChecker arena is
-/// freed.
-struct TypeCheckerArenaRAII {
-  ASTContext &ctxt;
-
+/// An RAII object that enables usage of the ConstraintSystem's arena.
+/// Once this object is destroyed, everything within the ConstraintSystem arena
+/// is freed.
+class RAIIConstraintSystemArena final {
+private:
   /// This object shouldn't be copyable.
-  TypeCheckerArenaRAII(const TypeCheckerArenaRAII &) = delete;
-  TypeCheckerArenaRAII &operator=(const TypeCheckerArenaRAII &) = delete;
+  RAIIConstraintSystemArena(const RAIIConstraintSystemArena &) = delete;
+  RAIIConstraintSystemArena &
+  operator=(const RAIIConstraintSystemArena &) = delete;
 
-  TypeCheckerArenaRAII(ASTContext &ctxt);
-  ~TypeCheckerArenaRAII();
+  /// Only the ASTContext can create those
+  friend class ASTContext;
+  RAIIConstraintSystemArena(ASTContext &ctxt);
+
+public:
+  RAIIConstraintSystemArena(RAIIConstraintSystemArena &&) = default;
+  RAIIConstraintSystemArena &operator=(RAIIConstraintSystemArena &&) = default;
+
+  ASTContext &ctxt;
+  ~RAIIConstraintSystemArena();
 };
 
 /// The ASTContext is a large object designed as the core of the AST.
@@ -102,9 +110,14 @@ public:
     return allocate(sizeof(Ty), alignof(Ty), allocator);
   }
 
-  /// \returns true if the ArenaKind::TypeChecker allocator is active.
-  /// It is only active if there's one active TypeCheckerArenaRAII.
-  bool hasTypeCheckerArena() const;
+  /// \returns true if the ArenaKind::ConstraintSystem allocator is active.
+  /// It is only active if there's one active RAIIConstraintSystemArena.
+  bool hasConstraintSystemArena() const;
+
+  /// Creates a new ConstraintSystem arena with a lifetime tied to the returned
+  /// object's.
+  /// \c hasConstraintSystemArena() must return false for this to be used!
+  RAIIConstraintSystemArena createConstraintSystemArena();
 
   /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
   void freeUnresolvedExprs();

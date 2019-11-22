@@ -536,7 +536,9 @@ enum class TypeVariableKind {
 /// Type Variable Type
 ///
 /// Used by the typechecker. This type is never unique, and is always allocated
-/// in the ASTContext's TypeChecker allocator.
+/// in the ASTContext's ConstraintSystem allocator.
+/// Note that types containing TypeVariables are also allocated in the
+/// ASTContext's ConstraintSystem allocator.
 ///
 /// This type is always canonical.
 class TypeVariableType final : public TypeBase {
