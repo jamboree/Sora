@@ -41,7 +41,8 @@ class alignas(PatternAlignement) Pattern {
   PatternKind kind;
   /// Make use of the padding bits by allowing derived class to store data here.
   /// NOTE: Derived classes are expected to initialize the bitfield themselves.
-  LLVM_PACKED(union Bits {
+  LLVM_PACKED_START; 
+  union Bits {
     Bits() : raw() {}
     // Raw bits (to zero-init the union)
     char raw[7];
@@ -49,7 +50,8 @@ class alignas(PatternAlignement) Pattern {
     struct {
       uint32_t numElements;
     } tuplePattern;
-  });
+  };
+  LLVM_PACKED_END;
   static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
