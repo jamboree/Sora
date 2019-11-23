@@ -39,14 +39,16 @@ private:
     Pointer
   };
 
+  struct Data {
+    Data(Kind kind, width_t width) : kind(kind), width(width) {}
+
+    Kind kind;
+    width_t width;
+  };
+
   union {
     uint32_t raw;
-    struct Data {
-      Data(Kind kind, width_t width) : kind(kind), width(width) {}
-
-      Kind kind;
-      width_t width;
-    } data;
+    Data data;
     static_assert(sizeof(Data) == 4, "Data must be 32 bits!");
   };
 
@@ -69,9 +71,7 @@ public:
   }
 
   /// \returns an IntegerWidth representing an arbitrary precision integer
-  static IntegerWidth arbitrary() {
-    return IntegerWidth(Kind::Arbitrary);
-  }
+  static IntegerWidth arbitrary() { return IntegerWidth(Kind::Arbitrary); }
 
   /// \returns an IntegerWidth representing a pointer-sized integer (16, 32
   /// or 64 bits depending on the platform).
