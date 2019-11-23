@@ -13,6 +13,7 @@
 
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
+#include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticConsumer.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -67,8 +68,9 @@ template <typename Ty> struct PassArgument { using type = Ty; };
 /// usable in diagnostics.
 template <typename Ty> struct DiagnosticArgumentFormatter {
   static std::string format(Ty value) {
-    static_assert(
-        false,
+    // This below will always evaluate to false and trip when ::format 
+    // doesn't exist for that type
+    static_assert(!std::is_same<Ty, Ty>::value,
         "No specialization of DiagnosticArgumentFormatter for this type.");
   }
 };
@@ -266,7 +268,7 @@ public:
   template <typename Consumer, typename... Args,
             typename = typename std::enable_if_t<
                 std::is_base_of<DiagnosticConsumer, Consumer>::value, Consumer>>
-  void createConsumer(Args&&... args) {
+  void createConsumer(Args &&... args) {
     setConsumer(std::make_unique<Consumer>(std::forward<Args>(args)...));
   }
 
