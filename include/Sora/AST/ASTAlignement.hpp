@@ -27,7 +27,7 @@ class TypeRepr;
   constexpr std::size_t CLASS##FreeLowBits = FREE_BITS_DESIRED##u;             \
   constexpr std::size_t CLASS##Alignement = 1u << FREE_BITS_DESIRED##u
 
-DECLARE(ASTContext, 2);
+DECLARE(ASTContext, 3);
 DECLARE(ASTScope, 3);
 DECLARE(Decl, 3);
 DECLARE(DeclContext, 3);
