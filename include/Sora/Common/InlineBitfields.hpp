@@ -40,7 +40,7 @@ namespace sora {
 /// NOTE: When passing the bit count to these macros, please do NOT precompute
 /// the total. Instead, sum the bit counts in field order. This makes visually
 /// verifying that all the fields are accounted for easier. For example:
-/// INLINE_BITFIELD(Foo, Bar, 1+3+7+2, w:1, x:3, y:7, z:2);
+/// SORA_INLINE_BITFIELD(Foo, Bar, 1+3+7+2, w:1, x:3, y:7, z:2);
 
 /// Define a base bitfield for type 'T' with 'C' bits used.
 ///
@@ -79,7 +79,7 @@ namespace sora {
 /// For optimal code gen, place naturally sized fields at the end, with the
 /// largest naturally sized field at the very end. For example:
 ///
-/// INLINE_BITFIELD_FULL(Foo, Bar, 1+8+16,
+/// SORA_INLINE_BITFIELD_FULL(Foo, Bar, 1+8+16,
 ///   flag : 1,
 ///   : NumPadBits, // pad the center, not the end
 ///   x : 8,
