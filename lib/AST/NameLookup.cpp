@@ -51,6 +51,8 @@ struct ASTScopeLookup {
 
   /// \returns true if \p decl should be considered as a result
   bool shouldConsider(ValueDecl *decl) {
+    if (options.ignoreIllegalRedeclarations && decl->isIllegalRedeclaration())
+      return false;
     return considerEveryResult() ? true : decl->getIdentifier() == ident;
   }
 

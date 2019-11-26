@@ -31,6 +31,9 @@ struct UnqualifiedLookupOptions {
   /// If set to true, lookup will stop after looking into the first
   /// SourceFile it finds, whether it has results or not;
   bool onlyLookInCurrentFile = false;
+  /// If true, illegal redeclarations are ignored.
+  /// Default is true.
+  bool ignoreIllegalRedeclarations = true;
 };
 
 /// Class used to configure, execute and collect the results of an unqualified
