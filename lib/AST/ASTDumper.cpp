@@ -287,7 +287,7 @@ public:
     dumpCommon(expr);
     out << ' ';
     dumpLoc(expr->getLoc(), "loc");
-    out << " decl='" << expr->getIdentifier() << "@";
+    out << " decl='" << expr->getIdentifier() << "'@";
     ValueDecl *decl = expr->getValueDecl();
     // Print the file name only if the Expr isn't in the same file as the decl
     // FIXME: Ideally, the decl should be printed as a "path".
