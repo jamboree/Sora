@@ -8,6 +8,7 @@
 #include "Sora/AST/Expr.hpp"
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/Decl.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include <type_traits>
@@ -74,6 +75,14 @@ Expr *Expr::ignoreParens() {
 void *UnresolvedExpr::operator new(size_t size, ASTContext &ctxt,
                                    unsigned align) {
   return ctxt.allocate(size, align, ArenaKind::UnresolvedExpr);
+}
+
+Identifier DeclRefExpr::getIdentifier() const { return decl->getIdentifier(); }
+
+DeclRefExpr::DeclRefExpr(UnresolvedDeclRefExpr *udre, ValueDecl *decl)
+    : DeclRefExpr(udre->getIdentifierLoc(), decl) {
+  assert(udre->getIdentifier() == decl->getIdentifier() &&
+         "Incorrect Resolution!");
 }
 
 APInt IntegerLiteralExpr::getRawValue() const {

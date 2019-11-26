@@ -31,6 +31,7 @@ protected:
     unresDeclRefExpr = new (*ctxt) UnresolvedDeclRefExpr({}, beg);
     unresMembRefExpr = new (*ctxt)
         UnresolvedMemberRefExpr(unresDeclRefExpr, mid, false, end, {});
+    declRefExpr = new (*ctxt) DeclRefExpr(beg, nullptr);
     discardExpr = new (*ctxt) DiscardExpr(beg);
     intLitExpr = new (*ctxt) IntegerLiteralExpr("0", beg);
     fltLitExpr = new (*ctxt) FloatLiteralExpr("0", beg);
@@ -60,6 +61,7 @@ protected:
 
   Expr *unresDeclRefExpr;
   Expr *unresMembRefExpr;
+  Expr *declRefExpr;
   Expr *discardExpr;
   Expr *intLitExpr;
   Expr *fltLitExpr;
@@ -83,6 +85,7 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<UnresolvedExpr>(unresDeclRefExpr));
   EXPECT_TRUE(isa<UnresolvedMemberRefExpr>(unresMembRefExpr));
   EXPECT_TRUE(isa<UnresolvedExpr>(unresMembRefExpr));
+  EXPECT_TRUE(isa<DeclRefExpr>(declRefExpr));
   EXPECT_TRUE(isa<DiscardExpr>(discardExpr));
   EXPECT_TRUE(isa<IntegerLiteralExpr>(intLitExpr));
   EXPECT_TRUE(isa<AnyLiteralExpr>(intLitExpr));
@@ -121,7 +124,6 @@ TEST_F(ExprTest, UnresolvedExprs) {
 
 TEST_F(ExprTest, getSourceRange) {
   // UnresolvedDeclRefExpr
-  
   EXPECT_EQ(beg, unresDeclRefExpr->getBegLoc());
   EXPECT_EQ(beg, unresDeclRefExpr->getLoc());
   EXPECT_EQ(beg, unresDeclRefExpr->getEndLoc());
@@ -132,6 +134,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(end, unresMembRefExpr->getEndLoc());
   EXPECT_EQ(mid, unresMembRefExpr->getLoc());
   EXPECT_EQ(SourceRange(beg, end), unresMembRefExpr->getSourceRange());
+
+  // DeclRefExpr
+  EXPECT_EQ(beg, declRefExpr->getBegLoc());
+  EXPECT_EQ(beg, declRefExpr->getLoc());
+  EXPECT_EQ(beg, declRefExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), declRefExpr->getSourceRange());
 
   // DiscardExpr
   EXPECT_EQ(beg, discardExpr->getBegLoc());

@@ -75,6 +75,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   //===- Expr -------------------------------------------------------------===//
 
   TRIVIAL_VISIT(UnresolvedDeclRefExpr)
+  TRIVIAL_VISIT(DeclRefExpr)
   TRIVIAL_VISIT(DiscardExpr)
   TRIVIAL_VISIT(AnyLiteralExpr)
   TRIVIAL_VISIT(ErrorExpr)

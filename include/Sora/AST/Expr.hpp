@@ -24,6 +24,7 @@
 namespace sora {
 class ASTContext;
 class ASTWalker;
+class ValueDecl;
 
 /// Kinds of Expressions
 enum class ExprKind : uint8_t {
@@ -188,6 +189,7 @@ public:
   SourceLoc getBegLoc() const { return identLoc; }
   SourceLoc getEndLoc() const { return identLoc; }
 
+  SourceLoc getIdentifierLoc() const { return identLoc; }
   Identifier getIdentifier() const { return ident; }
 
   static bool classof(const Expr *expr) {
@@ -238,6 +240,34 @@ public:
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::UnresolvedMemberRef;
+  }
+};
+
+/// Represents a resolved reference to an value. This is created by
+/// Semantic Analysis from UnresolvedDeclRefExprs.
+class DeclRefExpr final : public Expr {
+  SourceLoc identLoc;
+  ValueDecl *decl;
+
+public:
+  DeclRefExpr(SourceLoc identLoc, ValueDecl *decl)
+      : Expr(ExprKind::DeclRef), identLoc(identLoc), decl(decl) {}
+
+  /// Creates a DeclRefExpr from an UnresolvedDeclRefExpr.
+  /// Note that the identifier of the udre must match the identifier of the
+  /// decl.
+  DeclRefExpr(UnresolvedDeclRefExpr *udre, ValueDecl *decl);
+
+  ValueDecl *getValueDecl() const { return decl; }
+
+  SourceLoc getBegLoc() const { return identLoc; }
+  SourceLoc getEndLoc() const { return identLoc; }
+
+  SourceLoc getIdentifierLoc() const { return identLoc; }
+  Identifier getIdentifier() const;
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::DeclRef;
   }
 };
 

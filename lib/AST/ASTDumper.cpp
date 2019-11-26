@@ -283,6 +283,22 @@ public:
     visit(expr->getBase());
   }
 
+  void visitDeclRefExpr(DeclRefExpr *expr) {
+    dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLoc(), "loc");
+    out << " decl='" << expr->getIdentifier() << "@";
+    ValueDecl *decl = expr->getValueDecl();
+    // Print the file name only if the Expr isn't in the same file as the decl
+    // FIXME: Ideally, the decl should be printed as a "path".
+    // e.g. if we have foo, which is inside doBar, which is inside Bar, we
+    // should print "Bar.doBar.foo"
+    bool printFileName =
+        !decl->getSourceFile().contains(expr->getIdentifierLoc());
+    decl->getLoc().print(out, srcMgr, printFileName);
+    out << '\n';
+  }
+
   void visitDiscardExpr(DiscardExpr *expr) {
     dumpCommon(expr);
     out << ' ';
