@@ -418,6 +418,7 @@ public:
   /// Create an ErrorExpr from an UnresolvedExpr.
   /// This is simply a convenience method to avoid doing
   /// "ErrorExpr(theExpr->getSourceRange())" which can be quite repetitive.
+  /// Please note that \p expr *is not* saved.
   /// \param expr the expression that couldn't be resolved
   ErrorExpr(UnresolvedExpr *expr)
       : Expr(ExprKind::Error), range(expr->getSourceRange()) {}
