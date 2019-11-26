@@ -9,6 +9,10 @@
 # define PATTERN(KIND, PARENT)
 #endif
 
+#ifndef LAST_PATTERN
+# define LAST_PATTERN(KIND)
+#endif
+
 //===----------------------------------------------------------------------===//
 
 PATTERN(Var, Pattern)
@@ -18,6 +22,9 @@ PATTERN(Paren, Pattern)
 PATTERN(Tuple, Pattern)
 PATTERN(Typed, Pattern)
 
+LAST_PATTERN(Typed)
+
 //===----------------------------------------------------------------------===//
 
 #undef PATTERN
+#undef LAST_PATTERN

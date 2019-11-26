@@ -21,6 +21,10 @@
 # define DECL_RANGE(KIND, FIRST, LAST)
 #endif
 
+#ifndef LAST_DECL
+# define LAST_DECL(KIND)
+#endif
+
 //===----------------------------------------------------------------------===//
 
 ABSTRACT_DECL(Named, Decl)
@@ -35,9 +39,12 @@ ABSTRACT_DECL(PatternBinding, Decl)
   DECL(Let, PatternBindingDecl)
   DECL_RANGE(PatternBinding, Let, Let)
 
+LAST_DECL(Let)
+
 //===----------------------------------------------------------------------===//
 
 #undef DECL
 #undef VALUE_DECL
 #undef ABSTRACT_DECL
 #undef DECL_RANGE
+#undef LAST_DECL

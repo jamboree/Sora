@@ -9,6 +9,10 @@
 # define TYPEREPR(KIND, PARENT)
 #endif
 
+#ifndef LAST_TYPEREPR
+# define LAST_TYPEREPR(KIND)
+#endif
+
 //===----------------------------------------------------------------------===//
 
 TYPEREPR(Identifier, TypeRepr)
@@ -17,6 +21,9 @@ TYPEREPR(Tuple, TypeRepr)
 TYPEREPR(Reference, TypeRepr)
 TYPEREPR(Maybe, TypeRepr)
 
+LAST_TYPEREPR(Maybe)
+
 //===----------------------------------------------------------------------===//
 
 #undef TYPEREPR
+#undef LAST_TYPEREPR

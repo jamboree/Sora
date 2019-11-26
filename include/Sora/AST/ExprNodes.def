@@ -17,6 +17,10 @@
 # define EXPR_RANGE(NAME, FIRST, LAST)
 #endif
 
+#ifndef LAST_EXPR
+# define LAST_EXPR(KIND)
+#endif
+
 //===----------------------------------------------------------------------===//
 
 ABSTRACT_EXPR(Unresolved, Expr)
@@ -44,8 +48,11 @@ EXPR(ForceUnwrap, Expr)
 EXPR(Binary, Expr)
 EXPR(Unary, Expr)
 
+LAST_EXPR(Unary)
+
 //===----------------------------------------------------------------------===//
 
 #undef EXPR
 #undef ABSTRACT_EXPR
 #undef EXPR_RANGE
+#undef LAST_EXPR

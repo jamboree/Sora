@@ -17,6 +17,10 @@
 # define STMT_RANGE(KIND, FIRST, LAST)
 #endif
 
+#ifndef LAST_STMT
+# define LAST_STMT(KIND)
+#endif
+
 //===----------------------------------------------------------------------===//
 
 STMT(Continue, Stmt)
@@ -28,8 +32,11 @@ ABSTRACT_STMT(Conditional, Stmt)
   STMT(While, ConditionalStmt)
   STMT_RANGE(Conditional, If, While)
 
+LAST_STMT(While)
+
 //===----------------------------------------------------------------------===//
 
 #undef STMT
 #undef ABSTRACT_STMT
 #undef STMT_RANGE
+#undef LAST_STMT
