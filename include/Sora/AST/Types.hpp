@@ -553,15 +553,29 @@ public:
 ///
 /// This type is always canonical.
 class TypeVariableType final : public TypeBase {
+  // Also allow allocation of TypeVariables using the ASTContext.
+  void *operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
+                     unsigned align = alignof(TypeVariableType)) {
+    return TypeBase::operator new(size, ctxt, allocator, align);
+  }
+
+public:
   TypeVariableType(ASTContext &ctxt, unsigned id)
       : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
                  /*isCanonical*/ true) {
     bits.TypeVariableType.id = id;
   }
 
-  friend ASTContext;
+  /// Publicly allow operator new for TypeVariables because, as an
+  /// implementation detail, the ConstraintSystem allocates an extra data
+  /// structure after the TypeVariable to store additional data, such as its
+  /// substitution or kind.
+  void *operator new(size_t, void *mem) noexcept {
+    assert(mem);
+    return mem;
+  }
 
-public:
+  /// Creates a TypeVariable with id \p id using \p ctxt.
   static TypeVariableType *create(ASTContext &ctxt, unsigned id);
 
   /// \returns the ID of this type variable
