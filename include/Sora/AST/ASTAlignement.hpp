@@ -36,7 +36,7 @@ DECLARE(Pattern, 3);
 DECLARE(SourceFile, 3);
 DECLARE(Stmt, 3);
 DECLARE(TypeBase, 3);
-DECLARE(TypeRepr, 1);
+DECLARE(TypeRepr, 3);
 #undef DECLARE
 } // namespace sora
 
