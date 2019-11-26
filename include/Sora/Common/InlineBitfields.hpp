@@ -71,7 +71,7 @@ namespace sora {
   static_assert(sizeof(T##Bitfield) <= 8, "Bitfield overflow")
 
 #define SORA_INLINE_BITFIELD(T, U, C, ...) \
-  INLINE_BITFIELD_TEMPLATE(T, U, C, 0, __VA_ARGS__)
+  SORA_INLINE_BITFIELD_TEMPLATE(T, U, C, 0, __VA_ARGS__)
 
 /// Define a full bitfield for type 'T' that uses all of the remaining bits in
 /// the inline bitfield.
