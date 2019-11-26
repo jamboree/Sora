@@ -19,7 +19,7 @@ bool Identifier::operator!=(StringRef other) const { return str() != other; }
 
 bool Identifier::operator<(StringRef other) const { return str() <= other; }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &out, Identifier ident) {
+llvm::raw_ostream &sora::operator<<(llvm::raw_ostream &out, Identifier ident) {
   out << ident.str();
   return out;
 }
