@@ -23,7 +23,12 @@ namespace sora {
 /// This class also offers a "parse" methods to parse an integer of that width.
 class IntegerWidth final {
 public:
+  /// The type of the integer width stored inside this IntegerWidth object.
+  /// Currently, this is a 16 bits unsigned integer.
   using width_t = uint16_t;
+
+  /// The type of an IntegerWidth represented as an opaque value
+  using opaque_t = uint32_t;
 
 private:
   enum class Kind : uint8_t {
@@ -47,22 +52,30 @@ private:
   };
 
   union {
-    uint32_t raw;
+    opaque_t opaque;
     Data data;
-    static_assert(sizeof(Data) == 4, "Data must be 32 bits!");
+    static_assert(sizeof(Data) == sizeof(opaque_t),
+                  "Data is too large to fit in opaque_t");
   };
 
-  IntegerWidth(Kind kind, width_t width = 0) : data(kind, width) {}
+  IntegerWidth(Kind kind, width_t width) : data(kind, width) {}
+  IntegerWidth(uint32_t opaque) : opaque(opaque) {}
 
   friend struct llvm::DenseMapInfo<sora::IntegerWidth>;
-
-  unsigned getRaw() const { return raw; }
 
   bool isDenseMapSpecial() const {
     return data.kind == Kind::DMEmpty || data.kind == Kind::DMTombstone;
   }
 
 public:
+  /// Creates an IntegerWidth from a raw value
+  static IntegerWidth fromOpaqueValue(unsigned raw) {
+    return IntegerWidth(raw);
+  }
+
+  /// \returns this IntegerWidth as an opaque value
+  unsigned getOpaqueValue() const { return opaque; }
+
   /// \returns an IntegerWidth representing an integer with a fixed width of \p
   /// value. \p value can't be zero.
   static IntegerWidth fixed(width_t value) {
@@ -71,7 +84,7 @@ public:
   }
 
   /// \returns an IntegerWidth representing an arbitrary precision integer
-  static IntegerWidth arbitrary() { return IntegerWidth(Kind::Arbitrary); }
+  static IntegerWidth arbitrary() { return IntegerWidth(Kind::Arbitrary, 0); }
 
   /// \returns an IntegerWidth representing a pointer-sized integer (16, 32
   /// or 64 bits depending on the platform).
@@ -120,15 +133,15 @@ template <> struct DenseMapInfo<sora::IntegerWidth> {
   using IntegerWidth = sora::IntegerWidth;
 
   static IntegerWidth getEmptyKey() {
-    return IntegerWidth(IntegerWidth::Kind::DMEmpty);
+    return IntegerWidth(IntegerWidth::Kind::DMEmpty, 0);
   }
 
   static IntegerWidth getTombstoneKey() {
-    return IntegerWidth(IntegerWidth::Kind::DMTombstone);
+    return IntegerWidth(IntegerWidth::Kind::DMTombstone, 0);
   }
 
   static unsigned getHashValue(IntegerWidth value) {
-    return DenseMapInfo<unsigned>::getHashValue(value.getRaw());
+    return DenseMapInfo<unsigned>::getHashValue(value.getOpaqueValue());
   }
 
   static bool isEqual(IntegerWidth lhs, IntegerWidth rhs) { return lhs == rhs; }
