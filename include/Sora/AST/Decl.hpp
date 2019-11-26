@@ -84,8 +84,8 @@ protected:
   } bits;
   static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
-  // Children should be able to use placement new, as it is needed for children
-  // with trailing objects.
+  // Derived classes should be able to use placement new, as it is needed for
+  // classes with trailing objects.
   void *operator new(size_t, void *mem) noexcept {
     assert(mem);
     return mem;
