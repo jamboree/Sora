@@ -43,8 +43,7 @@ protected:
     tupleEltExpr = new (*ctxt) TupleElementExpr(begExpr, mid, false, end, 0);
     tupleExpr = TupleExpr::createEmpty(*ctxt, beg, end);
     parenExpr = new (*ctxt) ParenExpr(beg, midExpr, end);
-    callExpr =
-        new (*ctxt) CallExpr(begExpr, TupleExpr::createEmpty(*ctxt, beg, end));
+    callExpr = CallExpr::create(*ctxt, begExpr, {}, end);
     condExpr = new (*ctxt) ConditionalExpr(begExpr, mid, nullptr, {}, endExpr);
     forceUnwrapExpr = new (*ctxt) ForceUnwrapExpr(begExpr, end);
     binaryExpr =

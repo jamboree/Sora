@@ -361,10 +361,11 @@ parse_suffix:
     // If the '(' is on another line, this isn't a call.
     if (tok.isAtStartOfLine())
       break;
-    auto *args = parseTupleExpr().getOrNull();
-    if (!args)
+    SourceLoc lParenLoc, rParenLoc;
+    SmallVector<Expr *, 8> exprs;
+    if (!parseTupleExpr(lParenLoc, exprs, rParenLoc))
       return nullptr;
-    base = new (ctxt) CallExpr(base, args);
+    base = CallExpr::create(ctxt, base, lParenLoc, exprs, rParenLoc);
     goto parse_suffix;
   }
   case TokenKind::Dot:
@@ -480,35 +481,41 @@ Parser::parsePrimaryExpr(llvm::function_ref<void()> onNoExpr) {
   return expr ? makeParserResult(expr) : nullptr;
 }
 
-/*
-tuple-expression = '(' expression-list? ')'
-expression-list = expression (',' expression)*
-*/
 ParserResult<Expr> Parser::parseTupleExpr() {
   assert(tok.is(TokenKind::LParen));
-  SmallVector<Expr *, 4> elements;
-  SourceLoc lParen;
-  lParen = tok.getLoc();
-  auto parseFn = [&](unsigned k) -> bool {
-    auto result = parseExpr(
-        [&]() { diagnoseExpected(diag::expected_expr_after, k ? "," : "("); });
-
-    if (result.hasValue())
-      elements.push_back(result.get());
-    return result.hasValue();
-  };
-
-  SourceLoc rParen;
-  bool success =
-      parseTuple(rParen, parseFn, diag::expected_rparen_at_end_of_tuple_expr);
+  SmallVector<Expr *, 4> exprs;
+  SourceLoc lParen, rParen;
+  bool success = parseTupleExpr(lParen, exprs, rParen);
 
   assert(rParen && "no rParenLoc!");
 
   // Create a ParenExpr or TupleExpr depending on the number of elements.
   Expr *expr = nullptr;
-  if (elements.size() == 1)
-    expr = new (ctxt) ParenExpr(lParen, elements[0], rParen);
+  if (exprs.size() == 1)
+    expr = new (ctxt) ParenExpr(lParen, exprs[0], rParen);
   else
-    expr = TupleExpr::create(ctxt, lParen, elements, rParen);
+    expr = TupleExpr::create(ctxt, lParen, exprs, rParen);
   return makeParserResult(!success, expr);
+}
+
+/*
+tuple-expression = '(' expression-list? ')'
+expression-list = expression (',' expression)*
+*/
+bool Parser::parseTupleExpr(SourceLoc &lParenLoc,
+                            SmallVectorImpl<Expr *> &exprs,
+                            SourceLoc &rParenLoc) {
+  assert(tok.is(TokenKind::LParen));
+  lParenLoc = tok.getLoc();
+  auto parseFn = [&](unsigned k) -> bool {
+    auto result = parseExpr(
+        [&]() { diagnoseExpected(diag::expected_expr_after, k ? "," : "("); });
+
+    if (result.hasValue())
+      exprs.push_back(result.get());
+    return result.hasValue();
+  };
+
+  return parseTuple(rParenLoc, parseFn,
+                    diag::expected_rparen_at_end_of_tuple_expr);
 }

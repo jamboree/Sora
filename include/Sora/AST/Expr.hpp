@@ -611,10 +611,12 @@ class CallExpr final : public Expr,
   /// The function being called
   Expr *fn;
   /// The SourceLoc of the left and right parenthesis.
-  SourceLoc lParen, rParen;
+  SourceLoc lParenLoc, rParenLoc;
 
-  CallExpr(Expr *fn, SourceLoc lParen, ArrayRef<Expr *> args, SourceLoc rParen)
-      : Expr(ExprKind::Call), fn(fn), lParen(lParen), rParen(rParen) {
+  CallExpr(Expr *fn, SourceLoc lParenLoc, ArrayRef<Expr *> args,
+           SourceLoc rParenLoc)
+      : Expr(ExprKind::Call), fn(fn), lParenLoc(lParenLoc),
+        rParenLoc(rParenLoc) {
     bits.CallExpr.numArgs = args.size();
     std::uninitialized_copy(args.begin(), args.end(),
                             getTrailingObjects<Expr *>());
@@ -634,24 +636,24 @@ public:
 
   bool isArgsEmpty() const { return getNumArgs() == 0; }
   size_t getNumArgs() const { return bits.CallExpr.numArgs; }
-  MutableArrayRef<Expr *> getArg() {
+  MutableArrayRef<Expr *> getArgs() {
     return {getTrailingObjects<Expr *>(), getNumArgs()};
   }
   ArrayRef<Expr *> getArgs() const {
     return {getTrailingObjects<Expr *>(), getNumArgs()};
   }
-  Expr *getArg(size_t n) { return getArg()[n]; }
-  void setArg(size_t n, Expr *expr) { getArg()[n] = expr; }
+  Expr *getArg(size_t n) { return getArgs()[n]; }
+  void setArg(size_t n, Expr *expr) { getArgs()[n] = expr; }
 
   SourceLoc getBegLoc() const {
     assert(fn && "no fn");
     return fn->getBegLoc();
   }
-  SourceLoc getEndLoc() const { return rParen; }
+  SourceLoc getEndLoc() const { return getRParenLoc(); }
   SourceLoc getLoc() const { return fn->getLoc(); }
 
-  SourceLoc getLParenLoc() const { return lParen; }
-  SourceLoc getRParenLoc() const { return rParen; }
+  SourceLoc getLParenLoc() const { return lParenLoc; }
+  SourceLoc getRParenLoc() const { return rParenLoc; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Call;

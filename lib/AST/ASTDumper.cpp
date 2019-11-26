@@ -392,11 +392,17 @@ public:
 
   void visitCallExpr(CallExpr *expr) {
     dumpCommon(expr);
+    out << ' ';
+    dumpLoc(expr->getLParenLoc(), "lParenLoc");
+    out << ' ';
+    dumpLoc(expr->getRParenLoc(), "rParenLoc");
+    out << " numArgs=" << expr->getNumArgs() << ' ';
     out << '\n';
 
     auto indent = increaseIndent();
     visit(expr->getFn());
-    visit(expr->getArgs());
+    for (Expr *arg : expr->getArgs())
+      visit(arg);
   }
 
   void visitConditionalExpr(ConditionalExpr *expr) {

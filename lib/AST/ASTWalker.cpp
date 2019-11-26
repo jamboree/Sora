@@ -97,9 +97,9 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   }
 
   void visitTupleExpr(TupleExpr *expr) {
-    for (unsigned k = 0; k < expr->getNumElements(); ++k)
-      if (Expr *elem = doIt(expr->getElement(k)))
-        expr->setElement(k, elem);
+    for (Expr *&elem : expr->getElements())
+      if (Expr *newExpr = doIt(elem))
+        elem = newExpr;
   }
 
   void visitParenExpr(ParenExpr *expr) {
@@ -110,8 +110,9 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   void visitCallExpr(CallExpr *expr) {
     if (Expr *fn = doIt(expr->getFn()))
       expr->setFn(fn);
-    if (Expr *args = doIt(expr->getArgs()))
-      expr->setArgs(args);
+    for (Expr *&elem : expr->getArgs())
+      if (Expr *newExpr = doIt(elem))
+        elem = newExpr;
   }
 
   void visitConditionalExpr(ConditionalExpr *expr) {

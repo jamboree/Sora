@@ -190,9 +190,14 @@ public:
   /// Parses a primary-expression
   ParserResult<Expr> parsePrimaryExpr(llvm::function_ref<void()> onNoExpr);
 
-  /// Parses a tuple-expression
+  /// Parses a tuple-expression, returning a TupleExpr/ParenExpr on success.
   /// The parser must be positioned on the '('.
   ParserResult<Expr> parseTupleExpr();
+
+  /// Parses a tuple-expression.
+  /// The parser must be positioned on the '('.
+  bool parseTupleExpr(SourceLoc &lParenLoc, SmallVectorImpl<Expr *> &exprs,
+                      SourceLoc &rParenLoc);
 
   //===- Pattern Parsing --------------------------------------------------===//
 
@@ -232,7 +237,7 @@ public:
   /// \param cond where the result will be stored
   /// \param name the name of the condition (for diagnostics), e.g. "if".
   /// \returns true if no parsing error occured, false otherwise.
-  bool parseCondition(StmtCondition& cond, StringRef name);
+  bool parseCondition(StmtCondition &cond, StringRef name);
 
   //===- Type Parsing -----------------------------------------------------===//
 
