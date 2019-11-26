@@ -11,6 +11,7 @@
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/OperatorKinds.hpp"
 #include "Sora/AST/Type.hpp"
+#include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,6 +29,7 @@ class ASTWalker;
 enum class ExprKind : uint8_t {
 #define EXPR(KIND, PARENT) KIND,
 #define EXPR_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
+#define LAST_EXPR(KIND) Last_Expr = KIND
 #include "Sora/AST/ExprNodes.def"
 };
 
@@ -38,48 +40,59 @@ class alignas(ExprAlignement) Expr {
   void operator delete(void *)noexcept = delete;
 
   llvm::PointerIntPair<Type, 1, bool> typeAndIsImplicit;
-  ExprKind kind;
-  /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfields.
-  LLVM_PACKED_START;
-  union Bits {
-    Bits() : raw() {}
-    // Raw bits (to zero-init the union)
-    char raw[7];
-    // UnresolvedMemberRefExpr bits
-    struct {
-      // whether the operator used was the '->' operator
-      bool isArrow;
-    } unresMembRefExpr;
-    // BooleanLiteralExpr bits
-    struct {
-      bool value;
-    } booleanLiteralExpr;
-    /// TupleElementExpr bits
-    struct {
-      // whether the operator used was the '->' operator
-      bool isArrow;
-      // the index of the element in the tuple
-      unsigned index;
-    } tupleEltExpr;
-    /// TupleExpr bits
-    struct {
-      uint32_t numElements;
-    } tupleExpr;
-    /// BinaryExpr bits
-    struct {
-      BinaryOperatorKind opKind;
-    } binaryExpr;
-    /// UnaryExpr bits
-    struct {
-      UnaryOperatorKind opKind;
-    } unaryExpr;
-  };
-  LLVM_PACKED_END;
-  static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
-  Bits bits;
+  /// Number of bits needed for ExprKind
+  static constexpr unsigned kindBits =
+      countBitsUsed((unsigned)ExprKind::Last_Expr);
+
+  union Bits {
+    Bits() : rawBits(0) {}
+    uint64_t rawBits;
+
+    // clang-format off
+
+    // Expr
+    SORA_INLINE_BITFIELD_BASE(Expr, kindBits, 
+      kind : kindBits
+    );
+
+    // UnresolvedMemberRefExpr
+    SORA_INLINE_BITFIELD(UnresolvedMemberRefExpr, Expr, 1,
+      isArrow : 1  
+    );
+
+    // BooleanLiteralExpr
+    SORA_INLINE_BITFIELD(BooleanLiteralExpr, Expr, 1,
+      value : 1  
+    );
+
+    /// TupleElementExpr bits
+    SORA_INLINE_BITFIELD_FULL(TupleElementExpr, Expr, 32+1,
+      : NumPadBits,
+      index : 32,
+      isArrow : 1
+    );
+
+    /// TupleExpr
+    SORA_INLINE_BITFIELD_FULL(TupleExpr, Expr, 32,
+      : NumPadBits,
+      numElements : 32
+    );
+
+    /// BinaryExpr
+    SORA_INLINE_BITFIELD(BinaryExpr, Expr, 16, 
+      opKind : 16
+    );
+
+    /// UnaryExpr
+    SORA_INLINE_BITFIELD(UnaryExpr, Expr, 16, 
+      opKind : 16
+    );
+
+    // clang-format on
+  } bits;
+  static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
@@ -88,7 +101,7 @@ protected:
     return mem;
   }
 
-  Expr(ExprKind kind) : kind(kind) {}
+  Expr(ExprKind kind) { bits.Expr.kind = (uint64_t)kind; }
 
 public:
   // Publicly allow allocation of expressions using the ASTContext.
@@ -121,7 +134,7 @@ public:
             unsigned indent = 2) const;
 
   /// \return the kind of expression this is
-  ExprKind getKind() const { return kind; }
+  ExprKind getKind() const { return ExprKind(bits.Expr.kind); }
 
   /// \returns the SourceLoc of the first token of the expression
   SourceLoc getBegLoc() const;
@@ -202,7 +215,7 @@ public:
                           SourceLoc memberIdentLoc, Identifier memberIdent)
       : UnresolvedExpr(ExprKind::UnresolvedMemberRef), base(base), opLoc(opLoc),
         memberIdentLoc(memberIdentLoc), memberIdent(memberIdent) {
-    bits.unresMembRefExpr.isArrow = isArrow;
+    bits.UnresolvedMemberRefExpr.isArrow = isArrow;
   }
 
   Expr *getBase() const { return base; }
@@ -212,7 +225,7 @@ public:
   SourceLoc getOpLoc() const { return opLoc; }
 
   /// \returns true if the operator used was '->', false if it was '.'
-  bool isArrow() const { return bits.unresMembRefExpr.isArrow; }
+  bool isArrow() const { return bits.UnresolvedMemberRefExpr.isArrow; }
   /// \returns true if the operator used was '.', false if it was '->'
   bool isDot() const { return !isArrow(); }
 
@@ -337,10 +350,10 @@ class BooleanLiteralExpr final : public AnyLiteralExpr {
 public:
   BooleanLiteralExpr(bool value, SourceLoc loc)
       : AnyLiteralExpr(ExprKind::BooleanLiteral, loc) {
-    bits.booleanLiteralExpr.value = value;
+    bits.BooleanLiteralExpr.value = value;
   }
 
-  bool getValue() const { return bits.booleanLiteralExpr.value; }
+  bool getValue() const { return bits.BooleanLiteralExpr.value; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::BooleanLiteral;
@@ -431,20 +444,21 @@ public:
                    SourceLoc indexLoc, unsigned index)
       : Expr(ExprKind::TupleElement), base(base), opLoc(opLoc),
         indexLoc(indexLoc) {
-    bits.tupleEltExpr.index = index;
+    bits.TupleElementExpr.index = index;
+    bits.TupleElementExpr.isArrow = isArrow;
   }
 
   Expr *getBase() const { return base; }
   void setBase(Expr *base) { this->base = base; }
 
-  unsigned getIndex() const { return bits.tupleEltExpr.index; }
+  unsigned getIndex() const { return bits.TupleElementExpr.index; }
   SourceLoc getIndexLoc() const { return indexLoc; }
 
   /// \returns the SourceLoc of the '.' or '->'
   SourceLoc getOpLoc() const { return opLoc; }
 
   /// \returns true if the operator used was '->', false if it was '.'
-  bool isArrow() const { return bits.tupleEltExpr.isArrow; }
+  bool isArrow() const { return bits.TupleElementExpr.isArrow; }
   /// \returns true if the operator used was '.', false if it was '->'
   bool isDot() const { return !isArrow(); }
 
@@ -473,7 +487,7 @@ class TupleExpr final : public Expr,
       : Expr(ExprKind::Tuple), lParenLoc(lParenLoc), rParenLoc(rParenLoc) {
     assert(exprs.size() != 1 &&
            "Single-element tuples don't exist - Use ParenExpr!");
-    bits.tupleExpr.numElements = exprs.size();
+    bits.TupleExpr.numElements = exprs.size();
     std::uninitialized_copy(exprs.begin(), exprs.end(),
                             getTrailingObjects<Expr *>());
   }
@@ -492,7 +506,7 @@ public:
   }
 
   bool isEmpty() const { return getNumElements() == 0; }
-  size_t getNumElements() const { return bits.tupleExpr.numElements; }
+  size_t getNumElements() const { return bits.TupleExpr.numElements; }
   MutableArrayRef<Expr *> getElements() {
     return {getTrailingObjects<Expr *>(), getNumElements()};
   }
@@ -657,7 +671,10 @@ private:
 public:
   BinaryExpr(Expr *lhs, OpKind opKind, SourceLoc opLoc, Expr *rhs)
       : Expr(ExprKind::Binary), lhs(lhs), rhs(rhs), opLoc(opLoc) {
-    bits.binaryExpr.opKind = opKind;
+    bits.BinaryExpr.opKind = (uint64_t)opKind;
+    assert(
+        OpKind(bits.BinaryExpr.opKind) == opKind &&
+        "bits.BinaryExpr.opKind is not large enough to represent every OpKind");
   }
 
   Expr *getLHS() const { return lhs; }
@@ -667,7 +684,7 @@ public:
   void setRHS(Expr *rhs) { this->rhs = rhs; }
 
   SourceLoc getOpLoc() const { return opLoc; }
-  OpKind getOpKind() const { return bits.binaryExpr.opKind; }
+  OpKind getOpKind() const { return OpKind(bits.BinaryExpr.opKind); }
   const char *getOpKindStr() const { return to_string(getOpKind()); }
   /// \returns the spelling of the operator (e.g. "+" for Add)
   const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }
@@ -724,14 +741,17 @@ private:
 public:
   UnaryExpr(OpKind opKind, SourceLoc opLoc, Expr *subExpr)
       : Expr(ExprKind::Unary), subExpr(subExpr), opLoc(opLoc) {
-    bits.unaryExpr.opKind = opKind;
+    bits.UnaryExpr.opKind = (uint64_t)opKind;
+    assert(
+        OpKind(bits.UnaryExpr.opKind) == opKind &&
+        "bits.UnaryExpr.opKind is not large enough to represent every OpKind");
   }
 
   Expr *getSubExpr() const { return subExpr; }
   void setSubExpr(Expr *expr) { subExpr = expr; }
 
   SourceLoc getOpLoc() const { return opLoc; }
-  OpKind getOpKind() const { return bits.unaryExpr.opKind; }
+  OpKind getOpKind() const { return OpKind(bits.UnaryExpr.opKind); }
   const char *getOpKindStr() const { return to_string(getOpKind()); }
   /// \returns the spelling of the operator
   const char *getOpSpelling() const { return sora::getSpelling(getOpKind()); }

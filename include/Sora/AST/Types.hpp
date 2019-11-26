@@ -11,6 +11,7 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Type.hpp"
+#include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/IntegerWidth.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -36,18 +37,17 @@ enum class TypeKind : uint8_t {
 #include "Sora/AST/TypeNodes.def"
 };
 
-/// Small (byte-sized) class to represent & manipulate type properties.
-class TypeProperties {
-  static TypeProperties merge() { return {}; }
-
+/// Small (byte-sized) struct to represent & manipulate type properties.
+struct TypeProperties {
   using value_t = uint8_t;
-  value_t value;
-
-public:
   enum Property : value_t { hasErrorType = 0x01, hasTypeVariable = 0x02 };
+
+  value_t value;
 
   TypeProperties() : TypeProperties(0) {}
   /*implicit*/ TypeProperties(value_t value) : value(value) {}
+
+  value_t getValue() const { return value; }
 
   TypeProperties operator&(TypeProperties other) const {
     return value_t(value & other.value);
@@ -76,14 +76,14 @@ public:
   }
 
   /// \returns true if at least one property of this type is activated.
-  /// Useful in conjunction with & to check for the presence of properties
+  /// Useful in conjunction with '&' to check for the presence of properties
   /// \verbatim
   ///   if(type->getTypeProperties() & TypeProperties::foo) { /* ... */ }
   /// \endverbatim
   operator bool() const { return value; }
 };
-
-static_assert(sizeof(TypeProperties) == 1, "TypeProperties is too large!");
+static_assert(sizeof(TypeProperties) == sizeof(TypeProperties::value_t),
+              "TypeProperties is too large!");
 
 /// Common base class for Types.
 class alignas(TypeBaseAlignement) TypeBase {
@@ -91,50 +91,63 @@ class alignas(TypeBaseAlignement) TypeBase {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfields.
-  LLVM_PACKED_START;
-  union Bits {
-    Bits() : raw() {}
-    // Raw bits (to zero-init the union)
-    char raw[6];
-    // IntegerType bits
-    struct {
-      bool isSigned;
-      IntegerWidth width;
-    } integerType;
-    /// FloatType bits
-    struct {
-      uint8_t floatKind;
-    } floatType;
-    /// TupleType bits
-    struct {
-      unsigned numElems;
-    } tupleType;
-    /// TypeVariableType bits
-    struct {
-      unsigned id;
-    } typeVariableType;
-    /// FunctionType bits
-    struct {
-      unsigned numArgs;
-    } functionType;
-  };
-  LLVM_PACKED_END;
-  static_assert(sizeof(Bits) == 6, "Bits is too large!");
-
-  //===--- 8 Bits ---===//
-  const TypeKind kind : 7;
-  const bool canonical : 1;
-  static_assert(
-      unsigned(TypeKind::Last_Type) <= (1 << 7),
-      "Not enough bits allocated to the TypeKind to represent every Type Kind");
-  //===--------------===//
-
-  TypeProperties properties;
-
 protected:
-  Bits bits;
+  /// Number of bits needed for TypeKinds
+  static constexpr unsigned kindBits =
+      countBitsUsed((unsigned)TypeKind::Last_Type);
+  /// Number of bits needed for TypeProperties's value
+  static constexpr unsigned typePropertiesBits =
+      sizeof(TypeProperties::value_t) * 8;
+  /// Number of bits needed for IntegerWidth's opaque value
+  static constexpr unsigned integerWidthBits =
+      sizeof(IntegerWidth::opaque_t) * 8;
+
+  union Bits {
+    Bits() : rawBits(0) {}
+    uint64_t rawBits;
+
+    // clang-format off
+
+    // TypeRepr
+    SORA_INLINE_BITFIELD_BASE(TypeBase, kindBits+1+typePropertiesBits, 
+      kind : kindBits,
+      isCanonical : 1,
+      typePropertiesValue : typePropertiesBits
+    );
+
+    // IntegerType 
+    SORA_INLINE_BITFIELD_FULL(IntegerType, TypeBase, 1+integerWidthBits,
+      : NumPadBits,
+      isSigned : 1,
+      integerWidth: integerWidthBits
+    );
+
+    // FloatType
+    SORA_INLINE_BITFIELD(FloatType, TypeBase, 8,
+      floatKind : 8
+    );
+
+    /// TupleType
+    SORA_INLINE_BITFIELD_FULL(TupleType, TypeBase, 32,
+      : NumPadBits,
+      numElems : 32
+    );
+
+    /// TypeVariableType
+    SORA_INLINE_BITFIELD_FULL(TypeVariableType, TypeBase, 32,
+      : NumPadBits,
+      id : 32
+    );
+
+    /// FunctionType
+    SORA_INLINE_BITFIELD_FULL(FunctionType, TypeBase, 32,
+      : NumPadBits,
+      numArgs : 32
+    );
+
+    // clang-format on
+  } bits;
+  static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
 private:
   /// This union always contains the ASTContext for canonical types.
@@ -163,8 +176,11 @@ protected:
   /// \param canonical whether this type is canonical
   TypeBase(TypeKind kind, TypeProperties properties, ASTContext &ctxt,
            bool canonical)
-      : kind(kind), canonical(canonical), properties(properties),
-        ctxtOrCanType(&ctxt) {}
+      : ctxtOrCanType(&ctxt) {
+    bits.TypeBase.kind = (uint64_t)kind;
+    bits.TypeBase.isCanonical = canonical;
+    bits.TypeBase.typePropertiesValue = properties.value;
+  }
 
 public:
   TypeBase(const TypeBase &) = delete;
@@ -172,12 +188,12 @@ public:
 
   /// \returns whether this type contains an ErrorType
   bool hasErrorType() const {
-    return properties & TypeProperties::hasErrorType;
+    return getTypeProperties() & TypeProperties::hasErrorType;
   }
 
   /// \returns whether this type contains a TypeVariable
   bool hasTypeVariable() const {
-    return properties & TypeProperties::hasTypeVariable;
+    return getTypeProperties() & TypeProperties::hasTypeVariable;
   }
 
   /// \returns the ASTContext in which this type is allocated
@@ -193,10 +209,12 @@ public:
   CanType getCanonicalType() const;
 
   /// \returns the TypeProperties of this type
-  TypeProperties getTypeProperties() const { return properties; }
+  TypeProperties getTypeProperties() const {
+    return TypeProperties(bits.TypeBase.typePropertiesValue);
+  }
 
   /// \returns whether this type is canonical
-  bool isCanonical() const { return canonical; }
+  bool isCanonical() const { return bits.TypeBase.isCanonical; }
 
   /// Prints this type
   void print(raw_ostream &out,
@@ -207,15 +225,14 @@ public:
   getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;
 
   /// \returns the kind of type this is
-  TypeKind getKind() const { return kind; }
+  TypeKind getKind() const { return TypeKind(bits.TypeBase.kind); }
 
   template <typename Ty> Ty *getAs() { return dyn_cast<Ty>(this); }
   template <typename Ty> bool is() { return isa<Ty>(this); }
   template <typename Ty> Ty *castTo() { return cast<Ty>(this); }
 };
 
-/// TypeBase should only be 2 pointers in size (kind + padding bits +
-/// ctxt/canonical type ptr)
+/// TypeBase should only be 2 pointers in size
 static_assert(sizeof(TypeBase) <= 16, "TypeBase is too large!");
 
 /// Common base class for builtin primitive types.
@@ -242,8 +259,8 @@ class IntegerType final : public BuiltinType {
       : BuiltinType(TypeKind::Integer, ctxt) {
     assert((width.isFixedWidth() || width.isPointerSized()) &&
            "Can only create fixed or pointer-sized integer types!");
-    bits.integerType.width = width;
-    bits.integerType.isSigned = isSigned;
+    bits.IntegerType.integerWidth = width.getOpaqueValue();
+    bits.IntegerType.isSigned = isSigned;
   }
 
 public:
@@ -252,9 +269,11 @@ public:
   /// \returns an unsigned integer of width \p width
   static IntegerType *getUnsigned(ASTContext &ctxt, IntegerWidth width);
 
-  IntegerWidth getWidth() const { return bits.integerType.width; }
+  IntegerWidth getWidth() const {
+    return IntegerWidth::fromOpaqueValue(bits.IntegerType.integerWidth);
+  }
 
-  bool isSigned() const { return bits.integerType.isSigned; }
+  bool isSigned() const { return bits.IntegerType.isSigned; }
   bool isUnsigned() const { return !isSigned(); }
 
   static bool classof(const TypeBase *type) {
@@ -273,8 +292,8 @@ enum class FloatKind : uint8_t { IEEE32, IEEE64 };
 class FloatType final : public BuiltinType {
   FloatType(ASTContext &ctxt, FloatKind kind)
       : BuiltinType(TypeKind::Float, ctxt) {
-    bits.floatType.floatKind = uint8_t(kind);
-    assert(FloatKind(bits.floatType.floatKind) == kind && "bits dropped?");
+    bits.FloatType.floatKind = uint64_t(kind);
+    assert(FloatKind(bits.FloatType.floatKind) == kind && "bits dropped");
   }
 
   friend ASTContext;
@@ -294,7 +313,7 @@ public:
 
   const llvm::fltSemantics &getAPFloatSemantics() const;
 
-  FloatKind getFloatKind() const { return FloatKind(bits.floatType.floatKind); }
+  FloatKind getFloatKind() const { return FloatKind(bits.FloatType.floatKind); }
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Float;
@@ -390,7 +409,7 @@ class TupleType final : public TypeBase,
       : TypeBase(TypeKind::Tuple, prop, ctxt, canonical) {
     unsigned numElems = elements.size();
     assert(numElems >= 2 || (numElems == 0 && !canonical));
-    bits.tupleType.numElems = numElems;
+    bits.TupleType.numElems = numElems;
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<Type>());
 #ifndef NDEBUG
@@ -411,7 +430,7 @@ public:
   static TupleType *getEmpty(ASTContext &ctxt);
 
   bool isEmpty() const { return getNumElements() == 0; }
-  unsigned getNumElements() const { return bits.tupleType.numElems; }
+  unsigned getNumElements() const { return bits.TupleType.numElems; }
   ArrayRef<Type> getElements() const {
     return {getTrailingObjects<Type>(), getNumElements()};
   }
@@ -440,7 +459,7 @@ class FunctionType final : public TypeBase,
   FunctionType(TypeProperties properties, ASTContext &ctxt, bool canonical,
                ArrayRef<Type> args, Type rtr)
       : TypeBase(TypeKind::Function, properties, ctxt, canonical), rtr(rtr) {
-    bits.functionType.numArgs = args.size();
+    bits.FunctionType.numArgs = args.size();
     std::uninitialized_copy(args.begin(), args.end(),
                             getTrailingObjects<Type>());
 #ifndef NDEBUG
@@ -456,7 +475,7 @@ class FunctionType final : public TypeBase,
 public:
   static FunctionType *get(ArrayRef<Type> args, Type rtr);
 
-  unsigned getNumArgs() const { return bits.functionType.numArgs; }
+  unsigned getNumArgs() const { return bits.FunctionType.numArgs; }
   ArrayRef<Type> getArgs() const {
     return {getTrailingObjects<Type>(), getNumArgs()};
   }
@@ -537,7 +556,7 @@ class TypeVariableType final : public TypeBase {
   TypeVariableType(ASTContext &ctxt, unsigned id)
       : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
                  /*isCanonical*/ true) {
-    bits.typeVariableType.id = id;
+    bits.TypeVariableType.id = id;
   }
 
   friend ASTContext;
@@ -546,7 +565,7 @@ public:
   static TypeVariableType *create(ASTContext &ctxt, unsigned id);
 
   /// \returns the ID of this type variable
-  unsigned getID() const { return bits.typeVariableType.id; }
+  unsigned getID() const { return bits.TypeVariableType.id; }
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::TypeVariable;

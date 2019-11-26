@@ -10,6 +10,7 @@
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
+#include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,6 +29,7 @@ class VarDecl;
 /// Kinds of Patterns
 enum class PatternKind : uint8_t {
 #define PATTERN(KIND, PARENT) KIND,
+#define LAST_PATTERN(KIND) Last_Pattern = KIND
 #include "Sora/AST/PatternNodes.def"
 };
 
@@ -37,25 +39,34 @@ class alignas(PatternAlignement) Pattern {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
+  /// The type of the pattern
   Type type;
-  PatternKind kind;
-  /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfield themselves.
-  LLVM_PACKED_START; 
-  union Bits {
-    Bits() : raw() {}
-    // Raw bits (to zero-init the union)
-    char raw[7];
-    // TuplePattern
-    struct {
-      uint32_t numElements;
-    } tuplePattern;
-  };
-  LLVM_PACKED_END;
-  static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
-  Bits bits;
+  /// Number of bits needed for PatternKind
+  static constexpr unsigned kindBits =
+      countBitsUsed((unsigned)PatternKind::Last_Pattern);
+
+  union Bits {
+    Bits() : rawBits(0) {}
+    uint64_t rawBits;
+
+    // clang-format off
+
+    // Pattern
+    SORA_INLINE_BITFIELD_BASE(Pattern, kindBits, 
+      kind : kindBits
+    );
+
+    // TuplePattern
+    SORA_INLINE_BITFIELD_FULL(TuplePattern, Pattern, 32, 
+      : NumPadBits, 
+      numElements : 32
+    );
+
+    // clang-format on
+  } bits;
+  static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
@@ -64,7 +75,7 @@ protected:
     return mem;
   }
 
-  Pattern(PatternKind kind) : kind(kind) {}
+  Pattern(PatternKind kind) { bits.Pattern.kind = (uint64_t)kind; }
 
 public:
   // Publicly allow allocation of patterns using the ASTContext.
@@ -82,7 +93,7 @@ public:
             unsigned indent = 2) const;
 
   /// \return the kind of patterns this is
-  PatternKind getKind() const { return kind; }
+  PatternKind getKind() const { return PatternKind(bits.Pattern.kind); }
 
   bool hasType() const { return !type.isNull(); }
   Type getType() const { return type; }
@@ -221,7 +232,7 @@ class TuplePattern final
         rParenLoc(rParenLoc) {
     assert(patterns.size() != 1 &&
            "Single-element tuples don't exist - Use ParenPattern!");
-    bits.tuplePattern.numElements = patterns.size();
+    bits.TuplePattern.numElements = patterns.size();
     std::uninitialized_copy(patterns.begin(), patterns.end(),
                             getTrailingObjects<Pattern *>());
   }
@@ -242,7 +253,7 @@ public:
   }
 
   bool isEmpty() const { return getNumElements() == 0; }
-  size_t getNumElements() const { return bits.tuplePattern.numElements; }
+  size_t getNumElements() const { return bits.TuplePattern.numElements; }
   ArrayRef<Pattern *> getElements() const {
     return {getTrailingObjects<Pattern *>(), getNumElements()};
   }

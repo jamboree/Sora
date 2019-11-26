@@ -9,6 +9,7 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/ASTNode.hpp"
+#include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -27,6 +28,7 @@ class LetDecl;
 enum class StmtKind : uint8_t {
 #define STMT(KIND, PARENT) KIND,
 #define STMT_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
+#define LAST_STMT(KIND) Last_Stmt = KIND
 #include "Sora/AST/StmtNodes.def"
 };
 
@@ -36,24 +38,31 @@ class alignas(StmtAlignement) Stmt {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  StmtKind kind;
-  /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfields.
-  LLVM_PACKED_START;
-  union Bits {
-    Bits() : raw() {}
-    // Raw bits (to zero-init the union)
-    char raw[7];
-    // BlockStmt bits
-    struct {
-      uint32_t numElements;
-    } blockStmt;
-  };
-  LLVM_PACKED_END;
-  static_assert(sizeof(Bits) == 7, "Bits is too large!");
-
 protected:
-  Bits bits;
+  /// Number of bits needed for StmtKind
+  static constexpr unsigned kindBits =
+      countBitsUsed((unsigned)StmtKind::Last_Stmt);
+
+  union Bits {
+    Bits() : rawBits(0) {}
+    uint64_t rawBits;
+
+    // clang-format off
+
+    // Stmt
+    SORA_INLINE_BITFIELD_BASE(Stmt, kindBits, 
+      kind : kindBits
+    );
+
+    // BlockStmt 
+    SORA_INLINE_BITFIELD_FULL(BlockStmt, Stmt, 32, 
+      : NumPadBits, 
+      numElements : 32
+    );
+
+    // clang-format on
+  } bits;
+  static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
@@ -62,7 +71,7 @@ protected:
     return mem;
   }
 
-  Stmt(StmtKind kind) : kind(kind) {}
+  Stmt(StmtKind kind) { bits.Stmt.kind = (uint64_t)kind; }
 
 public:
   // Publicly allow allocation of statements using the ASTContext.
@@ -80,7 +89,7 @@ public:
             unsigned indent = 2) const;
 
   /// \return the kind of statement this is
-  StmtKind getKind() const { return kind; }
+  StmtKind getKind() const { return StmtKind(bits.Stmt.kind); }
 
   /// \returns the SourceLoc of the first token of the statement
   SourceLoc getBegLoc() const;
@@ -198,7 +207,7 @@ public:
   SourceLoc getLeftCurlyLoc() const { return lCurlyLoc; }
   SourceLoc getRightCurlyLoc() const { return rCurlyLoc; }
 
-  size_t getNumElements() const { return bits.blockStmt.numElements; }
+  size_t getNumElements() const { return bits.BlockStmt.numElements; }
   ArrayRef<ASTNode> getElements() const {
     return {getTrailingObjects<ASTNode>(), getNumElements()};
   }

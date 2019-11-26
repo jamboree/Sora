@@ -16,6 +16,7 @@
 
 #include "Sora/AST/ASTAlignement.hpp"
 #include "Sora/AST/Identifier.hpp"
+#include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -30,6 +31,7 @@ class Expr;
 
 enum class TypeReprKind : uint8_t {
 #define TYPEREPR(KIND, PARENT) KIND,
+#define LAST_TYPEREPR(KIND) Last_TypeRepr = KIND
 #include "Sora/AST/TypeReprNodes.def"
 };
 
@@ -39,24 +41,31 @@ class alignas(TypeReprAlignement) TypeRepr {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  TypeReprKind kind;
-  /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfield themselves.
-  LLVM_PACKED_START;
-  union Bits {
-    Bits() : raw() {}
-    // Raw bits (to zero-init the union)
-    char raw[7];
-    // TupleTypeRepr
-    struct {
-      uint32_t numElements;
-    } tupleTypeRepr;
-  };
-  LLVM_PACKED_END;
-  static_assert(sizeof(Bits) == 7, "Bits is too large!");
-
 protected:
-  Bits bits;
+  /// Number of bits needed for TypeReprKind
+  static constexpr unsigned kindBits =
+      countBitsUsed((unsigned)TypeReprKind::Last_TypeRepr);
+
+  union Bits {
+    Bits() : rawBits(0) {}
+    uint64_t rawBits;
+
+    // clang-format off
+
+    // TypeRepr
+    SORA_INLINE_BITFIELD_BASE(TypeRepr, kindBits, 
+      kind : kindBits
+    );
+
+    // TupleTypeRepr 
+    SORA_INLINE_BITFIELD_FULL(TupleTypeRepr, TypeRepr, 32, 
+      : NumPadBits, 
+      numElements : 32
+    );
+
+    // clang-format on
+  } bits;
+  static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
@@ -65,7 +74,7 @@ protected:
     return mem;
   }
 
-  TypeRepr(TypeReprKind kind) : kind(kind) {}
+  TypeRepr(TypeReprKind kind) { bits.TypeRepr.kind = (uint64_t)kind; }
 
 public:
   // Publicly allow allocation of patterns using the ASTContext.
@@ -73,7 +82,7 @@ public:
                      unsigned align = alignof(TypeRepr));
 
   /// \return the kind of TypeRepr this is
-  TypeReprKind getKind() const { return kind; }
+  TypeReprKind getKind() const { return TypeReprKind(bits.TypeRepr.kind); }
 
   /// Skips parentheses around this TypeRepr: If this is a ParenTypeRepr,
   /// returns getSubTypeRepr()->ignoreParens(), else returns this.
@@ -181,7 +190,7 @@ class TupleTypeRepr final
         rParenLoc(rParenLoc) {
     assert(elements.size() != 1 &&
            "Single-element tuples don't exist - Use ParenTypeRepr!");
-    bits.tupleTypeRepr.numElements = elements.size();
+    bits.TupleTypeRepr.numElements = elements.size();
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<TypeRepr *>());
   }
@@ -202,7 +211,7 @@ public:
   }
 
   bool isEmpty() const { return getNumElements() == 0; }
-  size_t getNumElements() const { return bits.tupleTypeRepr.numElements; }
+  size_t getNumElements() const { return bits.TupleTypeRepr.numElements; }
   ArrayRef<TypeRepr *> getElements() const {
     return {getTrailingObjects<TypeRepr *>(), getNumElements()};
   }

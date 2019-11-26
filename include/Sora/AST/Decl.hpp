@@ -11,6 +11,7 @@
 #include "Sora/AST/DeclContext.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
+#include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
@@ -31,6 +32,7 @@ class BlockStmt;
 enum class DeclKind : uint8_t {
 #define DECL(KIND, PARENT) KIND,
 #define DECL_RANGE(KIND, FIRST, LAST) First_##KIND = FIRST, Last_##KIND = LAST,
+#define LAST_DECL(KIND) Last_Decl = KIND
 #include "Sora/AST/DeclNodes.def"
 };
 
@@ -39,38 +41,48 @@ class alignas(DeclAlignement) Decl {
   // Disable vanilla new/delete for declarations
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
-  
+
   // The parent DeclContext and a flag indicating whether this decl has been
   // checked.
   llvm::PointerIntPair<DeclContext *, 1> declCtxtAndIsChecked;
-  DeclKind kind;
-  /// Make use of the padding bits by allowing derived class to store data here.
-  /// NOTE: Derived classes are expected to initialize the bitfields.
-  LLVM_PACKED_START;
-  union Bits {
-    Bits() : raw() {}
-    // Raw bits (to zero-init the union)
-    char raw[7];
-    // NamedDecl bits
-    struct {
-      bool illegalRedeclaration : 1;
-      union {
-        // VarDecl bits
-        struct {
-          bool isMutable : 1;
-        } varDecl;
-        // FuncDecl bits
-        struct {
-          bool bodyChecked : 1;
-        } funcDecl;
-      };
-    } namedDecl;
-  }
-  LLVM_PACKED_END;
-  static_assert(sizeof(Bits) == 7, "Bits is too large!");
 
 protected:
-  Bits bits;
+  /// Number of bits needed for ExprKind
+  static constexpr unsigned kindBits =
+      countBitsUsed((unsigned)DeclKind::Last_Decl);
+
+  union Bits {
+    Bits() : rawBits() {}
+    uint64_t rawBits;
+
+    // clang-format off
+
+    // Decl
+    SORA_INLINE_BITFIELD_BASE(Decl, kindBits, 
+      kind : kindBits
+    );
+
+    // NamedDecl
+    SORA_INLINE_BITFIELD(NamedDecl, Decl, 1, 
+      isIllegalRedeclaration : 1
+    );
+
+    // ValueDecl
+    SORA_INLINE_BITFIELD_EMPTY(ValueDecl, NamedDecl);
+
+    // VarDecl
+    SORA_INLINE_BITFIELD(VarDecl, ValueDecl, 1,
+      isMutable : 1
+    );
+
+    // FuncDecl
+    SORA_INLINE_BITFIELD(FuncDecl, ValueDecl, 1,
+      isBodyChecked : 1
+    );
+
+    // clang-format on
+  } bits;
+  static_assert(sizeof(Bits) == 8, "Bits is too large!");
 
   // Children should be able to use placement new, as it is needed for children
   // with trailing objects.
@@ -80,7 +92,9 @@ protected:
   }
 
   Decl(DeclKind kind, DeclContext *declContext)
-      : declCtxtAndIsChecked(declContext, false), kind(kind) {}
+      : declCtxtAndIsChecked(declContext, false) {
+    bits.Decl.kind = (uint64_t)kind;
+  }
 
 public:
   // Publicly allow allocation of declaration using the ASTContext.
@@ -133,7 +147,7 @@ public:
   void dump(raw_ostream &out, unsigned indent = 2) const;
 
   /// \return the kind of declaration this is
-  DeclKind getKind() const { return kind; }
+  DeclKind getKind() const { return DeclKind(bits.Decl.kind); }
 
   /// \returns the SourceLoc of the first token of the declaration
   SourceLoc getBegLoc() const;
@@ -169,19 +183,19 @@ protected:
             Identifier identifier)
       : Decl(kind, declContext), identifierLoc(identifierLoc),
         identifier(identifier) {
-    bits.namedDecl.illegalRedeclaration = false;
+    bits.NamedDecl.isIllegalRedeclaration = false;
   }
 
 public:
   /// \returns whether this NamedDecl is an illegal redeclaration or not.
   /// Returns false if \c isChecked returns false.
   bool isIllegalRedeclaration() const {
-    return bits.namedDecl.illegalRedeclaration;
+    return bits.NamedDecl.isIllegalRedeclaration;
   }
   /// Sets the flag indicating whether this NamedDecl is an illegal
   /// redeclaration.
   void setIsIllegalRedeclaration(bool value = true) {
-    bits.namedDecl.illegalRedeclaration = value;
+    bits.NamedDecl.isIllegalRedeclaration = value;
   }
 
   /// \returns the identifier (name) of this decl
@@ -237,7 +251,7 @@ public:
   VarDecl(DeclContext *declContext, SourceLoc identifierLoc,
           Identifier identifier)
       : ValueDecl(DeclKind::Var, declContext, identifierLoc, identifier) {
-    bits.namedDecl.varDecl.isMutable = false;
+    bits.VarDecl.isMutable = false;
   }
 
   /// Sets the type of this value (the type of the variable)
@@ -245,10 +259,8 @@ public:
   /// \returns the type of this value (the type of the variable)
   Type getValueType() const { return type; }
 
-  bool isMutable() const { return bits.namedDecl.varDecl.isMutable; }
-  void setIsMutable(bool value = true) {
-    bits.namedDecl.varDecl.isMutable = value;
-  }
+  bool isMutable() const { return bits.VarDecl.isMutable; }
+  void setIsMutable(bool value = true) { bits.VarDecl.isMutable = value; }
 
   SourceLoc getBegLoc() const { return getIdentifierLoc(); }
   SourceLoc getEndLoc() const { return getIdentifierLoc(); }
@@ -354,16 +366,17 @@ public:
       : ValueDecl(DeclKind::Func, declContext, identLoc, ident),
         DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc),
         paramList(params), returnTypeLoc(returnTypeLoc) {
-    bits.namedDecl.funcDecl.bodyChecked = false;
+    bits.FuncDecl.isBodyChecked = false;
   }
 
   BlockStmt *getBody() const { return body; }
   void setBody(BlockStmt *body) { this->body = body; }
 
   /// \returns whether the body of this function has been type-checked or not
-  bool isBodyChecked() const { return bits.namedDecl.funcDecl.bodyChecked; }
+  bool isBodyChecked() const { return bits.FuncDecl.isBodyChecked; }
+  /// Sets whether the body of this function has been checked.
   void setBodyChecked(bool value = true) {
-    bits.namedDecl.funcDecl.bodyChecked = value;
+    bits.FuncDecl.isBodyChecked = value;
   }
 
   ParamList *getParamList() const { return paramList; }

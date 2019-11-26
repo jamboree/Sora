@@ -75,7 +75,7 @@ SourceLoc ReturnStmt::getEndLoc() const {
 BlockStmt::BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes,
                      SourceLoc rCurlyLoc)
     : Stmt(StmtKind::Block), lCurlyLoc(lCurlyLoc), rCurlyLoc(rCurlyLoc) {
-  bits.blockStmt.numElements = nodes.size();
+  bits.BlockStmt.numElements = nodes.size();
   std::uninitialized_copy(nodes.begin(), nodes.end(),
                           getTrailingObjects<ASTNode>());
 }
