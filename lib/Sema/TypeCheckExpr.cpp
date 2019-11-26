@@ -25,7 +25,8 @@ namespace {
 /// The Prologue of Expression Type-Checking, which prepares the expression for
 /// constraint solving.
 ///
-/// Resolves UnresolvedDeclRefExprs and asExpr types.
+/// This does several things, but mostly resolves UnresolvedDeclRefExprs into
+/// DeclRef/ErrorExprs.
 class ExprPrologue : public ASTWalker {
 public:
   TypeChecker &tc;

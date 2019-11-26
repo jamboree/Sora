@@ -8,7 +8,7 @@
 #pragma once
 
 #include "Sora/AST/ASTContext.hpp"
-#include "Sora/AST/Type.hpp"
+#include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "TypeChecker.hpp"
 #include "llvm/ADT/SmallVector.h"
@@ -29,8 +29,17 @@ enum class TypeVariableKind : uint8_t {
 };
 
 /// TypeVariable extra information
-class TypeVariableInfo final {
+class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   friend class ConstraintSystem;
+
+  // Disable vanilla new/delete for TypeVariableInfo
+  void *operator new(size_t) noexcept = delete;
+  void operator delete(void *)noexcept = delete;
+
+  void *operator new(size_t, void *mem) noexcept {
+    assert(mem);
+    return mem;
+  }
 
   TypeVariableInfo(TypeVariableKind tvKind) : tvKind(tvKind) {}
 
@@ -41,6 +50,16 @@ class TypeVariableInfo final {
   Type substitution;
 
 public:
+  /// Make TypeVariableInfo noncopyable, so we don't copy it by mistake.
+  TypeVariableInfo(const TypeVariableInfo &) = delete;
+  TypeVariableInfo &operator=(const TypeVariableInfo &) = delete;
+
+  /// \returns the TypeVariableInfo object for \p type
+  static TypeVariableInfo &get(const TypeVariableType *type) {
+    return *reinterpret_cast<TypeVariableInfo *>(
+        const_cast<TypeVariableType *>(type) + 1);
+  }
+
   TypeVariableKind getTypeVariableKind() const { return tvKind; }
 
   bool isGeneralTypeVariable() const {
@@ -98,12 +117,22 @@ private:
   /// system.
   unsigned nextTypeVariableID = 0;
 
-  /// The array of type variable informations.
-  SmallVector<TypeVariableInfo *, 16> typeVariableInfos;
+  /// Creates a new type variable of kind \p kind
+  TypeVariableType *createTypeVariable(TypeVariableKind kind);
 
 public:
-  /// Creates a new type variable.
-  TypeVariableType *createTypeVariable();
+  /// Creates a new General type variable.
+  TypeVariableType *createGeneralTypeVariable() {
+    return createTypeVariable(TypeVariableKind::General);
+  }
+  /// Create a new Integer type variable
+  TypeVariableType *createIntegerTypeVariable() {
+    return createTypeVariable(TypeVariableKind::Integer);
+  }
+  /// Create a new Float type variable
+  TypeVariableType *createFloatTypeVariable() {
+    return createTypeVariable(TypeVariableKind::Float);
+  }
 
   /// Simplifies \p type, replacing type variables with their substitution (or
   /// ErrorType if there's no substitution)
@@ -117,8 +146,5 @@ public:
   std::string
   getString(const TypeVariableType *type,
             const TypePrintOptions &printOptions = TypePrintOptions()) const;
-
-  /// \returns the TypeVariableKind of \p type
-  TypeVariableInfo &getInfo(const TypeVariableType *type) const;
 };
 } // namespace sora

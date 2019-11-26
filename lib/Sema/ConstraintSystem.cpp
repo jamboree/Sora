@@ -99,7 +99,7 @@ private:
   Type visitErrorType(ErrorType *type) { return nullptr; }
 
   Type visitTypeVariableType(TypeVariableType *type) {
-    Type subst = cs.getInfo(type).getSubstitution();
+    Type subst = TypeVariableInfo::get(type).getSubstitution();
     // Return ErrorType when there are no substitutions
     if (!subst)
       return cs.ctxt.errorType;
@@ -113,8 +113,17 @@ private:
 
 //===--- ConstraintSystem -------------------------------------------------===//
 
-TypeVariableType *ConstraintSystem::createTypeVariable() {
-  return TypeVariableType::create(ctxt, nextTypeVariableID++);
+TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
+  // Calculate the total size we need
+  size_t size = sizeof(TypeVariableType) + sizeof(TypeVariableInfo);
+  void *mem = ctxt.allocate(size, alignof(TypeVariableType),
+                            ArenaKind::ConstraintSystem);
+  /// Create the TypeVariableType
+  TypeVariableType *tyVar =
+      new (mem) TypeVariableType(ctxt, nextTypeVariableID++);
+  /// Create the info
+  new (reinterpret_cast<void *>(tyVar + 1)) TypeVariableInfo(kind);
+  return tyVar;
 }
 
 Type ConstraintSystem::simplifyType(Type type) {
@@ -130,7 +139,7 @@ void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
   // Print the TypeVariable itself
   type->print(out, printOptions);
   // Print the kind
-  TypeVariableInfo &info = getInfo(type);
+  auto &info = TypeVariableInfo::get(type);
   switch (info.getTypeVariableKind()) {
   case TypeVariableKind::General:
     out << " [general type variable]";
@@ -159,11 +168,4 @@ ConstraintSystem::getString(const TypeVariableType *type,
   llvm::raw_string_ostream out(str);
   print(out, type, printOptions);
   return out.str();
-}
-
-TypeVariableInfo &
-ConstraintSystem::getInfo(const TypeVariableType *type) const {
-  TypeVariableInfo *info = typeVariableInfos[type->getID()];
-  assert(info && "No info for TypeVariable?");
-  return *info;
 }
