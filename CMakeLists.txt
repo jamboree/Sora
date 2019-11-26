@@ -7,7 +7,7 @@ project(Sora)
 # set minimal C++ standard
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+#set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
@@ -57,10 +57,14 @@ add_subdirectory(tools/sorac)
 # Disable RTTI, exceptions and enable /Wall
 # FIXME: Only add the flags if we don't have them already
 # FIXME: Is disabling exception handling needed or is D_HAS_EXCEPTIONS 0 above enough?
+# FIXME: DRY the code a bit
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" AND "x${CMAKE_CXX_SIMULATE_ID}" STREQUAL "xMSVC")
   add_definitions("/clang:-Wall")
   add_definitions("/GR-")
   # FIXME: Disable exception handling as well?
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  add_definitions("/GR-")
+    # FIXME: Disable exception handling as well?
 else() #FIXME: Is this good enough for all other compilers?
   add_definitions("-fno-rtti")
   add_definitions("-fno-exceptions") #FIXME: Is it needed?
