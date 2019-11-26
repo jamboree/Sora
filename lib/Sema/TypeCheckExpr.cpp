@@ -29,9 +29,11 @@ namespace {
 class ExprPrologue : public ASTWalker {
 public:
   TypeChecker &tc;
+  ASTContext &ctxt;
   DeclContext *dc;
 
-  ExprPrologue(TypeChecker &tc, DeclContext *dc) : tc(tc), dc(dc) {}
+  ExprPrologue(TypeChecker &tc, DeclContext *dc)
+      : tc(tc), ctxt(tc.ctxt), dc(dc) {}
 
   SourceFile &getSourceFile() const {
     assert(dc && "no DeclContext?");
@@ -40,34 +42,47 @@ public:
     return *sf;
   }
 
-  std::pair<bool, Expr *> resolveUDRE(UnresolvedDeclRefExpr *udre) {
-    UnqualifiedValueLookup uvl(getSourceFile());
-    llvm::outs() << "-----------------------------------\n";
-    llvm::outs() << "Expression:\n";
-    udre->dump(llvm::outs(), tc.ctxt.srcMgr);
-    llvm::outs() << "Performing lookup...\n";
-    uvl.performLookup(udre->getLoc(), udre->getIdentifier());
-    llvm::outs() << "Results found: " << uvl.results.size() << "\n";
-    unsigned k = 0;
-    for (ValueDecl *result : uvl.results) {
-      llvm::outs() << "Result #" << k++ << ":\n";
-      result->dump(llvm::outs());
-      llvm::outs() << "\n";
-    }
-    return {true, udre};
+  DeclRefExpr *resolve(UnresolvedDeclRefExpr *udre, ValueDecl *resolved) {
+    DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
+    expr->setType(resolved->getValueType());
+    llvm::outs() << "\tresolved\n";
+    return expr;
   }
 
-  std::pair<bool, Expr *> resolveCast(CastExpr *cast) {
-    // Just resolve the cast's typeloc.
+  Expr *tryResolveUDRE(UnresolvedDeclRefExpr *udre) {
+    llvm::outs() << "trying for '" << udre->getIdentifier() << "'\n";
+    // Lookup
+    UnqualifiedValueLookup uvl(getSourceFile());
+    uvl.performLookup(udre->getLoc(), udre->getIdentifier());
+    // Perfect scenario: only one result
+    if (ValueDecl *decl = uvl.getUniqueResult())
+      return resolve(udre, decl);
+    // Else, we got an error: emit a diagnostic depending on the situation
+    if (uvl.isEmpty()) {
+      tc.diagnose(udre->getLoc(), diag::cannot_find_value_in_scope,
+                  udre->getIdentifier());
+    }
+    else {
+      assert(uvl.results.size() >= 2);
+      tc.diagnose(udre->getLoc(), diag::reference_to_value_is_ambiguous,
+                  udre->getIdentifier());
+      for (ValueDecl *candidate : uvl.results)
+        tc.diagnose(candidate->getLoc(), diag::potential_candidate_found_here);
+    }
+    // and just return an ErrorExpr.
+    return new (ctxt) ErrorExpr(udre);
+  }
+
+  Expr *handleCast(CastExpr *cast) {
     tc.resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
-    return {true, cast};
+    return cast;
   }
 
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
     if (auto *udre = dyn_cast<UnresolvedDeclRefExpr>(expr))
-      return resolveUDRE(udre);
+      return {true, tryResolveUDRE(udre)};
     if (auto *cast = dyn_cast<CastExpr>(expr))
-      return resolveCast(cast);
+      return {true, handleCast(cast)};
     return {true, expr};
   }
 };
@@ -78,5 +93,6 @@ public:
 Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
   assert(expr && dc);
   expr = expr->walk(ExprPrologue(*this, dc)).second;
+  assert(expr && "walk returns null?");
   return expr;
 }

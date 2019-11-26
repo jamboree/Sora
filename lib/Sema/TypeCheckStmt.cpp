@@ -43,16 +43,15 @@ public:
       stmt->setResult(tc.typecheckExpr(stmt->getResult(), dc));
   }
 
-  ASTNode checkNode(ASTNode node) {
+  void checkNode(ASTNode &node) {
     if (node.is<Stmt *>())
       tc.typecheckStmt(node.get<Stmt *>(), dc);
     else if (node.is<Expr *>())
-      tc.typecheckExpr(node.get<Expr *>(), dc);
+      node = tc.typecheckExpr(node.get<Expr *>(), dc);
     else if (node.is<Decl *>())
       tc.typecheckDecl(node.get<Decl *>());
     else
       llvm_unreachable("unknown ASTNode kind");
-    return node;
   }
 
   FuncDecl *getAsFuncDecl(ASTNode node) {
@@ -87,7 +86,7 @@ public:
     // And do another one where we typecheck the rest
     for (ASTNode &node : stmt->getElements()) {
       if (!getAsFuncDecl(node))
-        node = checkNode(node);
+        checkNode(node);
     }
   }
 

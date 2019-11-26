@@ -87,6 +87,7 @@ public:
   /// \param expr the expression to typecheck
   /// \param dc th DeclContext in which this Expr lives. Cannot be null.
   /// \param ofType If valid, the expected type of the expression.
+  /// \returns \p expr or the expr that should replace it in the tree.
   Expr *typecheckExpr(Expr *expr, DeclContext *dc, Type ofType = Type());
 
   /// Statement typechecking entry point
