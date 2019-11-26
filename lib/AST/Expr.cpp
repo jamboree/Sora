@@ -102,3 +102,11 @@ TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
   void *mem = ctxt.allocate(size, alignof(TupleExpr));
   return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc);
 }
+
+CallExpr *CallExpr::create(ASTContext &ctxt, Expr *fn, SourceLoc lParen,
+                           ArrayRef<Expr *> args, SourceLoc rParen) {
+  // Need manual memory allocation here because of trailing objects.
+  auto size = totalSizeToAlloc<Expr *>(args.size());
+  void *mem = ctxt.allocate(size, alignof(CallExpr));
+  return new (mem) CallExpr(fn, lParen, args, rParen);
+}

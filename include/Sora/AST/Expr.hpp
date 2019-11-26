@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
+#include <memory>
 #include <stdint.h>
 
 namespace sora {
@@ -79,6 +80,12 @@ protected:
     SORA_INLINE_BITFIELD_FULL(TupleExpr, Expr, 32,
       : NumPadBits,
       numElements : 32
+    );
+
+    /// TupleExpr
+    SORA_INLINE_BITFIELD_FULL(CallExpr, Expr, 32,
+      : NumPadBits,
+      numArgs : 32
     );
 
     /// BinaryExpr
@@ -597,31 +604,54 @@ public:
 /// Represents a function call
 ///
 /// e.g. foo(0), bar()
-class CallExpr final : public Expr {
+class CallExpr final : public Expr,
+                       private llvm::TrailingObjects<CallExpr, Expr *> {
+  friend llvm::TrailingObjects<CallExpr, Expr *>;
+
   /// The function being called
   Expr *fn;
-  /// The arguments passed to the function. This is usually a ParenExpr, a
-  /// TupleExpr or an ErrorExpr.
-  Expr *args;
+  /// The SourceLoc of the left and right parenthesis.
+  SourceLoc lParen, rParen;
+
+  CallExpr(Expr *fn, SourceLoc lParen, ArrayRef<Expr *> args, SourceLoc rParen)
+      : Expr(ExprKind::Call), fn(fn), lParen(lParen), rParen(rParen) {
+    bits.CallExpr.numArgs = args.size();
+    std::uninitialized_copy(args.begin(), args.end(),
+                            getTrailingObjects<Expr *>());
+  }
 
 public:
-  CallExpr(Expr *fn, Expr *args) : Expr(ExprKind::Call), fn(fn), args(args) {}
+  static CallExpr *create(ASTContext &ctxt, Expr *fn, SourceLoc lParen,
+                          ArrayRef<Expr *> args, SourceLoc rParen);
+
+  static CallExpr *create(ASTContext &ctxt, Expr *fn, SourceLoc lParen,
+                          SourceLoc rParen) {
+    return create(ctxt, fn, lParen, {}, rParen);
+  }
 
   Expr *getFn() const { return fn; }
   void setFn(Expr *base) { this->fn = base; }
 
-  Expr *getArgs() const { return args; }
-  void setArgs(Expr *args) { this->args = args; }
+  bool isArgsEmpty() const { return getNumArgs() == 0; }
+  size_t getNumArgs() const { return bits.CallExpr.numArgs; }
+  MutableArrayRef<Expr *> getArg() {
+    return {getTrailingObjects<Expr *>(), getNumArgs()};
+  }
+  ArrayRef<Expr *> getArgs() const {
+    return {getTrailingObjects<Expr *>(), getNumArgs()};
+  }
+  Expr *getArg(size_t n) { return getArg()[n]; }
+  void setArg(size_t n, Expr *expr) { getArg()[n] = expr; }
 
   SourceLoc getBegLoc() const {
     assert(fn && "no fn");
     return fn->getBegLoc();
   }
-  SourceLoc getEndLoc() const {
-    assert(args && "no args");
-    return args->getEndLoc();
-  }
+  SourceLoc getEndLoc() const { return rParen; }
   SourceLoc getLoc() const { return fn->getLoc(); }
+
+  SourceLoc getLParenLoc() const { return lParen; }
+  SourceLoc getRParenLoc() const { return rParen; }
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Call;
