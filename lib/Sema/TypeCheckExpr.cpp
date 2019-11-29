@@ -9,6 +9,7 @@
 
 #include "TypeChecker.hpp"
 
+#include "ConstraintSystem.hpp"
 #include "Sora/AST/ASTWalker.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
@@ -19,22 +20,24 @@
 
 using namespace sora;
 
-//===- ExprTypeCheckingPrologue -------------------------------------------===//
+//===- ExprChecker --------------------------------------------------------===//
 
 namespace {
-/// The Prologue of Expression Type-Checking, which prepares the expression for
-/// constraint solving.
+/// This class handles most of expression type checking
 ///
-/// This does several things, but mostly resolves UnresolvedDeclRefExprs into
-/// DeclRef/ErrorExprs.
-class ExprPrologue : public ASTWalker {
+/// FIXME: This should derive from a "TypeChecker::Checker" class that'd some
+/// methods like diagnose(), a reference to the typechecker instance, etc.
+/// Once that's done, remove the getTypeChecker() calls.
+class ExprChecker : public ASTWalker {
 public:
-  TypeChecker &tc;
-  ASTContext &ctxt;
+  ConstraintSystem &cs;
   DeclContext *dc;
 
-  ExprPrologue(TypeChecker &tc, DeclContext *dc)
-      : tc(tc), ctxt(tc.ctxt), dc(dc) {}
+  ExprChecker(ConstraintSystem &cs, DeclContext *dc) : cs(cs), dc(dc) {}
+
+  ASTContext &getASTContext() const { return cs.ctxt; }
+
+  TypeChecker &getTypeChecker() const { return cs.typeChecker; }
 
   SourceFile &getSourceFile() const {
     assert(dc && "no DeclContext?");
@@ -44,7 +47,7 @@ public:
   }
 
   DeclRefExpr *resolve(UnresolvedDeclRefExpr *udre, ValueDecl *resolved) {
-    DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
+    DeclRefExpr *expr = new (getASTContext()) DeclRefExpr(udre, resolved);
     expr->setType(resolved->getValueType());
     llvm::outs() << "\tresolved\n";
     return expr;
@@ -60,22 +63,25 @@ public:
       return resolve(udre, decl);
     // Else, we got an error: emit a diagnostic depending on the situation
     if (uvl.isEmpty()) {
-      tc.diagnose(udre->getLoc(), diag::cannot_find_value_in_scope,
-                  udre->getIdentifier());
+      getTypeChecker().diagnose(udre->getLoc(),
+                                diag::cannot_find_value_in_scope,
+                                udre->getIdentifier());
     }
     else {
       assert(uvl.results.size() >= 2);
-      tc.diagnose(udre->getLoc(), diag::reference_to_value_is_ambiguous,
-                  udre->getIdentifier());
+      getTypeChecker().diagnose(udre->getLoc(),
+                                diag::reference_to_value_is_ambiguous,
+                                udre->getIdentifier());
       for (ValueDecl *candidate : uvl.results)
-        tc.diagnose(candidate->getLoc(), diag::potential_candidate_found_here);
+        getTypeChecker().diagnose(candidate->getLoc(),
+                                  diag::potential_candidate_found_here);
     }
     // and just return an ErrorExpr.
-    return new (ctxt) ErrorExpr(udre);
+    return new (getASTContext()) ErrorExpr(udre);
   }
 
   Expr *handleCast(CastExpr *cast) {
-    tc.resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
+    getTypeChecker().resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
     return cast;
   }
 
@@ -93,7 +99,12 @@ public:
 
 Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
   assert(expr && dc);
-  expr = expr->walk(ExprPrologue(*this, dc)).second;
+  // Create a constraint system for this expression
+  ConstraintSystem system(*this);
+  // Check the expression
+  expr = expr->walk(ExprChecker(system, dc)).second;
   assert(expr && "walk returns null?");
+  // Perform the epilogue
+  // TODO:
   return expr;
 }

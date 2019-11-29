@@ -102,12 +102,14 @@ public:
 class ConstraintSystem final {
 public:
   ConstraintSystem(TypeChecker &tc)
-      : ctxt(tc.ctxt), raiiCSArena(ctxt.createConstraintSystemArena()) {}
+      : ctxt(tc.ctxt), typeChecker(tc),
+        raiiCSArena(ctxt.createConstraintSystemArena()) {}
 
   ConstraintSystem(const ConstraintSystem &) = delete;
   ConstraintSystem &operator=(const ConstraintSystem &) = delete;
 
   ASTContext &ctxt;
+  TypeChecker &typeChecker;
 
 private:
   /// The Constraint System Arena RAII Object.
