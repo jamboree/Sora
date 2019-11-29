@@ -546,19 +546,15 @@ public:
 
 /// Type Variable Type
 ///
-/// Used by the typechecker. This type is never unique, and is always allocated
-/// in the ASTContext's ConstraintSystem allocator.
+/// Represents a type variable existing within a constraint system.
+///
+/// Used by Sema, this type is never unique and is always allocated
+/// in the ASTContext's ConstraintSystem arena.
 /// Note that types containing TypeVariables are also allocated in the
-/// ASTContext's ConstraintSystem allocator.
+/// ASTContext's ConstraintSystem arena.
 ///
 /// This type is always canonical.
 class TypeVariableType final : public TypeBase {
-  // Also allow allocation of TypeVariables using the ASTContext.
-  void *operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
-                     unsigned align = alignof(TypeVariableType)) {
-    return TypeBase::operator new(size, ctxt, allocator, align);
-  }
-
 public:
   TypeVariableType(ASTContext &ctxt, unsigned id)
       : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
@@ -566,14 +562,15 @@ public:
     bits.TypeVariableType.id = id;
   }
 
-  /// Publicly allow operator new for TypeVariables because, as an
-  /// implementation detail, the ConstraintSystem allocates an extra data
-  /// structure after the TypeVariable to store additional data, such as its
-  /// substitution or kind.
+  /// Allow placement new for TypeVariables
   void *operator new(size_t, void *mem) noexcept {
     assert(mem);
     return mem;
   }
+
+  // Allow allocation through the ASTContext's ConstraintSystem arena.
+  void *operator new(size_t size, ASTContext &ctxt,
+                     unsigned align = alignof(TypeVariableType));
 
   /// Creates a TypeVariable with id \p id using \p ctxt.
   static TypeVariableType *create(ASTContext &ctxt, unsigned id);
