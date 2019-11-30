@@ -1,0 +1,26 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func foo() {
+    // CHECK: DeclRefExpr type={{.*}} loc=line:5:15 decl='foo'@line:3:6
+    let foo = foo 
+    // CHECK: DeclRefExpr type={{.*}} loc=line:7:5 decl='foo'@line:5:9
+    foo
+    {
+        // CHECK: DeclRefExpr type={{.*}} loc=line:10:19 decl='foo'@line:5:9
+        let foo = foo 
+        // CHECK: DeclRefExpr type={{.*}} loc=line:12:9 decl='foo'@line:10:13
+        foo
+        {
+            // CHECK: DeclRefExpr type={{.*}} loc=line:15:23 decl='foo'@line:10:13
+            let foo = foo
+            // CHECK: DeclRefExpr type={{.*}} loc=line:17:13 decl='foo'@line:15:17
+            foo
+        }
+    }
+}
+
+func bar(bar: i32) {
+    // CHECK: DeclRefExpr type=i32 loc=line:24:5 decl='bar'@line:22:10
+    bar
+    bux // expect-error: cannot find value 'bux' in this scope
+}
