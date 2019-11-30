@@ -3,3 +3,4 @@ out
 build
 .DS_STORE
 .vscode
+.idea
