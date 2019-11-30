@@ -113,7 +113,7 @@ public:
 
 #define DECL(ID, PARENT) VISIT_METHOD(DeclRtrTy, ID##Decl, PARENT)
 #define ABSTRACT_DECL(ID, PARENT) VISIT_METHOD(DeclRtrTy, ID##Decl, PARENT)
-#include "Sora/AST/DeclNodes.def" virtual
+#include "Sora/AST/DeclNodes.def"
 #define STMT(ID, PARENT) VISIT_METHOD(StmtRtrTy, ID##Stmt, PARENT)
 #define ABSTRACT_STMT(ID, PARENT) VISIT_METHOD(StmtRtrTy, ID##Stmt, PARENT)
 #include "Sora/AST/StmtNodes.def"

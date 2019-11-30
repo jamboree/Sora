@@ -138,8 +138,8 @@ public:
     return diagEngine.diagnose<Args...>(loc, diag, args...);
   }
 
-  ASTContext &ctxt;
   TypeChecker &tc;
+  ASTContext &ctxt;
   DiagnosticEngine &diagEngine;
 };
 } // namespace sora
