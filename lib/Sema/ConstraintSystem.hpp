@@ -137,8 +137,11 @@ public:
   }
 
   /// Simplifies \p type, replacing type variables with their substitution (or
-  /// ErrorType if there's no substitution)
-  Type simplifyType(Type type);
+  /// ErrorType if there's no substitution).
+  /// \p success is set to true if every type variables were replaced
+  /// successfully, or if no type variables were replaced at all. It is set to
+  /// false if a type variable with no substitution was found.
+  Type simplifyType(Type type, bool &success);
 
   /// Prints \p type and its TypeVariableInfo to \p out
   void print(raw_ostream &out, const TypeVariableType *type,

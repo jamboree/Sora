@@ -25,7 +25,15 @@ using namespace sora;
 //===- ExprChecker --------------------------------------------------------===//
 
 namespace {
-/// This class handles most of expression type checking
+/// This class handles the bulk of expression type checking.
+///
+/// Most of the walk is done in post-order (the children are visited first), but
+/// some nodes are also visited in pre-order (see walkToExprPre/Post).
+///
+/// visit() methods return nullptr on error, else they return an expression with
+/// a valid type (this can be the same expression, or another one (if the
+/// expression must be replaced with something else (e.g. resolving
+/// UnresolvedDeclRefExprs)))
 class ExprChecker : public ASTChecker,
                     public ASTWalker,
                     public ExprVisitor<ExprChecker, Expr *> {
@@ -34,7 +42,7 @@ public:
   ConstraintSystem &cs;
   /// The DeclContext in which this expression appears
   DeclContext *dc;
-  /// The set of DiscardExpr that are considered valid.
+  /// The set of DiscardExpr that are valid.
   llvm::SmallPtrSet<DiscardExpr *, 4> validDiscardExprs;
 
   ExprChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
@@ -58,19 +66,40 @@ public:
     return cast;
   }
 
-  /// Given a an assignement expression \p expr, adds every valid DiscardExpr
-  /// found in the LHS of the assignement to \c validDiscardExprs
-  /// TODO
-  void addValidDiscardExprs(BinaryExpr *expr);
+  /// If \p expr is a DiscardExpr, adds it to \c validDiscardExprs.
+  /// Else, if \p expr is a ParenExpr or TupleExpr, recurses with the
+  /// subexpression(s).
+  void addValidDiscardExprs(Expr *expr);
+
+  std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
+    // For assignements, we must whitelist DiscardExprs in the LHS.
+    if (BinaryExpr *binary = dyn_cast<BinaryExpr>(expr))
+      if (binary->isAssignementOp())
+        addValidDiscardExprs(binary->getLHS());
+    return {Action::Continue, expr};
+  }
 
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
-    expr = visit(expr);
-    assert(expr && "visit() returned a null expr");
-    // FIXME: Remove this & uncomment the line after it once the ExprChecker is
-    // complete
-    if (expr->getType().isNull())
+    assert(expr && "expr is null");
+    Expr *result = visit(expr);
+    /// If the visit() method returned something, it must have a type.
+    if (result) {
+      /// FIXME: Remove this once ExprChecker is complete
+      result->hasType() ? void() : result->setType(ctxt.errorType);
+      assert(result->hasType() && "Returned an untyped expression");
+      expr = result;
+    }
+    // Else, if it returned nullptr, it's because the expr isn't valid, so just
+    // give it an error type.
+    else
       expr->setType(ctxt.errorType);
-    // assert(expr->getType() && "visit() didn't assign a type to the expr");
+
+    assert(expr->getType());
+
+    // If 'expr' is an assignement, clear the set of valid discard exprs.
+    if (BinaryExpr *binary = dyn_cast<BinaryExpr>(expr))
+      if (binary->isAssignementOp())
+        validDiscardExprs.clear();
     return {true, expr};
   }
 
@@ -119,7 +148,20 @@ Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
       diagnose(candidate->getLoc(), diag::potential_candidate_found_here);
   }
 
-  return new (ctxt) ErrorExpr(expr);
+  return nullptr;
+}
+
+void ExprChecker::addValidDiscardExprs(Expr *expr) {
+  // allow _ =
+  if (DiscardExpr *discard = dyn_cast<DiscardExpr>(expr))
+    validDiscardExprs.insert(discard);
+  // allow (_) = ...
+  if (ParenExpr *paren = dyn_cast<ParenExpr>(expr))
+    addValidDiscardExprs(paren->getSubExpr());
+  // allow (_, _) = ..., ((_, _), (_, _)) = ..., etc.
+  if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
+    for (Expr *elem : tuple->getElements())
+      addValidDiscardExprs(elem);
 }
 
 Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
@@ -128,7 +170,22 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 
 Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) { return expr; }
 
-Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) { return expr; }
+Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
+  /// This DiscardExpr is not valid, diagnose it.
+  if (validDiscardExprs.count(expr) != 0) {
+    diagnose(expr->getLoc(), diag::illegal_discard_expr);
+    return nullptr;
+  }
+  /// FIXME: Remove the next line & Uncomment the ones after once ExprEpilogue
+  /// is implemented.
+  expr->setType(ctxt.errorType);
+  /*
+  /// This DiscardExpr is valid, give it a TypeVariableType with an LValue.
+  TypeVariableType *tv = cs.createGeneralTypeVariable();
+  expr->setType(LValueType::get(tv));
+  */
+  return expr;
+}
 
 Expr *ExprChecker::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   return expr;

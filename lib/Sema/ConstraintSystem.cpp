@@ -25,9 +25,11 @@ public:
   using Parent = TypeVisitor<TypeSimplifier, Type>;
   friend Parent;
 
-  TypeSimplifier(ConstraintSystem &cs) : cs(cs) {}
+  TypeSimplifier(ConstraintSystem &cs, bool &success)
+      : cs(cs), success(success) {}
 
   ConstraintSystem &cs;
+  bool &success;
 
   using Parent::visit;
 
@@ -101,8 +103,11 @@ private:
   Type visitTypeVariableType(TypeVariableType *type) {
     Type subst = TypeVariableInfo::get(type).getSubstitution();
     // Return ErrorType when there are no substitutions
-    if (!subst)
+    if (!subst) {
+      success = false;
       return cs.ctxt.errorType;
+    }
+    success &= true;
     // Recursively simplify TypeVariableTypes
     if (Type simplified = visit(subst))
       return simplified;
@@ -126,10 +131,11 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   return tyVar;
 }
 
-Type ConstraintSystem::simplifyType(Type type) {
+Type ConstraintSystem::simplifyType(Type type, bool &success) {
+  success = true;
   if (!type->hasTypeVariable())
     return type;
-  Type simplified = TypeSimplifier(*this).visit(type);
+  Type simplified = TypeSimplifier(*this, success).visit(type);
   assert(simplified && !type->hasTypeVariable() && "Not simplified!");
   return simplified;
 }

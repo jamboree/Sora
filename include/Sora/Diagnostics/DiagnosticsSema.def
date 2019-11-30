@@ -45,7 +45,7 @@ SORA_FWD_DECL(class Identifier)
 ERROR(cannot_find_value_in_scope,
   "cannot find value '%0' in this scope", (Identifier))
 
-ERROR(illegal_wildcard,
+ERROR(illegal_discard_expr,
   "'_' can only appear in a pattern or on the left side of an assignement", ())
 
 ERROR(reference_to_value_is_ambiguous,
