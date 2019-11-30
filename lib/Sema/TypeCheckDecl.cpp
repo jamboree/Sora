@@ -25,14 +25,13 @@ namespace {
 /// Note that this doesn't check if a declaration is an illegal redeclaration -
 /// that's handled by checkForRedeclaration which is usually called after this
 /// class.
-class DeclChecker : DeclVisitor<DeclChecker> {
+class DeclChecker : public ASTChecker, DeclVisitor<DeclChecker> {
   friend DeclVisitor<DeclChecker>;
 
 public:
-  TypeChecker &tc;
   SourceFile &file;
 
-  DeclChecker(TypeChecker &tc, SourceFile &file) : tc(tc), file(file) {}
+  DeclChecker(TypeChecker &tc, SourceFile &file) : ASTChecker(tc), file(file) {}
 
   void check(Decl *decl) { visit(decl); }
 
@@ -81,14 +80,14 @@ private:
         paramBindings,
         // diagnoseDuplicateBinding
         [&](ValueDecl *decl) {
-          tc.diagnose(decl->getIdentifierLoc(),
-                      diag::identifier_bound_multiple_times_in_same_paramlist,
-                      decl->getIdentifier());
+          diagnose(decl->getIdentifierLoc(),
+                   diag::identifier_bound_multiple_times_in_same_paramlist,
+                   decl->getIdentifier());
         },
         // noteFirstBinding
         [&](ValueDecl *decl) {
-          tc.diagnose(decl->getIdentifierLoc(),
-                      diag::identifier_bound_first_here, decl->getIdentifier());
+          diagnose(decl->getIdentifierLoc(), diag::identifier_bound_first_here,
+                   decl->getIdentifier());
         });
 
     // Resolve the return type of the function
@@ -138,14 +137,14 @@ private:
         vars,
         // diagnoseDuplicateBinding
         [&](ValueDecl *decl) {
-          tc.diagnose(decl->getIdentifierLoc(),
-                      diag::identifier_bound_multiple_times_in_same_pat,
-                      decl->getIdentifier());
+          diagnose(decl->getIdentifierLoc(),
+                   diag::identifier_bound_multiple_times_in_same_pat,
+                   decl->getIdentifier());
         },
         // noteFirstBinding
         [&](ValueDecl *decl) {
-          tc.diagnose(decl->getIdentifierLoc(),
-                      diag::identifier_bound_first_here, decl->getIdentifier());
+          diagnose(decl->getIdentifierLoc(), diag::identifier_bound_first_here,
+                   decl->getIdentifier());
         });
 
     // Type-check the pattern.

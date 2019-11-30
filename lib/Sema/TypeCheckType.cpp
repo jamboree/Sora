@@ -21,12 +21,13 @@ using namespace sora;
 
 namespace {
 /// Resolves TypeReprs into types.
-class TypeReprResolver : public TypeReprVisitor<TypeReprResolver, Type> {
+class TypeReprResolver : public ASTChecker,
+                         public TypeReprVisitor<TypeReprResolver, Type> {
 public:
-  TypeChecker &tc;
   SourceFile &file;
 
-  TypeReprResolver(TypeChecker &tc, SourceFile &file) : tc(tc), file(file) {}
+  TypeReprResolver(TypeChecker &tc, SourceFile &file)
+      : ASTChecker(tc), file(file) {}
 
   Type visitIdentifierTypeRepr(IdentifierTypeRepr *tyRepr) {
     UnqualifiedTypeLookup utl(file);
@@ -37,8 +38,8 @@ public:
     // results.
     auto &results = utl.results;
     if (results.empty()) {
-      tc.diagnose(tyRepr->getLoc(), diag::cannot_find_type_in_scope,
-                  tyRepr->getIdentifier());
+      diagnose(tyRepr->getLoc(), diag::cannot_find_type_in_scope,
+               tyRepr->getIdentifier());
       return tc.ctxt.errorType;
     }
 

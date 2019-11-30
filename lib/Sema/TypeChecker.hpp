@@ -68,7 +68,7 @@ public:
   /// groups. For example, in 'let (a, b, a, b)', they're both called for 'a'
   /// first and then for 'b' (or for 'b' then for 'a' - that ordering isn't
   /// guaranteed)
-  void checkForDuplicateBindingsInList(
+  static void checkForDuplicateBindingsInList(
       ArrayRef<ValueDecl *> decls,
       llvm::function_ref<void(ValueDecl *)> diagnoseDuplicateBinding,
       llvm::function_ref<void(ValueDecl *)> noteFirstBinding);
@@ -90,6 +90,15 @@ public:
   /// \returns \p expr or the expr that should replace it in the tree.
   Expr *typecheckExpr(Expr *expr, DeclContext *dc, Type ofType = Type());
 
+  /// Typechecking entry point for expressions used as conditions.
+  /// \param expr the expression to typecheck
+  /// \param dc th DeclContext in which this Expr lives. Cannot be null.
+  /// \returns \p expr or the expr that should replace it in the tree.
+  Expr *typecheckCondition(Expr *expr, DeclContext *dc) {
+    /// FIXME: Handle these differently
+    return typecheckExpr(expr, dc);
+  }
+
   /// Statement typechecking entry point
   /// \param stmt the statement to typecheck
   /// \param dc th DeclContext in which this Stmt lives. Cannot be null.
@@ -109,6 +118,28 @@ public:
   SmallVector<FuncDecl *, 4> definedFunctions;
 
   ASTContext &ctxt;
+  DiagnosticEngine &diagEngine;
+};
+
+/// A small common base between AST "Checkers" (ExprChecker, DeclChecker,
+/// etc.) that provides some basic functionalities.
+class ASTChecker {
+public:
+  ASTChecker(TypeChecker &tc)
+      : tc(tc), ctxt(tc.ctxt), diagEngine(tc.diagEngine) {}
+
+  /// Emits a diagnostic at \p loc
+  template <typename... Args>
+  InFlightDiagnostic
+  diagnose(SourceLoc loc, TypedDiag<Args...> diag,
+           typename detail::PassArgument<Args>::type... args) {
+    assert(loc &&
+           "TypeChecker can't emit diagnostics without valid SourceLocs");
+    return diagEngine.diagnose<Args...>(loc, diag, args...);
+  }
+
+  ASTContext &ctxt;
+  TypeChecker &tc;
   DiagnosticEngine &diagEngine;
 };
 } // namespace sora

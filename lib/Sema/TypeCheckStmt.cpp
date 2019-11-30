@@ -18,12 +18,11 @@ using namespace sora;
 //===- StmtChecker --------------------------------------------------------===//
 
 namespace {
-class StmtChecker : public StmtVisitor<StmtChecker> {
+class StmtChecker : public ASTChecker, public StmtVisitor<StmtChecker> {
 public:
-  TypeChecker &tc;
   DeclContext *dc;
 
-  StmtChecker(TypeChecker &tc, DeclContext *dc) : tc(tc), dc(dc) {}
+  StmtChecker(TypeChecker &tc, DeclContext *dc) : ASTChecker(tc), dc(dc) {}
 
   void visitDecl(Decl *decl) { tc.typecheckDecl(decl); }
 
@@ -93,7 +92,7 @@ public:
   void checkCondition(ConditionalStmt *stmt) {
     StmtCondition cond = stmt->getCond();
     if (Expr *expr = cond.getExprOrNull()) {
-      cond = tc.typecheckExpr(expr, dc);
+      cond = tc.typecheckCondition(expr, dc);
       stmt->setCond(cond);
     }
     else if (LetDecl *decl = cond.getLetDecl())
