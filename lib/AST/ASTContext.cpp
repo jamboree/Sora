@@ -200,6 +200,7 @@ ASTContext::ASTContext(const SourceManager &srcMgr,
       f64Type(new (*this, ArenaKind::Permanent)
                   FloatType(*this, FloatKind::IEEE64)),
       voidType(new (*this, ArenaKind::Permanent) VoidType(*this)),
+      nullType(new (*this, ArenaKind::Permanent) NullType(*this)),
       boolType(new (*this, ArenaKind::Permanent) BoolType(*this)),
       errorType(new (*this, ArenaKind::Permanent) ErrorType(*this)) {
   // Build the BuiltinTypes lookup map

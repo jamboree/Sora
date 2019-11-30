@@ -333,6 +333,20 @@ public:
   }
 };
 
+/// The null type is the type of the 'null' literal.
+///
+/// This type is always canonical.
+class NullType final : public BuiltinType {
+  NullType(ASTContext &ctxt) : BuiltinType(TypeKind::Null, ctxt) {}
+  friend ASTContext;
+
+public:
+  static bool classof(const TypeBase *type) {
+    return type->getKind() == TypeKind::Null;
+  }
+};
+
+
 /// 'bool' type
 //
 /// This type is always canonical.
