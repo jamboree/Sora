@@ -252,6 +252,12 @@ CanType TypeBase::getCanonicalType() const {
   return CanType(result);
 }
 
+Type TypeBase::getRValue() const { 
+  if (LValueType *lvalue = dyn_cast<LValueType>(const_cast<TypeBase *>(this)))
+    return lvalue->getObjectType()->getRValue();
+  return const_cast<TypeBase *>(this);
+}
+
 void TypeBase::print(raw_ostream &out,
                      const TypePrintOptions &printOptions) const {
   Type(const_cast<TypeBase *>(this)).print(out, printOptions);

@@ -208,6 +208,11 @@ public:
   /// \returns the canonical version of this type
   CanType getCanonicalType() const;
 
+  /// \returns this type as an rvalue.
+  /// If this type is an LValue, returns getObjectType()->getRValue(), else just
+  /// returns this.
+  Type getRValue() const;
+
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const {
     return TypeProperties(bits.TypeBase.typePropertiesValue);
@@ -345,7 +350,6 @@ public:
     return type->getKind() == TypeKind::Null;
   }
 };
-
 
 /// 'bool' type
 //
