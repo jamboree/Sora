@@ -17,6 +17,7 @@
 #include "Sora/AST/NameLookup.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/Diagnostics/DiagnosticsSema.hpp"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
@@ -33,6 +34,8 @@ public:
   ConstraintSystem &cs;
   /// The DeclContext in which this expression appears
   DeclContext *dc;
+  /// The set of DiscardExpr that are considered valid.
+  llvm::SmallPtrSet<DiscardExpr *, 4> validDiscardExprs;
 
   ExprChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
       : ASTChecker(tc), cs(cs), dc(dc) {}
@@ -54,6 +57,11 @@ public:
     tc.resolveTypeLoc(cast->getTypeLoc(), getSourceFile());
     return cast;
   }
+
+  /// Given a an assignement expression \p expr, adds every valid DiscardExpr
+  /// found in the LHS of the assignement to \c validDiscardExprs
+  /// TODO
+  void addValidDiscardExprs(BinaryExpr *expr);
 
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
     expr = visit(expr);
