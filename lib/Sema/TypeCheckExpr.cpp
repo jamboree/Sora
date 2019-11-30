@@ -168,11 +168,13 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   return expr;
 }
 
-Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) { return expr; }
+Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) {
+  llvm_unreachable("Expr visited twice!");
+}
 
 Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
   /// This DiscardExpr is not valid, diagnose it.
-  if (validDiscardExprs.count(expr) != 0) {
+  if (validDiscardExprs.count(expr) == 0) {
     diagnose(expr->getLoc(), diag::illegal_discard_expr);
     return nullptr;
   }
@@ -183,18 +185,30 @@ Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
 }
 
 Expr *ExprChecker::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
+  // integer literals have a "float" type variable that'll default to i32 unless
+  // unified with another floating point type.
+  expr->setType(cs.createIntegerTypeVariable());
   return expr;
 }
 
 Expr *ExprChecker::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
+  // float literals have a "float" type variable that'll default to f32 unless
+  // unified with another floating point type.
+  expr->setType(cs.createFloatTypeVariable());
   return expr;
 }
 
 Expr *ExprChecker::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
+  // boolean literals always have a "bool" type.
+  expr->setType(ctxt.boolType);
   return expr;
 }
 
-Expr *ExprChecker::visitNullLiteralExpr(NullLiteralExpr *expr) { return expr; }
+Expr *ExprChecker::visitNullLiteralExpr(NullLiteralExpr *expr) {
+  // The "null" literal has its own type
+  expr->setType(ctxt.nullType);
+  return expr;
+}
 
 Expr *ExprChecker::visitErrorExpr(ErrorExpr *expr) {
   llvm_unreachable("Expr checked twice!");
@@ -202,7 +216,8 @@ Expr *ExprChecker::visitErrorExpr(ErrorExpr *expr) {
 
 Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   tc.resolveTypeLoc(expr->getTypeLoc(), getSourceFile());
-  // TODO
+  // TODO: unify subexpression type w/ cast goal type w/ a special comparator
+  // (that checks if the conversion is legit)
   return expr;
 }
 

@@ -105,8 +105,10 @@ private:
     Type subst = TypeVariableInfo::get(type).getSubstitution();
     // Return ErrorType when there are no substitutions
     if (!subst) {
-      if (Type result = onNoSubst(type))
+      if (Type result = onNoSubst(type)) {
+        assert(!result->hasTypeVariable() && "not simplified");
         return result;
+      }
       return cs.ctxt.errorType;
     }
     // Recursively simplify TypeVariableTypes
@@ -137,7 +139,7 @@ Type ConstraintSystem::simplifyType(
   if (!type->hasTypeVariable())
     return type;
   Type simplified = TypeSimplifier(*this, onNoSubst).visit(type);
-  assert(simplified && !type->hasTypeVariable() && "Not simplified!");
+  assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
   return simplified;
 }
 
