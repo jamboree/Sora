@@ -25,11 +25,12 @@ public:
   using Parent = TypeVisitor<TypeSimplifier, Type>;
   friend Parent;
 
-  TypeSimplifier(ConstraintSystem &cs, bool &success)
-      : cs(cs), success(success) {}
+  TypeSimplifier(ConstraintSystem &cs,
+                 llvm::function_ref<Type(TypeVariableType *)> onNoSubst)
+      : cs(cs), onNoSubst(onNoSubst) {}
 
   ConstraintSystem &cs;
-  bool &success;
+  llvm::function_ref<Type(TypeVariableType *)> onNoSubst;
 
   using Parent::visit;
 
@@ -104,10 +105,10 @@ private:
     Type subst = TypeVariableInfo::get(type).getSubstitution();
     // Return ErrorType when there are no substitutions
     if (!subst) {
-      success = false;
+      if (Type result = onNoSubst(type))
+        return result;
       return cs.ctxt.errorType;
     }
-    success &= true;
     // Recursively simplify TypeVariableTypes
     if (Type simplified = visit(subst))
       return simplified;
@@ -131,11 +132,11 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   return tyVar;
 }
 
-Type ConstraintSystem::simplifyType(Type type, bool &success) {
-  success = true;
+Type ConstraintSystem::simplifyType(
+    Type type, llvm::function_ref<Type(TypeVariableType *)> onNoSubst) {
   if (!type->hasTypeVariable())
     return type;
-  Type simplified = TypeSimplifier(*this, success).visit(type);
+  Type simplified = TypeSimplifier(*this, onNoSubst).visit(type);
   assert(simplified && !type->hasTypeVariable() && "Not simplified!");
   return simplified;
 }

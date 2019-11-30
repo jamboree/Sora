@@ -69,13 +69,13 @@ public:
   /// If \p expr is a DiscardExpr, adds it to \c validDiscardExprs.
   /// Else, if \p expr is a ParenExpr or TupleExpr, recurses with the
   /// subexpression(s).
-  void addValidDiscardExprs(Expr *expr);
+  void findValidDiscardExprs(Expr *expr);
 
   std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
     // For assignements, we must whitelist DiscardExprs in the LHS.
     if (BinaryExpr *binary = dyn_cast<BinaryExpr>(expr))
       if (binary->isAssignementOp())
-        addValidDiscardExprs(binary->getLHS());
+        findValidDiscardExprs(binary->getLHS());
     return {Action::Continue, expr};
   }
 
@@ -151,17 +151,17 @@ Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
   return nullptr;
 }
 
-void ExprChecker::addValidDiscardExprs(Expr *expr) {
+void ExprChecker::findValidDiscardExprs(Expr *expr) {
   // allow _ =
   if (DiscardExpr *discard = dyn_cast<DiscardExpr>(expr))
     validDiscardExprs.insert(discard);
   // allow (_) = ...
   if (ParenExpr *paren = dyn_cast<ParenExpr>(expr))
-    addValidDiscardExprs(paren->getSubExpr());
+    findValidDiscardExprs(paren->getSubExpr());
   // allow (_, _) = ..., ((_, _), (_, _)) = ..., etc.
   if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
     for (Expr *elem : tuple->getElements())
-      addValidDiscardExprs(elem);
+      findValidDiscardExprs(elem);
 }
 
 Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
@@ -176,14 +176,9 @@ Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
     diagnose(expr->getLoc(), diag::illegal_discard_expr);
     return nullptr;
   }
-  /// FIXME: Remove the next line & Uncomment the ones after once ExprEpilogue
-  /// is implemented.
-  expr->setType(ctxt.errorType);
-  /*
   /// This DiscardExpr is valid, give it a TypeVariableType with an LValue.
   TypeVariableType *tv = cs.createGeneralTypeVariable();
   expr->setType(LValueType::get(tv));
-  */
   return expr;
 }
 
@@ -232,6 +227,47 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) { return expr; }
 Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) { return expr; }
 
 Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) { return expr; }
+
+//===- TypeChecker --------------------------------------------------------===//
+
+class ExprCheckerEpilogue : public ASTChecker, public ASTWalker {
+public:
+  ConstraintSystem &cs;
+
+  ExprCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs)
+      : ASTChecker(tc), cs(cs) {}
+
+  void simplifyTypeOfExpr(Expr *expr) {
+    Type type = expr->getType();
+    assert(type && "untyped expr");
+    if (!type->hasTypeVariable())
+      return;
+    bool isAmbiguous = false;
+    expr->setType(
+        // Called when a TV has no substitution
+        cs.simplifyType(expr->getType(), [&](TypeVariableType *type) -> Type {
+          TypeVariableInfo &info = TypeVariableInfo::get(type);
+          // If it's an integer type variable, default to i32
+          if (info.isIntegerTypeVariable())
+            return ctxt.i32Type;
+          // If it's a float type variable, default to f32
+          if (info.isFloatTypeVariable())
+            return ctxt.f32Type;
+          // Else, we can't do much more, just tag the type as being ambiguous
+          isAmbiguous = true;
+          return nullptr;
+        }));
+    // FIXME: Make the diagnostic more precise depending on the circumstances
+    if (isAmbiguous)
+      diagnose(expr->getLoc(), diag::type_is_ambiguous_without_more_ctxt);
+  }
+
+  std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
+    simplifyTypeOfExpr(expr);
+    return {true, expr};
+  }
+};
+
 } // namespace
 
 //===- TypeChecker --------------------------------------------------------===//
@@ -242,7 +278,9 @@ Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
   ConstraintSystem system(*this);
   // Check the expression
   expr = expr->walk(ExprChecker(*this, system, dc)).second;
-  assert(expr && "walk returns null?");
-  // TODO: Perform the epilogue (simplify types, diagnose inference errors)
+  assert(expr && "ExprChecker returns null?");
+  // Perform the epilogue (simplify types, diagnose inference errors)
+  expr = expr->walk(ExprCheckerEpilogue(*this, system)).second;
+  assert(expr && "ExprCheckerEpilogue returns null?");
   return expr;
 }

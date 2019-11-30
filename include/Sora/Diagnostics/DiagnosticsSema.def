@@ -42,6 +42,9 @@ SORA_FWD_DECL(class Identifier)
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(type_is_ambiguous_without_more_ctxt,
+  "type of expression is ambiguous without more context", ())
+
 ERROR(cannot_find_value_in_scope,
   "cannot find value '%0' in this scope", (Identifier))
 
