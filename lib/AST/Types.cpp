@@ -289,6 +289,24 @@ const llvm::fltSemantics &FloatType::getAPFloatSemantics() const {
   llvm_unreachable("Unknown FloatKind!");
 }
 
+Optional<unsigned> TupleType::lookup(Identifier ident) const {
+  IntegerWidth::Status status;
+  // Parse the identifier string as an arbitrary-width integer
+  llvm::APInt value =
+      IntegerWidth::arbitrary().parse(ident.c_str(), false, 0, &status);
+  // If the value couldn't be parsed successfully, it can't be an integer.
+  if (status != IntegerWidth::Status::Ok)
+    return None;
+  // The maximum index of the tuple is like an array: its size-1.
+  const unsigned maxIdx = getNumElements() - 1;
+  // If the value is greater or equal to that value, the index isn't legit,
+  // else, return the parsed index.
+  unsigned result = value.getLimitedValue(maxIdx);
+  if (result == maxIdx)
+    return None;
+  return result;
+}
+
 void TupleType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements) {
   id.AddInteger(elements.size());
   for (Type type : elements)

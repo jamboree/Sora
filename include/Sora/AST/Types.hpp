@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
+#include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/IntegerWidth.hpp"
@@ -450,11 +451,18 @@ public:
   /// \returns the empty tuple type.
   static TupleType *getEmpty(ASTContext &ctxt);
 
+  /// \returns the index of the element with identifier \p ident, or None if no
+  /// element with that identifier exists in the tuple.
+  /// Note that this always converts the identifier to a number, as tuple
+  /// elements in Sora don't have labels.
+  Optional<unsigned> lookup(Identifier ident) const;
+
   bool isEmpty() const { return getNumElements() == 0; }
   unsigned getNumElements() const { return bits.TupleType.numElems; }
   ArrayRef<Type> getElements() const {
     return {getTrailingObjects<Type>(), getNumElements()};
   }
+  Type getElement(unsigned n) const { return getElements()[n]; }
 
   void Profile(llvm::FoldingSetNodeID &id) { Profile(id, getElements()); }
   static void Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements);
