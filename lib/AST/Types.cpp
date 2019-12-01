@@ -293,7 +293,7 @@ Optional<unsigned> TupleType::lookup(Identifier ident) const {
   IntegerWidth::Status status;
   // Parse the identifier string as an arbitrary-width integer
   llvm::APInt value =
-      IntegerWidth::arbitrary().parse(ident.c_str(), false, 0, &status);
+      IntegerWidth::arbitrary().parse(ident.c_str(), false, 10, &status);
   // If the value couldn't be parsed successfully, it can't be an integer.
   if (status != IntegerWidth::Status::Ok)
     return None;
