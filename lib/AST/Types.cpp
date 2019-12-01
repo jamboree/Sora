@@ -160,7 +160,7 @@ SourceLoc TypeLoc::getEndLoc() const {
 }
 
 std::string DiagnosticArgumentFormatter<Type>::format(Type type) {
-  return type.getString();
+  return type.getString(TypePrintOptions::forDiagnostics());
 }
 
 //===- TypeBase/Types -----------------------------------------------------===//
