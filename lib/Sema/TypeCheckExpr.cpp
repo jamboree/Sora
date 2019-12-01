@@ -354,20 +354,7 @@ public:
     if (!type->hasTypeVariable())
       return;
     bool isAmbiguous = false;
-    expr->setType(
-        // Called when a TV has no substitution
-        cs.simplifyType(expr->getType(), [&](TypeVariableType *type) -> Type {
-          TypeVariableInfo &info = TypeVariableInfo::get(type);
-          // If it's an integer type variable, default to i32
-          if (info.isIntegerTypeVariable())
-            return ctxt.i32Type;
-          // If it's a float type variable, default to f32
-          if (info.isFloatTypeVariable())
-            return ctxt.f32Type;
-          // Else, we can't do much more, just tag the type as being ambiguous
-          isAmbiguous = true;
-          return nullptr;
-        }));
+    expr->setType(cs.simplifyType(expr->getType()));
     // FIXME: Make the diagnostic more precise depending on the circumstances
     if (isAmbiguous)
       diagnose(expr->getLoc(), diag::type_is_ambiguous_without_more_ctxt);
