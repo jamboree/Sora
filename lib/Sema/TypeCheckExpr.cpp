@@ -83,6 +83,12 @@ public:
     return cast;
   }
 
+  /// \returns whether we can emit a diagnostic involving \p type
+  bool canDiagnose(Type type) { return !type->hasErrorType(); }
+
+  /// \returns whether we can emit a diagnostic involving \p expr
+  bool canDiagnose(Expr *expr) { return canDiagnose(expr->getType()); }
+
   /// If \p expr is a DiscardExpr, adds it to \c validDiscardExprs.
   /// Else, if \p expr is a ParenExpr or TupleExpr, recurses with the
   /// subexpression(s).
@@ -196,11 +202,14 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 
   // Helper that emits a diagnostic and returns nullptr.
   auto failure = [&]() -> Expr * {
-    // Emit a diagnostic: We want to highlight the value and member name fully.
-    diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, lookupTy,
-             memberID)
-        .highlight(expr->getBase()->getSourceRange())
-        .highlight(expr->getMemberIdentifierLoc());
+    if (canDiagnose(lookupTy)) {
+      // Emit a diagnostic: We want to highlight the value and member name
+      // fully.
+      diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, lookupTy,
+               memberID)
+          .highlight(expr->getBase()->getSourceRange())
+          .highlight(expr->getMemberIdentifierLoc());
+    }
     return nullptr;
   };
 
@@ -316,6 +325,10 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   Type fromType = expr->getSubExpr()->getType();
   Type toType = expr->getTypeLoc().getType();
 
+  // If the toType is already invalid, don't bother checking this
+  if (toType->hasErrorType())
+    return nullptr;
+
   // Check if cast is legal
   UnificationOptions options;
   options.typeComparator = [&](CanType a, CanType b) -> bool {
@@ -328,12 +341,17 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
     // TODO: int to bool conversion?
     return false;
   };
+
   if (!cs.unify(fromType, toType, options)) {
     // Use the simplified "fromType" in the diagnostic
-    diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
-             cs.simplifyType(fromType), toType)
-        .highlight(expr->getAsLoc())
-        .highlight(expr->getTypeLoc().getSourceRange());
+    Type fromTypeSimplified = cs.simplifyType(fromType);
+    if (canDiagnose(fromTypeSimplified)) {
+      // Emit the diagnostic
+      diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
+               fromTypeSimplified, toType)
+          .highlight(expr->getAsLoc())
+          .highlight(expr->getTypeLoc().getSourceRange());
+    }
   }
 
   // The type of the CastExpr is the 'to' type, even when there's an error.
