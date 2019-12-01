@@ -1,0 +1,14 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func defaultTypes() {
+  // CHECK: IntegerLiteralExpr type=i32 loc=line:5:3
+  0
+  // CHECK: FloatLiteralExpr type=f32 loc=line:7:3
+  0.0
+  // CHECK: BooleanLiteralExpr type=bool loc=line:9:3
+  true 
+  // CHECK: NullLiteralExpr type=null loc=line:11:3
+  null
+}
+
+// TODO:coercion  (0 as i16, etc.)

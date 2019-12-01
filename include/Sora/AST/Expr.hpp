@@ -486,6 +486,11 @@ public:
     bits.TupleElementExpr.isArrow = isArrow;
   }
 
+  /// Creates a TupleElementExpr from a UnresolvedMemberRefExpr
+  TupleElementExpr(UnresolvedMemberRefExpr *umre, unsigned index)
+      : TupleElementExpr(umre->getBase(), umre->getOpLoc(), umre->isArrow(),
+                         umre->getMemberIdentifierLoc(), index) {}
+
   Expr *getBase() const { return base; }
   void setBase(Expr *base) { this->base = base; }
 

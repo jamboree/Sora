@@ -39,8 +39,18 @@
 //===- Forward Declarations -----------------------------------------------===//
 
 SORA_FWD_DECL(class Identifier)
+SORA_FWD_DECL(class Type)
 
 //===- Exprs --------------------------------------------------------------===//
+
+ERROR(base_operand_of_arrow_isnt_ref_ty,
+  "base operand of '->' is not a reference type", ())
+
+ERROR(base_operand_of_dot_isnt_value_ty,
+  "base operand of '.' is not a value type", ())
+
+ERROR(value_of_type_has_no_member_named,
+  "value of type '%0' has no member named '%1'", (Type, Identifier))
 
 ERROR(type_is_ambiguous_without_more_ctxt,
   "type of expression is ambiguous without more context", ())

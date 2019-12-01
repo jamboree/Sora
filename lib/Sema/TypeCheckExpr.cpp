@@ -55,9 +55,26 @@ public:
     return *sf;
   }
 
-  DeclRefExpr *resolve(UnresolvedDeclRefExpr *udre, ValueDecl *resolved) {
+  DeclRefExpr *resolveDeclRefExpr(UnresolvedDeclRefExpr *udre,
+                                  ValueDecl *resolved) {
     DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
-    expr->setType(resolved->getValueType());
+    Type type = resolved->getValueType();
+    // Everything is immutable by default, except 'mut' VarDecls.
+    if (VarDecl *var = dyn_cast<VarDecl>(resolved))
+      if (var->isMutable())
+        type = LValueType::get(type);
+    expr->setType(type);
+    return expr;
+  }
+
+  TupleElementExpr *resolveTupleElementExpr(UnresolvedMemberRefExpr *umre,
+                                            TupleType *tuple, unsigned idx,
+                                            bool isMutable) {
+    TupleElementExpr *expr = new (ctxt) TupleElementExpr(umre, idx);
+    Type type = tuple->getElement(idx);
+    if (isMutable)
+      type = LValueType::get(type);
+    expr->setType(type);
     return expr;
   }
 
@@ -89,10 +106,16 @@ public:
       assert(result->hasType() && "Returned an untyped expression");
       expr = result;
     }
-    // Else, if it returned nullptr, it's because the expr isn't valid, so just
-    // give it an error type.
-    else
+    // Else, if it returned nullptr, it's because the expr isn't valid, so give
+    // it an ErrorType.
+    else {
+      // If it's an UnresolvedExpr that couldn't be resolved, replace it with an
+      // ErrorExpr first. This is needed because UnresolvedExpr are freed after
+      // Semantic Analysis completes.
+      if (UnresolvedExpr *ue = dyn_cast<UnresolvedExpr>(expr))
+        expr = new (ctxt) ErrorExpr(ue);
       expr->setType(ctxt.errorType);
+    }
 
     assert(expr->getType());
 
@@ -130,7 +153,7 @@ Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
 
   // If we have only one result, just resolve the expression.
   if (ValueDecl *decl = uvl.getUniqueResult())
-    return resolve(expr, decl);
+    return resolveDeclRefExpr(expr, decl);
 
   // Else, we got an error: emit a diagnostic depending on the situation
 
@@ -165,7 +188,80 @@ void ExprChecker::findValidDiscardExprs(Expr *expr) {
 }
 
 Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
-  return expr;
+  // The type on which we'll perform lookup
+  Type lookupTy = expr->getBase()->getType();
+  // The identifier we'll be looking for
+  Identifier memberID = expr->getMemberIdentifier();
+  SourceLoc memberIDLoc = expr->getMemberIdentifierLoc();
+
+  // Helper that emits a diagnostic and returns nullptr.
+  auto failure = [&]() -> Expr * {
+    // Emit a diagnostic: We want to highlight the value and member name fully.
+    diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, lookupTy,
+             memberID)
+        .highlight(expr->getBase()->getSourceRange())
+        .highlight(expr->getMemberIdentifierLoc());
+    return nullptr;
+  };
+
+  bool isMutable = false;
+
+  // #1
+  //  - Check that the operator used was the correct one
+  //  - Find the type in which lookup will be performed
+  {
+    // If the '->' operator was used, the base must be a reference type
+    ReferenceType *ref = lookupTy->getRValue()->getAs<ReferenceType>();
+    if (expr->isArrow()) {
+      if (!ref) {
+        // It's not a reference type, emit a diagnostic: we want to point at the
+        // operator & highlight the base expression fully.
+        diagnose(expr->getOpLoc(), diag::base_operand_of_arrow_isnt_ref_ty)
+            .highlight(expr->getBase()->getSourceRange());
+        return nullptr;
+      }
+      // It's indeed a reference type, and we'll look into the pointee type, and
+      // the mutability depends on the mutability of the ref.
+      lookupTy = ref->getPointeeType();
+      isMutable = ref->isMut();
+    }
+    // If the '.' operator was used, the base must be a value type.
+    else {
+      if (ref) {
+        // It's a reference type, emit a diagnostic: we want to point at the
+        // operator & highlight the base expression fully.
+        diagnose(expr->getOpLoc(), diag::base_operand_of_dot_isnt_value_ty)
+            .highlight(expr->getBase()->getSourceRange());
+        return nullptr;
+      }
+      // It's a value type, we'll look into the type minus its LValue if
+      // present, and the mutability depends on whether the type carries an
+      // LValue or not.
+      if (lookupTy->isLValue()) {
+        lookupTy = lookupTy->getRValue();
+        isMutable = true;
+      }
+    }
+  }
+
+  // #2
+  //  - Canonicalize the lookup type
+  lookupTy = lookupTy->getCanonicalType();
+
+  // #3
+  //  - Perform the actual lookup
+
+  // A. Looking into a tuple
+  if (TupleType *tuple = lookupTy->getAs<TupleType>()) {
+    Optional<unsigned> lookupResult = tuple->lookup(memberID);
+    if (lookupResult == None)
+      return failure();
+    return resolveTupleElementExpr(expr, tuple, *lookupResult, isMutable);
+  }
+  // (that's it, there are only tuples in sora for now)
+
+  // This type doesn't have members
+  return failure();
 }
 
 Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) {
