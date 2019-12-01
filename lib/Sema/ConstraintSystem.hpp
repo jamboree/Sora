@@ -74,7 +74,7 @@ public:
     return getTypeVariableKind() == TypeVariableKind::Float;
   }
 
-  /// Sets this TypeVariable's substitution. This can only be done once (\c
+  /// Sets this TypeVariable's substitution. This can only be done once. (\c
   /// hasSubstitution() must return false)
   void setSubstitution(Type type) {
     assert(!hasSubstitution() && "Already has a substitution");
@@ -153,11 +153,12 @@ public:
   /// \param success is set to true if every type variables were replaced
   /// successfully, or if no type variables were replaced at all. It is set to
   /// false if a type variable with no substitution was found.
-  /// \param onNoSubst function that is called when a type variable with no
-  /// substitution is found. If it returns null, the type is replaced with an
-  /// error type, else it's replaced with the type returned.
-  Type simplifyType(Type type,
-                    llvm::function_ref<Type(TypeVariableType *)> onNoSubst);
+  /// \param defaultInt If non-null, overrides the default substitution of
+  /// Integer type variables. (i32 by default)
+  /// \param defaultFloat If non-null, overrides the default substitution of
+  /// Float type variables. (f32 by default)
+  Type simplifyType(Type type, Type defaultInt = Type(),
+                    Type defaultFloat = Type());
 
   /// Unifies \p a with \p b with \p options.
   /// \returns true if unification was successful, false otherwise.

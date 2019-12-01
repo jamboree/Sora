@@ -25,12 +25,15 @@ public:
   using Parent = TypeVisitor<TypeSimplifier, Type>;
   friend Parent;
 
-  TypeSimplifier(ConstraintSystem &cs,
-                 llvm::function_ref<Type(TypeVariableType *)> onNoSubst)
-      : cs(cs), onNoSubst(onNoSubst) {}
+  TypeSimplifier(ConstraintSystem &cs, Type defaultInt, Type defaultFloat)
+      : cs(cs), defaultInt(defaultInt), defaultFloat(defaultFloat) {
+    // Default types can't have type variables
+    assert(defaultInt && !defaultInt->hasTypeVariable());
+    assert(defaultFloat && !defaultFloat->hasTypeVariable());
+  }
 
   ConstraintSystem &cs;
-  llvm::function_ref<Type(TypeVariableType *)> onNoSubst;
+  Type defaultInt, defaultFloat;
 
   using Parent::visit;
 
@@ -102,16 +105,17 @@ private:
   Type visitErrorType(ErrorType *type) { return nullptr; }
 
   Type visitTypeVariableType(TypeVariableType *type) {
-    Type subst = TypeVariableInfo::get(type).getSubstitution();
-    // Return ErrorType when there are no substitutions
+    TypeVariableInfo &info = TypeVariableInfo::get(type);
+    Type subst = info.getSubstitution();
+    // Return a default type or ErrorType when there are no substitutions
     if (!subst) {
-      if (Type result = onNoSubst(type)) {
-        assert(!result->hasTypeVariable() && "not simplified");
-        return result;
-      }
+      if (info.isFloatTypeVariable())
+        return defaultFloat;
+      if (info.isIntegerTypeVariable())
+        return defaultInt;
       return cs.ctxt.errorType;
     }
-    // Recursively simplify TypeVariableTypes
+    // If the substitution is also a type variable, simplify it as well.
     if (Type simplified = visit(subst))
       return simplified;
     return subst;
@@ -135,6 +139,19 @@ class TypeUnifier {
     TypeVariableInfo &info = TypeVariableInfo::get(tv);
     if (info.hasSubstitution())
       return false;
+    // Check that the substitution is legal
+    switch (info.getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      break;
+    case TypeVariableKind::Integer:
+      if (!subst->is<IntegerType>())
+        return false;
+      break;
+    case TypeVariableKind::Float:
+      if (!subst->is<FloatType>())
+        return false;
+      break;
+    }
     info.setSubstitution(subst);
     return true;
   }
@@ -258,11 +275,15 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   return tyVar;
 }
 
-Type ConstraintSystem::simplifyType(
-    Type type, llvm::function_ref<Type(TypeVariableType *)> onNoSubst) {
+Type ConstraintSystem::simplifyType(Type type, Type defaultInt,
+                                    Type defaultFloat) {
   if (!type->hasTypeVariable())
     return type;
-  Type simplified = TypeSimplifier(*this, onNoSubst).visit(type);
+  if (defaultInt.isNull())
+    defaultInt = ctxt.i32Type;
+  if (defaultFloat.isNull())
+    defaultFloat = ctxt.f32Type;
+  Type simplified = TypeSimplifier(*this, defaultInt, defaultFloat).visit(type);
   assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
   return simplified;
 }
