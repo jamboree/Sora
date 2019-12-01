@@ -312,6 +312,8 @@ void ConstraintSystem::dumpTypeVariables(
     print(out, tv, printOptions);
     out << "\n";
   }
+  if (typeVariables.empty())
+    out << "    <empty>\n";
 }
 
 std::string
