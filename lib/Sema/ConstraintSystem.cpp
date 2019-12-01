@@ -181,7 +181,7 @@ public:
         return setSubstitution(otherTV, type);
     }
 
-    // Else, we must visit the type to check that their structure matches.
+    // Else, we must visit the types to check that their structure matches.
     if (type->getKind() != other->getKind())
       return false;
 
@@ -191,9 +191,8 @@ public:
     return visit##ID##Type(static_cast<ID##Type *>(type.getPtr()),             \
                            static_cast<ID##Type *>(other.getPtr()));
 #include "Sora/AST/TypeNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   }
 
 #define BUILTIN_TYPE(TYPE)                                                     \
@@ -256,8 +255,15 @@ public:
   }
 
   bool visitTypeVariableType(TypeVariableType *type, TypeVariableType *other) {
-    // Equivalence (T0 = T1, so T0 should have the same substitution as T1)
-    // FIXME: This needs more work, what if 'type' has a subst but other doesn't?
+    TypeVariableInfo &typeInfo = TypeVariableInfo::get(type);
+    TypeVariableInfo &otherInfo = TypeVariableInfo::get(other);
+    // if both have substitution, unify their substitution
+    if (typeInfo.hasSubstitution() && otherInfo.hasSubstitution())
+      return unify(typeInfo.getSubstitution(), otherInfo.getSubstitution());
+    // if only 'type' has a substitution, set the substitution of 'other' to 'type'.
+    if (typeInfo.hasSubstitution())
+      return setSubstitution(other, type);
+    // Else, just set the substitution of 'type' to 'other.
     return setSubstitution(type, other);
   }
 };
