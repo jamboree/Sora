@@ -346,6 +346,8 @@ public:
     dumpCommon(expr);
     out << ' ';
     dumpLoc(expr->getAsLoc(), "asLoc");
+    if (expr->isUseless())
+      out << " useless";
     out << '\n';
 
     auto indent = increaseIndent();

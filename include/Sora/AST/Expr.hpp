@@ -69,6 +69,11 @@ protected:
       value : 1  
     );
 
+    // CastExpr
+    SORA_INLINE_BITFIELD(CastExpr, Expr, 1,
+      isUseless : 1  
+    );
+
     /// TupleElementExpr bits
     SORA_INLINE_BITFIELD_FULL(TupleElementExpr, Expr, 32+1,
       : NumPadBits,
@@ -451,10 +456,22 @@ class CastExpr final : public Expr {
 public:
   CastExpr(Expr *subExpr, SourceLoc asLoc, TypeRepr *typeRepr)
       : Expr(ExprKind::Cast), subExpr(subExpr), asLoc(asLoc),
-        typeLoc(typeRepr) {}
+        typeLoc(typeRepr) {
+    bits.CastExpr.isUseless = false;
+  }
 
   Expr *getSubExpr() const { return subExpr; }
   void setSubExpr(Expr *subExpr) { this->subExpr = subExpr; }
+
+  void setIsUseless(bool value = true) { bits.CastExpr.isUseless = value; }
+  /// \returns whether this cast is useless.
+  /// Useless casts are simply ignored by the IR generator.
+  ///
+  /// Note that an unless cast might still be useful, for instance
+  /// "0 as i16" is needed to tell the compiler that 0 is an i16 literal, but
+  /// the cast itself is useless (= it won't compile to anything, it's
+  /// purely static).
+  bool isUseless() const { return bits.CastExpr.isUseless; }
 
   SourceLoc getAsLoc() const { return asLoc; }
 
