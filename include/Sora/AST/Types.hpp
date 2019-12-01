@@ -213,6 +213,9 @@ public:
   /// returns this.
   Type getRValue() const;
 
+  /// \returns whether this type is an LValue
+  bool isLValue() const;
+
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const {
     return TypeProperties(bits.TypeBase.typePropertiesValue);
