@@ -508,6 +508,7 @@ public:
   ArrayRef<Type> getArgs() const {
     return {getTrailingObjects<Type>(), getNumArgs()};
   }
+  Type getArg(unsigned k) const { return getArgs()[k]; }
 
   Type getReturnType() const { return rtr; }
 

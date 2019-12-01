@@ -88,6 +88,17 @@ public:
   Type getSubstitution() const { return substitution; }
 };
 
+/// Options for type unification
+struct UnificationOptions {
+  std::function<bool(CanType, CanType)> typeComparator =
+      [](CanType a, CanType b) { return a == b; };
+
+  /// Whether LValues are ignored.
+  /// e.g. if true, unification will succeed for "@lvalue i32" and"i32", if set
+  /// to false, it'll fail.
+  bool ignoreLValues = true;
+};
+
 /// The ConstraintSystem serves a context for constraint generation, solving
 /// and diagnosing.
 ///
@@ -115,9 +126,9 @@ private:
   /// The Constraint System Arena RAII Object.
   RAIIConstraintSystemArena raiiCSArena;
 
-  /// The ID of the next TypeVariable that'll be allocated by the constraint
-  /// system.
-  unsigned nextTypeVariableID = 0;
+  /// The list of type variables created by this ConstraintSystem. Mostly used
+  /// by dumpTypeVariables().
+  SmallVector<TypeVariableType *, 8> typeVariables;
 
   /// Creates a new type variable of kind \p kind
   TypeVariableType *createTypeVariable(TypeVariableKind kind);
@@ -148,9 +159,18 @@ public:
   Type simplifyType(Type type,
                     llvm::function_ref<Type(TypeVariableType *)> onNoSubst);
 
+  /// Unifies \p a with \p b with \p options.
+  /// \returns true if unification was successful, false otherwise.
+  bool unify(Type a, Type b,
+             const UnificationOptions &options = UnificationOptions());
+
   /// Prints \p type and its TypeVariableInfo to \p out
   void print(raw_ostream &out, const TypeVariableType *type,
              const TypePrintOptions &printOptions = TypePrintOptions()) const;
+
+  void dumpTypeVariables(
+      raw_ostream &out,
+      const TypePrintOptions &printOptions = TypePrintOptions()) const;
 
   /// Same as \c print, but returns a string instead of printing to a stream.
   std::string

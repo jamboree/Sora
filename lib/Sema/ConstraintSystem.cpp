@@ -117,6 +117,128 @@ private:
     return subst;
   }
 };
+//===--- TypeUnifier ------------------------------------------------------===//
+
+/// Implements ConstraintSystem::unify()
+///
+/// visit() methods return true on success, false on failure.
+class TypeUnifier {
+
+  /// Checks for equality between a and b using options.typeComparator
+  bool checkEquality(CanType a, CanType b) {
+    return options.typeComparator(a, b);
+  }
+
+  /// Attempts to set the substitution of \p tv to \p subst.
+  /// \returns true on success, false on failure.
+  bool setSubstitution(TypeVariableType *tv, Type subst) {
+    TypeVariableInfo &info = TypeVariableInfo::get(tv);
+    if (info.hasSubstitution())
+      return false;
+    info.setSubstitution(subst);
+    return true;
+  }
+
+public:
+  TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options)
+      : cs(cs), options(options) {}
+
+  ConstraintSystem &cs;
+  const UnificationOptions &options;
+
+  bool unify(Type type, Type other) {
+    // Ignore LValues if allowed to
+    if (options.ignoreLValues) {
+      type = type->getRValue();
+      other = other->getRValue();
+    }
+
+    // If the other is a type variable, and 'type' isn't, just set the
+    // substitution
+    if (!type->is<TypeVariableType>())
+      if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
+        return setSubstitution(otherTV, type);
+
+    // Else, we must visit the type to check that their structure matches.
+    if (type->getKind() != other->getKind())
+      return false;
+
+    switch (type->getKind()) {
+#define TYPE(ID, PARENT)                                                       \
+  case TypeKind::ID:                                                           \
+    return visit##ID##Type(static_cast<ID##Type *>(type.getPtr()),             \
+                           static_cast<ID##Type *>(other.getPtr()));
+#include "Sora/AST/TypeNodes.def"
+    default:
+      llvm_unreachable("Unknown node");
+    }
+  }
+
+#define BUILTIN_TYPE(TYPE)                                                     \
+  bool visit##TYPE(TYPE *type, TYPE *other) {                                  \
+    return checkEquality(CanType(type), CanType(other));                       \
+  }
+
+  BUILTIN_TYPE(IntegerType)
+  BUILTIN_TYPE(FloatType)
+  BUILTIN_TYPE(VoidType)
+  BUILTIN_TYPE(BoolType)
+  BUILTIN_TYPE(NullType)
+
+#undef BUILTIN_TYPE
+
+  bool visitReferenceType(ReferenceType *type, ReferenceType *other) {
+    if (type->isMut() != other->isMut())
+      return false;
+    return unify(type->getPointeeType(), other->getPointeeType());
+  }
+
+  bool visitMaybeType(MaybeType *type, MaybeType *other) {
+    return unify(type->getValueType(), other->getValueType());
+  }
+
+  bool visitTupleType(TupleType *type, TupleType *other) {
+    // Tuples must have the same number of elements
+    if (type->getNumElements() != other->getNumElements())
+      return false;
+
+    bool success = true;
+    // Unify the elements
+    for (unsigned k = 0, size = type->getNumElements(); k < size; ++k)
+      success &= unify(type->getElement(k), other->getElement(k));
+    return success;
+  }
+
+  bool visitFunctionType(FunctionType *type, FunctionType *other) {
+    // Functions must have the same number of arguments
+    if (type->getNumArgs() != other->getNumArgs())
+      return false;
+
+    bool success = true;
+    // Unify return types
+    success &= unify(type->getReturnType(), other->getReturnType());
+    // Unify arg types
+    for (unsigned k = 0, size = type->getNumArgs(); k < size; ++k)
+      success &= unify(type->getArg(k), other->getArg(k));
+    return success;
+  }
+
+  bool visitLValueType(LValueType *type, LValueType *other) {
+    return unify(type->getObjectType(), other->getObjectType());
+  }
+
+  bool visitErrorType(ErrorType *type, ErrorType *other) {
+    // FIXME: Return true or false? The types are indeed equal, but they're
+    // error types. Should <error_type> = <error_type> really return true?
+    return true;
+  }
+
+  bool visitTypeVariableType(TypeVariableType *type, TypeVariableType *other) {
+    // Equivalence (T0 = T1, so T0 should have the same substitution as T1)
+    return setSubstitution(type, other);
+  }
+};
+
 } // namespace
 
 //===--- ConstraintSystem -------------------------------------------------===//
@@ -126,11 +248,13 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   size_t size = sizeof(TypeVariableType) + sizeof(TypeVariableInfo);
   void *mem = ctxt.allocate(size, alignof(TypeVariableType),
                             ArenaKind::ConstraintSystem);
-  /// Create the TypeVariableType
+  // Create the TypeVariableType
   TypeVariableType *tyVar =
-      new (mem) TypeVariableType(ctxt, nextTypeVariableID++);
-  /// Create the info
+      new (mem) TypeVariableType(ctxt, typeVariables.size());
+  // Create the info
   new (reinterpret_cast<void *>(tyVar + 1)) TypeVariableInfo(kind);
+  // Store the TypeVariable
+  typeVariables.push_back(tyVar);
   return tyVar;
 }
 
@@ -141,6 +265,15 @@ Type ConstraintSystem::simplifyType(
   Type simplified = TypeSimplifier(*this, onNoSubst).visit(type);
   assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
   return simplified;
+}
+
+bool ConstraintSystem::unify(Type a, Type b,
+                             const UnificationOptions &options) {
+  // If both types don't contain any type variables, just compare them.
+  if (!a->hasTypeVariable() && !b->hasTypeVariable())
+    return options.typeComparator(a->getCanonicalType(), b->getCanonicalType());
+  // Else, use the TypeUnifier.
+  return TypeUnifier(*this, options).unify(a, b);
 }
 
 void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
@@ -168,6 +301,17 @@ void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
   }
   else
     out << " unbound";
+}
+
+void ConstraintSystem::dumpTypeVariables(
+    raw_ostream &out, const TypePrintOptions &printOptions) const {
+  out << "Type Variables Created By ConstraintSystem 0x" << (void *)this
+      << "\n";
+  for (TypeVariableType *tv : typeVariables) {
+    out << "    ";
+    print(out, tv, printOptions);
+    out << "\n";
+  }
 }
 
 std::string
