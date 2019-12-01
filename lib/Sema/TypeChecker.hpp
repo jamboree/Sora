@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace sora {
+class ConstraintSystem;
 class Decl;
 class DeclContext;
 class Expr;
@@ -30,6 +31,26 @@ class ValueDecl;
 class TypeChecker final {
   TypeChecker(const TypeChecker &) = delete;
   TypeChecker &operator=(const TypeChecker &) = delete;
+
+  /// Performs expression checking on \p expr using the ConstraintSystem \p cs.
+  /// \returns \p expr or the expression that should replace \p expr in the
+  /// tree. Never nullptr. 
+  ///
+  /// After expression checking finishes, \c
+  /// performExprCheckingEpilogue must be called to replace type variables with
+  /// their substitutions & diagnose inference errors.
+  ///
+  /// Note that if the type of the expression contains unbound type variables,
+  /// you can use unify(expr->getType, someType) to bind it to something before
+  /// calling \c performExprCheckingEpilogue
+  Expr *performExprChecking(ConstraintSystem &cs, Expr *expr, DeclContext *dc);
+
+  /// Performs expression checking epilogue on \p expr using the
+  /// ConstraintSystem \p cs. This will replace type variables with their
+  /// substitutions & diagnose inference errors.
+  /// \returns \p expr or the expression that should replace \p expr in the
+  /// tree. Never nullptr.
+  Expr *performExprCheckingEpilogue(ConstraintSystem &cs, Expr *expr);
 
 public:
   TypeChecker(ASTContext &ctxt);
@@ -84,8 +105,9 @@ public:
   void typecheckFunctionBody(FuncDecl *func);
 
   /// Expression typechecking entry point.
+  /// This will create a ConstraintSystem for the expression.
   /// \param expr the expression to typecheck
-  /// \param dc th DeclContext in which this Expr lives. Cannot be null.
+  /// \param dc the DeclContext in which this Expr lives. Cannot be null.
   /// \param ofType If valid, the expected type of the expression.
   /// \returns \p expr or the expr that should replace it in the tree.
   Expr *typecheckExpr(Expr *expr, DeclContext *dc, Type ofType = Type());

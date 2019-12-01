@@ -383,15 +383,34 @@ public:
 
 //===- TypeChecker --------------------------------------------------------===//
 
+Expr *TypeChecker::performExprChecking(ConstraintSystem &cs, Expr *expr,
+                                       DeclContext *dc) {
+  assert(expr && "Expr* is null");
+  assert(dc && "DeclContext* is null");
+  expr = expr->walk(ExprChecker(*this, cs, dc)).second;
+  assert(expr && "ExprChecker returns a null Expr*?");
+  return expr;
+}
+
+Expr *TypeChecker::performExprCheckingEpilogue(ConstraintSystem &cs,
+                                               Expr *expr) {
+  assert(expr && "Expr* is null");
+  expr = expr->walk(ExprCheckerEpilogue(*this, cs)).second;
+  assert(expr && "ExprChecker returns a null Expr*?");
+  return expr;
+}
+
 Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
-  assert(expr && dc);
   // Create a constraint system for this expression
   ConstraintSystem system(*this);
+
   // Check the expression
-  expr = expr->walk(ExprChecker(*this, system, dc)).second;
-  assert(expr && "ExprChecker returns null?");
+  expr = performExprChecking(system, expr, dc);
+
+  // TODO: Unify this expr's type with oftype.
+
   // Perform the epilogue (simplify types, diagnose inference errors)
-  expr = expr->walk(ExprCheckerEpilogue(*this, system)).second;
-  assert(expr && "ExprCheckerEpilogue returns null?");
+  expr = performExprCheckingEpilogue(system, expr);
+
   return expr;
 }
