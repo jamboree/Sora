@@ -59,18 +59,20 @@ namespace detail {
 template <typename Ty> struct PassArgument { using type = Ty; };
 } // namespace detail
 
-/// This is the class that should be specialized to support custom types
+/// This is the class that can be specialized to support custom types
 /// in Diagnostics.
 ///
 /// For instance, if the "Foo" class wants to be usable in diagnostics,
 /// It needs to specialize this class for "Foo", and provide a definition
 /// of the static format method that returns a human-readable string
-/// usable in diagnostics.
+/// usable in diagnostics. SORA_FWD_DECL(class Foo) will also need to be used in
+/// the files that wish to use Foo as diagnostic arguments.
 template <typename Ty> struct DiagnosticArgumentFormatter {
   static std::string format(Ty value) {
-    // This below will always evaluate to false and trip when ::format 
+    // This below will always evaluate to false and trip when ::format
     // doesn't exist for that type
-    static_assert(!std::is_same<Ty, Ty>::value,
+    static_assert(
+        !std::is_same<Ty, Ty>::value,
         "No specialization of DiagnosticArgumentFormatter for this type.");
   }
 };
