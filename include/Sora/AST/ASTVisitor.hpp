@@ -45,9 +45,8 @@ public:
     return static_cast<Derived *>(this)->visit##ID##Expr(                      \
         static_cast<ID##Expr *>(expr), ::std::forward<Args>(args)...);
 #include "Sora/AST/ExprNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   };
 
   DeclRtrTy visit(Decl *decl, Args... args) {
@@ -58,9 +57,8 @@ public:
     return static_cast<Derived *>(this)->visit##ID##Decl(                      \
         static_cast<ID##Decl *>(decl), ::std::forward<Args>(args)...);
 #include "Sora/AST/DeclNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   };
 
   StmtRtrTy visit(Stmt *stmt, Args... args) {
@@ -71,9 +69,8 @@ public:
     return static_cast<Derived *>(this)->visit##ID##Stmt(                      \
         static_cast<ID##Stmt *>(stmt), ::std::forward<Args>(args)...);
 #include "Sora/AST/StmtNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   };
 
   PatternRtrTy visit(Pattern *pattern, Args... args) {
@@ -84,9 +81,8 @@ public:
     return static_cast<Derived *>(this)->visit##ID##Pattern(                   \
         static_cast<ID##Pattern *>(pattern), ::std::forward<Args>(args)...);
 #include "Sora/AST/PatternNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   };
 
   TypeReprRtrTy visit(TypeRepr *tyRepr, Args... args) {
@@ -97,9 +93,8 @@ public:
     return static_cast<Derived *>(this)->visit##ID##TypeRepr(                  \
         static_cast<ID##TypeRepr *>(tyRepr), ::std::forward<Args>(args)...);
 #include "Sora/AST/TypeReprNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   };
 
   // Add default implementations that chain back to their base class, so we

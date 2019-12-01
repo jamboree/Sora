@@ -24,9 +24,8 @@ public:
         static_cast<ID##Type *>(type.getPtr()),                                \
         ::std::forward<Args>(args)...);
 #include "Sora/AST/TypeNodes.def"
-    default:
-      llvm_unreachable("Unknown node");
     }
+    llvm_unreachable("Unknown node");
   }
 
 #define VISIT_METHOD(NODE, PARENT)                                             \
