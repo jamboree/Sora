@@ -18,7 +18,7 @@
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/Diagnostics/DiagnosticsSema.hpp"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/raw_ostream.h" // TODO: remove this
 
 using namespace sora;
 
@@ -312,8 +312,32 @@ Expr *ExprChecker::visitErrorExpr(ErrorExpr *expr) {
 
 Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   tc.resolveTypeLoc(expr->getTypeLoc(), getSourceFile());
-  // TODO: unify subexpression type w/ cast goal type w/ a special comparator
-  // (that checks if the conversion is legit)
+
+  Type fromType = expr->getSubExpr()->getType();
+  Type toType = expr->getTypeLoc().getType();
+
+  // Check if cast is legal
+  UnificationOptions options;
+  options.typeComparator = [&](CanType a, CanType b) -> bool {
+    // Allow conversion between integer widths/signedness
+    if (a->is<IntegerType>() && b->is<IntegerType>())
+      return true;
+    // Allow conversion between float widths as well
+    if (a->is<FloatType>() && b->is<FloatType>())
+      return true;
+    // TODO: int to bool conversion?
+    return false;
+  };
+  if (!cs.unify(fromType, toType, options)) {
+    // Use the simplified "fromType" in the diagnostic
+    diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
+             cs.simplifyType(fromType), toType)
+        .highlight(expr->getAsLoc())
+        .highlight(expr->getTypeLoc().getSourceRange());
+  }
+
+  // The type of the CastExpr is the 'to' type, even when there's an error.
+  expr->setType(toType);
   return expr;
 }
 
@@ -362,6 +386,13 @@ public:
 
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
     simplifyTypeOfExpr(expr);
+    // Some exprs might require a bit of post processing
+    if (CastExpr *cast = dyn_cast<CastExpr>(expr)) {
+      // Check whether this cast is useful or not
+      Type fromType = cast->getSubExpr()->getType()->getRValue();
+      if (fromType->getCanonicalType() == cast->getType()->getCanonicalType())
+        cast->setIsUseless();
+    }
     return {true, expr};
   }
 };
@@ -394,7 +425,8 @@ Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
   // Check the expression
   expr = performExprChecking(system, expr, dc);
 
-  // TODO: Unify this expr's type with oftype.
+  // TODO: Unify this expr's type with oftype (will need a handler for when
+  // unification fails)
 
   // Perform the epilogue (simplify types, diagnose inference errors)
   expr = performExprCheckingEpilogue(system, expr);

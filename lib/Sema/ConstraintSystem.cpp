@@ -170,11 +170,16 @@ public:
       other = other->getRValue();
     }
 
-    // If the other is a type variable, and 'type' isn't, just set the
-    // substitution
-    if (!type->is<TypeVariableType>())
+    // If one is a type variable, and the other isn't, just set the
+    // substitution.
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
+      if (!other->is<TypeVariableType>())
+        return setSubstitution(tv, other);
+    }
+    else {
       if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
         return setSubstitution(otherTV, type);
+    }
 
     // Else, we must visit the type to check that their structure matches.
     if (type->getKind() != other->getKind())
@@ -252,6 +257,7 @@ public:
 
   bool visitTypeVariableType(TypeVariableType *type, TypeVariableType *other) {
     // Equivalence (T0 = T1, so T0 should have the same substitution as T1)
+    // FIXME: This needs more work, what if 'type' has a subst but other doesn't?
     return setSubstitution(type, other);
   }
 };

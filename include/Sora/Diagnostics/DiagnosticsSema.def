@@ -43,6 +43,9 @@ SORA_FWD_DECL(class Type)
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(cannot_cast_value_of_type,
+  "cannot cast value of type '%0' to '%1'", (Type, Type))
+
 ERROR(base_operand_of_arrow_isnt_ref_ty,
   "base operand of '->' is not a reference type", ())
 
