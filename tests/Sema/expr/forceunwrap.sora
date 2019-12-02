@@ -1,0 +1,10 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func foo(a: maybe u16, b: maybe ()) {
+   0!   // expect-error: cannot force unwrap value of type 'i32' - value must have a 'maybe' type
+   // CHECK: ForceUnwrapExpr type=u16 exclaimLoc=line:6:5
+   a!
+   // CHECK: ForceUnwrapExpr type=() exclaimLoc=line:8:5
+   b!   
+   c!   // expect-error: cannot find value 'c' in this scope
+}

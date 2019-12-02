@@ -43,6 +43,10 @@ SORA_FWD_DECL(class Type)
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(cannot_force_unwrap_value_of_type,
+  "cannot force unwrap value of type '%0' - value must have a 'maybe' type", 
+  (Type))
+
 ERROR(cannot_cast_value_of_type,
   "cannot cast value of type '%0' to '%1'", (Type, Type))
 

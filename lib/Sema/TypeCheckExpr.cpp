@@ -65,6 +65,10 @@ public:
                                   ValueDecl *resolved) {
     DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
     Type type = resolved->getValueType();
+    // FIXME: Remove this & replace it with an assert once VarDecls are checked
+    // correctly
+    if (type.isNull())
+      type = ctxt.errorType;
     // Everything is immutable by default, except 'mut' VarDecls.
     if (VarDecl *var = dyn_cast<VarDecl>(resolved))
       if (var->isMutable())
@@ -151,6 +155,19 @@ public:
   Expr *visitUnaryExpr(UnaryExpr *expr);
 };
 
+void ExprChecker::findValidDiscardExprs(Expr *expr) {
+  // allow _ =
+  if (DiscardExpr *discard = dyn_cast<DiscardExpr>(expr))
+    validDiscardExprs.insert(discard);
+  // allow (_) = ...
+  if (ParenExpr *paren = dyn_cast<ParenExpr>(expr))
+    findValidDiscardExprs(paren->getSubExpr());
+  // allow (_, _) = ..., ((_, _), (_, _)) = ..., etc.
+  if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
+    for (Expr *elem : tuple->getElements())
+      findValidDiscardExprs(elem);
+}
+
 Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
   // Perform unqualified value lookup to try to resolve this identifier.
   UnqualifiedValueLookup uvl(getSourceFile());
@@ -179,35 +196,25 @@ Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
   return nullptr;
 }
 
-void ExprChecker::findValidDiscardExprs(Expr *expr) {
-  // allow _ =
-  if (DiscardExpr *discard = dyn_cast<DiscardExpr>(expr))
-    validDiscardExprs.insert(discard);
-  // allow (_) = ...
-  if (ParenExpr *paren = dyn_cast<ParenExpr>(expr))
-    findValidDiscardExprs(paren->getSubExpr());
-  // allow (_, _) = ..., ((_, _), (_, _)) = ..., etc.
-  if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
-    for (Expr *elem : tuple->getElements())
-      findValidDiscardExprs(elem);
-}
-
 Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
-  // The type on which we'll perform lookup
-  Type lookupTy = expr->getBase()->getType();
-  // The identifier we'll be looking for
+  Type baseTy = expr->getBase()->getType();
   Identifier memberID = expr->getMemberIdentifier();
   SourceLoc memberIDLoc = expr->getMemberIdentifierLoc();
+
+  // #0
+  //    - Compute the lookup type: it's the canonical type of the base,
+  //    simplified.
+  Type lookupTy = cs.simplifyType(baseTy->getCanonicalType());
 
   // If the type that we want to look into contains an ErrorType, stop here.
   if (lookupTy->hasErrorType())
     return nullptr;
 
-  bool isMutable = false;
-
   // #1
   //  - Check that the operator used was the correct one
   //  - Find the type in which lookup will be performed
+  //  - Find if the source is mutable or not
+  bool isMutable = false;
   {
     // If the '->' operator was used, the base must be a reference type
     ReferenceType *ref = lookupTy->getRValue()->getAs<ReferenceType>();
@@ -233,32 +240,15 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
             .highlight(expr->getBase()->getSourceRange());
         return nullptr;
       }
-      // It's a value type, we'll look into the type minus its LValue if
-      // present, and the mutability depends on whether the type carries an
-      // LValue or not.
+      // It's a value type, we'll look into the type (minus LValue if present)
+      // and the mutability depends on whether the type carries an LValue or
+      // not.
       if (lookupTy->isLValue()) {
         lookupTy = lookupTy->getRValue();
         isMutable = true;
       }
     }
   }
-
-  // #2
-  //  - Simplify & Canonicalize the lookup type
-  //  FIXME: It'd be great to "freeze" the lookupTy, so the TypeVariables inside
-  //    it don't change after this node has been checked. This can be achieved
-  //    by writing a "freezeType" method in the ConstraintSystem which would set
-  //    the substitution of every TypeVariable to the default type or the error
-  //    type. NOTE: It's currently not needed (as there's no way that the TVs
-  //    can be changed by an expression other than this one)
-  assert(!lookupTy->hasErrorType());
-  lookupTy = cs.simplifyType(lookupTy)->getCanonicalType();
-
-  // Check if simplification was successful or not, if it wasn't, stop here.
-  // We don't need to complain, ExprCheckerEpilogue will complain for us.
-  // FIXME: Perhaps it'd be better to emit a custom diagnostic here?
-  if (lookupTy->hasErrorType())
-    return expr;
 
   // #3
   //  - Perform the actual lookup
@@ -268,10 +258,11 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   auto memberNotFound = [&]() -> Expr * {
     // Emit a diagnostic: We want to highlight the value and member name
     // fully.
-    diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, lookupTy,
-             memberID)
-        .highlight(expr->getBase()->getSourceRange())
-        .highlight(expr->getMemberIdentifierLoc());
+    if (canDiagnose(baseTy))
+      diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, baseTy,
+               memberID)
+          .highlight(expr->getBase()->getSourceRange())
+          .highlight(expr->getMemberIdentifierLoc());
     return nullptr;
   };
 
@@ -413,7 +404,33 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
 }
 
 Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
-  return nullptr;
+  // Fetch the type of the subexpression as an RValue, and simplify it.
+  Type subExprType =
+      cs.simplifyType(expr->getSubExpr()->getType()->getRValue());
+
+  // Can't check the expression if it has an error type
+  if (subExprType->hasErrorType())
+    return nullptr;
+
+  // Get the canonical version of the subexpression's type
+  CanType canSubExprType = subExprType->getCanonicalType();
+
+  // Check that it's a maybe type
+  MaybeType *maybe = canSubExprType->getAs<MaybeType>();
+  if (!maybe) {
+    if (canDiagnose(subExprType))
+      diagnose(expr->getExclaimLoc(), diag::cannot_force_unwrap_value_of_type,
+               subExprType)
+          .highlight(expr->getSubExpr()->getSourceRange());
+    return nullptr;
+  }
+  // If it's indeed a maybe type, the type of this expression is the value type
+  // of the 'maybe'.
+  // FIXME: This doesn't preserve type sugar:
+  // e.g. if the subExpr's type is 'maybe ()', this will use 'void' as the type
+  // of the ForceUnwrapExpr.
+  expr->setType(maybe->getValueType());
+  return expr;
 }
 
 Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) { return nullptr; }
