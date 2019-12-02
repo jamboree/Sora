@@ -133,29 +133,6 @@ class TypeUnifier {
     return options.typeComparator(a, b);
   }
 
-  /// Attempts to set the substitution of \p tv to \p subst.
-  /// \returns true on success, false on failure.
-  bool setSubstitution(TypeVariableType *tv, Type subst) {
-    TypeVariableInfo &info = TypeVariableInfo::get(tv);
-    if (info.hasSubstitution())
-      return false;
-    // Check that the substitution is legal
-    switch (info.getTypeVariableKind()) {
-    case TypeVariableKind::General:
-      break;
-    case TypeVariableKind::Integer:
-      if (!subst->is<IntegerType>())
-        return false;
-      break;
-    case TypeVariableKind::Float:
-      if (!subst->is<FloatType>())
-        return false;
-      break;
-    }
-    info.setSubstitution(subst);
-    return true;
-  }
-
 public:
   TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options)
       : cs(cs), options(options) {}
@@ -174,11 +151,11 @@ public:
     // substitution.
     if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
       if (!other->is<TypeVariableType>())
-        return setSubstitution(tv, other);
+        return TypeVariableInfo::get(tv).setSubstitution(other);
     }
     else {
       if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
-        return setSubstitution(otherTV, type);
+        return TypeVariableInfo::get(otherTV).setSubstitution(type);
     }
 
     // Else, we must visit the types to check that their structure matches.
@@ -263,9 +240,9 @@ public:
     // if only 'type' has a substitution, set the substitution of 'other' to
     // 'type'.
     if (typeInfo.hasSubstitution())
-      return setSubstitution(other, type);
+      return TypeVariableInfo::get(other).setSubstitution(type);
     // Else, just set the substitution of 'type' to 'other.
-    return setSubstitution(type, other);
+    return TypeVariableInfo::get(type).setSubstitution(other);
   }
 };
 

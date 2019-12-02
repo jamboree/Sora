@@ -49,6 +49,24 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   /// Note that this can be another TypeVariable in case of an equivalence.
   Type substitution;
 
+  bool isIntegerTypeOrIntegerTypeVariable(Type type) {
+    if (type->is<IntegerType>())
+      return true;
+    TypeVariableType *tv = type->getAs<TypeVariableType>();
+    if (!tv)
+      return false;
+    return TypeVariableInfo::get(tv).isIntegerTypeVariable();
+  }
+
+  bool isFloatTypeOrFloatTypeVariable(Type type) {
+    if (type->is<FloatType>())
+      return true;
+    TypeVariableType *tv = type->getAs<TypeVariableType>();
+    if (!tv)
+      return false;
+    return TypeVariableInfo::get(tv).isFloatTypeVariable();
+  }
+
 public:
   /// Make TypeVariableInfo noncopyable, so we don't copy it by mistake.
   TypeVariableInfo(const TypeVariableInfo &) = delete;
@@ -74,11 +92,27 @@ public:
     return getTypeVariableKind() == TypeVariableKind::Float;
   }
 
-  /// Sets this TypeVariable's substitution. This can only be done once. (\c
-  /// hasSubstitution() must return false)
-  void setSubstitution(Type type) {
-    assert(!hasSubstitution() && "Already has a substitution");
+  /// Sets this TypeVariable's substitution.
+  /// \returns false if the substitution was rejected (because there's already a
+  /// substitution, or because it's not compatible), true if the substitution
+  /// was accepted.
+  bool setSubstitution(Type type) {
+    if (hasSubstitution())
+      return false;
+    switch (getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      break;
+    case TypeVariableKind::Integer:
+      if (!isIntegerTypeOrIntegerTypeVariable(type))
+        return false;
+      break;
+    case TypeVariableKind::Float:
+      if (!isFloatTypeOrFloatTypeVariable(type))
+        return false;
+      break;
+    }
     substitution = type;
+    return true;
   }
   /// \returns true if this TypeVariable has a substitution
   bool hasSubstitution() const { return (bool)substitution; }
