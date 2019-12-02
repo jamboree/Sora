@@ -11,4 +11,17 @@ func defaultTypes() {
   null
 }
 
-// TODO:coercion  (0 as i16, etc.)
+func coercions() {
+  // CHECK: IntegerLiteralExpr type=i16 loc=line:16:3
+  0 as i16
+  // CHECK: IntegerLiteralExpr type=u32 loc=line:18:3
+  0 as u32
+  // CHECK: IntegerLiteralExpr type=usize loc=line:20:3
+  0 as usize
+  // CHECK: IntegerLiteralExpr type=isize loc=line:22:3
+  0 as isize
+  // CHECK: FloatLiteralExpr type=f32 loc=line:24:3
+  0.0 as f32
+  // CHECK: FloatLiteralExpr type=f64 loc=line:26:3
+  0.0 as f64
+}
