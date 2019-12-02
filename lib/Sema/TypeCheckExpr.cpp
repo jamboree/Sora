@@ -346,12 +346,14 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   options.typeComparator = [&](CanType a, CanType b) -> bool {
     // Allow conversion between integer widths/signedness
     // Allow conversion between float widths as well
+    // Allow "useless" conversions (same type to same type)
     // TODO: int to bool conversion?
     return (a->is<IntegerType>() && b->is<IntegerType>()) ||
-           (a->is<FloatType>() && b->is<FloatType>());
+           (a->is<FloatType>() && b->is<FloatType>()) || (a == b);
   };
-
-  if (!cs.unify(fromType, toType, options)) {
+  // Unify the Canonical types
+  if (!cs.unify(fromType->getCanonicalType(), toType->getCanonicalType(),
+                options)) {
     // Use the simplified "fromType" in the diagnostic
     Type fromTypeSimplified = cs.simplifyType(fromType);
     // Emit the diagnostic
@@ -412,11 +414,11 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   if (subExprType->hasErrorType())
     return nullptr;
 
-  // Get the canonical version of the subexpression's type
-  CanType canSubExprType = subExprType->getCanonicalType();
+  // FIXME: Once TypeAliases are implemented, subExprType should be desugared to
+  // support things like "type Foo = maybe (), let x: Foo, x!"
 
   // Check that it's a maybe type
-  MaybeType *maybe = canSubExprType->getAs<MaybeType>();
+  MaybeType *maybe = subExprType->getAs<MaybeType>();
   if (!maybe) {
     if (canDiagnose(subExprType))
       diagnose(expr->getExclaimLoc(), diag::cannot_force_unwrap_value_of_type,
