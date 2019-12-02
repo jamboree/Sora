@@ -36,10 +36,9 @@ namespace {
 ///
 /// TODO-list of things that can be improved:
 ///     - This is a large class, it'd be a good idea to split it between
-///     multiple files if possible.
-///     - Handling of DiscardExprs could be improved, perhaps they shouldn't be
-///     checked by this class but should be checked by a separate visitor
-///     instead?
+///     multiple files.
+///     - Handling of DiscardExprs isn't ideal, perhaps they should be checked
+///     by another class?
 class ExprChecker : public ASTChecker,
                     public ASTWalker,
                     public ExprVisitor<ExprChecker, Expr *> {
