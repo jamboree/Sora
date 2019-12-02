@@ -244,8 +244,19 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   }
 
   // #2
-  //  - Canonicalize the lookup type
-  lookupTy = lookupTy->getCanonicalType();
+  //  - Simplify & Canonicalize the lookup type
+  //  FIXME: It'd be great to "freeze" the lookupTy, so the TypeVariables inside
+  //    it don't change after this node has been checked. NOTE: It's currently
+  //    not needed (as there's no way that the TVs can be changed by an
+  //    expression other than this one)
+  assert(!lookupTy->hasErrorType());
+  lookupTy = cs.simplifyType(lookupTy)->getCanonicalType();
+
+  // Check if simplification was successful or not, if it wasn't, stop here.
+  // We don't need to complain, ExprCheckerEpilogue will complain for us.
+  // FIXME: Perhaps it'd be better to emit a custom diagnostic here?
+  if (lookupTy->hasErrorType())
+    return expr;
 
   // #3
   //  - Perform the actual lookup
