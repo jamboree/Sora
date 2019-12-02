@@ -31,9 +31,15 @@ namespace {
 /// some nodes are also visited in pre-order (see walkToExprPre/Post).
 ///
 /// visit() methods return nullptr on error, else they return an expression with
-/// a valid type (this can be the same expression, or another one (if the
-/// expression must be replaced with something else (e.g. resolving
-/// UnresolvedDeclRefExprs)))
+/// a valid type (this can be the same expression, or another one that'll
+/// replace it in the AST (e.g. resolving UnresolvedDeclRefExprs))
+///
+/// TODO-list of things that can be improved:
+///     - This is a large class, it'd be a good idea to split it between
+///     multiple files if possible.
+///     - Handling of DiscardExprs could be improved, perhaps they shouldn't be
+///     checked by this class but should be checked by a separate visitor
+///     instead?
 class ExprChecker : public ASTChecker,
                     public ASTWalker,
                     public ExprVisitor<ExprChecker, Expr *> {
@@ -42,7 +48,7 @@ public:
   ConstraintSystem &cs;
   /// The DeclContext in which this expression appears
   DeclContext *dc;
-  /// The set of DiscardExpr that are valid.
+  /// The set of DiscardExpr that are valid
   llvm::SmallPtrSet<DiscardExpr *, 4> validDiscardExprs;
 
   ExprChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
@@ -107,8 +113,7 @@ public:
     Expr *result = visit(expr);
     /// If the visit() method returned something, it must have a type.
     if (result) {
-      /// FIXME: Remove this once ExprChecker is complete
-      result->hasType() ? void() : result->setType(ctxt.errorType);
+      assert(!isa<UnresolvedExpr>(result) && "Returned an UnresolvedExpr");
       assert(result->hasType() && "Returned an untyped expression");
       expr = result;
     }
@@ -122,13 +127,7 @@ public:
         expr = new (ctxt) ErrorExpr(ue);
       expr->setType(ctxt.errorType);
     }
-
-    assert(expr->getType());
-
-    // If 'expr' is an assignement, clear the set of valid discard exprs.
-    if (BinaryExpr *binary = dyn_cast<BinaryExpr>(expr))
-      if (binary->isAssignementOp())
-        validDiscardExprs.clear();
+    assert(expr && expr->hasType());
     return {true, expr};
   }
 
@@ -200,18 +199,9 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   Identifier memberID = expr->getMemberIdentifier();
   SourceLoc memberIDLoc = expr->getMemberIdentifierLoc();
 
-  // Helper that emits a diagnostic and returns nullptr.
-  auto failure = [&]() -> Expr * {
-    if (canDiagnose(lookupTy)) {
-      // Emit a diagnostic: We want to highlight the value and member name
-      // fully.
-      diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, lookupTy,
-               memberID)
-          .highlight(expr->getBase()->getSourceRange())
-          .highlight(expr->getMemberIdentifierLoc());
-    }
+  // If the type that we want to look into contains an ErrorType, stop here.
+  if (lookupTy->hasErrorType())
     return nullptr;
-  };
 
   bool isMutable = false;
 
@@ -260,17 +250,28 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   // #3
   //  - Perform the actual lookup
 
+  // Helper that emits a diagnostic (lookupTy doesn't have member) and returns
+  // nullptr.
+  auto memberNotFound = [&]() -> Expr * {
+    // Emit a diagnostic: We want to highlight the value and member name
+    // fully.
+    diagnose(memberIDLoc, diag::value_of_type_has_no_member_named, lookupTy,
+             memberID)
+        .highlight(expr->getBase()->getSourceRange())
+        .highlight(expr->getMemberIdentifierLoc());
+    return nullptr;
+  };
+
   // A. Looking into a tuple
   if (TupleType *tuple = lookupTy->getAs<TupleType>()) {
     Optional<unsigned> lookupResult = tuple->lookup(memberID);
     if (lookupResult == None)
-      return failure();
+      return memberNotFound();
     return resolveTupleElementExpr(expr, tuple, *lookupResult, isMutable);
   }
   // (that's it, there are only tuples in sora for now)
 
-  // This type doesn't have members
-  return failure();
+  return memberNotFound();
 }
 
 Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) {
@@ -278,7 +279,7 @@ Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) {
 }
 
 Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
-  /// This DiscardExpr is not valid, diagnose it.
+  /// If this DiscardExpr is not valid, diagnose it.
   if (validDiscardExprs.count(expr) == 0) {
     diagnose(expr->getLoc(), diag::illegal_discard_expr);
     return nullptr;
@@ -325,37 +326,37 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   Type fromType = expr->getSubExpr()->getType();
   Type toType = expr->getTypeLoc().getType();
 
-  // If the toType is already invalid, don't bother checking this
-  if (toType->hasErrorType())
-    return nullptr;
+  assert(toType && "toType is null?");
+  // The type of the CastExpr is always the 'to' type, even if the from/toType
+  // contains an ErrorType.
+  expr->setType(toType);
+
+  // Don't bother checking if the cast is legit if there's an ErrorType
+  // somewhere.
+  if (fromType->hasErrorType() || toType->hasErrorType())
+    return expr;
 
   // Check if cast is legal
   UnificationOptions options;
+  // Use a custom comparator
   options.typeComparator = [&](CanType a, CanType b) -> bool {
     // Allow conversion between integer widths/signedness
-    if (a->is<IntegerType>() && b->is<IntegerType>())
-      return true;
     // Allow conversion between float widths as well
-    if (a->is<FloatType>() && b->is<FloatType>())
-      return true;
     // TODO: int to bool conversion?
-    return false;
+    return (a->is<IntegerType>() && b->is<IntegerType>()) ||
+           (a->is<FloatType>() && b->is<FloatType>());
   };
 
   if (!cs.unify(fromType, toType, options)) {
     // Use the simplified "fromType" in the diagnostic
     Type fromTypeSimplified = cs.simplifyType(fromType);
-    if (canDiagnose(fromTypeSimplified)) {
-      // Emit the diagnostic
-      diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
-               fromTypeSimplified, toType)
-          .highlight(expr->getAsLoc())
-          .highlight(expr->getTypeLoc().getSourceRange());
-    }
+    // Emit the diagnostic
+    diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
+             fromTypeSimplified, toType)
+        .highlight(expr->getAsLoc())
+        .highlight(expr->getTypeLoc().getSourceRange());
   }
 
-  // The type of the CastExpr is the 'to' type, even when there's an error.
-  expr->setType(toType);
   return expr;
 }
 
@@ -363,25 +364,50 @@ Expr *ExprChecker::visitTupleElementExpr(TupleElementExpr *expr) {
   llvm_unreachable("Expr checked twice!");
 }
 
-Expr *ExprChecker::visitTupleExpr(TupleExpr *expr) { return expr; }
-
-Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
-  // The type of this expr is the same as its child.
-  expr->setType(expr->getType());
+Expr *ExprChecker::visitTupleExpr(TupleExpr *expr) {
+  // If this is an empty tuple, just give it the empty tuple type '()'
+  if (expr->isEmpty()) {
+    expr->setType(TupleType::getEmpty(ctxt));
+    return expr;
+  }
+  // Create a TupleType of the element's types
+  assert(expr->getNumElements() > 1 && "Single Element Tuple Shouldn't Exist!");
+  SmallVector<Type, 8> tupleEltsTypes;
+  // A tuple's type is an LValue only if every element is also an LValue.
+  bool isLValue = true;
+  for (Expr *elt : expr->getElements()) {
+    Type eltType = elt->getType();
+    tupleEltsTypes.push_back(eltType);
+    isLValue &= eltType->hasErrorType();
+  }
+  Type type = TupleType::get(ctxt, tupleEltsTypes);
+  if (isLValue)
+    type = LValueType::get(type);
+  expr->setType(type);
   return expr;
 }
 
-Expr *ExprChecker::visitCallExpr(CallExpr *expr) { return expr; }
+Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
+  // The type of this expr is the same as its subexpression, preserving LValues.
+  expr->setType(expr->getSubExpr()->getType());
+  return expr;
+}
 
-Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) { return expr; }
+Expr *ExprChecker::visitCallExpr(CallExpr *expr) { return nullptr; }
 
-Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) { return expr; }
+Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
+  return nullptr;
+}
 
-Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) { return expr; }
+Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
+  return nullptr;
+}
 
-Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) { return expr; }
+Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) { return nullptr; }
 
-//===- TypeChecker --------------------------------------------------------===//
+Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) { return nullptr; }
+
+//===- ExprCheckerEpilogue ------------------------------------------------===//
 
 class ExprCheckerEpilogue : public ASTChecker, public ASTWalker {
 public:
