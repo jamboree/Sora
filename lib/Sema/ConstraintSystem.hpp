@@ -116,9 +116,7 @@ public:
   }
   /// \returns true if this TypeVariable has a substitution
   bool hasSubstitution() const { return (bool)substitution; }
-  /// \returns this TypeVariable's substitution (it can be a TypeVariable in
-  /// case of an equivalence class, see \c getBoundSubstitution() to get a
-  /// non TypeVariable substitution)
+  /// \returns this TypeVariable's substitution
   Type getSubstitution() const { return substitution; }
 };
 
