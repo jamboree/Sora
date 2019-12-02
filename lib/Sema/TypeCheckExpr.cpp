@@ -321,12 +321,12 @@ Expr *ExprChecker::visitErrorExpr(ErrorExpr *expr) {
 }
 
 Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
+  // Resolve the type after the 'as'.
   tc.resolveTypeLoc(expr->getTypeLoc(), getSourceFile());
 
   Type fromType = expr->getSubExpr()->getType();
   Type toType = expr->getTypeLoc().getType();
 
-  assert(toType && "toType is null?");
   // The type of the CastExpr is always the 'to' type, even if the from/toType
   // contains an ErrorType.
   expr->setType(toType);
