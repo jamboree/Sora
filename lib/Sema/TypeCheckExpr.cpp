@@ -246,9 +246,11 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   // #2
   //  - Simplify & Canonicalize the lookup type
   //  FIXME: It'd be great to "freeze" the lookupTy, so the TypeVariables inside
-  //    it don't change after this node has been checked. NOTE: It's currently
-  //    not needed (as there's no way that the TVs can be changed by an
-  //    expression other than this one)
+  //    it don't change after this node has been checked. This can be achieved
+  //    by writing a "freezeType" method in the ConstraintSystem which would set
+  //    the substitution of every TypeVariable to the default type or the error
+  //    type. NOTE: It's currently not needed (as there's no way that the TVs
+  //    can be changed by an expression other than this one)
   assert(!lookupTy->hasErrorType());
   lookupTy = cs.simplifyType(lookupTy)->getCanonicalType();
 
