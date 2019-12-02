@@ -1,0 +1,23 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func correct(a: &mut ((i32, i32), i16), b: (i32, i16), c: &((i32, i32), i16)) {  
+    // Mutable sources
+    // CHECK: TupleElementExpr type=@lvalue i32 dot opLoc=line:7:11 index=0 indexLoc=line:7:12
+    // CHECK: TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:7:7 index=0 indexLoc=line:7:9
+    (a->0).0
+    // Immutable sources
+    // CHECK: TupleElementExpr type=i32 dot opLoc=line:10:6 index=0 indexLoc=line:10:7
+    b.0
+    // CHECK: TupleElementExpr type=i32 dot opLoc=line:13:11 index=0 indexLoc=line:13:12
+    // CHECK: TupleElementExpr type=(i32, i32) arrow opLoc=line:13:7 index=0 indexLoc=line:13:9
+    (c->0).0
+}
+
+func incorrect(a: &mut (i16, i16), b: (i32, i16), c: i32) {  
+  a.0       // expect-error:  base operand of '.' is not a value type
+  b->0      // expect-error: base operand of '->' is not a reference type
+  b.2       // expect-error: value of type '(i32, i16)' has no member named '2'
+  b.123456123456123456  // expect-error: value of type '(i32, i16)' has no member named '123456123456123456'
+  c->foo    // expect-error: base operand of '->' is not a reference type
+  c.bar     // expect-error: value of type 'i32' has no member named 'bar'
+}
