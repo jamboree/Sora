@@ -298,11 +298,11 @@ Optional<unsigned> TupleType::lookup(Identifier ident) const {
   if (status != IntegerWidth::Status::Ok)
     return None;
   // The maximum index of the tuple is like an array: its size-1.
-  const unsigned maxIdx = getNumElements() - 1;
+  const unsigned numElem = getNumElements();
   // If the value is greater or equal to that value, the index isn't legit,
   // else, return the parsed index.
-  unsigned result = value.getLimitedValue(maxIdx);
-  if (result == maxIdx)
+  unsigned result = value.getLimitedValue(numElem);
+  if (result == numElem)
     return None;
   return result;
 }
