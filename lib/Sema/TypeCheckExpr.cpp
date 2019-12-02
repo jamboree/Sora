@@ -428,9 +428,6 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   }
   // If it's indeed a maybe type, the type of this expression is the value type
   // of the 'maybe'.
-  // FIXME: This doesn't preserve type sugar:
-  // e.g. if the subExpr's type is 'maybe ()', this will use 'void' as the type
-  // of the ForceUnwrapExpr.
   expr->setType(maybe->getValueType());
   return expr;
 }
