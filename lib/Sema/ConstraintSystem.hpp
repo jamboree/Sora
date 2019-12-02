@@ -112,9 +112,23 @@ struct UnificationOptions {
 /// relatively large object that can't be copied.
 class ConstraintSystem final {
 public:
+  /// \param tc the TypeChecker instance
+  /// Uses i32 and f32 for the default int/float type variable substitutions.
   ConstraintSystem(TypeChecker &tc)
+      : ConstraintSystem(tc, tc.ctxt.i32Type, tc.ctxt.f32Type) {}
+
+  /// \param tc the TypeChecker instance
+  /// \param intTVDefault The default type for Integer type variables
+  /// \param floatTVDefault The default type for Float type variables
+  ConstraintSystem(TypeChecker &tc, Type intTVDefault, Type floatTVDefault)
       : ctxt(tc.ctxt), typeChecker(tc),
-        raiiCSArena(ctxt.createConstraintSystemArena()) {}
+        raiiCSArena(ctxt.createConstraintSystemArena()),
+        intTVDefault(intTVDefault), floatTVDefault(floatTVDefault) {
+    assert(intTVDefault &&
+           "No default substitution for integer type variables");
+    assert(floatTVDefault &&
+           "No default substitution for float type variables");
+  }
 
   ConstraintSystem(const ConstraintSystem &) = delete;
   ConstraintSystem &operator=(const ConstraintSystem &) = delete;
@@ -129,6 +143,11 @@ private:
   /// The list of type variables created by this ConstraintSystem. Mostly used
   /// by dumpTypeVariables().
   SmallVector<TypeVariableType *, 8> typeVariables;
+
+  /// The default type of int type variables
+  const Type intTVDefault;
+  /// The default type of float type variables
+  const Type floatTVDefault;
 
   /// Creates a new type variable of kind \p kind
   TypeVariableType *createTypeVariable(TypeVariableKind kind);
@@ -147,16 +166,19 @@ public:
     return createTypeVariable(TypeVariableKind::Float);
   }
 
-  /// Simplifies \p type, replacing type variables with their substitution (or
-  /// ErrorType if there's no substitution)
+  /// \returns the default substitution for integer type variables
+  Type getIntegerTypeVariableDefaultType() const { return intTVDefault; }
+  /// \returns the default substitution for float type variables
+  Type getFloatTypeVariableDefaultType() const { return floatTVDefault; }
+
+  /// Simplifies \p type, replacing type variables with their substitutions.
+  /// If a general type variable has no substitution, an ErrorType is used, if
+  /// an Integer or Float type variable has no substitution, the default type
+  /// for those type variables is used (see \c getIntegerTypeVariableDefaultType
+  /// and \c getFloatTypeVariableDefaultType)
   /// \param type the type to simplify
-  /// \param defaultInt If non-null, overrides the default substitution of
-  /// Integer type variables. (i32 by default)
-  /// \param defaultFloat If non-null, overrides the default substitution of
-  /// Float type variables. (f32 by default)
-  /// \\\returns the simplified type, ErrorType on error (never nullptr)
-  Type simplifyType(Type type, Type defaultInt = Type(),
-                    Type defaultFloat = Type());
+  /// \returns the simplified type, ErrorType on error (never nullptr)
+  Type simplifyType(Type type);
 
   /// Unifies \p a with \p b with \p options.
   /// \returns true if unification was successful, false otherwise.

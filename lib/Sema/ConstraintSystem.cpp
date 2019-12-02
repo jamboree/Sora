@@ -260,7 +260,8 @@ public:
     // if both have substitution, unify their substitution
     if (typeInfo.hasSubstitution() && otherInfo.hasSubstitution())
       return unify(typeInfo.getSubstitution(), otherInfo.getSubstitution());
-    // if only 'type' has a substitution, set the substitution of 'other' to 'type'.
+    // if only 'type' has a substitution, set the substitution of 'other' to
+    // 'type'.
     if (typeInfo.hasSubstitution())
       return setSubstitution(other, type);
     // Else, just set the substitution of 'type' to 'other.
@@ -287,15 +288,11 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   return tyVar;
 }
 
-Type ConstraintSystem::simplifyType(Type type, Type defaultInt,
-                                    Type defaultFloat) {
+Type ConstraintSystem::simplifyType(Type type) {
   if (!type->hasTypeVariable())
     return type;
-  if (defaultInt.isNull())
-    defaultInt = ctxt.i32Type;
-  if (defaultFloat.isNull())
-    defaultFloat = ctxt.f32Type;
-  Type simplified = TypeSimplifier(*this, defaultInt, defaultFloat).visit(type);
+  Type simplified =
+      TypeSimplifier(*this, intTVDefault, floatTVDefault).visit(type);
   assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
   return simplified;
 }
