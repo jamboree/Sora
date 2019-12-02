@@ -148,15 +148,13 @@ public:
   }
 
   /// Simplifies \p type, replacing type variables with their substitution (or
-  /// ErrorType if there's no substitution).
+  /// ErrorType if there's no substitution)
   /// \param type the type to simplify
-  /// \param success is set to true if every type variables were replaced
-  /// successfully, or if no type variables were replaced at all. It is set to
-  /// false if a type variable with no substitution was found.
   /// \param defaultInt If non-null, overrides the default substitution of
   /// Integer type variables. (i32 by default)
   /// \param defaultFloat If non-null, overrides the default substitution of
   /// Float type variables. (f32 by default)
+  /// \\\returns the simplified type, ErrorType on error (never nullptr)
   Type simplifyType(Type type, Type defaultInt = Type(),
                     Type defaultFloat = Type());
 
