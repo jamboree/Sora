@@ -19,8 +19,18 @@ func foo() {
     }
 }
 
+func lvalues(a: i32) {
+  let (mut b: u16, c: i16)
+  // CHECK: DeclRefExpr type=i32 loc=line:25:3 decl='a'@line:22:14
+  a
+  // CHECK: DeclRefExpr type=@lvalue u16 loc=line:27:3 decl='b'@line:23:12
+  b
+  // CHECK: DeclRefExpr type=i16 loc=line:29:3 decl='c'@line:23:20
+  c
+}
+
 func bar(bar: i32) {
-    // CHECK: DeclRefExpr type=i32 loc=line:24:5 decl='bar'@line:22:10
+    // CHECK: DeclRefExpr type=i32 loc=line:34:5 decl='bar'@line:32:10
     bar
     bux // expect-error: cannot find value 'bux' in this scope
 }
