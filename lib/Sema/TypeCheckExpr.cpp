@@ -442,31 +442,28 @@ public:
       : ASTChecker(tc), cs(cs) {}
 
   /// Simplifies the type of \p expr.
-  /// \returns the next action to take
-  Action simplifyTypeOfExpr(Expr *expr) {
+  void simplifyTypeOfExpr(Expr *expr) {
     Type type = expr->getType();
     assert(type && "untyped expr");
     if (!type->hasTypeVariable())
-      return Action::Continue;
+      return;
     bool hadErrorType = type->hasErrorType();
     type = cs.simplifyType(type);
     expr->setType(type);
     // If the type didn't contain an ErrorType before, but it does now, it means
     // we got an inference error.
     if (!hadErrorType && type->hasErrorType()) {
-      // FIXME: This diagnostic is probably not idea for every situation, but
-      // currently, inference errors should be quite rare (if not non-existent)
-      // in Sora, so we won't see it often.
+      // FIXME: This diagnostic is probably not ideal for every situation, and
+      // may even be spammed, but currently, inference errors should be quite
+      // rare (if not non-existent) in Sora, so we won't see it often.
       diagnose(expr->getLoc(),
                diag::type_of_expr_is_ambiguous_without_more_ctxt);
-      return Action::SkipChildren;
     }
-    return Action::Continue;
   }
 
-  // Perform the walk in pre-order.
-  std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
-    Action action = simplifyTypeOfExpr(expr);
+  // Perform the walk in post-order.
+  std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
+    simplifyTypeOfExpr(expr);
     // Some exprs require a bit of post processing
     if (CastExpr *cast = dyn_cast<CastExpr>(expr)) {
       // Check whether this cast is useful or not
@@ -474,7 +471,7 @@ public:
       if (fromType->getCanonicalType() == cast->getType()->getCanonicalType())
         cast->setIsUseless();
     }
-    return {action, expr};
+    return {true, expr};
   }
 };
 
