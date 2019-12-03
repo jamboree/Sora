@@ -164,6 +164,8 @@ public:
         return TypeVariableInfo::get(otherTV).setSubstitution(type);
     }
 
+    // FIXME: After this step, desugared types should be used.
+
     // Else, we must visit the types to check that their structure matches.
     if (type->getKind() != other->getKind())
       return false;
