@@ -124,12 +124,16 @@ public:
     assert(type && "untyped pattern");
     if (!type->hasTypeVariable())
       return;
+
+    // Whether the type contained a type variable prior to simplification
     bool hadErrorType = type->hasErrorType();
-    type = cs.simplifyType(type);
+    // Whether the type is ambiguous
+    bool isAmbiguous = false;
+
+    type = cs.simplifyType(type, &isAmbiguous);
     pattern->setType(type);
-    // If the type didn't contain an ErrorType before, but it does now, it means
-    // we got an inference error.
-    if (!hadErrorType && type->hasErrorType()) {
+
+    if (isAmbiguous && !hadErrorType) {
       // We only complain about inference errors on VarPattern &
       // DiscardPatterns.
       if ((isa<VarPattern>(pattern) || isa<DiscardPattern>(pattern))) {
