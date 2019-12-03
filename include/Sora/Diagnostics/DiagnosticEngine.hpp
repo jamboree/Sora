@@ -210,6 +210,9 @@ public:
   /// Adds a insertion fix-it (insert \p text at \p loc)
   InFlightDiagnostic &fixitInsert(SourceLoc loc, StringRef text);
 
+  /// Adds a insertion fix-it (insert \p text after the token at \p loc)
+  InFlightDiagnostic &fixitInsertAfter(SourceLoc loc, StringRef text);
+
   /// Adds a replacement fix-it (replace the character range \p range by
   /// \p text)
   InFlightDiagnostic &fixitReplace(CharSourceRange range, StringRef text);

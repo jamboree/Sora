@@ -100,6 +100,13 @@ InFlightDiagnostic &InFlightDiagnostic::fixitInsert(SourceLoc loc,
   return *this;
 }
 
+InFlightDiagnostic &InFlightDiagnostic::fixitInsertAfter(SourceLoc loc,
+                                                         StringRef text) {
+  assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
+  loc = Lexer::getLocPastTheEndOfTokenAtLoc(diagEngine->srcMgr, loc);
+  return fixitInsert(loc, text);
+}
+
 InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
                                                      StringRef text) {
   assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
