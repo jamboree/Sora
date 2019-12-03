@@ -367,16 +367,20 @@ Expr *ExprChecker::visitTupleElementExpr(TupleElementExpr *expr) {
 }
 
 Expr *ExprChecker::visitTupleExpr(TupleExpr *expr) {
+  // If the tuple is empty, just give it a () type.
+  if (expr->isEmpty()) {
+    expr->setType(TupleType::getEmpty(ctxt));
+    return expr;
+  }
   // Create a TupleType of the element's types
-  assert(expr->getNumElements() != 1 &&
-         "Single Element Tuple Shouldn't Exist!");
+  assert(expr->getNumElements() > 1 && "Single Element Tuple Shouldn't Exist!");
   SmallVector<Type, 8> eltsTypes;
   // A tuple's type is an LValue only if every element is also an LValue.
-  bool isLValue = !expr->isEmpty();
+  bool isLValue = true;
   for (Expr *elt : expr->getElements()) {
     Type eltType = elt->getType();
     eltsTypes.push_back(eltType);
-    isLValue &= eltType->hasErrorType();
+    isLValue &= eltType->isLValue();
   }
   Type type = TupleType::get(ctxt, eltsTypes);
   if (isLValue)
