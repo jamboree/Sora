@@ -34,6 +34,7 @@ public:
 
   ConstraintSystem &cs;
   Type defaultInt, defaultFloat;
+  bool hadUnboundTypeVariable = false;
 
   using Parent::visit;
 
@@ -113,6 +114,7 @@ private:
         return defaultFloat;
       if (info.isIntegerTypeVariable())
         return defaultInt;
+      hadUnboundTypeVariable = true;
       return cs.ctxt.errorType;
     }
     // If the substitution is also a type variable, simplify it as well.
@@ -273,12 +275,14 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   return tyVar;
 }
 
-Type ConstraintSystem::simplifyType(Type type) {
+Type ConstraintSystem::simplifyType(Type type, bool *hadUnboundTypeVariable) {
   if (!type->hasTypeVariable())
     return type;
-  Type simplified =
-      TypeSimplifier(*this, intTVDefault, floatTVDefault).visit(type);
+  auto typeSimplifier = TypeSimplifier(*this, intTVDefault, floatTVDefault);
+  Type simplified = typeSimplifier.visit(type);
   assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
+  if (hadUnboundTypeVariable)
+    *hadUnboundTypeVariable = typeSimplifier.hadUnboundTypeVariable;
   return simplified;
 }
 

@@ -114,7 +114,8 @@ public:
     substitution = type;
     return true;
   }
-  /// \returns true if this TypeVariable has a substitution
+  /// \returns true if this TypeVariable has a substitution (whether it is
+  /// bound)
   bool hasSubstitution() const { return (bool)substitution; }
   /// \returns this TypeVariable's substitution
   Type getSubstitution() const { return substitution; }
@@ -208,9 +209,12 @@ public:
   /// an Integer or Float type variable has no substitution, the default type
   /// for those type variables is used (see \c getIntegerTypeVariableDefaultType
   /// and \c getFloatTypeVariableDefaultType)
+  ///
   /// \param type the type to simplify
-  /// \returns the simplified type, ErrorType on error (never nullptr)
-  Type simplifyType(Type type);
+  /// \param hadUnboundTypeVariable whether the type contained an unbound
+  /// general type variable.
+  /// \returns the simplified type, or the ErrorType on error (never nullptr)
+  Type simplifyType(Type type, bool *hadUnboundTypeVariable = nullptr);
 
   /// Unifies \p a with \p b with \p options.
   /// \returns true if unification was successful, false otherwise.
