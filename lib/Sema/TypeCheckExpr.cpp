@@ -372,7 +372,7 @@ Expr *ExprChecker::visitTupleExpr(TupleExpr *expr) {
          "Single Element Tuple Shouldn't Exist!");
   SmallVector<Type, 8> eltsTypes;
   // A tuple's type is an LValue only if every element is also an LValue.
-  bool isLValue = true;
+  bool isLValue = !expr->isEmpty();
   for (Expr *elt : expr->getElements()) {
     Type eltType = elt->getType();
     eltsTypes.push_back(eltType);
