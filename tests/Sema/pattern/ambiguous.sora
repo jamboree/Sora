@@ -1,0 +1,8 @@
+// RUN: %sorac-typecheck -verify %s
+
+func foo() {
+  let _ // expect-error: type of pattern is ambiguous without more context
+        // expect-note@-1: add a type annotation to the pattern to give it a type
+  let (a, b)  // expect-2-error: type of pattern is ambiguous without more context
+              // expect-2-note@-1: add a type annotation to the pattern to give it a type
+}

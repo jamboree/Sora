@@ -1,0 +1,32 @@
+// RUN: %sorac-typecheck -dump-ast %s | %filecheck %s
+
+func correct() {
+   // CHECK: VarDecl type=i32 identifier=a0 identifierLoc=line:14:10 immutable
+   // CHECK: VarDecl type=i32 identifier=a1 identifierLoc=line:14:14 immutable
+   // CHECK: VarDecl type=i32 identifier=a2 identifierLoc=line:14:19 immutable
+   // CHECK: VarDecl type=i32 identifier=a3 identifierLoc=line:14:24 immutable
+   // CHECK: VarDecl type=i32 identifier=a4 identifierLoc=line:14:28 immutable
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:14:37
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:14:40
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:14:44
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:14:48
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:14:51
+   let ((a0, a1), a2, (a3, a4)) = ((0, 1), 2, (3, 4))
+   // CHECK: VarDecl type=i64 identifier=b0 identifierLoc=line:19:9 immutable
+   // CHECK: VarDecl type=i32 identifier=b1 identifierLoc=line:19:18 immutable
+   // CHECK: IntegerLiteralExpr type=i64 loc=line:19:25
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:19:28
+   let (b0: i64, b1) = (0, 1)
+   // CHECK: DiscardPattern type=i32 loc=line:22:8
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:22:12
+   let _ = 0 
+   // CHECK: TuplePattern type=() numElements=0 lParenLoc=line:25:8 rParenLoc=line:25:9
+   // CHECK: TupleExpr type=() numElements=0 lParenLoc=line:25:13 rParenLoc=line:25:14
+   let () = ()
+   // CHECK: VarDecl type=usize identifier=c0 identifierLoc=line:28:8 immutable
+   // CHECK: IntegerLiteralExpr type=usize loc=line:28:20 str='0' rawValue=0
+   let c0: usize = 0
+   // CHECK: VarDecl type=i32 identifier=d0 identifierLoc=line:31:8 immutable
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:31:13
+   let d0 = 0
+}

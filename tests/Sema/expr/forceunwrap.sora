@@ -7,4 +7,7 @@ func foo(a: maybe u16, b: maybe ()) {
    // CHECK: ForceUnwrapExpr type=() exclaimLoc=line:8:5
    b!   
    c!   // expect-error: cannot find value 'c' in this scope
+   let x: maybe ()
+   // CHECK: ForceUnwrapExpr type=() exclaimLoc=line:12:5
+   x!
 }
