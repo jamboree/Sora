@@ -147,6 +147,12 @@ public:
       other = other->getRValue();
     }
 
+    // If the types don't contain type variables, just compare their canonical
+    // types.
+    if (!type->hasTypeVariable() && !other->hasTypeVariable())
+      return options.typeComparator(type->getCanonicalType(),
+                                    other->getCanonicalType());
+
     // If one is a type variable, and the other isn't, just set the
     // substitution.
     if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
@@ -276,10 +282,6 @@ Type ConstraintSystem::simplifyType(Type type) {
 
 bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
-  // If both types don't contain any type variables, just compare them.
-  if (!a->hasTypeVariable() && !b->hasTypeVariable())
-    return options.typeComparator(a->getCanonicalType(), b->getCanonicalType());
-  // Else, use the TypeUnifier.
   return TypeUnifier(*this, options).unify(a, b);
 }
 
