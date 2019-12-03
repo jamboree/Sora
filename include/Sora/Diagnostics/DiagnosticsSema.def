@@ -59,9 +59,6 @@ ERROR(base_operand_of_dot_isnt_value_ty,
 ERROR(value_of_type_has_no_member_named,
   "value of type '%0' has no member named '%1'", (Type, Identifier))
 
-ERROR(type_of_expr_is_ambiguous_without_more_ctxt,
-  "type of expression is ambiguous without more context", ())
-
 ERROR(cannot_find_value_in_scope,
   "cannot find value '%0' in this scope", (Identifier))
 
