@@ -1,0 +1,13 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func intCast() {
+  let mut a: i32
+  // CHECK: CastExpr type=u16 asLoc=line:6:5
+  a as u16
+  // CHECK: CastExpr type=i32 asLoc=line:8:5 useless
+  a as i32
+  // CHECK: CastExpr type=u16 asLoc=line:10:5 useless
+  0 as u16
+
+  // TODO: int-to-float, bool-to-int, bool-to-float, etc.
+}
