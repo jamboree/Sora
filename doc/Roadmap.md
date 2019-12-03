@@ -24,8 +24,9 @@ Additional requirements
 
 Here's a non-exhaustive list of features that will be present in the initial implementation.
 - Types:
-  - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64` and `void`
-  - Reference & Pointer types (`&T`, `&mut T`, `*T` and `*mut T`)
+  - Primitive types: `bool`, `i8`, `i16`, `i32`, `i64`, `isize`, `u8`, `u16`, `u32`, `u64`, `usize`, `f32`, `f64`, and `void`
+  - Reference type
+  - Optional "maybe" type
   - Tuple types
     - Tuples w/ 0 elements (`()`) will be canonicalized as `void`
     - Tuples w/ 1 element (e.g. `(0)`, of type `(i32)`) will be canonicalized as the type of the element (w/o the tuple, so `i32` in this case)
@@ -39,7 +40,6 @@ Here's a non-exhaustive list of features that will be present in the initial imp
   - This includes basic pattern matching in variable declarations. e.g. `let (a, b) = (0, 1)`
 - Basic C FFI
   - Semantics TBD (A basic one, so I can import a few C functions, e.g. a "print" function. It can even be built-in/hardcoded while waiting for a better solution)
-    - Example syntax: `extern "C" { func malloc(size: usize) -> *mut void }`
 
 This phase is all about "making it work" & preparing for what's next.
 
