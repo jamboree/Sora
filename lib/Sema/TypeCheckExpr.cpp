@@ -437,6 +437,8 @@ Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) { return nullptr; }
 class ExprCheckerEpilogue : public ASTChecker, public ASTWalker {
 public:
   ConstraintSystem &cs;
+  bool canComplain = true;
+  Expr *parentWithErrorType = nullptr;
 
   ExprCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs)
       : ASTChecker(tc), cs(cs) {}
@@ -444,24 +446,32 @@ public:
   /// Simplifies the type of \p expr.
   void simplifyTypeOfExpr(Expr *expr) {
     Type type = expr->getType();
-    assert(type && "untyped expr");
     if (!type->hasTypeVariable())
       return;
-    bool hadErrorType = type->hasErrorType();
-    type = cs.simplifyType(type);
+
+    // Whether the type is ambiguous
+    bool isAmbiguous = false;
+
+    type = cs.simplifyType(type, &isAmbiguous);
     expr->setType(type);
-    // If the type didn't contain an ErrorType before, but it does now, it means
-    // we got an inference error.
-    if (!hadErrorType && type->hasErrorType()) {
-      // FIXME: This diagnostic is probably not ideal for every situation, and
-      // may even be spammed, but currently, inference errors should be quite
-      // rare (if not non-existent) in Sora, so we won't see it often.
-      diagnose(expr->getLoc(),
-               diag::type_of_expr_is_ambiguous_without_more_ctxt);
+
+    if (isAmbiguous && canComplain) {
+      // This shouldn't happen with the current iteration of Sora.
+      llvm_unreachable("Diagnostic emission for ambiguous expressions is "
+                       "currently not supported");
     }
   }
 
-  // Perform the walk in post-order.
+  std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
+    // Mute diagnostics when walking into an Expr with an ErrorType
+    if (canComplain && expr->getType()->hasErrorType()) {
+      canComplain = false;
+      parentWithErrorType = expr;
+    }
+    return {Action::Continue, expr};
+  }
+
+  // Perform simplification in post-order (= children first)
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
     simplifyTypeOfExpr(expr);
     // Some exprs require a bit of post processing
@@ -471,6 +481,13 @@ public:
       if (fromType->getCanonicalType() == cast->getType()->getCanonicalType())
         cast->setIsUseless();
     }
+
+    // If this expr is the one that muted diagnostics, unmute diagnostics.
+    if (parentWithErrorType == expr) {
+      canComplain = true;
+      parentWithErrorType = nullptr;
+    }
+
     return {true, expr};
   }
 };
