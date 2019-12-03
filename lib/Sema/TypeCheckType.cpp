@@ -77,7 +77,14 @@ public:
 void TypeChecker::resolveTypeLoc(TypeLoc &tyLoc, SourceFile &file) {
   assert(tyLoc.hasTypeRepr() && "Must have a TypeRepr");
   assert(!tyLoc.hasType() && "TypeLoc already resolved!");
-  TypeReprResolver resolver(*this, file);
-  tyLoc.setType(resolver.visit(tyLoc.getTypeRepr()));
+  tyLoc.setType(resolveTypeRepr(tyLoc.getTypeRepr(), file));
   assert(tyLoc.hasType() && "Type not set?");
+}
+
+Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
+  assert(tyRepr);
+  TypeReprResolver resolver(*this, file);
+  Type result = resolver.visit(tyRepr);
+  assert(result);
+  return result;
 }

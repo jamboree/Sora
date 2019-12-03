@@ -56,7 +56,7 @@ public:
   SourceFile &getSourceFile() const {
     assert(dc && "no DeclContext?");
     SourceFile *sf = dc->getParentSourceFile();
-    assert(sf && "no source file");
+    assert(sf && "no Source File?");
     return *sf;
   }
 
@@ -64,10 +64,7 @@ public:
                                   ValueDecl *resolved) {
     DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
     Type type = resolved->getValueType();
-    // FIXME: Remove this & replace it with an assert once VarDecls are checked
-    // correctly
-    if (type.isNull())
-      type = ctxt.errorType;
+    assert(!type.isNull() && "VarDecl type is null!");
     // Everything is immutable by default, except 'mut' VarDecls.
     if (VarDecl *var = dyn_cast<VarDecl>(resolved))
       if (var->isMutable())
@@ -370,22 +367,18 @@ Expr *ExprChecker::visitTupleElementExpr(TupleElementExpr *expr) {
 }
 
 Expr *ExprChecker::visitTupleExpr(TupleExpr *expr) {
-  // If this is an empty tuple, just give it the empty tuple type '()'
-  if (expr->isEmpty()) {
-    expr->setType(TupleType::getEmpty(ctxt));
-    return expr;
-  }
   // Create a TupleType of the element's types
-  assert(expr->getNumElements() > 1 && "Single Element Tuple Shouldn't Exist!");
-  SmallVector<Type, 8> tupleEltsTypes;
+  assert(expr->getNumElements() != 1 &&
+         "Single Element Tuple Shouldn't Exist!");
+  SmallVector<Type, 8> eltsTypes;
   // A tuple's type is an LValue only if every element is also an LValue.
   bool isLValue = true;
   for (Expr *elt : expr->getElements()) {
     Type eltType = elt->getType();
-    tupleEltsTypes.push_back(eltType);
+    eltsTypes.push_back(eltType);
     isLValue &= eltType->hasErrorType();
   }
-  Type type = TupleType::get(ctxt, tupleEltsTypes);
+  Type type = TupleType::get(ctxt, eltsTypes);
   if (isLValue)
     type = LValueType::get(type);
   expr->setType(type);
@@ -444,28 +437,40 @@ public:
   ExprCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs)
       : ASTChecker(tc), cs(cs) {}
 
-  void simplifyTypeOfExpr(Expr *expr) {
+  /// Simplifies the type of \p expr.
+  /// \returns the next action to take
+  Action simplifyTypeOfExpr(Expr *expr) {
     Type type = expr->getType();
     assert(type && "untyped expr");
     if (!type->hasTypeVariable())
-      return;
-    bool isAmbiguous = false;
-    expr->setType(cs.simplifyType(expr->getType()));
-    // FIXME: Make the diagnostic more precise depending on the circumstances
-    if (isAmbiguous)
-      diagnose(expr->getLoc(), diag::type_is_ambiguous_without_more_ctxt);
+      return Action::Continue;
+    bool hadErrorType = type->hasErrorType();
+    type = cs.simplifyType(type);
+    expr->setType(type);
+    // If the type didn't contain an ErrorType before, but it does now, it means
+    // we got an inference error.
+    if (!hadErrorType && type->hasErrorType()) {
+      // FIXME: This diagnostic is probably not idea for every situation, but
+      // currently, inference errors should be quite rare (if not non-existent)
+      // in Sora, so we won't see it often.
+      diagnose(expr->getLoc(),
+               diag::type_of_expr_is_ambiguous_without_more_ctxt);
+      return Action::SkipChildren;
+    }
+    return Action::Continue;
   }
 
-  std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
-    simplifyTypeOfExpr(expr);
-    // Some exprs might require a bit of post processing
+  // Perform the walk in pre-order.
+  std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
+    Action action = simplifyTypeOfExpr(expr);
+    // Some exprs require a bit of post processing
     if (CastExpr *cast = dyn_cast<CastExpr>(expr)) {
       // Check whether this cast is useful or not
       Type fromType = cast->getSubExpr()->getType()->getRValue();
       if (fromType->getCanonicalType() == cast->getType()->getCanonicalType())
         cast->setIsUseless();
     }
-    return {true, expr};
+    return {action, expr};
   }
 };
 
@@ -490,18 +495,30 @@ Expr *TypeChecker::performExprCheckingEpilogue(ConstraintSystem &cs,
   return expr;
 }
 
-Expr *TypeChecker::typecheckExpr(Expr *expr, DeclContext *dc, Type ofType) {
-  // Create a constraint system for this expression
-  ConstraintSystem system(*this);
-
+Expr *TypeChecker::typecheckExpr(
+    ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType,
+    llvm::function_ref<void(Type, Type)> onUnificationFailure) {
   // Check the expression
-  expr = performExprChecking(system, expr, dc);
+  expr = performExprChecking(cs, expr, dc);
 
-  // TODO: Unify this expr's type with oftype (will need a handler for when
-  // unification fails)
+  // Unify it with ofType if needed
+  if (ofType) {
+    Type exprTy = expr->getType();
+    if (!cs.unify(ofType, exprTy)) {
+      if (onUnificationFailure)
+        onUnificationFailure(cs.simplifyType(exprTy), ofType);
+    }
+  }
 
   // Perform the epilogue (simplify types, diagnose inference errors)
-  expr = performExprCheckingEpilogue(system, expr);
+  expr = performExprCheckingEpilogue(cs, expr);
 
   return expr;
+}
+
+Expr *TypeChecker::typecheckExpr(
+    Expr *expr, DeclContext *dc, Type ofType,
+    llvm::function_ref<void(Type, Type)> onUnificationFailure) {
+  ConstraintSystem cs(*this);
+  return typecheckExpr(cs, expr, dc, ofType, onUnificationFailure);
 }

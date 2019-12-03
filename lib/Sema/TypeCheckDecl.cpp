@@ -147,15 +147,16 @@ private:
                    decl->getIdentifier());
         });
 
-    // Type-check the pattern.
-    tc.typecheckPattern(pattern);
-
-    // Type-check the initializer
+    // If there's an initializer, typecheck the pattern with the initializer.
     if (decl->hasInitializer()) {
       Expr *init = decl->getInitializer();
-      init = tc.typecheckExpr(init, decl->getDeclContext());
+      init = tc.typecheckPatternAndInitializer(decl->getPattern(), init,
+                                               decl->getDeclContext());
       decl->setInitializer(init);
     }
+    // Else, just check the pattern
+    else
+      tc.typecheckPattern(decl->getPattern(), decl->getDeclContext());
   }
 };
 } // namespace

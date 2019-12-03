@@ -34,7 +34,7 @@ class TypeChecker final {
 
   /// Performs expression checking on \p expr using the ConstraintSystem \p cs.
   /// \returns \p expr or the expression that should replace \p expr in the
-  /// tree. Never nullptr. 
+  /// tree. Never nullptr.
   ///
   /// After expression checking finishes, \c
   /// performExprCheckingEpilogue must be called to replace type variables with
@@ -105,12 +105,30 @@ public:
   void typecheckFunctionBody(FuncDecl *func);
 
   /// Expression typechecking entry point.
+  /// \param cs the ConstraintSystem to use to check \p expr.
+  /// \param expr the expression to typecheck
+  /// \param dc the DeclContext in which this Expr lives. Cannot be null.
+  /// \param ofType If valid, the expected type of the expression.
+  /// \param onUnificationFailure Called if the Expr's type can't unify with \p
+  /// ofType. The first argument is the type of the Expr (simplified), the
+  /// second is ofType.
+  /// \returns \p expr or the expr that should replace it in the tree.
+  Expr *typecheckExpr(
+      ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType = Type(),
+      llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
+
+  /// Expression typechecking entry point.
   /// This will create a ConstraintSystem for the expression.
   /// \param expr the expression to typecheck
   /// \param dc the DeclContext in which this Expr lives. Cannot be null.
   /// \param ofType If valid, the expected type of the expression.
+  /// \param onUnificationFailure Called if the Expr's type can't unify with \p
+  /// ofType. The first argument is the type of the Expr (simplified), the
+  /// second is ofType.
   /// \returns \p expr or the expr that should replace it in the tree.
-  Expr *typecheckExpr(Expr *expr, DeclContext *dc, Type ofType = Type());
+  Expr *typecheckExpr(
+      Expr *expr, DeclContext *dc, Type ofType = Type(),
+      llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
 
   /// Typechecking entry point for expressions used as conditions.
   /// \param expr the expression to typecheck
@@ -121,19 +139,31 @@ public:
     return typecheckExpr(expr, dc);
   }
 
+  /// Pattern typechecking entry point.
+  void typecheckPattern(Pattern *pat, DeclContext *dc);
+
+  /// Type-checks a pattern and its initializer together.
+  /// \returns \p init or the expr that should replace it in the tree.
+  Expr *typecheckPatternAndInitializer(Pattern *pat, Expr *init,
+                                       DeclContext *dc);
+
   /// Statement typechecking entry point
   /// \param stmt the statement to typecheck
   /// \param dc th DeclContext in which this Stmt lives. Cannot be null.
   void typecheckStmt(Stmt *stmt, DeclContext *dc);
-
-  /// Pattern typechecking entry point
-  void typecheckPattern(Pattern *pat);
 
   /// Resolves a TypeLoc, giving it a type from its TypeRepr.
   /// This can only be used if the TypeLoc has a TypeRepr.
   /// \param tyLoc the TypeLoc to resolve (must have a TypeRepr* but no Type)
   /// \param file the file in which this TypeLoc lives
   void resolveTypeLoc(TypeLoc &tyLoc, SourceFile &file);
+
+  /// Resolves a TypeRepr \p tyRepr, returning its type.
+  /// \param tyRepr the TypeRepr to resolve
+  /// \param file the file in which this TypeRepr lives
+  /// \returns the type of \p tyRepr, or ErrorType if resolution fails. Never
+  /// nullptr.
+  Type resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file);
 
   /// The list of non-local functions that have a body (=have been defined).
   /// See \p typecheckFunctionBodies()

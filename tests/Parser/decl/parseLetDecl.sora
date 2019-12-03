@@ -2,34 +2,34 @@
 
 func foo() {
   // CHECK: LetDecl letLoc=line:7:3
-  // CHECK-NEXT: VarPattern loc=line:7:7 identifier=a
+  // CHECK-NEXT: VarPattern type=<null_type> loc=line:7:7 identifier=a
   // CHECK-NEXT:  VarDecl type=<null_type> identifier=a identifierLoc=line:7:7 immutable
   let a
   // CHECK: LetDecl letLoc=line:12:3
-  // CHECK-NEXT: MutPattern mutLoc=line:12:7
-  // CHECK-NEXT:  VarPattern loc=line:12:11 identifier=a
+  // CHECK-NEXT: MutPattern type=<null_type> mutLoc=line:12:7
+  // CHECK-NEXT:  VarPattern type=<null_type> loc=line:12:11 identifier=a
   // CHECK-NEXT:    VarDecl type=<null_type> identifier=a identifierLoc=line:12:11 mutable
   let mut a
   // CHECK: LetDecl letLoc=line:22:3
-  // CHECK-NEXT: TuplePattern numElements=3 lParenLoc=line:22:7 rParenLoc=line:22:19
-  // CHECK-NEXT:  VarPattern loc=line:22:8 identifier=a
+  // CHECK-NEXT: TuplePattern type=<null_type> numElements=3 lParenLoc=line:22:7 rParenLoc=line:22:19
+  // CHECK-NEXT:  VarPattern type=<null_type> loc=line:22:8 identifier=a
   // CHECK-NEXT:    VarDecl type=<null_type> identifier=a identifierLoc=line:22:8 immutable
-  // CHECK-NEXT:  MutPattern mutLoc=line:22:11
-  // CHECK-NEXT:    VarPattern loc=line:22:15 identifier=b
+  // CHECK-NEXT:  MutPattern type=<null_type> mutLoc=line:22:11
+  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:22:15 identifier=b
   // CHECK-NEXT:      VarDecl type=<null_type> identifier=b identifierLoc=line:22:15 mutable
-  // CHECK-NEXT: VarPattern loc=line:22:18 identifier=c
+  // CHECK-NEXT: VarPattern type=<null_type> loc=line:22:18 identifier=c
   // CHECK-NEXT:    VarDecl type=<null_type> identifier=c identifierLoc=line:22:18 immutable
   let (a, mut b, c)
   // CHECK: LetDecl letLoc=line:34:3
-  // CHECK-NEXT: MutPattern mutLoc=line:34:7
-  // CHECK-NEXT:  TuplePattern numElements=4 lParenLoc=line:34:11 rParenLoc=line:34:22
-  // CHECK-NEXT:    VarPattern loc=line:34:12 identifier=a
+  // CHECK-NEXT: MutPattern type=<null_type> mutLoc=line:34:7
+  // CHECK-NEXT:  TuplePattern type=<null_type> numElements=4 lParenLoc=line:34:11 rParenLoc=line:34:22
+  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:34:12 identifier=a
   // CHECK-NEXT:      VarDecl type=<null_type> identifier=a identifierLoc=line:34:12 mutable
-  // CHECK-NEXT:    VarPattern loc=line:34:15 identifier=b
+  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:34:15 identifier=b
   // CHECK-NEXT:      VarDecl type=<null_type> identifier=b identifierLoc=line:34:15 mutable
-  // CHECK-NEXT:    VarPattern loc=line:34:18 identifier=c
+  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:34:18 identifier=c
   // CHECK-NEXT:      VarDecl type=<null_type> identifier=c identifierLoc=line:34:18 mutable
-  // CHECK-NEXT:    VarPattern loc=line:34:21 identifier=d
+  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:34:21 identifier=d
   // CHECK-NEXT:      VarDecl type=<null_type> identifier=d identifierLoc=line:34:21 mutable
   let mut (a, b, c, d)
 }
