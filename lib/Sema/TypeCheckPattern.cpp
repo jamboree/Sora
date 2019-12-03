@@ -100,7 +100,7 @@ void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
     return;
   // Else, check if the annotation is valid.
   Type subPatType = pattern->getSubPattern()->getType();
-  if (cs.unify(subPatType->getCanonicalType(), type->getCanonicalType()))
+  if (cs.unify(subPatType, type))
     return;
 
   // Diagnose the error, highlighting the subpattern & typerepr fully.
