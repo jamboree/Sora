@@ -167,7 +167,8 @@ public:
   /// The DiagnosticEngine used to diagnose errors related to this AST.
   DiagnosticEngine &diagEngine;
 
-  //===- Frequently Used Types --------------------------------------------===//
+  //===- Frequently Used Types & Builtin Types ----------------------------===//
+
 
   const CanType i8Type;    /// "i8"
   const CanType i16Type;   /// "i16"
