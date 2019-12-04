@@ -496,30 +496,16 @@ public:
 
 //===- TypeChecker --------------------------------------------------------===//
 
-Expr *TypeChecker::performExprChecking(ConstraintSystem &cs, Expr *expr,
-                                       DeclContext *dc) {
-  assert(expr && "Expr* is null");
-  assert(dc && "DeclContext* is null");
-  expr = expr->walk(ExprChecker(*this, cs, dc)).second;
-  assert(expr && "ExprChecker returns a null Expr*?");
-  return expr;
-}
-
-Expr *TypeChecker::performExprCheckingEpilogue(ConstraintSystem &cs,
-                                               Expr *expr) {
-  assert(expr && "Expr* is null");
-  expr = expr->walk(ExprCheckerEpilogue(*this, cs)).second;
-  assert(expr && "ExprChecker returns a null Expr*?");
-  return expr;
-}
-
 Expr *TypeChecker::typecheckExpr(
     ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType,
     llvm::function_ref<void(Type, Type)> onUnificationFailure) {
   // Check the expression
-  expr = performExprChecking(cs, expr, dc);
+  assert(expr && "Expr* is null");
+  assert(dc && "DeclContext* is null");
+  expr = expr->walk(ExprChecker(*this, cs, dc)).second;
+  assert(expr && "ExprChecker returns a null Expr*?");
 
-  // Unify it with ofType if needed
+  // Unify it with 'ofType' if needed
   if (ofType) {
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
@@ -529,7 +515,9 @@ Expr *TypeChecker::typecheckExpr(
   }
 
   // Perform the epilogue (simplify types, diagnose inference errors)
-  expr = performExprCheckingEpilogue(cs, expr);
+  assert(expr && "Expr* is null");
+  expr = expr->walk(ExprCheckerEpilogue(*this, cs)).second;
+  assert(expr && "ExprChecker returns a null Expr*?");
 
   return expr;
 }
