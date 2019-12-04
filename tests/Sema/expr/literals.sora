@@ -25,3 +25,31 @@ func coercions() {
   // CHECK: FloatLiteralExpr type=f64 loc=line:26:3
   0.0 as f64
 }
+
+func inference() {
+  // CHECK: IntegerLiteralExpr type=i8 loc=line:31:15
+  let _: i8 = 0
+  // CHECK: IntegerLiteralExpr type=i16 loc=line:33:16
+  let _: i16 = 0
+  // CHECK: IntegerLiteralExpr type=i32 loc=line:35:16
+  let _: i32 = 0
+  // CHECK: IntegerLiteralExpr type=i64 loc=line:37:16
+  let _: i64 = 0
+  // CHECK: IntegerLiteralExpr type=isize loc=line:39:18
+  let _: isize = 0
+  // CHECK: IntegerLiteralExpr type=u8 loc=line:41:15
+  let _: u8 = 0
+  // CHECK: IntegerLiteralExpr type=u16 loc=line:43:16
+  let _: u16 = 0
+  // CHECK: IntegerLiteralExpr type=u32 loc=line:45:16
+  let _: u32 = 0
+  // CHECK: IntegerLiteralExpr type=u64 loc=line:47:16
+  let _: u64 = 0
+  // CHECK: IntegerLiteralExpr type=usize loc=line:49:18
+  let _: usize = 0
+  
+  // CHECK: FloatLiteralExpr type=f32 loc=line:52:16
+  let _: f32 = 0.0
+  // CHECK: FloatLiteralExpr type=f64 loc=line:54:16
+  let _: f64 = 0.0
+}
