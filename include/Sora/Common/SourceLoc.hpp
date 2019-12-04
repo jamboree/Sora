@@ -157,12 +157,12 @@ public:
 /// Represents a half-open range of characters in the source.
 class CharSourceRange {
   SourceLoc begin;
-  unsigned byteLength = 0;
+  size_t byteLength = 0;
 
 public:
   CharSourceRange() = default;
 
-  explicit CharSourceRange(SourceLoc begin, unsigned byteLength = 0)
+  explicit CharSourceRange(SourceLoc begin, size_t byteLength = 0)
       : begin(begin), byteLength(byteLength) {}
 
   /// Creates a CharSourceRange from 2 SourceLocs by calculating the distance
@@ -186,7 +186,7 @@ public:
   explicit operator bool() const { return isValid(); }
 
   /// \returns the length in bytes of this CharSourceRange
-  unsigned getByteLength() const { return byteLength; }
+  size_t getByteLength() const { return byteLength; }
 
   /// Prints this CharSourceRange to \p out
   void print(raw_ostream &out, const SourceManager &srcMgr,

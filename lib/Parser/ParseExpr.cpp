@@ -507,7 +507,7 @@ bool Parser::parseTupleExpr(SourceLoc &lParenLoc,
                             SourceLoc &rParenLoc) {
   assert(tok.is(TokenKind::LParen));
   lParenLoc = tok.getLoc();
-  auto parseFn = [&](unsigned k) -> bool {
+  auto parseFn = [&](size_t k) -> bool {
     auto result = parseExpr(
         [&]() { diagnoseExpected(diag::expected_expr_after, k ? "," : "("); });
 

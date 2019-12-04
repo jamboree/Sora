@@ -74,7 +74,7 @@ public:
   }
 
   TupleElementExpr *resolveTupleElementExpr(UnresolvedMemberRefExpr *umre,
-                                            TupleType *tuple, unsigned idx,
+                                            TupleType *tuple, size_t idx,
                                             bool isMutable) {
     TupleElementExpr *expr = new (ctxt) TupleElementExpr(umre, idx);
     Type type = tuple->getElement(idx);
@@ -264,7 +264,7 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 
   // A. Looking into a tuple
   if (TupleType *tuple = lookupTy->getAs<TupleType>()) {
-    Optional<unsigned> lookupResult = tuple->lookup(memberID);
+    Optional<size_t> lookupResult = tuple->lookup(memberID);
     if (lookupResult == None)
       return memberNotFound();
     return resolveTupleElementExpr(expr, tuple, *lookupResult, isMutable);

@@ -275,7 +275,7 @@ public:
   /// position of the element we're parsing.
   ///
   /// The callback is always called at least once.
-  void parseList(llvm::function_ref<bool(unsigned)> callback);
+  void parseList(llvm::function_ref<bool(size_t)> callback);
 
   /// Parses a comma-separated list of values inside a parentheses.
   /// The parser must be positioned on the '('
@@ -289,7 +289,7 @@ public:
   ///
   /// \returns true on success, false on failure.
   bool parseTuple(SourceLoc &rParenLoc,
-                  llvm::function_ref<bool(unsigned)> callback,
+                  llvm::function_ref<bool(size_t)> callback,
                   Optional<TypedDiag<>> missingRParenDiag = None);
 
   //===- Diagnostic Emission ----------------------------------------------===//

@@ -429,9 +429,10 @@ class TupleType final : public TypeBase,
   TupleType(TypeProperties prop, ASTContext &ctxt, bool canonical,
             ArrayRef<Type> elements)
       : TypeBase(TypeKind::Tuple, prop, ctxt, canonical) {
-    unsigned numElems = elements.size();
+    size_t numElems = elements.size();
     assert(numElems >= 2 || (numElems == 0 && !canonical));
     bits.TupleType.numElems = numElems;
+    assert(getNumElements() == numElems && "Bits dropped?");
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<Type>());
 #ifndef NDEBUG
@@ -455,14 +456,14 @@ public:
   /// element with that identifier exists in the tuple.
   /// Note that this always converts the identifier to a number, as tuple
   /// elements in Sora don't have labels.
-  Optional<unsigned> lookup(Identifier ident) const;
+  Optional<size_t> lookup(Identifier ident) const;
 
   bool isEmpty() const { return getNumElements() == 0; }
-  unsigned getNumElements() const { return bits.TupleType.numElems; }
+  size_t getNumElements() const { return (size_t)bits.TupleType.numElems; }
   ArrayRef<Type> getElements() const {
     return {getTrailingObjects<Type>(), getNumElements()};
   }
-  Type getElement(unsigned n) const { return getElements()[n]; }
+  Type getElement(size_t n) const { return getElements()[n]; }
 
   void Profile(llvm::FoldingSetNodeID &id) { Profile(id, getElements()); }
   static void Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements);
@@ -489,6 +490,7 @@ class FunctionType final : public TypeBase,
                ArrayRef<Type> args, Type rtr)
       : TypeBase(TypeKind::Function, properties, ctxt, canonical), rtr(rtr) {
     bits.FunctionType.numArgs = args.size();
+    assert(getNumArgs() == args.size() && "Bits dropped");
     std::uninitialized_copy(args.begin(), args.end(),
                             getTrailingObjects<Type>());
 #ifndef NDEBUG
@@ -504,11 +506,11 @@ class FunctionType final : public TypeBase,
 public:
   static FunctionType *get(ArrayRef<Type> args, Type rtr);
 
-  unsigned getNumArgs() const { return bits.FunctionType.numArgs; }
+  size_t getNumArgs() const { return (size_t)bits.FunctionType.numArgs; }
   ArrayRef<Type> getArgs() const {
     return {getTrailingObjects<Type>(), getNumArgs()};
   }
-  Type getArg(unsigned k) const { return getArgs()[k]; }
+  Type getArg(size_t k) const { return getArgs()[k]; }
 
   Type getReturnType() const { return rtr; }
 

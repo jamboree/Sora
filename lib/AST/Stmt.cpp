@@ -76,6 +76,7 @@ BlockStmt::BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes,
                      SourceLoc rCurlyLoc)
     : Stmt(StmtKind::Block), lCurlyLoc(lCurlyLoc), rCurlyLoc(rCurlyLoc) {
   bits.BlockStmt.numElements = nodes.size();
+  assert(getNumElements() == nodes.size() && "Bits dropped");
   std::uninitialized_copy(nodes.begin(), nodes.end(),
                           getTrailingObjects<ASTNode>());
 }

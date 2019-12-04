@@ -27,7 +27,7 @@ bool tryConsume(StringRef &str, StringRef expected) {
 }
 
 /// Attempts to consume a number from the input
-Optional<unsigned> tryConsumeNumber(StringRef &str) {
+Optional<size_t> tryConsumeNumber(StringRef &str) {
   size_t k = 0;
   while ((k < str.size()) && isdigit(str[k]))
     ++k;
@@ -39,7 +39,7 @@ Optional<unsigned> tryConsumeNumber(StringRef &str) {
   // Remove the number from str
   str = str.substr(k);
   // Parse the number & return it.
-  unsigned result;
+  size_t result;
   if (numberStr.getAsInteger(10, result))
     llvm_unreachable(
         "StringRef::getAsInteger() failed parsing a string with only digits?");
@@ -101,7 +101,7 @@ bool DiagnosticVerifier::parseFile(BufferID buffer) {
     str = str.substr(prefixLen);
 
     // (number "-") ?
-    unsigned diagCount = 1;
+    size_t diagCount = 1;
     if (auto result = tryConsumeNumber(str)) {
       if (!tryConsume(str, "-")) {
         error(getCurLoc(), "expected '-'");

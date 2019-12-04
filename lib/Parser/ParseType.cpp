@@ -44,7 +44,7 @@ ParserResult<TypeRepr> Parser::parseTupleType() {
   SmallVector<TypeRepr *, 4> elements;
   SourceLoc lParen, rParen;
   lParen = tok.getLoc();
-  auto parseFn = [&](unsigned k) -> bool {
+  auto parseFn = [&](size_t k) -> bool {
     auto result = parseType(
         [&]() { diagnoseExpected(diag::expected_type_after, k ? "," : "("); });
 

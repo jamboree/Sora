@@ -34,9 +34,7 @@ bool ASTScope::overlaps(const ASTScope *other) const {
   if (thisRange.begin <= otherRange.begin && otherRange.begin <= thisRange.end)
     return true;
   // Check that the end of otherRange isn't inside this range
-  if (thisRange.begin <= otherRange.end && otherRange.end <= thisRange.end)
-    return true;
-  return false;
+  return thisRange.begin <= otherRange.end && otherRange.end <= thisRange.end;
 }
 
 void ASTScope::addChild(ASTScope *scope) {

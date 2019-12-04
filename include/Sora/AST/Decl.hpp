@@ -315,7 +315,7 @@ class ParamList final : private llvm::TrailingObjects<ParamList, ParamDecl *> {
   }
 
   SourceLoc lParenLoc, rParenloc;
-  unsigned numParams = 0;
+  size_t numParams = 0;
 
   ParamList(SourceLoc lParenLoc, ArrayRef<ParamDecl *> params,
             SourceLoc rParenloc);
@@ -333,7 +333,7 @@ public:
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
-  unsigned getNumParams() const { return numParams; }
+  size_t getNumParams() const { return numParams; }
   ArrayRef<ParamDecl *> getParams() const {
     return {getTrailingObjects<ParamDecl *>(), numParams};
   }

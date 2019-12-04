@@ -69,12 +69,12 @@ private:
 
 public:
   /// Creates an IntegerWidth from a raw value
-  static IntegerWidth fromOpaqueValue(unsigned raw) {
+  static IntegerWidth fromOpaqueValue(opaque_t raw) {
     return IntegerWidth(raw);
   }
 
   /// \returns this IntegerWidth as an opaque value
-  unsigned getOpaqueValue() const { return opaque; }
+  opaque_t getOpaqueValue() const { return opaque; }
 
   /// \returns an IntegerWidth representing an integer with a fixed width of \p
   /// value. \p value can't be zero.

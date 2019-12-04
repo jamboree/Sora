@@ -46,8 +46,8 @@ SourceLoc Parser::parseMatchingToken(SourceLoc lLoc, TokenKind kind,
   }
 }
 
-void Parser::parseList(llvm::function_ref<bool(unsigned)> callback) {
-  unsigned idx = 0;
+void Parser::parseList(llvm::function_ref<bool(size_t)> callback) {
+  size_t idx = 0;
   do {
     // eat extra commas
     while (SourceLoc extraComma = consumeIf(TokenKind::Comma))
@@ -59,7 +59,7 @@ void Parser::parseList(llvm::function_ref<bool(unsigned)> callback) {
 }
 
 bool Parser::parseTuple(SourceLoc &rParenLoc,
-                        llvm::function_ref<bool(unsigned)> callback,
+                        llvm::function_ref<bool(size_t)> callback,
                         Optional<TypedDiag<>> missingRParenDiag) {
   assert(tok.is(TokenKind::LParen));
   SourceLoc lParen = consumeToken();
@@ -72,7 +72,7 @@ bool Parser::parseTuple(SourceLoc &rParenLoc,
 
   // Parse the list
   bool lastSuccess = false;
-  parseList([&](unsigned k) -> bool {
+  parseList([&](size_t k) -> bool {
     // Stop at ')'
     if (tok.is(TokenKind::RParen))
       return false;

@@ -191,6 +191,7 @@ class TupleTypeRepr final
     assert(elements.size() != 1 &&
            "Single-element tuples don't exist - Use ParenTypeRepr!");
     bits.TupleTypeRepr.numElements = elements.size();
+    assert(getNumElements() == elements.size() && "Bits dropped");
     std::uninitialized_copy(elements.begin(), elements.end(),
                             getTrailingObjects<TypeRepr *>());
   }
@@ -211,7 +212,9 @@ public:
   }
 
   bool isEmpty() const { return getNumElements() == 0; }
-  size_t getNumElements() const { return bits.TupleTypeRepr.numElements; }
+  size_t getNumElements() const {
+    return (size_t)bits.TupleTypeRepr.numElements;
+  }
   ArrayRef<TypeRepr *> getElements() const {
     return {getTrailingObjects<TypeRepr *>(), getNumElements()};
   }

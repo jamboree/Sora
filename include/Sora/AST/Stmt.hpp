@@ -207,7 +207,7 @@ public:
   SourceLoc getLeftCurlyLoc() const { return lCurlyLoc; }
   SourceLoc getRightCurlyLoc() const { return rCurlyLoc; }
 
-  size_t getNumElements() const { return bits.BlockStmt.numElements; }
+  size_t getNumElements() const { return (size_t)bits.BlockStmt.numElements; }
   ArrayRef<ASTNode> getElements() const {
     return {getTrailingObjects<ASTNode>(), getNumElements()};
   }

@@ -212,7 +212,7 @@ public:
 
     bool success = true;
     // Unify the elements
-    for (unsigned k = 0, size = type->getNumElements(); k < size; ++k)
+    for (size_t k = 0, size = type->getNumElements(); k < size; ++k)
       success &= unify(type->getElement(k), other->getElement(k));
     return success;
   }
@@ -226,7 +226,7 @@ public:
     // Unify return types
     success &= unify(type->getReturnType(), other->getReturnType());
     // Unify arg types
-    for (unsigned k = 0, size = type->getNumArgs(); k < size; ++k)
+    for (size_t k = 0, size = type->getNumArgs(); k < size; ++k)
       success &= unify(type->getArg(k), other->getArg(k));
     return success;
   }

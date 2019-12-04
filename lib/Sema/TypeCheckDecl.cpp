@@ -181,7 +181,7 @@ void TypeChecker::typecheckFunctionBody(FuncDecl *func) {
 
 void TypeChecker::typecheckDefinedFunctions() {
 #ifndef NDEBUG
-  unsigned numDefinedFunc = definedFunctions.size();
+  size_t numDefinedFunc = definedFunctions.size();
 #endif
   for (FuncDecl *func : definedFunctions)
     typecheckFunctionBody(func);

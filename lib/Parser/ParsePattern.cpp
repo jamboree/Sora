@@ -162,7 +162,7 @@ ParserResult<Pattern> Parser::parseTuplePattern() {
   SmallVector<Pattern *, 4> elements;
   SourceLoc lParen, rParen;
   lParen = tok.getLoc();
-  auto parseFn = [&](unsigned k) -> bool {
+  auto parseFn = [&](size_t k) -> bool {
     auto result = parsePattern(
         [&]() { diagnoseExpected(diag::expected_pat_after, k ? "," : "("); });
 

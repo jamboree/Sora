@@ -233,6 +233,7 @@ class TuplePattern final
     assert(patterns.size() != 1 &&
            "Single-element tuples don't exist - Use ParenPattern!");
     bits.TuplePattern.numElements = patterns.size();
+    assert(getNumElements() == patterns.size() && "Bits dropped");
     std::uninitialized_copy(patterns.begin(), patterns.end(),
                             getTrailingObjects<Pattern *>());
   }
@@ -253,7 +254,9 @@ public:
   }
 
   bool isEmpty() const { return getNumElements() == 0; }
-  size_t getNumElements() const { return bits.TuplePattern.numElements; }
+  size_t getNumElements() const {
+    return (size_t)bits.TuplePattern.numElements;
+  }
   ArrayRef<Pattern *> getElements() const {
     return {getTrailingObjects<Pattern *>(), getNumElements()};
   }

@@ -496,22 +496,23 @@ class TupleElementExpr final : public Expr {
 
 public:
   TupleElementExpr(Expr *base, SourceLoc opLoc, bool isArrow,
-                   SourceLoc indexLoc, unsigned index)
+                   SourceLoc indexLoc, size_t index)
       : Expr(ExprKind::TupleElement), base(base), opLoc(opLoc),
         indexLoc(indexLoc) {
     bits.TupleElementExpr.index = index;
+    assert(getIndex() == index && "Bits dropped?");
     bits.TupleElementExpr.isArrow = isArrow;
   }
 
   /// Creates a TupleElementExpr from a UnresolvedMemberRefExpr
-  TupleElementExpr(UnresolvedMemberRefExpr *umre, unsigned index)
+  TupleElementExpr(UnresolvedMemberRefExpr *umre, size_t index)
       : TupleElementExpr(umre->getBase(), umre->getOpLoc(), umre->isArrow(),
                          umre->getMemberIdentifierLoc(), index) {}
 
   Expr *getBase() const { return base; }
   void setBase(Expr *base) { this->base = base; }
 
-  unsigned getIndex() const { return bits.TupleElementExpr.index; }
+  size_t getIndex() const { return (size_t)bits.TupleElementExpr.index; }
   SourceLoc getIndexLoc() const { return indexLoc; }
 
   /// \returns the SourceLoc of the '.' or '->'
@@ -548,6 +549,7 @@ class TupleExpr final : public Expr,
     assert(exprs.size() != 1 &&
            "Single-element tuples don't exist - Use ParenExpr!");
     bits.TupleExpr.numElements = exprs.size();
+    assert(getNumElements() == exprs.size() && "Bits dropped?");
     std::uninitialized_copy(exprs.begin(), exprs.end(),
                             getTrailingObjects<Expr *>());
   }
@@ -566,7 +568,7 @@ public:
   }
 
   bool isEmpty() const { return getNumElements() == 0; }
-  size_t getNumElements() const { return bits.TupleExpr.numElements; }
+  size_t getNumElements() const { return (size_t)bits.TupleExpr.numElements; }
   MutableArrayRef<Expr *> getElements() {
     return {getTrailingObjects<Expr *>(), getNumElements()};
   }

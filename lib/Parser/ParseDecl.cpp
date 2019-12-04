@@ -149,7 +149,7 @@ ParserResult<ParamList> Parser::parseParamDeclList() {
   SmallVector<ParamDecl *, 4> params;
   SourceLoc lParen, rParen;
   lParen = tok.getLoc();
-  auto parseFn = [&](unsigned k) -> bool {
+  auto parseFn = [&](size_t k) -> bool {
     if (tok.isNot(TokenKind::Identifier)) {
       diagnoseExpected(diag::expected_param_decl);
       return false;
