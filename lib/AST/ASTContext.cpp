@@ -228,7 +228,6 @@ void ASTContext::buildBuiltinTypesLookupMap() {
   BUILTIN_TYPE(f64);
 
   BUILTIN_TYPE(void);
-  BUILTIN_TYPE(null);
   BUILTIN_TYPE(bool);
 #undef BUILTIN_TYPE
 }
