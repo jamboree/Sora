@@ -20,17 +20,10 @@ class SourceLoc;
 class ValueDecl;
 
 struct UnqualifiedLookupOptions {
-  /// FIXME: Can't onlyLookInCurrentBlock and onlyLookInCurrentFile be merged?
-  /// Maybe, but onlyLookInCurrentScope wouldn't be good enough (because of
-  /// LocalLetDeclScopes).
-
-  /// If set to true, lookup will stop after looking into the first
-  /// BlockStmtScope it finds, whether it has results or not;
-  /// This has no effect if the code isn't contained inside a BlockStmt.
-  bool onlyLookInCurrentBlock = false;
-  /// If set to true, lookup will stop after looking into the first
-  /// SourceFile it finds, whether it has results or not;
-  bool onlyLookInCurrentFile = false;
+  /// If non-null, this is called after looking into a scope before looking into
+  /// the next one. If it returns true, lookup stops, if it returns true, it
+  /// continues.
+  std::function<bool(const ASTScope *)> shouldStop;
   /// If true, illegal redeclarations are ignored.
   /// Default is true.
   bool ignoreIllegalRedeclarations = true;

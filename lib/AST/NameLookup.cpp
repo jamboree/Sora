@@ -37,7 +37,7 @@ struct ASTScopeLookup {
     break;
 #include "Sora/AST/ASTScopeKinds.def"
     }
-    if (stop)
+    if (stop || shouldStop(scope))
       return;
     if (ASTScope *parent = scope->getParent())
       visit(parent);
@@ -47,6 +47,10 @@ struct ASTScopeLookup {
   /// \returns the result of the consumer if it was called, false otherwise.
   bool consume(ArrayRef<ValueDecl *> decls, const ASTScope *scope) {
     return decls.empty() ? false : consumerFunc(decls, scope);
+  }
+
+  bool shouldStop(const ASTScope *scope) {
+    return options.shouldStop != nullptr ? options.shouldStop(scope) : false;
   }
 
   /// \returns true if \p decl should be considered as a result
@@ -66,15 +70,10 @@ struct ASTScopeLookup {
   bool visitSourceFile(const SourceFileScope *scope) {
     // Check the contents of the file
 
-    auto finish = [&](ArrayRef<ValueDecl *> decls, const ASTScope *scope) {
-      // Stop if the consumer wishes to, or if we have to.
-      return consume(decls, scope) || options.onlyLookInCurrentFile;
-    };
-
     // If we can consider every result, just feed everything to consume()
     SourceFile &sf = scope->getSourceFile();
     if (considerEveryResult())
-      return finish(sf.getMembers(), scope);
+      return consume(sf.getMembers(), scope);
 
     // If we can't consider everything, remove everything that can't be
     // considered.
@@ -84,7 +83,8 @@ struct ASTScopeLookup {
     for (ValueDecl *decl : sf.getMembers())
       if (shouldConsider(decl))
         decls.push_back(decl);
-    return finish(decls, scope);
+
+    return consume(decls, scope);
   }
 
   bool visitLocalLetDecl(const LocalLetDeclScope *scope) {
@@ -95,6 +95,7 @@ struct ASTScopeLookup {
       if (shouldConsider(var))
         decls.push_back(var);
     });
+
     return consume(decls, scope);
   }
 
@@ -107,6 +108,7 @@ struct ASTScopeLookup {
       if (shouldConsider(param))
         decls.push_back(param);
     }
+
     return consume(decls, scope);
   }
 
@@ -125,8 +127,8 @@ struct ASTScopeLookup {
       if (func && shouldConsider(func))
         decls.push_back(func);
     }
-    // Stop if the consumer wishes to, or if we have to.
-    return consume(decls, scope) || options.onlyLookInCurrentBlock;
+
+    return consume(decls, scope);
   }
 
   bool visitIfStmt(const IfStmtScope *scope) {
