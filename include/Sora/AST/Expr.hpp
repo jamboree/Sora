@@ -417,10 +417,11 @@ class ImplicitConversionExpr : public Expr {
   Expr *subExpr;
 
 protected:
-  ImplicitConversionExpr(ExprKind kind, Expr *subExpr)
+  ImplicitConversionExpr(ExprKind kind, Expr *subExpr, Type type = Type())
       : Expr(kind), subExpr(subExpr) {
-    // Implicit Conversions are, of course, always implicit
     setImplicit();
+    if (type)
+      setType(type);
   }
 
 public:
@@ -441,8 +442,8 @@ public:
 /// Represents an implicit conversion of 'T' into 'maybe T'
 class ImplicitMaybeConversionExpr : public ImplicitConversionExpr {
 public:
-  ImplicitMaybeConversionExpr(Expr *expr)
-      : ImplicitConversionExpr(ExprKind::ImplicitMaybeConversion, expr) {}
+  ImplicitMaybeConversionExpr(Expr *expr, Type type = Type())
+      : ImplicitConversionExpr(ExprKind::ImplicitMaybeConversion, expr, type) {}
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::ImplicitMaybeConversion;
