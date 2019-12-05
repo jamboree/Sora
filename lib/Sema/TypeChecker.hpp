@@ -88,7 +88,8 @@ public:
   /// \param cs the ConstraintSystem to use
   /// \param expr the expression to typecheck
   /// \param dc the DeclContext in which this Expr lives. Cannot be null.
-  /// \param ofType If valid, the expected type of the expression.
+  /// \param ofType (Optional) The expected type of the expression. If non-null,
+  /// implicit conversions may be added to \p expr to convert it to \p ofType
   /// \param onUnificationFailure Called if the Expr's type can't unify with \p
   /// ofType. The first argument is the type of the Expr (simplified), the
   /// second is \p ofType.
@@ -102,14 +103,16 @@ public:
   /// be no active constraint system.
   /// \param expr the expression to typecheck
   /// \param dc the DeclContext in which this Expr lives. Cannot be null.
-  /// \param ofType If valid, the expected type of the expression.
-  /// \param onUnificationFailure Called if the Expr's type can't unify with \p
-  /// ofType. The first argument is the type of the Expr (simplified), the
-  /// second is \p ofType.
+  /// \param ofType (Optional) The expected type of the expression. If non-null,
+  /// implicit conversions may be added to \p expr to convert it to \p ofType
+  /// \param onUnificationFailure Called if the Expr's type can't
+  /// unify with \p ofType. The first argument is the type of the Expr
+  /// (simplified), the second is \p ofType.
   /// \returns \p expr or the expr that should replace it in the tree.
   Expr *typecheckExpr(
       Expr *expr, DeclContext *dc, Type ofType = Type(),
       llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
+
 
   /// Typechecking entry point for expressions used as conditions.
   /// \param expr the expression to typecheck
