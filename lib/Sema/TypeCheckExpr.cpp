@@ -18,13 +18,45 @@
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/Diagnostics/DiagnosticsSema.hpp"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/raw_ostream.h" // TODO: remove this
 
 using namespace sora;
 
+namespace {
+//===- Utils --------------------------------------------------------------===//
+
+/// Attempts to insert implicit conversions around \p expr so its type can
+/// become \p toType.
+/// \param ctxt the ASTContext
+/// \param toType the destination type
+/// \param expr the expression
+/// \param exprTy the type of the expression, simplified.
+/// \returns \p expr if no implicit conversions are needed or possible, else,
+/// returns the expr that should take \p expr's place in the AST.
+Expr *tryInsertImplicitConversions(ASTContext &ctxt, Type toType, Expr *expr,
+                                   Type exprTy,
+                                   bool &hasAddedImplicitConversions) {
+  assert(toType && expr && exprTy);
+  hasAddedImplicitConversions = false;
+
+  // Canonicalize both types & remove LValues
+  CanType canToType = toType->getRValue()->getCanonicalType();
+  CanType canExprTy = exprTy->getRValue()->getCanonicalType();
+
+  // If both types are equal, we don't have anything to do.
+  if (canToType == canExprTy)
+    return expr;
+
+  // Insert a ImplicitMaybeConversion if toType is 'maybe T' and exprTy is 'T'
+  if (MaybeType *toMaybe = canToType->getAs<MaybeType>()) {
+    if (CanType(toMaybe->getValueType()) == canExprTy)
+      expr = new (ctxt) ImplicitMaybeConversionExpr(expr, toType);
+  }
+  assert(expr->hasType() && "Untyped Implicit Conversions!");
+  return expr;
+}
+
 //===- ExprChecker --------------------------------------------------------===//
 
-namespace {
 /// This class handles the bulk of expression type checking.
 ///
 /// Most of the walk is done in post-order (the children are visited first), but
@@ -502,10 +534,16 @@ Expr *TypeChecker::typecheckExpr(
   expr = expr->walk(ExprChecker(*this, cs, dc)).second;
   assert(expr && "ExprChecker returns a null Expr*?");
 
-  // Unify it with 'ofType' if needed
+  // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
+    bool addedImplicitConversions;
+    expr = tryInsertImplicitConversions(ctxt, ofType, expr,
+                                        cs.simplifyType(expr->getType()),
+                                        addedImplicitConversions);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
+      assert(!addedImplicitConversions && "Added implicit conversions, yet "
+                                          "unification still failed?");
       if (onUnificationFailure)
         onUnificationFailure(cs.simplifyType(exprTy), ofType);
     }
