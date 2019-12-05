@@ -24,6 +24,9 @@ func foo() { // expect-error: value 'foo' is already defined in this scope
             func foo() {}
         }
     }
+    
+    let x: maybe i32
+    if let x = x {}
 }
 
 func bar(bar: i32) {} // this is allowed, but not really useful. 
