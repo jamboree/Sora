@@ -236,7 +236,8 @@ enum class StmtConditionKind {
 };
 
 /// Represents the condition of a loop or an if statement.
-/// This can be a boolean expression (or a "let" declaration in the future)
+/// This can be a boolean expression, or a let-declaration which can be used to
+/// create conditional bindings for 'maybe' types.
 ///
 /// This is intended to be a thin pointer-sized wrapper around a PointerUnion,
 /// providing convenience methods like getKind(), getBegLoc() & getEndLoc().
