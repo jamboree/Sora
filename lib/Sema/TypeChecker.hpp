@@ -161,6 +161,12 @@ public:
   ASTChecker(TypeChecker &tc)
       : tc(tc), ctxt(tc.ctxt), diagEngine(tc.diagEngine) {}
 
+  /// \returns whether we can emit a diagnostic involving \p type
+  bool canDiagnose(Type type);
+
+  /// \returns whether we can emit a diagnostic involving \p expr
+  bool canDiagnose(Expr *expr);
+
   /// Emits a diagnostic at \p loc
   template <typename... Args>
   InFlightDiagnostic

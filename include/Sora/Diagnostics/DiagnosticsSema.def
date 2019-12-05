@@ -59,6 +59,12 @@ ERROR(identifier_bound_multiple_times_in_same_paramlist,
 NOTE(identifier_bound_first_here,
   "identifier '%0' is bound for the first time here", (Identifier))
 
+ERROR(variable_binding_in_cond_requires_initializer,
+  "variable binding in a condition requires an initializer", ())
+ERROR(cond_binding_must_have_maybe_type,
+  "initializer for conditional binding must have a maybe type, not '%0'", 
+  (Type))
+
 //===- Exprs --------------------------------------------------------------===//
 
 ERROR(cannot_force_unwrap_value_of_type,
@@ -96,9 +102,9 @@ ERROR(cannot_convert_pattern,
   "cannot convert pattern of type '%0' to '%1'", (Type, Type))
 
 ERROR(type_of_pattern_is_ambiguous_without_more_ctxt,
-  "type of pattern is ambiguous without more context", ())
-NOTE(add_type_annot_to_pattern,
-  "add a type annotation to the pattern to give it a type", ())
+  "type of '%0' is ambiguous without more context", (StringRef))
+NOTE(add_type_annot_to_give_pattern_a_type,
+  "add a type annotation to give '%0' a type", (StringRef))
 
 //===- Types --------------------------------------------------------------===//
 

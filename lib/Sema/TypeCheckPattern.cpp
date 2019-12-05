@@ -125,21 +125,26 @@ public:
     if (!type->hasTypeVariable())
       return;
 
-    // Whether the type contained a type variable prior to simplification
-    bool hadErrorType = type->hasErrorType();
-    // Whether the type is ambiguous
     bool isAmbiguous = false;
-
+    bool wasDiagnosable = canDiagnose(type);
     type = cs.simplifyType(type, &isAmbiguous);
     pattern->setType(type);
 
-    if (isAmbiguous && !hadErrorType) {
+    if (isAmbiguous && wasDiagnosable) {
       // We only complain about inference errors on VarPattern &
       // DiscardPatterns.
       if ((isa<VarPattern>(pattern) || isa<DiscardPattern>(pattern))) {
+        StringRef patternName;
+        if (isa<DiscardPattern>(pattern))
+          patternName = "_";
+        else
+          patternName = cast<VarPattern>(pattern)->getIdentifier().c_str();
+
         diagnose(pattern->getLoc(),
-                 diag::type_of_pattern_is_ambiguous_without_more_ctxt);
-        diagnose(pattern->getLoc(), diag::add_type_annot_to_pattern)
+                 diag::type_of_pattern_is_ambiguous_without_more_ctxt,
+                 patternName);
+        diagnose(pattern->getLoc(), diag::add_type_annot_to_give_pattern_a_type,
+                 patternName)
             .fixitInsertAfter(pattern->getEndLoc(), ": <type>");
       }
     }

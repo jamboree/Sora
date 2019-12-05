@@ -88,3 +88,9 @@ Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
   assert(result);
   return result;
 }
+
+//===- ASTChecker ---------------------------------------------------------===//
+
+bool ASTChecker::canDiagnose(Type type) {
+  return type && !type->hasErrorType();
+}

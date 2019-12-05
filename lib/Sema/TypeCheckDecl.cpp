@@ -9,6 +9,7 @@
 
 #include "TypeChecker.hpp"
 
+#include "Sora/AST/ASTScope.hpp"
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/NameLookup.hpp"
@@ -200,9 +201,14 @@ void TypeChecker::checkIsIllegalRedeclaration(ValueDecl *decl) {
 
   UnqualifiedValueLookup uvl(decl->getSourceFile());
 
-  // Limit lookup to the current block & file so shadowing rules are respected.
-  uvl.options.onlyLookInCurrentBlock = true;
-  uvl.options.onlyLookInCurrentFile = true;
+  // Since Sora has quite loose shadowing rules, we want lookup to stop after
+  // looking into the first scope, unless we're checking a FuncDecl and we're
+  // looking into its own scope.
+  uvl.options.shouldStop = [&](const ASTScope *scope) {
+    if (const FuncDeclScope *fnScope = dyn_cast<FuncDeclScope>(scope))
+      return fnScope->getFuncDecl() != decl;
+    return true;
+  };
 
   // This decl shouldn't part of the result set
   uvl.ignore(decl);

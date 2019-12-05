@@ -12,6 +12,7 @@
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/AST/Types.hpp"
 
 using namespace sora;
 
@@ -95,8 +96,25 @@ public:
       cond = tc.typecheckCondition(expr, dc);
       stmt->setCond(cond);
     }
-    else if (LetDecl *decl = cond.getLetDecl())
+    else if (LetDecl *decl = cond.getLetDecl()) {
       tc.typecheckDecl(decl);
+      // To use this construct, the 'let' decl must have an initializer
+      Expr *init = decl->getInitializer();
+      if (!init) {
+        diagnose(decl->getLetLoc(),
+                 diag::variable_binding_in_cond_requires_initializer)
+            .fixitInsertAfter(decl->getEndLoc(), "= <expression>");
+        return;
+      }
+      // Check the type of the initializer: it must be a "maybe" type.
+      Type initTy = init->getType();
+      if (!initTy->getRValue()->getCanonicalType()->is<MaybeType>()) {
+        if (canDiagnose(init)) {
+          diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
+                   initTy);
+        }
+      }
+    }
   }
 
   void visitIfStmt(IfStmt *stmt) {

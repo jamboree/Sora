@@ -89,12 +89,6 @@ public:
     return cast;
   }
 
-  /// \returns whether we can emit a diagnostic involving \p type
-  bool canDiagnose(Type type) { return !type->hasErrorType(); }
-
-  /// \returns whether we can emit a diagnostic involving \p expr
-  bool canDiagnose(Expr *expr) { return canDiagnose(expr->getType()); }
-
   /// If \p expr is a DiscardExpr, adds it to \c validDiscardExprs.
   /// Else, if \p expr is a ParenExpr or TupleExpr, recurses with the
   /// subexpression(s).
@@ -527,4 +521,10 @@ Expr *TypeChecker::typecheckExpr(
     llvm::function_ref<void(Type, Type)> onUnificationFailure) {
   ConstraintSystem cs(*this);
   return typecheckExpr(cs, expr, dc, ofType, onUnificationFailure);
+}
+
+//===- ASTChecker ---------------------------------------------------------===//
+
+bool ASTChecker::canDiagnose(Expr *expr) {
+  return canDiagnose(expr->getType());
 }
