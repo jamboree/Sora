@@ -29,7 +29,7 @@ Here's a non-exhaustive list of features that will be present in the initial imp
   - Optional "maybe" type
   - Tuple types
     - Tuples w/ 0 elements (`()`) will be canonicalized as `void`
-    - Tuples w/ 1 element (e.g. `(0)`, of type `(i32)`) will be canonicalized as the type of the element (w/o the tuple, so `i32` in this case)
+    - Tuples w/ 1 element don't exist (they're grouping parentheses)
     - Tuples w/ 2+ elements will be canonicalized as a tuple of the canonicalized types of the elements
 - Every statement except the `for` statement 
 - Every expression except subscripts, array literals, char literals and string literals.
