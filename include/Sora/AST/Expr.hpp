@@ -412,6 +412,43 @@ public:
   }
 };
 
+/// Common base class for implicit conversion expressions.
+class ImplicitConversionExpr : public Expr {
+  Expr *subExpr;
+
+protected:
+  ImplicitConversionExpr(ExprKind kind, Expr *subExpr)
+      : Expr(kind), subExpr(subExpr) {
+    // Implicit Conversions are, of course, always implicit
+    setImplicit();
+  }
+
+public:
+  void setSubExpr(Expr *expr) { subExpr = expr; }
+  Expr *getSubExpr() const { return subExpr; }
+
+  SourceLoc getBegLoc() const { return subExpr->getBegLoc(); }
+  SourceLoc getEndLoc() const { return subExpr->getEndLoc(); }
+  SourceLoc getLoc() const { return subExpr->getLoc(); }
+  SourceRange getSourceRange() const { return subExpr->getSourceRange(); }
+
+  static bool classof(const Expr *expr) {
+    return (expr->getKind() >= ExprKind::First_ImplicitConversion) &&
+           (expr->getKind() <= ExprKind::Last_ImplicitConversion);
+  }
+};
+
+/// Represents an implicit conversion of 'T' into 'maybe T'
+class ImplicitMaybeConversionExpr : public ImplicitConversionExpr {
+public:
+  ImplicitMaybeConversionExpr(Expr *expr)
+      : ImplicitConversionExpr(ExprKind::ImplicitMaybeConversion, expr) {}
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::ImplicitMaybeConversion;
+  }
+};
+
 /// Represents an error expr.
 ///
 /// This is created when Sema cannot resolve an UnresolvedExpr.

@@ -337,6 +337,14 @@ public:
     out << '\n';
   }
 
+  void visitImplicitConversionExpr(ImplicitConversionExpr *expr) {
+    dumpCommon(expr);
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(expr->getSubExpr());
+  }
+
   void visitErrorExpr(ErrorExpr *expr) {
     dumpCommon(expr);
     out << ' ';

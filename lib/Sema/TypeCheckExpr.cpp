@@ -127,13 +127,12 @@ public:
 
   Expr *visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr);
   Expr *visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr);
-  Expr *visitDeclRefExpr(DeclRefExpr *expr);
+
   Expr *visitDiscardExpr(DiscardExpr *expr);
   Expr *visitIntegerLiteralExpr(IntegerLiteralExpr *expr);
   Expr *visitFloatLiteralExpr(FloatLiteralExpr *expr);
   Expr *visitBooleanLiteralExpr(BooleanLiteralExpr *expr);
   Expr *visitNullLiteralExpr(NullLiteralExpr *expr);
-  Expr *visitErrorExpr(ErrorExpr *expr);
   Expr *visitCastExpr(CastExpr *expr);
   Expr *visitTupleElementExpr(TupleElementExpr *expr);
   Expr *visitTupleExpr(TupleExpr *expr);
@@ -143,6 +142,18 @@ public:
   Expr *visitForceUnwrapExpr(ForceUnwrapExpr *expr);
   Expr *visitBinaryExpr(BinaryExpr *expr);
   Expr *visitUnaryExpr(UnaryExpr *expr);
+
+  Expr *visitDeclRefExpr(DeclRefExpr *expr) {
+    llvm_unreachable("Expr visited twice!");
+  }
+
+  Expr *visitImplicitConversionExpr(ImplicitConversionExpr *expr) {
+    llvm_unreachable("Expression checked twice!");
+  }
+
+  Expr *visitErrorExpr(ErrorExpr *expr) {
+    llvm_unreachable("Expr visited twice!");
+  }
 };
 
 void ExprChecker::findValidDiscardExprs(Expr *expr) {
@@ -268,10 +279,6 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   return memberNotFound();
 }
 
-Expr *ExprChecker::visitDeclRefExpr(DeclRefExpr *expr) {
-  llvm_unreachable("Expr visited twice!");
-}
-
 Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
   /// If this DiscardExpr is not valid, diagnose it.
   if (validDiscardExprs.count(expr) == 0) {
@@ -308,10 +315,6 @@ Expr *ExprChecker::visitNullLiteralExpr(NullLiteralExpr *expr) {
   // The "null" literal has its own type
   expr->setType(ctxt.nullType);
   return expr;
-}
-
-Expr *ExprChecker::visitErrorExpr(ErrorExpr *expr) {
-  llvm_unreachable("Expr checked twice!");
 }
 
 Expr *ExprChecker::visitCastExpr(CastExpr *expr) {

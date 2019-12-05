@@ -80,6 +80,11 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   TRIVIAL_VISIT(AnyLiteralExpr)
   TRIVIAL_VISIT(ErrorExpr)
 
+  void visitImplicitConversionExpr(ImplicitConversionExpr *expr) {
+    if (Expr *subExpr = doIt(expr->getSubExpr()))
+      expr->setSubExpr(subExpr);
+  }
+
   void visitCastExpr(CastExpr *expr) {
     if (Expr *subExpr = doIt(expr->getSubExpr()))
       expr->setSubExpr(subExpr);
