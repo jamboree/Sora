@@ -142,8 +142,7 @@ public:
   /// \param expr the expression
   /// \returns the expr that should take \p expr's place in the AST.
   Expr *tryInsertImplicitConversions(ConstraintSystem &cs, Expr *expr,
-                                     Type toType,
-                                     bool &hasAddedImplicitConversions);
+                                     Type toType);
 
   /// Resolves a TypeLoc, giving it a type from its TypeRepr.
   /// This can only be used if the TypeLoc has a TypeRepr.

@@ -500,48 +500,121 @@ public:
   }
 };
 
+//===- ImplicitConversionBuilder ------------------------------------------===//
+
+/// The ImplicitConversionBuilder attempts to insert implicit conversions inside
+/// an expression in order to make it convert to a certain type.
+///
+///  When the ImplicitConversionBuilder succeeds,
+/// "ConstraintSystem::unify(destType, expr->getType())" will succeed.
+class ImplicitConversionBuilder
+    : private ExprVisitor<ImplicitConversionBuilder, Expr *, Type> {
+
+  using Inherited = ExprVisitor<ImplicitConversionBuilder, Expr *, Type>;
+  friend Inherited;
+
+public:
+  ImplicitConversionBuilder(ConstraintSystem &cs) : cs(cs), ctxt(cs.ctxt) {}
+
+  ConstraintSystem &cs;
+  ASTContext &ctxt;
+
+  Expr *doIt(Type destType, Expr *expr) {
+    // If both types already unify, we don't have anything to do
+    if (cs.unify(destType, expr->getType()))
+      return expr;
+    // Else, visit the Expr
+    expr = Inherited::visit(expr, destType);
+    return expr;
+  }
+
+private:
+#ifndef NDEBUG
+  Expr *visit(Expr *expr, Type destType) {
+    Expr *result = Inherited::visit(expr, destType);
+    assert(result && "visit() returned null!");
+    return result;
+  }
+#endif
+
+  Expr *visitParenExpr(ParenExpr *expr, Type destType) {
+    expr->setSubExpr(visit(expr->getSubExpr(), destType));
+    rebuildParenExprType(expr);
+    return expr;
+  }
+
+  Expr *visitTupleExpr(TupleExpr *expr, Type destType) {
+    // destType must be a TupleType with the same number of elements as this
+    // expr, else, we can't do anything.
+
+    /// Empty tuples are covered by visitExpr.
+    if (expr->isEmpty())
+      return visitExpr(expr, destType);
+
+    // TODO: Ignore sugar as well
+    destType = destType->getRValue();
+
+    TupleType *destTupleType = destType->getAs<TupleType>();
+    if (!destTupleType)
+      return expr;
+
+    size_t numElem = destTupleType->getNumElements();
+
+    if (numElem != expr->getNumElements())
+      return expr;
+
+    MutableArrayRef<Expr *> tupleElts = expr->getElements();
+    for (size_t k = 0; k < numElem; ++k)
+      tupleElts[k] = visit(tupleElts[k], destTupleType->getElement(k));
+
+    rebuildTupleExprType(ctxt, expr);
+    return expr;
+  }
+
+  // For everything else, just try to insert an implicit conversion to type \p
+  // destType.
+  Expr *visitExpr(Expr *expr, Type destType) {
+    bool addedImplicitConversion = false;
+
+    // TODO: Ignore sugar as well
+    destType = destType->getRValue();
+
+    // Check if we can insert an ImplicitMaybeConversionExpr
+    if (MaybeType *toMaybe = destType->getAs<MaybeType>()) {
+      // If the MaybeType's ValueType is another MaybeType, just recurse first.
+      // Perhaps we're facing nested maybe types.
+      Type valueType = toMaybe->getValueType();
+      if (valueType->getCanonicalType()->is<MaybeType>())
+        expr = visitExpr(expr, valueType);
+
+      // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
+      // does, insert the ImplicitMaybeConversionExpr.
+      if (cs.unify(toMaybe->getValueType(), expr->getType())) {
+        // The Type of the ImplicitMaybeConversionExpr is the subexpression's
+        // type (without LValues) wrapped in a MaybeType.
+        expr = new (ctxt) ImplicitMaybeConversionExpr(
+            expr, MaybeType::get(expr->getType()->getRValue()));
+        addedImplicitConversion = true;
+      }
+    }
+
+#ifndef NDEBUG
+    if (addedImplicitConversion)
+      assert(cs.unify(destType, expr->getType()) &&
+             "Added implicit conversions but still can't unify?");
+#endif
+
+    return expr;
+  }
+};
+
 } // namespace
 
 //===- TypeChecker --------------------------------------------------------===//
 
-Expr *
-TypeChecker::tryInsertImplicitConversions(ConstraintSystem &cs, Expr *expr,
-                                          Type toType,
-                                          bool &hasAddedImplicitConversions) {
-  assert(toType && expr && expr->hasType());
-
-  // If both types already unify, we don't have anything to do
-  if (cs.unify(toType, expr->getType()))
-    return expr;
-
-  // TODO: Ignore sugar as well
-  toType = toType->getRValue();
-
-  // Check if we can insert an ImplicitMaybeConversionExpr
-  if (MaybeType *toMaybe = toType->getAs<MaybeType>()) {
-    // If the MaybeType's ValueType is another MaybeType, just recurse first.
-    // Perhaps we're facing nested maybe types.
-    Type valueType = toMaybe->getValueType();
-    if (valueType->getCanonicalType()->is<MaybeType>())
-      expr = tryInsertImplicitConversions(cs, expr, valueType,
-                                          hasAddedImplicitConversions);
-    // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
-    // does, insert the ImplicitMaybeConversionExpr.
-    if (cs.unify(toMaybe->getValueType(), expr->getType())) {
-      // The Type of the ImplicitMaybeConversionExpr is the subexpression's type
-      // (without LValues) wrapped in a MaybeType.
-      expr = new (ctxt) ImplicitMaybeConversionExpr(
-          expr, MaybeType::get(expr->getType()->getRValue()));
-      hasAddedImplicitConversions = true;
-    }
-  }
-
-#ifndef NDEBUG
-  if (hasAddedImplicitConversions)
-    assert(cs.unify(toType, expr->getType()) &&
-           "Added implicit conversions but still can't unify?");
-#endif
-  return expr;
+Expr *TypeChecker::tryInsertImplicitConversions(ConstraintSystem &cs,
+                                                Expr *expr, Type toType) {
+  return ImplicitConversionBuilder(cs).doIt(toType, expr);
 }
 
 Expr *TypeChecker::typecheckExpr(
@@ -555,9 +628,7 @@ Expr *TypeChecker::typecheckExpr(
 
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
-    bool addedImplicitConversions = false;
-    expr = tryInsertImplicitConversions(cs, expr, ofType,
-                                        addedImplicitConversions);
+    expr = tryInsertImplicitConversions(cs, expr, ofType);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
       if (onUnificationFailure)

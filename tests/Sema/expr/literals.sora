@@ -58,4 +58,9 @@ func inference() {
 
   // CHECK: IntegerLiteralExpr type=usize loc=line:60:30
   let _: maybe maybe usize = 0
+
+  // CHECK: IntegerLiteralExpr type=u8 loc=line:65:34
+  // CHECK: IntegerLiteralExpr type=u16 loc=line:65:37
+  // CHECK: IntegerLiteralExpr type=u32 loc=line:65:40
+  let (_: u8, _: u16, _: u32) = (0, 0, 0)
 }
