@@ -49,7 +49,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   /// Note that this can be another TypeVariable in case of an equivalence.
   Type substitution;
 
-  bool isIntegerTypeOrIntegerTypeVariable(Type type) {
+  static bool isIntegerTypeOrIntegerTypeVariable(Type type) {
     if (type->is<IntegerType>())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
@@ -58,7 +58,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
     return TypeVariableInfo::get(tv).isIntegerTypeVariable();
   }
 
-  bool isFloatTypeOrFloatTypeVariable(Type type) {
+  static bool isFloatTypeOrFloatTypeVariable(Type type) {
     if (type->is<FloatType>())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
@@ -92,25 +92,28 @@ public:
     return getTypeVariableKind() == TypeVariableKind::Float;
   }
 
+  /// \returns true \p type can be used as a substitution for this type variable
+  bool isValidSubstitution(Type type) const {
+    assert(type);
+    if (hasSubstitution())
+      return false;
+    switch (getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      return true;
+    case TypeVariableKind::Integer:
+      return isIntegerTypeOrIntegerTypeVariable(type);
+    case TypeVariableKind::Float:
+      return isFloatTypeOrFloatTypeVariable(type);
+    }
+  }
+
   /// Sets this TypeVariable's substitution.
   /// \returns false if the substitution was rejected (because there's already a
   /// substitution, or because it's not compatible), true if the substitution
   /// was accepted.
   bool setSubstitution(Type type) {
-    if (hasSubstitution())
+    if (!isValidSubstitution(type))
       return false;
-    switch (getTypeVariableKind()) {
-    case TypeVariableKind::General:
-      break;
-    case TypeVariableKind::Integer:
-      if (!isIntegerTypeOrIntegerTypeVariable(type))
-        return false;
-      break;
-    case TypeVariableKind::Float:
-      if (!isFloatTypeOrFloatTypeVariable(type))
-        return false;
-      break;
-    }
     substitution = type;
     return true;
   }
@@ -220,6 +223,12 @@ public:
   /// \returns true if unification was successful, false otherwise.
   bool unify(Type a, Type b,
              const UnificationOptions &options = UnificationOptions());
+
+  /// Checks if unification between two types is possible without binding the
+  /// type variables inside \p a and \p b.
+  /// \returns true if \c unify on \p a and \p b would succeed.
+  bool canUnify(Type a, Type b,
+                const UnificationOptions &options = UnificationOptions()) const;
 
   /// Prints \p type and its TypeVariableInfo to \p out
   void print(raw_ostream &out, const TypeVariableType *type,

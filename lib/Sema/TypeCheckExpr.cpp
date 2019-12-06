@@ -24,32 +24,34 @@ using namespace sora;
 namespace {
 //===- Utils --------------------------------------------------------------===//
 
-/// Attempts to insert implicit conversions around \p expr so its type can
-/// become \p toType.
-/// \param ctxt the ASTContext
+/// Attempts to insert implicit conversions around \p expr so
+/// unify(expr->getType(), toType) can work.
+/// \param cs the ConstraintSystem
 /// \param toType the destination type
 /// \param expr the expression
 /// \param exprTy the type of the expression, simplified.
 /// \returns \p expr if no implicit conversions are needed or possible, else,
 /// returns the expr that should take \p expr's place in the AST.
-Expr *tryInsertImplicitConversions(ASTContext &ctxt, Type toType, Expr *expr,
-                                   Type exprTy,
+Expr *tryInsertImplicitConversions(const ConstraintSystem &cs, Type toType,
+                                   Expr *expr, Type exprTy,
                                    bool &hasAddedImplicitConversions) {
   assert(toType && expr && exprTy);
   hasAddedImplicitConversions = false;
 
-  // Canonicalize both types & remove LValues
-  CanType canToType = toType->getRValue()->getCanonicalType();
-  CanType canExprTy = exprTy->getRValue()->getCanonicalType();
+  // TODO: Remove sugar from toType
+  toType = toType->getRValue();
 
   // If both types are equal, we don't have anything to do.
-  if (canToType == canExprTy)
+  if (toType->getRValue()->getCanonicalType() ==
+      exprTy->getRValue()->getCanonicalType())
     return expr;
 
   // Insert a ImplicitMaybeConversion if toType is 'maybe T' and exprTy is 'T'
-  if (MaybeType *toMaybe = canToType->getAs<MaybeType>()) {
-    if (CanType(toMaybe->getValueType()) == canExprTy)
-      expr = new (ctxt) ImplicitMaybeConversionExpr(expr, toType);
+  if (MaybeType *toMaybe = toType->getAs<MaybeType>()) {
+    if (cs.canUnify(toMaybe->getValueType(), exprTy)) {
+      expr = new (cs.ctxt) ImplicitMaybeConversionExpr(expr, toType);
+      hasAddedImplicitConversions = true;
+    }
   }
   assert(expr->hasType() && "Untyped Implicit Conversions!");
   return expr;
@@ -537,7 +539,7 @@ Expr *TypeChecker::typecheckExpr(
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
     bool addedImplicitConversions;
-    expr = tryInsertImplicitConversions(ctxt, ofType, expr,
+    expr = tryInsertImplicitConversions(cs, ofType, expr,
                                         cs.simplifyType(expr->getType()),
                                         addedImplicitConversions);
     Type exprTy = expr->getType();

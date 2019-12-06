@@ -112,8 +112,8 @@ void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
 }
 
 void PatternChecker::visitMaybeValuePattern(MaybeValuePattern *pattern) {
-  llvm_unreachable(
-      "PatternChecker for MaybeValuePattern is not implemented yet");
+  // The pattern has a "maybe T" type where T is the type of the subpattern.
+  pattern->setType(MaybeType::get(pattern->getSubPattern()->getType()));
 }
 
 //===- PatternCheckerEpilogue ---------------------------------------------===//
@@ -121,9 +121,12 @@ void PatternChecker::visitMaybeValuePattern(MaybeValuePattern *pattern) {
 class PatternCheckerEpilogue : public ASTChecker, public ASTWalker {
 public:
   ConstraintSystem &cs;
+  const bool canEmitInferenceErrors;
 
-  PatternCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs)
-      : ASTChecker(tc), cs(cs) {}
+  PatternCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs,
+                         bool canEmitInferenceErrors)
+      : ASTChecker(tc), cs(cs), canEmitInferenceErrors(canEmitInferenceErrors) {
+  }
 
   void simplifyTypeOfPattern(Pattern *pattern) {
     Type type = pattern->getType();
@@ -136,7 +139,7 @@ public:
     type = cs.simplifyType(type, &isAmbiguous);
     pattern->setType(type);
 
-    if (isAmbiguous && wasDiagnosable) {
+    if (isAmbiguous && wasDiagnosable && canEmitInferenceErrors) {
       // We only complain about inference errors on VarPattern &
       // DiscardPatterns.
       if ((isa<VarPattern>(pattern) || isa<DiscardPattern>(pattern))) {
@@ -183,7 +186,7 @@ void TypeChecker::typecheckPattern(Pattern *pat, DeclContext *dc) {
   pat->walk(PatternChecker(*this, cs, dc));
 
   // Perform the epilogue
-  pat->walk(PatternCheckerEpilogue(*this, cs));
+  pat->walk(PatternCheckerEpilogue(*this, cs, /*canEmitInferenceErrors*/ true));
 }
 
 Expr *TypeChecker::typecheckPatternAndInitializer(Pattern *pat, Expr *init,
@@ -196,16 +199,19 @@ Expr *TypeChecker::typecheckPatternAndInitializer(Pattern *pat, Expr *init,
   pat->walk(PatternChecker(*this, cs, dc));
 
   // Fully check the expr, unifying it with the type of the pattern
+  bool emitInferenceErrors = true;
   init = typecheckExpr(cs, init, dc, pat->getType(), [&](Type from, Type to) {
     // FIXME: This diagnostic can be improved.
     if (!from->hasErrorType() && !to->hasErrorType())
       diagnose(init->getLoc(), diag::cannot_convert_value_of_type, from, to)
           .highlight(pat->getLoc())
           .highlight(init->getSourceRange());
+    // Don't emit inference errors in the pattern
+    emitInferenceErrors = false;
   });
 
   // Perform the epilogue
-  pat->walk(PatternCheckerEpilogue(*this, cs));
+  pat->walk(PatternCheckerEpilogue(*this, cs, emitInferenceErrors));
 
   return init;
 }

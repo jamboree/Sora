@@ -136,13 +136,26 @@ class TypeUnifier {
   }
 
 public:
-  TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options)
-      : cs(cs), options(options) {}
+  TypeUnifier(const UnificationOptions &options, bool canBind)
+      : options(options), canBind(canBind) {}
 
-  ConstraintSystem &cs;
   const UnificationOptions &options;
+  /// Whether this TypeUnifier can bind the type variables.
+  const bool canBind;
+
+  /// If possible, sets the substitution of \p tv to \p subst.
+  /// If \c canBind is set to false, just returns whether \p subst is a valid
+  /// substitution for \p tv.
+  bool setSubstitution(TypeVariableType *tv, Type subst) {
+    assert(tv && subst);
+    TypeVariableInfo &info = TypeVariableInfo::get(tv);
+    if (!canBind)
+      return info.isValidSubstitution(subst);
+    return info.setSubstitution(subst);
+  }
 
   bool unify(Type type, Type other) {
+    assert(type && other);
     // Ignore LValues if allowed to
     if (options.ignoreLValues) {
       type = type->getRValue();
@@ -159,11 +172,11 @@ public:
     // substitution.
     if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
       if (!other->is<TypeVariableType>())
-        return TypeVariableInfo::get(tv).setSubstitution(other);
+        return setSubstitution(tv, other);
     }
     else {
       if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
-        return TypeVariableInfo::get(otherTV).setSubstitution(type);
+        return setSubstitution(otherTV, type);
     }
 
     // FIXME: After this step, desugared types should be used.
@@ -250,9 +263,9 @@ public:
     // if only 'type' has a substitution, set the substitution of 'other' to
     // 'type'.
     if (typeInfo.hasSubstitution())
-      return TypeVariableInfo::get(other).setSubstitution(type);
+      return setSubstitution(other, type);
     // Else, just set the substitution of 'type' to 'other.
-    return TypeVariableInfo::get(type).setSubstitution(other);
+    return setSubstitution(type, other);
   }
 };
 
@@ -288,7 +301,12 @@ Type ConstraintSystem::simplifyType(Type type, bool *hadUnboundTypeVariable) {
 
 bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
-  return TypeUnifier(*this, options).unify(a, b);
+  return TypeUnifier(options, /*canBind*/ true).unify(a, b);
+}
+
+bool ConstraintSystem::canUnify(Type a, Type b,
+                                const UnificationOptions &options) const {
+  return TypeUnifier(options, /*canBind*/ false).unify(a, b);
 }
 
 void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
