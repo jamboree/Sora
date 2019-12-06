@@ -140,6 +140,14 @@ public:
     return const_cast<Expr *>(this)->ignoreParens();
   }
 
+  /// Ignores the implicit conversions around this expressions.
+  /// If this is an ImplicitConversionExpr, returns
+  /// getSubExpr()->ignoreImplicitConversions(), else returns this.
+  Expr *ignoreImplicitConversions();
+  const Expr *ignoreImplicitConversions() const {
+    return const_cast<Expr *>(this)->ignoreImplicitConversions();
+  }
+
   /// Traverse this Expr using \p walker.
   /// \returns a pair, the first element indicates whether the walk completed
   /// successfully (true = success), and the second element is this Expr or the

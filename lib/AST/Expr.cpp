@@ -72,6 +72,12 @@ Expr *Expr::ignoreParens() {
   return this;
 }
 
+Expr *Expr::ignoreImplicitConversions() {
+  if (ImplicitConversionExpr *conv = dyn_cast<ImplicitConversionExpr>(this))
+    return conv->getSubExpr()->ignoreImplicitConversions();
+  return this;
+}
+
 void *UnresolvedExpr::operator new(size_t size, ASTContext &ctxt,
                                    unsigned align) {
   return ctxt.allocate(size, align, ArenaKind::UnresolvedExpr);
