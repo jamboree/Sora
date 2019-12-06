@@ -99,6 +99,8 @@ public:
   bool setSubstitution(Type type) {
     if (hasSubstitution())
       return false;
+    // Never allow LValues into substitutions
+    type = type->getRValue();
     switch (getTypeVariableKind()) {
     case TypeVariableKind::General:
       break;
@@ -111,8 +113,11 @@ public:
         return false;
       break;
     }
-    // Never allow LValues into substitutions
-    substitution = type->getRValue();
+    substitution = type;
+    // If we set the substitution, make sure that we set this TV's kind to the
+    // same kind as the other TV.
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
+      tvKind = get(tv).getTypeVariableKind();
     return true;
   }
   /// \returns true if this TypeVariable has a substitution (whether it is

@@ -272,8 +272,8 @@ public:
     }
 
     // Else, if both don't have a substitution, just set the substitution of
-    // 'type' to 'other'
-    return typeInfo.setSubstitution(other);
+    // 'type' to 'other', or 'other' to 'type if the first one doesn't work out.
+    return typeInfo.setSubstitution(other) || otherInfo.setSubstitution(type);
   }
 };
 
