@@ -38,7 +38,6 @@ protected:
     boolLitExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLitExpr = new (*ctxt) NullLiteralExpr(beg);
     implicitMaybeConvExpr = new (*ctxt) ImplicitMaybeConversionExpr(begExpr);
-    loadExpr = new (*ctxt) LoadExpr(begExpr);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
     castExpr = new (*ctxt)
         CastExpr(begExpr, mid, new (*ctxt) IdentifierTypeRepr(end, {}));
@@ -69,7 +68,6 @@ protected:
   Expr *boolLitExpr;
   Expr *nullLitExpr;
   Expr *implicitMaybeConvExpr;
-  Expr *loadExpr;
   Expr *errorExpr;
   Expr *castExpr;
   Expr *tupleEltExpr;
@@ -107,9 +105,6 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<AnyLiteralExpr>(nullLitExpr));
 
   EXPECT_TRUE(isa<ImplicitMaybeConversionExpr>(implicitMaybeConvExpr));
-  EXPECT_TRUE(isa<ImplicitConversionExpr>(implicitMaybeConvExpr));
-
-  EXPECT_TRUE(isa<LoadExpr>(loadExpr));
   EXPECT_TRUE(isa<ImplicitConversionExpr>(implicitMaybeConvExpr));
 
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
@@ -202,12 +197,6 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(beg, implicitMaybeConvExpr->getLoc());
   EXPECT_EQ(beg, implicitMaybeConvExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, beg), implicitMaybeConvExpr->getSourceRange());
-
-  // LoadExpr
-  EXPECT_EQ(beg, loadExpr->getBegLoc());
-  EXPECT_EQ(beg, loadExpr->getLoc());
-  EXPECT_EQ(beg, loadExpr->getEndLoc());
-  EXPECT_EQ(SourceRange(beg, beg), loadExpr->getSourceRange());
 
   // ErrorExpr
   EXPECT_EQ(beg, errorExpr->getBegLoc());
