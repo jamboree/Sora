@@ -448,6 +448,9 @@ public:
 
   /// \returns the Pattern of this PBD
   Pattern *getPattern() const { return pattern; }
+  /// Replaces the pattern of this PBD
+  void setPattern(Pattern *pattern) { this->pattern = pattern; }
+
   /// \returns the SourceLoc of the '=' if there's an initializer.
   SourceLoc getEqualLoc() const { return equalLoc; }
 
