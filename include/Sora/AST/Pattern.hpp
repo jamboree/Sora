@@ -196,6 +196,8 @@ public:
       : Pattern(PatternKind::Mut), mutLoc(mutLoc), subPattern(subPattern) {}
 
   SourceLoc getMutLoc() const { return mutLoc; }
+
+  void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
 
   SourceLoc getBegLoc() const { return mutLoc; }
@@ -218,6 +220,7 @@ public:
       : Pattern(PatternKind::Paren), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
         subPattern(subPattern) {}
 
+  void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
@@ -279,6 +282,8 @@ public:
   MutableArrayRef<Pattern *> getElements() {
     return {getTrailingObjects<Pattern *>(), getNumElements()};
   }
+  void setElement(size_t n, Pattern *pattern) { getElements()[n] = pattern; }
+  Pattern *getElement(size_t n) const { return getElements()[n]; }
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }
@@ -307,7 +312,9 @@ public:
       : Pattern(PatternKind::Typed), subPattern(subPattern),
         typeRepr(typeRepr) {}
 
+  void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
+
   TypeRepr *getTypeRepr() const { return typeRepr; }
 
   SourceLoc getBegLoc() const;
@@ -343,6 +350,7 @@ public:
   MaybeValuePattern(Pattern *subPattern)
       : RefutablePattern(PatternKind::MaybeValue), subPattern(subPattern) {}
 
+  void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
 
   SourceLoc getBegLoc() const { return subPattern->getBegLoc(); }
