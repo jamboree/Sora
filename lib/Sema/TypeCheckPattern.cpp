@@ -58,6 +58,7 @@ public:
   void visitParenPattern(ParenPattern *pattern);
   void visitTuplePattern(TuplePattern *pattern);
   void visitTypedPattern(TypedPattern *pattern);
+  void visitMaybeValuePattern(MaybeValuePattern *pattern);
 };
 
 void PatternChecker::visitVarPattern(VarPattern *pattern) {
@@ -108,6 +109,11 @@ void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
            subPatType, type)
       .highlight(pattern->getTypeRepr()->getSourceRange())
       .highlight(pattern->getSubPattern()->getSourceRange());
+}
+
+void PatternChecker::visitMaybeValuePattern(MaybeValuePattern *pattern) {
+  llvm_unreachable(
+      "PatternChecker for MaybeValuePattern is not implemented yet");
 }
 
 //===- PatternCheckerEpilogue ---------------------------------------------===//

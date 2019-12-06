@@ -168,6 +168,10 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
     doIt(pattern->getTypeRepr());
   }
 
+  void visitMaybeValuePattern(MaybeValuePattern *pattern) {
+    doIt(pattern->getSubPattern());
+  }
+
   //===- ParamList --------------------------------------------------------===//
 
   void visitParamList(ParamList *paramList) {

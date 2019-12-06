@@ -32,9 +32,9 @@ protected:
         new (*ctxt) ParenPattern(beg, new (*ctxt) DiscardPattern(mid), end);
     tuplePattern = TuplePattern::createEmpty(*ctxt, beg, end);
     mutPattern = new (*ctxt) MutPattern(beg, new (*ctxt) DiscardPattern(end));
-    typedPattern =
-        new (*ctxt) TypedPattern(new (*ctxt) DiscardPattern(beg),
-                                 new (*ctxt) IdentifierTypeRepr(end, {}));
+    typedPattern = new (*ctxt)
+        TypedPattern(discardPattern, new (*ctxt) IdentifierTypeRepr(end, {}));
+    maybeValuePattern = new (*ctxt) MaybeValuePattern(discardPattern);
   }
 
   SourceManager srcMgr;
@@ -49,16 +49,25 @@ protected:
   Pattern *parenPattern;
   Pattern *tuplePattern;
   Pattern *typedPattern;
+  Pattern *maybeValuePattern;
 };
 } // namespace
 
 TEST_F(PatternTest, rtti) {
   EXPECT_TRUE(isa<VarPattern>(varPattern));
+
   EXPECT_TRUE(isa<DiscardPattern>(discardPattern));
+
   EXPECT_TRUE(isa<MutPattern>(mutPattern));
+
   EXPECT_TRUE(isa<ParenPattern>(parenPattern));
+
   EXPECT_TRUE(isa<TuplePattern>(tuplePattern));
+
   EXPECT_TRUE(isa<TypedPattern>(typedPattern));
+
+  EXPECT_TRUE(isa<MaybeValuePattern>(maybeValuePattern));
+  EXPECT_TRUE(isa<RefutablePattern>(maybeValuePattern));
 }
 
 TEST_F(PatternTest, getSourceRange) {
@@ -91,4 +100,9 @@ TEST_F(PatternTest, getSourceRange) {
   EXPECT_EQ(beg, typedPattern->getLoc());
   EXPECT_EQ(end, typedPattern->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), typedPattern->getSourceRange());
+
+  EXPECT_EQ(beg, maybeValuePattern->getBegLoc());
+  EXPECT_EQ(beg, maybeValuePattern->getLoc());
+  EXPECT_EQ(beg, maybeValuePattern->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), maybeValuePattern->getSourceRange());
 }

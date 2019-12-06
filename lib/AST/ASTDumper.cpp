@@ -531,6 +531,14 @@ public:
     visit(pattern->getTypeRepr());
   }
 
+  void visitMaybeValuePattern(MaybeValuePattern *pattern) {
+    dumpCommon(pattern);
+    out << '\n';
+
+    auto indent = increaseIndent();
+    visit(pattern->getSubPattern());
+  }
+
   //===--- SourceFile -----------------------------------------------------===//
 
   void visitSourceFile(const SourceFile &sf) {

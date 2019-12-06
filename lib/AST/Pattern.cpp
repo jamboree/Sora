@@ -59,6 +59,10 @@ void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
     if (Pattern *sub = cast<TypedPattern>(this)->getSubPattern())
       sub->forEachVarDecl(fn);
     break;
+  case Kind::MaybeValue:
+    if (Pattern *sub = cast<MaybeValuePattern>(this)->getSubPattern())
+      sub->forEachVarDecl(fn);
+    break;
   }
 }
 

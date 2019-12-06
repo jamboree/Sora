@@ -29,6 +29,8 @@ class VarDecl;
 /// Kinds of Patterns
 enum class PatternKind : uint8_t {
 #define PATTERN(KIND, PARENT) KIND,
+#define PATTERN_RANGE(KIND, FIRST, LAST)                                       \
+  First_##KIND = FIRST, Last_##KIND = LAST,
 #define LAST_PATTERN(KIND) Last_Pattern = KIND
 #include "Sora/AST/PatternNodes.def"
 };
@@ -307,6 +309,42 @@ public:
 
   static bool classof(const Pattern *pattern) {
     return pattern->getKind() == PatternKind::Typed;
+  }
+};
+
+/// Common base class for refutable patterns (= patterns that don't always match
+/// and thus can fail at runtime)
+class RefutablePattern : public Pattern {
+protected:
+  RefutablePattern(PatternKind kind) : Pattern(kind) {}
+
+public:
+  static bool classof(const Pattern *pattern) {
+    return (pattern->getKind() >= PatternKind::First_Refutable) &&
+           (pattern->getKind() <= PatternKind::Last_Refutable);
+  }
+};
+
+/// Pattern that matches when a "maybe" type contains a value.
+///
+/// Currently, this pattern is always implicit and can't be explicitly written
+/// in source. It is generated for "if let" conditions.
+class MaybeValuePattern : public RefutablePattern {
+  Pattern *subPattern;
+
+public:
+  MaybeValuePattern(Pattern *subPattern)
+      : RefutablePattern(PatternKind::MaybeValue), subPattern(subPattern) {}
+
+  Pattern *getSubPattern() const { return subPattern; }
+
+  SourceLoc getBegLoc() const { return subPattern->getBegLoc(); }
+  SourceLoc getLoc() const { return subPattern->getLoc(); }
+  SourceLoc getEndLoc() const { return subPattern->getEndLoc(); }
+  SourceRange getSourceRange() const { return subPattern->getSourceRange(); }
+
+  static bool classof(const Pattern *pattern) {
+    return pattern->getKind() == PatternKind::MaybeValue;
   }
 };
 } // namespace sora

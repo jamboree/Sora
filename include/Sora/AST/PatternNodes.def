@@ -9,6 +9,14 @@
 # define PATTERN(KIND, PARENT)
 #endif
 
+#ifndef ABSTRACT_PATTERN
+# define ABSTRACT_PATTERN(KIND, PARENT)
+#endif
+
+#ifndef PATTERN_RANGE
+# define PATTERN_RANGE(NAME, FIRST, LAST)
+#endif
+
 #ifndef LAST_PATTERN
 # define LAST_PATTERN(KIND)
 #endif
@@ -22,9 +30,15 @@ PATTERN(Paren, Pattern)
 PATTERN(Tuple, Pattern)
 PATTERN(Typed, Pattern)
 
-LAST_PATTERN(Typed)
+ABSTRACT_PATTERN(Refutable, Pattern)
+  PATTERN(MaybeValue, RefutablePattern)
+  PATTERN_RANGE(Refutable, MaybeValue, MaybeValue)
+
+LAST_PATTERN(MaybeValue)
 
 //===----------------------------------------------------------------------===//
 
 #undef PATTERN
+#undef ABSTRACT_PATTERN
+#undef PATTERN_RANGE
 #undef LAST_PATTERN
