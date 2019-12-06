@@ -49,7 +49,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   /// Note that this can be another TypeVariable in case of an equivalence.
   Type substitution;
 
-  bool isIntegerTypeOrIntegerTypeVariable(Type type) {
+  static bool isIntegerTypeOrIntegerTypeVariable(Type type) {
     if (type->is<IntegerType>())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
@@ -58,7 +58,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
     return TypeVariableInfo::get(tv).isIntegerTypeVariable();
   }
 
-  bool isFloatTypeOrFloatTypeVariable(Type type) {
+  static bool isFloatTypeOrFloatTypeVariable(Type type) {
     if (type->is<FloatType>())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
