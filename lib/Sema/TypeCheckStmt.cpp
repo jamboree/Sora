@@ -97,6 +97,14 @@ public:
       stmt->setCond(cond);
     }
     else if (LetDecl *decl = cond.getLetDecl()) {
+      // "if let x" implicitly looks inside "maybe" types, so wrap the LetDecl's
+      // pattern in an implicit MaybeValuePattern.
+      {
+        Pattern *letPat = decl->getPattern();
+        letPat = new (ctxt) MaybeValuePattern(letPat, /*isImplicit*/ true);
+        decl->setPattern(letPat);
+      }
+      // Type-check the declaration now
       tc.typecheckDecl(decl);
       // To use this construct, the 'let' decl must have an initializer
       Expr *init = decl->getInitializer();
