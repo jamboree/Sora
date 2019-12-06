@@ -90,37 +90,6 @@ public:
     }
   }
 
-  /// \returns a pair: the first element is true if \p expr is a valid "if let"
-  /// initializer, false otherwise. The second element is non-null only if the
-  /// first element if false and contains the type that should be used to emit
-  /// the diagnostic.
-  static std::pair<bool, Type> isValidIfLetInitializer(Expr *expr) {
-    Type type = expr->getType()->getRValue();
-    // If it doesn't have a "Maybe" type it's never okay.
-    if (!type->getCanonicalType()->is<MaybeType>())
-      return {false, type};
-    // If it has a "Maybe" type, but it originates from an
-    // "ImplicitMaybeConversionExpr", it's not right either.
-    {
-      Expr *cur = expr;
-      while (auto implicitConv =
-                 dyn_cast<ImplicitConversionExpr>(cur->ignoreParens())) {
-        if (isa<ImplicitMaybeConversionExpr>(implicitConv)) {
-          Type subExprTy = implicitConv->getSubExpr()->getType()->getRValue();
-          /*
-          assert(!subExprTy->getCanonicalType()->is<MaybeType>() &&
-                 "The expr still has a 'maybe' type even without the "
-                 "ImplicitMaybeConversionExpr?");
-                 */
-          return {false, subExprTy};
-        }
-        cur = implicitConv->getSubExpr();
-      }
-    }
-    // Else it's okay
-    return {true, nullptr};
-  }
-
   void checkCondition(ConditionalStmt *stmt) {
     StmtCondition cond = stmt->getCond();
     if (Expr *expr = cond.getExprOrNull()) {
@@ -128,14 +97,6 @@ public:
       stmt->setCond(cond);
     }
     else if (LetDecl *decl = cond.getLetDecl()) {
-      // "if let x" implicitly looks inside "maybe" types, so wrap the LetDecl's
-      // pattern in an implicit MaybeValuePattern.
-      {
-        Pattern *letPat = decl->getPattern();
-        letPat = new (ctxt) MaybeValuePattern(letPat, /*isImplicit*/ true);
-        decl->setPattern(letPat);
-      }
-      // Type-check the declaration now
       tc.typecheckDecl(decl);
       // To use this construct, the 'let' decl must have an initializer
       Expr *init = decl->getInitializer();
@@ -146,12 +107,13 @@ public:
         return;
       }
       // Check the type of the initializer: it must be a "maybe" type.
-      bool isValid;
-      Type diagTy;
-      std::tie(isValid, diagTy) = isValidIfLetInitializer(init);
-      if (isValid && canDiagnose(diagTy))
-        diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
-                 diagTy);
+      Type initTy = init->getType();
+      if (!initTy->getRValue()->getCanonicalType()->is<MaybeType>()) {
+        if (canDiagnose(init)) {
+          diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
+                   initTy);
+        }
+      }
     }
   }
 
