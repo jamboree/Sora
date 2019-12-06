@@ -114,8 +114,9 @@ public:
             .fixitInsertAfter(decl->getEndLoc(), "= <expression>");
         return;
       }
-      // Check the type of the initializer: it must be a "maybe" type.
-      Type initTy = init->getType();
+      // Check the type of the initializer *without* potential implicit
+      // conversions: it must be a "maybe" type.
+      Type initTy = init->ignoreImplicitConversions()->getType();
       if (!initTy->getRValue()->getCanonicalType()->is<MaybeType>()) {
         if (canDiagnose(init)) {
           diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
