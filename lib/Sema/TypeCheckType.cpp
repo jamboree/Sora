@@ -91,6 +91,6 @@ Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
 
 //===- ASTChecker ---------------------------------------------------------===//
 
-bool ASTChecker::canDiagnose(Type type) {
+bool TypeChecker::canDiagnose(Type type) {
   return type && !type->hasErrorType();
 }

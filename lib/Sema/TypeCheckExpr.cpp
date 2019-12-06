@@ -650,6 +650,6 @@ Expr *TypeChecker::typecheckExpr(
 
 //===- ASTChecker ---------------------------------------------------------===//
 
-bool ASTChecker::canDiagnose(Expr *expr) {
+bool TypeChecker::canDiagnose(Expr *expr) {
   return canDiagnose(expr->getType());
 }
