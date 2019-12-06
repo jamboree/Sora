@@ -45,10 +45,9 @@ public:
     return diagEngine.diagnose<Args...>(loc, diag, args...);
   }
 
-  /// Declaration typechecking entry point
   void typecheckDecl(Decl *decl);
 
-  /// Entry point for typechecking "if let" declarations.
+  /// Entry point for typechecking "let" declarations used as conditions.
   void typecheckLetCondition(LetDecl *decl);
 
   /// Typechecking entry point for expressions used as conditions.
@@ -81,22 +80,12 @@ public:
       ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType = Type(),
       llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
 
-  /// Expression typechecking entry point.
-  /// This will create a new ConstraintSystem for the expression, so there must
-  /// be no active constraint system.
-  /// \param expr the expression to typecheck
-  /// \param dc the DeclContext in which this Expr lives. Cannot be null.
-  /// \param ofType (Optional) The expected type of the expression. If non-null,
-  /// implicit conversions may be added to \p expr to convert it to \p ofType
-  /// \param onUnificationFailure Called if the Expr's type can't
-  /// unify with \p ofType. The first argument is the type of the Expr
-  /// (simplified), the second is \p ofType.
-  /// \returns \p expr or the expr that should replace it in the tree.
+  /// Same as above, except this creates a fresh ConstraintSystem for the
+  /// expression.
   Expr *typecheckExpr(
       Expr *expr, DeclContext *dc, Type ofType = Type(),
       llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
 
-  /// Pattern typechecking entry point.
   void typecheckPattern(Pattern *pat, DeclContext *dc,
                         bool canEmitInferenceErrors = true);
 
