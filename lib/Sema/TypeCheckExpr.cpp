@@ -22,54 +22,6 @@
 using namespace sora;
 
 namespace {
-//===- Utils --------------------------------------------------------------===//
-
-/// Attempts to insert implicit conversions around \p expr so its type can
-/// become \p toType.
-/// \param ctxt the ASTContext
-/// \param toType the destination type
-/// \param expr the expression
-/// \param exprTy the type of the expression, simplified.
-/// \returns \p expr if no implicit conversions are needed or possible, else,
-/// returns the expr that should take \p expr's place in the AST.
-Expr *tryInsertImplicitConversions(ConstraintSystem &cs, Type toType,
-                                   Expr *expr,
-                                   bool &hasAddedImplicitConversions) {
-  assert(toType && expr && expr->hasType());
-
-  // If both types already unify, we don't have anything to do
-  if (cs.unify(toType, expr->getType()))
-    return expr;
-
-  // TODO: Ignore sugar as well
-  toType = toType->getRValue();
-
-  // Check if we can insert an ImplicitMaybeConversionExpr
-  if (MaybeType *toMaybe = toType->getAs<MaybeType>()) {
-    // If the MaybeType's ValueType is another MaybeType, just recurse first.
-    // Perhaps we're facing nested maybe types.
-    Type valueType = toMaybe->getValueType();
-    if (valueType->getCanonicalType()->is<MaybeType>())
-      expr = tryInsertImplicitConversions(cs, valueType, expr,
-                                          hasAddedImplicitConversions);
-    // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
-    // does, insert the ImplicitMaybeConversionExpr.
-    if (cs.unify(toMaybe->getValueType(), expr->getType())) {
-      // The Type of the ImplicitMaybeConversionExpr is the subexpression's type
-      // (without LValues) wrapped in a MaybeType.
-      expr = new (cs.ctxt) ImplicitMaybeConversionExpr(
-          expr, MaybeType::get(expr->getType()->getRValue()));
-      hasAddedImplicitConversions = true;
-    }
-  }
-
-#ifndef NDEBUG
-  if (hasAddedImplicitConversions)
-    assert(cs.unify(toType, expr->getType()) &&
-           "Added implicit conversions but still can't unify?");
-#endif
-  return expr;
-}
 
 //===- ExprChecker --------------------------------------------------------===//
 
@@ -541,6 +493,46 @@ public:
 
 //===- TypeChecker --------------------------------------------------------===//
 
+Expr *
+TypeChecker::tryInsertImplicitConversions(ConstraintSystem &cs, Expr *expr,
+                                          Type toType,
+                                          bool &hasAddedImplicitConversions) {
+  assert(toType && expr && expr->hasType());
+
+  // If both types already unify, we don't have anything to do
+  if (cs.unify(toType, expr->getType()))
+    return expr;
+
+  // TODO: Ignore sugar as well
+  toType = toType->getRValue();
+
+  // Check if we can insert an ImplicitMaybeConversionExpr
+  if (MaybeType *toMaybe = toType->getAs<MaybeType>()) {
+    // If the MaybeType's ValueType is another MaybeType, just recurse first.
+    // Perhaps we're facing nested maybe types.
+    Type valueType = toMaybe->getValueType();
+    if (valueType->getCanonicalType()->is<MaybeType>())
+      expr = tryInsertImplicitConversions(cs, expr, valueType,
+                                          hasAddedImplicitConversions);
+    // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
+    // does, insert the ImplicitMaybeConversionExpr.
+    if (cs.unify(toMaybe->getValueType(), expr->getType())) {
+      // The Type of the ImplicitMaybeConversionExpr is the subexpression's type
+      // (without LValues) wrapped in a MaybeType.
+      expr = new (ctxt) ImplicitMaybeConversionExpr(
+          expr, MaybeType::get(expr->getType()->getRValue()));
+      hasAddedImplicitConversions = true;
+    }
+  }
+
+#ifndef NDEBUG
+  if (hasAddedImplicitConversions)
+    assert(cs.unify(toType, expr->getType()) &&
+           "Added implicit conversions but still can't unify?");
+#endif
+  return expr;
+}
+
 Expr *TypeChecker::typecheckExpr(
     ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType,
     llvm::function_ref<void(Type, Type)> onUnificationFailure) {
@@ -553,7 +545,7 @@ Expr *TypeChecker::typecheckExpr(
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
     bool addedImplicitConversions = false;
-    expr = tryInsertImplicitConversions(cs, ofType, expr,
+    expr = tryInsertImplicitConversions(cs, expr, ofType,
                                         addedImplicitConversions);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {

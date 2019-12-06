@@ -113,7 +113,6 @@ public:
       Expr *expr, DeclContext *dc, Type ofType = Type(),
       llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
 
-
   /// Typechecking entry point for expressions used as conditions.
   /// \param expr the expression to typecheck
   /// \param dc th DeclContext in which this Expr lives. Cannot be null.
@@ -135,6 +134,16 @@ public:
   /// \param stmt the statement to typecheck
   /// \param dc th DeclContext in which this Stmt lives. Cannot be null.
   void typecheckStmt(Stmt *stmt, DeclContext *dc);
+
+  /// Attemps to make cs.unify(toType, expr->getType()) work by adding implicit
+  /// conversions around \p expr when possible.
+  /// \param ctxt the ASTContext
+  /// \param toType the destination type (on the left of the equality)
+  /// \param expr the expression
+  /// \returns the expr that should take \p expr's place in the AST.
+  Expr *tryInsertImplicitConversions(ConstraintSystem &cs, Expr *expr,
+                                     Type toType,
+                                     bool &hasAddedImplicitConversions);
 
   /// Resolves a TypeLoc, giving it a type from its TypeRepr.
   /// This can only be used if the TypeLoc has a TypeRepr.
