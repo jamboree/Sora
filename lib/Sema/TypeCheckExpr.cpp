@@ -33,21 +33,28 @@ namespace {
 /// \returns \p expr if no implicit conversions are needed or possible, else,
 /// returns the expr that should take \p expr's place in the AST.
 Expr *tryInsertImplicitConversions(ConstraintSystem &cs, Type toType,
-                                   Expr *expr, Type exprTy,
+                                   Expr *expr,
                                    bool &hasAddedImplicitConversions) {
-  assert(toType && expr && exprTy);
+  assert(toType && expr && expr->hasType());
 
   // If both types already unify, we don't have anything to do
   if (cs.unify(toType, expr->getType()))
     return expr;
 
-  CanType canToType = toType->getRValue()->getCanonicalType();
+  // TODO: Ignore sugar as well
+  toType = toType->getRValue();
 
   // Check if we can insert an ImplicitMaybeConversionExpr
-  if (MaybeType *toMaybe = canToType->getAs<MaybeType>()) {
-    // If the value type of the "maybe" unifies with the expression's type, we
-    // can insert an ImplicitMaybeConversionExpr.
-    if (cs.unify(toMaybe->getValueType(), exprTy)) {
+  if (MaybeType *toMaybe = toType->getAs<MaybeType>()) {
+    // If the MaybeType's ValueType is another MaybeType, just recurse first.
+    // Perhaps we're facing nested maybe types.
+    Type valueType = toMaybe->getValueType();
+    if (valueType->getCanonicalType()->is<MaybeType>())
+      expr = tryInsertImplicitConversions(cs, valueType, expr,
+                                          hasAddedImplicitConversions);
+    // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
+    // does, insert the ImplicitMaybeConversionExpr.
+    if (cs.unify(toMaybe->getValueType(), expr->getType())) {
       // The Type of the ImplicitMaybeConversionExpr is the subexpression's type
       // (without LValues) wrapped in a MaybeType.
       expr = new (cs.ctxt) ImplicitMaybeConversionExpr(
@@ -546,7 +553,7 @@ Expr *TypeChecker::typecheckExpr(
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
     bool addedImplicitConversions = false;
-    expr = tryInsertImplicitConversions(cs, ofType, expr, expr->getType(),
+    expr = tryInsertImplicitConversions(cs, ofType, expr,
                                         addedImplicitConversions);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
