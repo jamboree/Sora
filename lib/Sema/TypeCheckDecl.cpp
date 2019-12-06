@@ -26,17 +26,12 @@ namespace {
 /// Note that this doesn't check if a declaration is an illegal redeclaration -
 /// that's handled by checkForRedeclaration which is usually called after this
 /// class.
-class DeclChecker : public ASTChecker, DeclVisitor<DeclChecker> {
-  friend DeclVisitor<DeclChecker>;
-
+class DeclChecker : public ASTChecker, public DeclVisitor<DeclChecker> {
 public:
   SourceFile &file;
 
   DeclChecker(TypeChecker &tc, SourceFile &file) : ASTChecker(tc), file(file) {}
 
-  void check(Decl *decl) { visit(decl); }
-
-private:
   // An RAII object that marks a declaratin as being checked on destruction.
   class RAIIDeclChecking {
     Decl *const decl = nullptr;
@@ -123,11 +118,19 @@ private:
       tc.definedFunctions.push_back(decl);
   }
 
-  void visitLetDecl(LetDecl *decl) {
+  void visitLetDecl(LetDecl *decl, bool isCondition = false) {
     RAIIDeclChecking declChecking(decl);
 
     Pattern *pattern = decl->getPattern();
     assert(pattern && "LetDecl doesn't have a pattern");
+
+    // When used as a condition, "let" implicitly look inside "maybe" types,
+    // so wrap the LetDecl's pattern in an implicit MaybeValuePattern.
+    if (isCondition) {
+      Pattern *letPat = decl->getPattern();
+      letPat = new (ctxt) MaybeValuePattern(letPat, /*isImplicit*/ true);
+      decl->setPattern(letPat);
+    }
 
     // Collect the variables declared inside the pattern
     SmallVector<ValueDecl *, 4> vars;
@@ -148,29 +151,79 @@ private:
                    decl->getIdentifier());
         });
 
-    // If there's an initializer, typecheck the pattern with the initializer.
     if (decl->hasInitializer()) {
       Expr *init = decl->getInitializer();
-      init = tc.typecheckPatternAndInitializer(decl->getPattern(), init,
-                                               decl->getDeclContext());
+
+      auto diagnoseInitShouldHaveMaybeType = [&](Type initTy) {
+        if (canDiagnose(initTy))
+          diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
+                   initTy);
+      };
+
+      // type-check the initializer & pattern together.
+      bool complained = false;
+      init = tc.typecheckPatternAndInitializer(
+          decl->getPattern(), init, decl->getDeclContext(),
+          [&](Type initTy, Type patTy) {
+            complained = true;
+            // If this is a "let" condition, we should simply complain that the
+            // initializer should have a "maybe" type, so we don't confuse the
+            // user too much (with the implicit MaybeValuePattern)
+            if (isCondition)
+              diagnoseInitShouldHaveMaybeType(initTy);
+            // Else, just complain that we can't convert the type of the
+            // initializer to the the pattern's type.
+            else if (canDiagnose(initTy) && canDiagnose(patTy))
+              diagnose(init->getLoc(), diag::cannot_convert_value_of_type,
+                       initTy, patTy)
+                  .highlight(pattern->getLoc())
+                  .highlight(init->getSourceRange());
+          });
       decl->setInitializer(init);
+
+      // In conditions, also check that the initializer wasn't implicitly
+      // converted to the "maybe" type, if that's the case, we're probably
+      // facing something like "if let x = 0" which isn't allowed
+      if (isCondition && !complained) {
+        Expr *rawInit = init->ignoreImplicitConversions();
+        Type rawInitTy = rawInit->getType()->getRValue();
+        if (!rawInitTy->getDesugaredType()->is<MaybeType>())
+          diagnoseInitShouldHaveMaybeType(rawInitTy);
+      }
     }
-    // Else, just check the pattern
-    else
-      tc.typecheckPattern(decl->getPattern(), decl->getDeclContext());
+    else {
+      // If this is a "let" condition, we should have an initializer. Complain
+      // about it!
+      if (isCondition)
+        diagnose(decl->getLetLoc(),
+                 diag::variable_binding_in_cond_requires_initializer)
+            .fixitInsertAfter(decl->getEndLoc(), "= <expression>")
+            .highlight(decl->getLetLoc());
+      tc.typecheckPattern(decl->getPattern(), decl->getDeclContext(),
+                          /*canEmitInferenceErrors=*/!isCondition);
+    }
   }
 };
 } // namespace
 
 //===- TypeChecker --------------------------------------------------------===//
 
-void TypeChecker::typecheckDecl(Decl *decl) {
+static bool shouldCheck(Decl *decl) {
   assert(decl);
-  if (decl->isChecked())
-    return;
-  DeclChecker(*this, decl->getSourceFile()).check(decl);
-  assert(decl->isChecked() &&
-         "Decl isn't marked as checked after being checked");
+  return !decl->isChecked();
+}
+
+void TypeChecker::typecheckDecl(Decl *decl) {
+  if (shouldCheck(decl))
+    DeclChecker(*this, decl->getSourceFile()).visit(decl);
+  assert(decl->isChecked());
+}
+
+void TypeChecker::typecheckLetCondition(LetDecl *decl) {
+  if (shouldCheck(decl))
+    DeclChecker(*this, decl->getSourceFile())
+        .visitLetDecl(decl, /*isCondition*/ true);
+  assert(decl->isChecked());
 }
 
 void TypeChecker::typecheckFunctionBody(FuncDecl *func) {

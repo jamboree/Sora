@@ -96,34 +96,8 @@ public:
       cond = tc.typecheckCondition(expr, dc);
       stmt->setCond(cond);
     }
-    else if (LetDecl *decl = cond.getLetDecl()) {
-      // "if let x" implicitly looks inside "maybe" types, so wrap the LetDecl's
-      // pattern in an implicit MaybeValuePattern.
-      {
-        Pattern *letPat = decl->getPattern();
-        letPat = new (ctxt) MaybeValuePattern(letPat, /*isImplicit*/ true);
-        decl->setPattern(letPat);
-      }
-      // Type-check the declaration now
-      tc.typecheckDecl(decl);
-      // To use this construct, the 'let' decl must have an initializer
-      Expr *init = decl->getInitializer();
-      if (!init) {
-        diagnose(decl->getLetLoc(),
-                 diag::variable_binding_in_cond_requires_initializer)
-            .fixitInsertAfter(decl->getEndLoc(), "= <expression>");
-        return;
-      }
-      // Check the type of the initializer *without* potential implicit
-      // conversions: it must be a "maybe" type.
-      Type initTy = init->ignoreImplicitConversions()->getType();
-      if (!initTy->getRValue()->getCanonicalType()->is<MaybeType>()) {
-        if (canDiagnose(init)) {
-          diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
-                   initTy);
-        }
-      }
-    }
+    else if (LetDecl *decl = cond.getLetDecl())
+      tc.typecheckLetCondition(decl);
   }
 
   void visitIfStmt(IfStmt *stmt) {

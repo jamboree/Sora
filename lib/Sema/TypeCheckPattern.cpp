@@ -177,7 +177,7 @@ public:
 
 //===- TypeChecker --------------------------------------------------------===//
 
-void TypeChecker::typecheckPattern(Pattern *pat, DeclContext *dc) {
+void TypeChecker::typecheckPattern(Pattern *pat, DeclContext *dc, bool canEmitInferenceErrors) {
   assert(pat && dc);
   // Create a constraint system for this pattern
   ConstraintSystem cs(*this);
@@ -186,11 +186,12 @@ void TypeChecker::typecheckPattern(Pattern *pat, DeclContext *dc) {
   pat->walk(PatternChecker(*this, cs, dc));
 
   // Perform the epilogue
-  pat->walk(PatternCheckerEpilogue(*this, cs, /*canEmitInferenceErrors*/ true));
+  pat->walk(PatternCheckerEpilogue(*this, cs, canEmitInferenceErrors));
 }
 
-Expr *TypeChecker::typecheckPatternAndInitializer(Pattern *pat, Expr *init,
-                                                  DeclContext *dc) {
+Expr *TypeChecker::typecheckPatternAndInitializer(
+    Pattern *pat, Expr *init, DeclContext *dc,
+    llvm::function_ref<void(Type, Type)> onUnificationFailure) {
   assert(pat && init && dc);
   // Create a constraint system for this pattern
   ConstraintSystem cs(*this);
@@ -202,10 +203,8 @@ Expr *TypeChecker::typecheckPatternAndInitializer(Pattern *pat, Expr *init,
   bool emitInferenceErrors = true;
   init = typecheckExpr(cs, init, dc, pat->getType(), [&](Type from, Type to) {
     // FIXME: This diagnostic can be improved.
-    if (!from->hasErrorType() && !to->hasErrorType())
-      diagnose(init->getLoc(), diag::cannot_convert_value_of_type, from, to)
-          .highlight(pat->getLoc())
-          .highlight(init->getSourceRange());
+    if (onUnificationFailure)
+      onUnificationFailure(from, to);
     // Don't emit inference errors in the pattern
     emitInferenceErrors = false;
   });

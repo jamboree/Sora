@@ -77,6 +77,9 @@ public:
   /// Declaration typechecking entry point
   void typecheckDecl(Decl *decl);
 
+  /// Entry point for typechecking "if let" declarations.
+  void typecheckLetCondition(LetDecl *decl);
+
   /// Typechecks the body of the functions in \c definedFunctions
   void typecheckDefinedFunctions();
 
@@ -123,12 +126,17 @@ public:
   }
 
   /// Pattern typechecking entry point.
-  void typecheckPattern(Pattern *pat, DeclContext *dc);
+  void typecheckPattern(Pattern *pat, DeclContext *dc,
+                        bool canEmitInferenceErrors = true);
 
   /// Type-checks a pattern and its initializer together.
   /// \returns \p init or the expr that should replace it in the tree.
-  Expr *typecheckPatternAndInitializer(Pattern *pat, Expr *init,
-                                       DeclContext *dc);
+  /// \param onUnificationFailure Called if the Expr's type can't
+  /// unify with \p pat's type. The first argument is the type of \p init
+  /// (simplified), the second is the type of \p pat (not simplified)
+  Expr *typecheckPatternAndInitializer(
+      Pattern *pat, Expr *init, DeclContext *dc,
+      llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
 
   /// Statement typechecking entry point
   /// \param stmt the statement to typecheck
@@ -157,6 +165,12 @@ public:
   /// nullptr.
   Type resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file);
 
+  /// \returns whether we can emit a diagnostic involving \p type
+  static bool canDiagnose(Type type);
+
+  /// \returns whether we can emit a diagnostic involving \p expr
+  static bool canDiagnose(Expr *expr);
+
   /// The list of non-local functions that have a body (=have been defined).
   /// See \p typecheckFunctionBodies()
   SmallVector<FuncDecl *, 4> definedFunctions;
@@ -172,11 +186,8 @@ public:
   ASTChecker(TypeChecker &tc)
       : tc(tc), ctxt(tc.ctxt), diagEngine(tc.diagEngine) {}
 
-  /// \returns whether we can emit a diagnostic involving \p type
-  bool canDiagnose(Type type);
-
-  /// \returns whether we can emit a diagnostic involving \p expr
-  bool canDiagnose(Expr *expr);
+  bool canDiagnose(Expr *expr) { return TypeChecker::canDiagnose(expr); }
+  bool canDiagnose(Type type) { return TypeChecker::canDiagnose(type); }
 
   /// Emits a diagnostic at \p loc
   template <typename... Args>
