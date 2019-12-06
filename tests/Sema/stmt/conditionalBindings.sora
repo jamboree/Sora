@@ -23,4 +23,8 @@ func test() {
         y
       }
     }
+    let z: maybe i32 = 0
+    if let (x, y) = (z, z) { // expect-error: initializer for conditional binding must have a maybe type, not '(maybe i32, maybe i32)'
+    
+    }
 }
