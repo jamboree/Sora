@@ -19,9 +19,63 @@
 
 using namespace sora;
 
-//===- TypeChecker::DeclChecker -------------------------------------------===//
+//===- Utils --------------------------------------------------------------===//
 
 namespace {
+
+/// Checks that a declaration list doesn't bind an identifier more than once.
+///
+/// First, this checks that an identifier isn't bound more than once in
+/// \p decls. Else, \p noteFirst is called for the first binding, and
+/// \p diagnoseDuplicateBinding for each duplicate binding.
+///
+/// This also sets the 'isIllegalRedeclaration' flag on each duplicate
+/// binding.
+///
+/// Finally, note that diagnoseDuplicateBinding/noteFirst are called in
+/// groups. For example, in 'let (a, b, a, b)', they're both called for 'a'
+/// first and then for 'b' (or for 'b' then for 'a' - that ordering isn't
+/// guaranteed)
+void checkForDuplicateBindingsInList(
+    ArrayRef<ValueDecl *> decls,
+    llvm::function_ref<void(ValueDecl *)> diagnoseDuplicateBinding,
+    llvm::function_ref<void(ValueDecl *)> noteFirstBinding) {
+  // The map of identifiers -> list of bindings.
+  llvm::DenseMap<Identifier, SmallVector<ValueDecl *, 2>> bindingsMap;
+
+  // Collect the bindings
+  for (ValueDecl *decl : decls)
+    bindingsMap[decl->getIdentifier()].push_back(decl);
+
+  // Check them
+  for (auto entry : bindingsMap) {
+    SmallVectorImpl<ValueDecl *> &bindings = entry.second;
+    assert(!bindings.empty() && "Empty set of bindings?");
+
+    // If we got more than one binding for this identifier in the list, we must
+    // emit diagnostics.
+    if (bindings.size() > 1) {
+      // First, sort the vector
+      std::sort(bindings.begin(), bindings.end(),
+                [&](ValueDecl *lhs, ValueDecl *rhs) {
+                  return lhs->getBegLoc() < rhs->getBegLoc();
+                });
+
+      // Call diagnoseDuplicateBinding on each decl except the first one.
+      for (auto it = bindings.begin() + 1, end = bindings.end(); it != end;
+           ++it) {
+        diagnoseDuplicateBinding(*it);
+        (*it)->setIsIllegalRedeclaration();
+      }
+
+      // Call noteFirstBinding on the first one
+      noteFirstBinding(bindings.front());
+    }
+  }
+}
+
+//===- DeclChecker --------------------------------------------------------===//
+
 /// Performs semantic analysis of a declaration.
 /// Note that this doesn't check if a declaration is an illegal redeclaration -
 /// that's handled by checkForRedeclaration which is usually called after this
@@ -72,7 +126,7 @@ public:
       paramBindings.push_back(param);
 
     // Check that all parameter names are unique.
-    tc.checkForDuplicateBindingsInList(
+    checkForDuplicateBindingsInList(
         paramBindings,
         // diagnoseDuplicateBinding
         [&](ValueDecl *decl) {
@@ -137,7 +191,7 @@ public:
     decl->forEachVarDecl([&](VarDecl *var) { vars.push_back(var); });
 
     // Check if the pattern doesn't contain duplicate bindings
-    tc.checkForDuplicateBindingsInList(
+    checkForDuplicateBindingsInList(
         vars,
         // diagnoseDuplicateBinding
         [&](ValueDecl *decl) {
@@ -291,42 +345,4 @@ void TypeChecker::checkIsIllegalRedeclaration(ValueDecl *decl) {
            decl->getIdentifier());
   diagnose(earliest->getIdentifierLoc(), diag::previous_def_is_here,
            earliest->getIdentifier());
-}
-
-void TypeChecker::checkForDuplicateBindingsInList(
-    ArrayRef<ValueDecl *> decls,
-    llvm::function_ref<void(ValueDecl *)> diagnoseDuplicateBinding,
-    llvm::function_ref<void(ValueDecl *)> noteFirstBinding) {
-  // The map of identifiers -> list of bindings.
-  llvm::DenseMap<Identifier, SmallVector<ValueDecl *, 2>> bindingsMap;
-
-  // Collect the bindings
-  for (ValueDecl *decl : decls)
-    bindingsMap[decl->getIdentifier()].push_back(decl);
-
-  // Check them
-  for (auto entry : bindingsMap) {
-    SmallVectorImpl<ValueDecl *> &bindings = entry.second;
-    assert(!bindings.empty() && "Empty set of bindings?");
-
-    // If we got more than one binding for this identifier in the list, we must
-    // emit diagnostics.
-    if (bindings.size() > 1) {
-      // First, sort the vector
-      std::sort(bindings.begin(), bindings.end(),
-                [&](ValueDecl *lhs, ValueDecl *rhs) {
-                  return lhs->getBegLoc() < rhs->getBegLoc();
-                });
-
-      // Call diagnoseDuplicateBinding on each decl except the first one.
-      for (auto it = bindings.begin() + 1, end = bindings.end(); it != end;
-           ++it) {
-        diagnoseDuplicateBinding(*it);
-        (*it)->setIsIllegalRedeclaration();
-      }
-
-      // Call noteFirstBinding on the first one
-      noteFirstBinding(bindings.front());
-    }
-  }
 }

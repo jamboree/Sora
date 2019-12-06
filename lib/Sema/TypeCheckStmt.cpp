@@ -93,7 +93,7 @@ public:
   void checkCondition(ConditionalStmt *stmt) {
     StmtCondition cond = stmt->getCond();
     if (Expr *expr = cond.getExprOrNull()) {
-      cond = tc.typecheckCondition(expr, dc);
+      cond = tc.typecheckBooleanCondition(expr, dc);
       stmt->setCond(cond);
     }
     else if (LetDecl *decl = cond.getLetDecl())

@@ -56,29 +56,20 @@ public:
   /// \endverbatim
   void checkIsIllegalRedeclaration(ValueDecl *decl);
 
-  /// Checks that a declaration list doesn't bind an identifier more than once.
-  ///
-  /// First, this checks that an identifier isn't bound more than once in
-  /// \p decls. Else, \p noteFirst is called for the first binding, and
-  /// \p diagnoseDuplicateBinding for each duplicate binding.
-  ///
-  /// This also sets the 'isIllegalRedeclaration' flag on each duplicate
-  /// binding.
-  ///
-  /// Finally, note that diagnoseDuplicateBinding/noteFirst are called in
-  /// groups. For example, in 'let (a, b, a, b)', they're both called for 'a'
-  /// first and then for 'b' (or for 'b' then for 'a' - that ordering isn't
-  /// guaranteed)
-  static void checkForDuplicateBindingsInList(
-      ArrayRef<ValueDecl *> decls,
-      llvm::function_ref<void(ValueDecl *)> diagnoseDuplicateBinding,
-      llvm::function_ref<void(ValueDecl *)> noteFirstBinding);
-
   /// Declaration typechecking entry point
   void typecheckDecl(Decl *decl);
 
   /// Entry point for typechecking "if let" declarations.
   void typecheckLetCondition(LetDecl *decl);
+
+  /// Typechecking entry point for expressions used as conditions.
+  /// \param expr the expression to typecheck
+  /// \param dc th DeclContext in which this Expr lives. Cannot be null.
+  /// \returns \p expr or the expr that should replace it in the tree.
+  Expr *typecheckBooleanCondition(Expr *expr, DeclContext *dc) {
+    /// FIXME: Handle these differently
+    return typecheckExpr(expr, dc);
+  }
 
   /// Typechecks the body of the functions in \c definedFunctions
   void typecheckDefinedFunctions();
@@ -115,15 +106,6 @@ public:
   Expr *typecheckExpr(
       Expr *expr, DeclContext *dc, Type ofType = Type(),
       llvm::function_ref<void(Type, Type)> onUnificationFailure = nullptr);
-
-  /// Typechecking entry point for expressions used as conditions.
-  /// \param expr the expression to typecheck
-  /// \param dc th DeclContext in which this Expr lives. Cannot be null.
-  /// \returns \p expr or the expr that should replace it in the tree.
-  Expr *typecheckCondition(Expr *expr, DeclContext *dc) {
-    /// FIXME: Handle these differently
-    return typecheckExpr(expr, dc);
-  }
 
   /// Pattern typechecking entry point.
   void typecheckPattern(Pattern *pat, DeclContext *dc,
