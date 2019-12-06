@@ -52,4 +52,7 @@ func inference() {
   let _: f32 = 0.0
   // CHECK: FloatLiteralExpr type=f64 loc=line:54:16
   let _: f64 = 0.0
+
+  // CHECK: IntegerLiteralExpr type=u8 loc=line:57:21
+  let x: maybe u8 = 0
 }
