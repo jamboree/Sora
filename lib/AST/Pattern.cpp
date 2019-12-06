@@ -66,6 +66,38 @@ void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
   }
 }
 
+void Pattern::forEachNode(llvm::function_ref<void(Pattern *)> fn) {
+  using Kind = PatternKind;
+  fn(this);
+  switch (getKind()) {
+  case Kind::Var:
+  case Kind::Discard:
+  case Kind::Mut:
+    if (Pattern *sub = cast<MutPattern>(this)->getSubPattern())
+      sub->forEachNode(fn);
+    break;
+  case Kind::Paren:
+    if (Pattern *sub = cast<ParenPattern>(this)->getSubPattern())
+      sub->forEachNode(fn);
+    break;
+  case Kind::Tuple: {
+    const TuplePattern *tuple = cast<TuplePattern>(this);
+    for (Pattern *elem : tuple->getElements())
+      if (elem)
+        elem->forEachNode(fn);
+    break;
+  }
+  case Kind::Typed:
+    if (Pattern *sub = cast<TypedPattern>(this)->getSubPattern())
+      sub->forEachNode(fn);
+    break;
+  case Kind::MaybeValue:
+    if (Pattern *sub = cast<MaybeValuePattern>(this)->getSubPattern())
+      sub->forEachNode(fn);
+    break;
+  }
+}
+
 SourceLoc Pattern::getBegLoc() const {
   switch (getKind()) {
 #define PATTERN(ID, PARENT)                                                    \
