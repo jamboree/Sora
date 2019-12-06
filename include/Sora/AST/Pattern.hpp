@@ -347,8 +347,10 @@ class MaybeValuePattern : public RefutablePattern {
   Pattern *subPattern;
 
 public:
-  MaybeValuePattern(Pattern *subPattern)
-      : RefutablePattern(PatternKind::MaybeValue), subPattern(subPattern) {}
+  MaybeValuePattern(Pattern *subPattern, bool isImplicit = false)
+      : RefutablePattern(PatternKind::MaybeValue), subPattern(subPattern) {
+    setImplicit(isImplicit);
+  }
 
   void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
