@@ -32,6 +32,15 @@ Pattern *Pattern::ignoreParens() {
   return this;
 }
 
+bool Pattern::isRefutable() const {
+  bool foundRefutablePattern = false;
+  const_cast<Pattern *>(this)->forEachNode([&](Pattern *pattern) {
+    if (isa<RefutablePattern>(pattern))
+      foundRefutablePattern = true;
+  });
+  return foundRefutablePattern;
+}
+
 void Pattern::forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const {
   using Kind = PatternKind;
   switch (getKind()) {
@@ -72,6 +81,7 @@ void Pattern::forEachNode(llvm::function_ref<void(Pattern *)> fn) {
   switch (getKind()) {
   case Kind::Var:
   case Kind::Discard:
+    break;
   case Kind::Mut:
     if (Pattern *sub = cast<MutPattern>(this)->getSubPattern())
       sub->forEachNode(fn);

@@ -115,6 +115,10 @@ public:
     return const_cast<Pattern *>(this)->ignoreParens();
   }
 
+  /// \returns whether this pattern is refutable or not.
+  /// This is not a cheap method, it has to traverse the pattern on every call.
+  bool isRefutable() const;
+
   /// Call \p fn on each VarDecl in this Pattern.
   void forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const;
 

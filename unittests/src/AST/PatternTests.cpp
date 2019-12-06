@@ -106,3 +106,21 @@ TEST_F(PatternTest, getSourceRange) {
   EXPECT_EQ(beg, maybeValuePattern->getEndLoc());
   EXPECT_EQ(SourceRange(beg, beg), maybeValuePattern->getSourceRange());
 }
+
+TEST_F(PatternTest, isRefutable) {
+  // Create a tuple pattern: ((), _, ((), _))
+  SmallVector<Pattern *, 4> tupleElts;
+  tupleElts.push_back(TuplePattern::createEmpty(*ctxt, {}, {}));
+  tupleElts.push_back(new (*ctxt) DiscardPattern({}));
+  tupleElts.push_back(TuplePattern::create(*ctxt, {}, tupleElts, {}));
+  Pattern *thePattern = TuplePattern::create(*ctxt, {}, tupleElts, {});
+
+  // This pattern shouldn't be considered refutable
+  ASSERT_FALSE(thePattern->isRefutable());
+
+  // Now, if we add a MaybeValuePattern somewhere, it should become refutable.
+  auto elts = cast<TuplePattern>(thePattern)->getElements();
+  elts[1] = new (*ctxt) MaybeValuePattern(elts[1]);
+
+  ASSERT_TRUE(thePattern->isRefutable());
+}
