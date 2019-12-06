@@ -23,6 +23,36 @@ using namespace sora;
 
 namespace {
 
+//===- Utils --------------------------------------------------------------===//
+
+/// (re-)builds the type of a TupleExpr
+void rebuildTupleExprType(ASTContext &ctxt, TupleExpr *expr) {
+  // If the tuple is empty, just give it a () type.
+  if (expr->isEmpty()) {
+    expr->setType(TupleType::getEmpty(ctxt));
+    return;
+  }
+  // Create a TupleType of the element's types
+  assert(expr->getNumElements() > 1 && "Single Element Tuple Shouldn't Exist!");
+  SmallVector<Type, 8> eltsTypes;
+  // A tuple's type is an LValue only if every element is also an LValue.
+  bool isLValue = true;
+  for (Expr *elt : expr->getElements()) {
+    Type eltType = elt->getType();
+    eltsTypes.push_back(eltType);
+    isLValue &= eltType->isLValue();
+  }
+  Type type = TupleType::get(ctxt, eltsTypes);
+  if (isLValue)
+    type = LValueType::get(type);
+  expr->setType(type);
+}
+
+/// (re-)builds the type of a ParenExpr
+void rebuildParenExprType(ParenExpr *expr) {
+  expr->setType(expr->getSubExpr()->getType());
+}
+
 //===- ExprChecker --------------------------------------------------------===//
 
 /// This class handles the bulk of expression type checking.
@@ -364,31 +394,12 @@ Expr *ExprChecker::visitTupleElementExpr(TupleElementExpr *expr) {
 }
 
 Expr *ExprChecker::visitTupleExpr(TupleExpr *expr) {
-  // If the tuple is empty, just give it a () type.
-  if (expr->isEmpty()) {
-    expr->setType(TupleType::getEmpty(ctxt));
-    return expr;
-  }
-  // Create a TupleType of the element's types
-  assert(expr->getNumElements() > 1 && "Single Element Tuple Shouldn't Exist!");
-  SmallVector<Type, 8> eltsTypes;
-  // A tuple's type is an LValue only if every element is also an LValue.
-  bool isLValue = true;
-  for (Expr *elt : expr->getElements()) {
-    Type eltType = elt->getType();
-    eltsTypes.push_back(eltType);
-    isLValue &= eltType->isLValue();
-  }
-  Type type = TupleType::get(ctxt, eltsTypes);
-  if (isLValue)
-    type = LValueType::get(type);
-  expr->setType(type);
+  rebuildTupleExprType(ctxt, expr);
   return expr;
 }
 
 Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
-  // The type of this expr is the same as its subexpression, preserving LValues.
-  expr->setType(expr->getSubExpr()->getType());
+  rebuildParenExprType(expr);
   return expr;
 }
 
