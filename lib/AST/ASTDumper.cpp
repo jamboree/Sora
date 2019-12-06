@@ -142,6 +142,8 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   void dumpCommon(Pattern *pattern) {
     out.indent(curIndent);
     withColor(nodeKindColor) << getKindStr(pattern->getKind());
+    if (pattern->isImplicit())
+      out << " implicit";
     out << ' ';
     dumpType(pattern->getType(), "type");
   }

@@ -54,8 +54,9 @@ protected:
     // clang-format off
 
     // Pattern
-    SORA_INLINE_BITFIELD_BASE(Pattern, kindBits, 
-      kind : kindBits
+    SORA_INLINE_BITFIELD_BASE(Pattern, kindBits+1, 
+      kind : kindBits,
+      isImplicit : 1
     );
 
     // TuplePattern
@@ -75,7 +76,10 @@ protected:
     return mem;
   }
 
-  Pattern(PatternKind kind) { bits.Pattern.kind = (uint64_t)kind; }
+  Pattern(PatternKind kind) {
+    bits.Pattern.kind = (uint64_t)kind;
+    bits.Pattern.isImplicit = false;
+  }
 
 public:
   // Publicly allow allocation of patterns using the ASTContext.
@@ -94,6 +98,9 @@ public:
 
   /// \return the kind of patterns this is
   PatternKind getKind() const { return PatternKind(bits.Pattern.kind); }
+
+  void setImplicit(bool value = true) { bits.Pattern.isImplicit = value; }
+  bool isImplicit() const { return bits.Pattern.isImplicit; }
 
   bool hasType() const { return !type.isNull(); }
   Type getType() const { return type; }
