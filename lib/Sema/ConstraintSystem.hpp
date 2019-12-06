@@ -111,7 +111,8 @@ public:
         return false;
       break;
     }
-    substitution = type;
+    // Never allow LValues into substitutions
+    substitution = type->getRValue();
     return true;
   }
   /// \returns true if this TypeVariable has a substitution (whether it is
