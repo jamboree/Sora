@@ -95,6 +95,11 @@ public:
   bool operator!=(const Type &) const = delete;
 };
 
+inline llvm::raw_ostream& operator<<(llvm::raw_ostream& out, Type type) {
+  type.print(out);
+  return out;
+}
+
 /// Represents a type that's statically known to be canonical (can also be
 /// null).
 class CanType final : public Type {
@@ -112,6 +117,11 @@ public:
     return getPtr() != other.getPtr();
   }
 };
+
+inline llvm::raw_ostream& operator<<(llvm::raw_ostream& out, CanType type) {
+  type.print(out);
+  return out;
+}
 
 /// A simple Type/TypeRepr* pair, used to represent a type as written
 /// down by the user.
