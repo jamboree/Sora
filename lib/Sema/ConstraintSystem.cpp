@@ -172,7 +172,8 @@ public:
     else if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
       return setOrUnifySubstitution(otherTV, type);
 
-    // FIXME: After this step, desugared types should be used.
+    type = type->getDesugaredType();
+    other = other->getDesugaredType();
 
     // Else, we must visit the types to check that their structure matches.
     if (type->getKind() != other->getKind())

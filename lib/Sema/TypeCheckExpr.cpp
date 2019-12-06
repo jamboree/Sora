@@ -410,16 +410,15 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
 }
 
 Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
-  // Fetch the type of the subexpression as an RValue, and simplify it.
+  // Fetch the type of the subexpression and simplify it.
   Type subExprType =
-      cs.simplifyType(expr->getSubExpr()->getType()->getRValue());
+      cs.simplifyType(expr->getSubExpr()->getType());
 
   // Can't check the expression if it has an error type
   if (subExprType->hasErrorType())
     return nullptr;
 
-  // FIXME: Once TypeAliases are implemented, subExprType should be desugared to
-  // support things like "type Foo = maybe (), let x: Foo, x!"
+  subExprType = subExprType->getRValue()->getDesugaredType();
 
   // Check that it's a maybe type
   MaybeType *maybe = subExprType->getAs<MaybeType>();
@@ -551,8 +550,7 @@ private:
     if (expr->isEmpty())
       return visitExpr(expr, destType);
 
-    // TODO: Ignore sugar as well
-    destType = destType->getRValue();
+    destType = destType->getRValue()->getDesugaredType();
 
     TupleType *destTupleType = destType->getAs<TupleType>();
     if (!destTupleType)
@@ -576,8 +574,7 @@ private:
   Expr *visitExpr(Expr *expr, Type destType) {
     bool addedImplicitConversion = false;
 
-    // TODO: Ignore sugar as well
-    destType = destType->getRValue();
+    destType = destType->getRValue()->getDesugaredType();
 
     // Check if we can insert an ImplicitMaybeConversionExpr
     if (MaybeType *toMaybe = destType->getAs<MaybeType>()) {

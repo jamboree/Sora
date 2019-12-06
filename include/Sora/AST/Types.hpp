@@ -209,6 +209,11 @@ public:
   /// \returns the canonical version of this type
   CanType getCanonicalType() const;
 
+  /// \returns the desugared version of this type
+  /// NOTE: This currently does nothing as sugared types haven't been
+  /// implemented yet.
+  Type getDesugaredType() const { return const_cast<TypeBase *>(this); }
+
   /// \returns this type as an rvalue.
   /// If this type is an LValue, returns getObjectType()->getRValue(), else just
   /// returns this.
