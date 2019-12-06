@@ -32,8 +32,8 @@ namespace {
 /// \param exprTy the type of the expression, simplified.
 /// \returns \p expr if no implicit conversions are needed or possible, else,
 /// returns the expr that should take \p expr's place in the AST.
-Expr *tryInsertImplicitConversions(ASTContext &ctxt, Type toType, Expr *expr,
-                                   Type exprTy,
+Expr *tryInsertImplicitConversions(ConstraintSystem &cs, Type toType,
+                                   Expr *expr, Type exprTy,
                                    bool &hasAddedImplicitConversions) {
   assert(toType && expr && exprTy);
   hasAddedImplicitConversions = false;
@@ -46,10 +46,15 @@ Expr *tryInsertImplicitConversions(ASTContext &ctxt, Type toType, Expr *expr,
   if (canToType == canExprTy)
     return expr;
 
-  // Insert a ImplicitMaybeConversion if toType is 'maybe T' and exprTy is 'T'
+  // Check if we can insert an ImplicitMaybeConversionExpr
   if (MaybeType *toMaybe = canToType->getAs<MaybeType>()) {
-    if (CanType(toMaybe->getValueType()) == canExprTy)
-      expr = new (ctxt) ImplicitMaybeConversionExpr(expr, toType);
+    // If the value type of the "maybe" unifies with the expression's type, we
+    // can insert an ImplicitMaybeConversionExpr.
+    if (cs.unify(toMaybe->getValueType(), exprTy)) {
+      expr = new (cs.ctxt)
+          ImplicitMaybeConversionExpr(expr, MaybeType::get(expr->getType()));
+      hasAddedImplicitConversions = true;
+    }
   }
   assert(expr->hasType() && "Untyped Implicit Conversions!");
   return expr;
@@ -537,11 +542,12 @@ Expr *TypeChecker::typecheckExpr(
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
     bool addedImplicitConversions;
-    expr = tryInsertImplicitConversions(ctxt, ofType, expr,
-                                        cs.simplifyType(expr->getType()),
+    expr = tryInsertImplicitConversions(cs, ofType, expr, expr->getType(),
                                         addedImplicitConversions);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
+      llvm::outs() << "ofType: " << ofType << " exprTy:" << exprTy << "\n";
+      cs.dumpTypeVariables(llvm::outs());
       assert(!addedImplicitConversions && "Added implicit conversions, yet "
                                           "unification still failed?");
       if (onUnificationFailure)
