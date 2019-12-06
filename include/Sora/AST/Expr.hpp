@@ -41,7 +41,8 @@ class alignas(ExprAlignement) Expr {
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
 
-  llvm::PointerIntPair<Type, 1, bool> typeAndIsImplicit;
+  /// The type of this expression
+  Type type;
 
 protected:
   /// Number of bits needed for ExprKind
@@ -55,8 +56,9 @@ protected:
     // clang-format off
 
     // Expr
-    SORA_INLINE_BITFIELD_BASE(Expr, kindBits, 
-      kind : kindBits
+    SORA_INLINE_BITFIELD_BASE(Expr, kindBits+1, 
+      kind : kindBits,
+      isImplicit : 1
     );
 
     // UnresolvedMemberRefExpr
@@ -114,19 +116,22 @@ protected:
     return mem;
   }
 
-  Expr(ExprKind kind) { bits.Expr.kind = (uint64_t)kind; }
+  Expr(ExprKind kind) {
+    bits.Expr.kind = (uint64_t)kind;
+    bits.Expr.isImplicit = false;
+  }
 
 public:
   // Publicly allow allocation of expressions using the ASTContext.
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(Expr));
 
-  void setImplicit(bool implicit = true) { typeAndIsImplicit.setInt(implicit); }
-  bool isImplicit() const { return typeAndIsImplicit.getInt(); }
+  void setImplicit(bool value = true) { bits.Expr.isImplicit = value; }
+  bool isImplicit() const { return bits.Expr.isImplicit; }
 
   bool hasType() const { return !getType().isNull(); }
-  Type getType() const { return typeAndIsImplicit.getPointer(); }
-  void setType(Type type) { typeAndIsImplicit.setPointer(type); }
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
 
   /// Skips parentheses around this Expr: If this is a ParenExpr, returns
   /// getSubExpr()->ignoreParens(), else returns this.
