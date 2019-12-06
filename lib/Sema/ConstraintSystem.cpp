@@ -130,11 +130,6 @@ private:
 /// visit() methods return true on success, false on failure.
 class TypeUnifier {
 
-  /// Checks for equality between a and b using options.typeComparator
-  bool checkEquality(CanType a, CanType b) {
-    return options.typeComparator(a, b);
-  }
-
 public:
   TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options)
       : cs(cs), options(options) {}
@@ -148,12 +143,6 @@ public:
       type = type->getRValue();
       other = other->getRValue();
     }
-
-    // If the types don't contain type variables, just compare their canonical
-    // types.
-    if (!type->hasTypeVariable() && !other->hasTypeVariable())
-      return options.typeComparator(type->getCanonicalType(),
-                                    other->getCanonicalType());
 
     auto setOrUnifySubstitution = [&](TypeVariableType *tv, Type subst) {
       TypeVariableInfo &info = TypeVariableInfo::get(tv);
@@ -175,6 +164,15 @@ public:
     type = type->getDesugaredType();
     other = other->getDesugaredType();
 
+    // If both types are just built-in types, compare them using the
+    // builtinTypeComparator.
+    {
+      auto builtinType = type->getCanonicalType()->getAs<BuiltinType>();
+      auto builtinOther = other->getCanonicalType()->getAs<BuiltinType>();
+      if (builtinType && builtinOther)
+        return options.builtinTypeComparator(builtinType, builtinOther);
+    }
+
     // Else, we must visit the types to check that their structure matches.
     if (type->getKind() != other->getKind())
       return false;
@@ -191,7 +189,9 @@ public:
 
 #define BUILTIN_TYPE(TYPE)                                                     \
   bool visit##TYPE(TYPE *type, TYPE *other) {                                  \
-    return checkEquality(CanType(type), CanType(other));                       \
+    llvm_unreachable(                                                          \
+        "visit() on a builtin type should never be called - Builtin Types "    \
+        "are directly handled by unify()!");                                   \
   }
 
   BUILTIN_TYPE(IntegerType)

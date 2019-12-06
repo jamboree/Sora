@@ -366,13 +366,14 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   // Check if cast is legal
   UnificationOptions options;
   // Use a custom comparator
-  options.typeComparator = [&](CanType a, CanType b) -> bool {
+  options.builtinTypeComparator = [&](const BuiltinType *a,
+                                      const BuiltinType *b) -> bool {
     // Allow conversion between integer widths/signedness
     // Allow conversion between float widths as well
     // Allow "useless" conversions (same type to same type)
     // TODO: int to bool conversion?
-    return (a->is<IntegerType>() && b->is<IntegerType>()) ||
-           (a->is<FloatType>() && b->is<FloatType>()) || (a == b);
+    return (isa<IntegerType>(a) && isa<IntegerType>(b)) ||
+           (isa<FloatType>(a) && isa<FloatType>(b)) || (a == b);
   };
   // Unify the Canonical types
   if (!cs.unify(fromType->getCanonicalType(), toType->getCanonicalType(),
@@ -411,8 +412,7 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
 
 Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   // Fetch the type of the subexpression and simplify it.
-  Type subExprType =
-      cs.simplifyType(expr->getSubExpr()->getType());
+  Type subExprType = cs.simplifyType(expr->getSubExpr()->getType());
 
   // Can't check the expression if it has an error type
   if (subExprType->hasErrorType())
