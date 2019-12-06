@@ -74,6 +74,7 @@ public:
 
   /// \returns the TypeVariableInfo object for \p type
   static TypeVariableInfo &get(const TypeVariableType *type) {
+    assert(type);
     return *reinterpret_cast<TypeVariableInfo *>(
         const_cast<TypeVariableType *>(type) + 1);
   }
@@ -105,6 +106,7 @@ public:
     case TypeVariableKind::Float:
       return isFloatTypeOrFloatTypeVariable(type);
     }
+    return true;
   }
 
   /// Sets this TypeVariable's substitution.
