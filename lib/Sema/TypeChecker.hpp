@@ -45,17 +45,6 @@ public:
     return diagEngine.diagnose<Args...>(loc, diag, args...);
   }
 
-  /// Checks if a single ValueDecl is a legal declaration, and not an invalid
-  /// redeclaration.
-  /// This sets the decl's 'isIllegalRedeclaration' flag.
-  /// This will not check the decl if it's already marked as being an illegal
-  /// redeclaration.
-  /// \verbatim
-  ///   func foo() {} // this foo is valid, it's the first one
-  ///   func foo() {} // this one isn't
-  /// \endverbatim
-  void checkIsIllegalRedeclaration(ValueDecl *decl);
-
   /// Declaration typechecking entry point
   void typecheckDecl(Decl *decl);
 

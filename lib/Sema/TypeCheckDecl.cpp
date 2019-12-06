@@ -95,9 +95,65 @@ public:
     ~RAIIDeclChecking() { decl->setChecked(); }
   };
 
+  /// Checks if a ValueDecl is legal, and not an invalid redeclaration.
+  /// This sets the decl's 'isIllegalRedeclaration' flag.
+  /// This will not check the decl if it's already marked as being an illegal
+  /// redeclaration.
+  /// \verbatim
+  ///   func foo() {} // this foo is valid, it's the first one
+  ///   func foo() {} // this one isn't
+  /// \endverbatim
+  void checkIsIllegalRedeclaration(ValueDecl *decl) {
+    assert(decl && "decl is null!");
+
+    // If it's an illegal redeclaration, don't re-check.
+    if (decl->isIllegalRedeclaration())
+      return;
+
+    UnqualifiedValueLookup uvl(decl->getSourceFile());
+
+    // Since Sora has quite loose shadowing rules, we want lookup to stop after
+    // looking into the first scope, unless we're checking a FuncDecl and we're
+    // looking into its own scope.
+    uvl.options.shouldStop = [&](const ASTScope *scope) {
+      if (const FuncDeclScope *fnScope = dyn_cast<FuncDeclScope>(scope))
+        return fnScope->getFuncDecl() != decl;
+      return true;
+    };
+
+    // This decl shouldn't part of the result set
+    uvl.ignore(decl);
+
+    // Perform the lookup
+    uvl.performLookup(decl->getIdentifierLoc(), decl->getIdentifier());
+    // Remove every result that come *after* us
+    uvl.filterResults([&](ValueDecl *result) {
+      return (result->getBegLoc() > decl->getBegLoc());
+    });
+
+    // If there are no results, this is a valid declaration
+    if (uvl.isEmpty())
+      return decl->setIsIllegalRedeclaration(false);
+    decl->setIsIllegalRedeclaration();
+
+    // Else, find the earliest result.
+    ValueDecl *earliest = nullptr;
+    for (ValueDecl *result : uvl.results)
+      if (!earliest || (earliest->getBegLoc() > result->getBegLoc()))
+        earliest = result;
+    assert(earliest && "no earliest result found?");
+    assert(earliest != decl);
+
+    // Emit the diagnostics
+    diagnose(decl->getIdentifierLoc(), diag::value_already_defined_in_scope,
+             decl->getIdentifier());
+    diagnose(earliest->getIdentifierLoc(), diag::previous_def_is_here,
+             earliest->getIdentifier());
+  }
+
   void visitVarDecl(VarDecl *decl) {
     RAIIDeclChecking declChecking(decl);
-    tc.checkIsIllegalRedeclaration(decl);
+    checkIsIllegalRedeclaration(decl);
   }
 
   // Called by visitFuncDecl
@@ -116,7 +172,7 @@ public:
     RAIIDeclChecking declChecking(decl);
 
     // Check if this function isn't an illegal redeclaration
-    tc.checkIsIllegalRedeclaration(decl);
+    checkIsIllegalRedeclaration(decl);
 
     // Collect the parameters in an array of ValueDecl*s, as
     // tc.checkForDuplicateBindingsInList wants an ArrayRef<ValueDecl*>
@@ -297,52 +353,4 @@ void TypeChecker::typecheckDefinedFunctions() {
          "Extra functions were found while checking the bodies "
          "of defined non-local functions");
   definedFunctions.clear();
-}
-
-void TypeChecker::checkIsIllegalRedeclaration(ValueDecl *decl) {
-  assert(decl && "decl is null!");
-
-  // If it's an illegal redeclaration, don't re-check.
-  if (decl->isIllegalRedeclaration())
-    return;
-
-  UnqualifiedValueLookup uvl(decl->getSourceFile());
-
-  // Since Sora has quite loose shadowing rules, we want lookup to stop after
-  // looking into the first scope, unless we're checking a FuncDecl and we're
-  // looking into its own scope.
-  uvl.options.shouldStop = [&](const ASTScope *scope) {
-    if (const FuncDeclScope *fnScope = dyn_cast<FuncDeclScope>(scope))
-      return fnScope->getFuncDecl() != decl;
-    return true;
-  };
-
-  // This decl shouldn't part of the result set
-  uvl.ignore(decl);
-
-  // Perform the lookup
-  uvl.performLookup(decl->getIdentifierLoc(), decl->getIdentifier());
-  // Remove every result that come *after* us
-  uvl.filterResults([&](ValueDecl *result) {
-    return (result->getBegLoc() > decl->getBegLoc());
-  });
-
-  // If there are no results, this is a valid declaration
-  if (uvl.isEmpty())
-    return decl->setIsIllegalRedeclaration(false);
-  decl->setIsIllegalRedeclaration();
-
-  // Else, find the earliest result.
-  ValueDecl *earliest = nullptr;
-  for (ValueDecl *result : uvl.results)
-    if (!earliest || (earliest->getBegLoc() > result->getBegLoc()))
-      earliest = result;
-  assert(earliest && "no earliest result found?");
-  assert(earliest != decl);
-
-  // Emit the diagnostics
-  diagnose(decl->getIdentifierLoc(), diag::value_already_defined_in_scope,
-           decl->getIdentifier());
-  diagnose(earliest->getIdentifierLoc(), diag::previous_def_is_here,
-           earliest->getIdentifier());
 }
