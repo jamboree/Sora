@@ -1,0 +1,19 @@
+// RUN: %sorac-typecheck -dump-ast -verify %s | %filecheck %s
+
+func test() {
+    let x: maybe i32 = 0
+    if let x = x {
+      // CHECK: DeclRefExpr type=i32 loc=line:7:7 decl='x'@line:5:12
+      x // has type i32
+    }
+    // CHECK: IntegerLiteralExpr type=i32 loc=line:10:16
+    if let x = 0 { // expect-error: initializer for conditional binding must have a maybe type, not 'i32'
+      // CHECK: DeclRefExpr type=i32 loc=line:12:7 decl='x'@line:10:12
+      x
+    }
+    // CHECK: IntegerLiteralExpr type=i64 loc=line:15:21
+    if let x: i64 = 0 { // expect-error: initializer for conditional binding must have a maybe type, not 'i64'
+      // CHECK: DeclRefExpr type=i64 loc=line:17:7 decl='x'@line:15:12
+      x
+    }
+}
