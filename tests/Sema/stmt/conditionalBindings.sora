@@ -16,4 +16,11 @@ func test() {
       // CHECK: DeclRefExpr type=i64 loc=line:17:7 decl='x'@line:15:12
       x
     }
+    let y: maybe maybe void = ()
+    if let y = y {
+      if let y = y {
+        // CHECK: DeclRefExpr type=void loc=line:23:9 decl='y'@line:21:14
+        y
+      }
+    }
 }
