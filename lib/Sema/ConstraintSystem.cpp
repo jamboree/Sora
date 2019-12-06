@@ -155,16 +155,22 @@ public:
       return options.typeComparator(type->getCanonicalType(),
                                     other->getCanonicalType());
 
+    auto setOrUnifySubstitution = [&](TypeVariableType *tv, Type subst) {
+      TypeVariableInfo &info = TypeVariableInfo::get(tv);
+      if (info.hasSubstitution())
+        return unify(info.getSubstitution(), subst);
+      return info.setSubstitution(subst);
+    };
+
     // If one is a type variable, and the other isn't, just set the
-    // substitution.
+    // substitution, or unify the current substitution with other.
     if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
-      if (!other->is<TypeVariableType>())
-        return TypeVariableInfo::get(tv).setSubstitution(other);
+      if (!other->is<TypeVariableType>()) {
+        return setOrUnifySubstitution(tv, other);
+      }
     }
-    else {
-      if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
-        return TypeVariableInfo::get(otherTV).setSubstitution(type);
-    }
+    else if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
+      return setOrUnifySubstitution(otherTV, type);
 
     // FIXME: After this step, desugared types should be used.
 
@@ -244,15 +250,30 @@ public:
   bool visitTypeVariableType(TypeVariableType *type, TypeVariableType *other) {
     TypeVariableInfo &typeInfo = TypeVariableInfo::get(type);
     TypeVariableInfo &otherInfo = TypeVariableInfo::get(other);
-    // if both have substitution, unify their substitution
+
+    // if both have a substitution, unify their substitution
     if (typeInfo.hasSubstitution() && otherInfo.hasSubstitution())
       return unify(typeInfo.getSubstitution(), otherInfo.getSubstitution());
+
     // if only 'type' has a substitution, set the substitution of 'other' to
-    // 'type'.
-    if (typeInfo.hasSubstitution())
-      return TypeVariableInfo::get(other).setSubstitution(type);
-    // Else, just set the substitution of 'type' to 'other.
-    return TypeVariableInfo::get(type).setSubstitution(other);
+    // 'type', unless type's substitution *is* other (equivalence class).
+    if (typeInfo.hasSubstitution()) {
+      if (typeInfo.getSubstitution()->getAs<TypeVariableType>() == other)
+        return true;
+      return otherInfo.setSubstitution(type);
+    }
+
+    // if only 'other' has a substitution, set the substitution of 'type' to
+    // 'other', unless other's substitution *is* type (equivalence class).
+    if (otherInfo.hasSubstitution()) {
+      if (otherInfo.getSubstitution()->getAs<TypeVariableType>() == type)
+        return true;
+      return typeInfo.setSubstitution(type);
+    }
+
+    // Else, if both don't have a substitution, just set the substitution of
+    // 'type' to 'other'
+    return typeInfo.setSubstitution(other);
   }
 };
 
