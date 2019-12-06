@@ -452,7 +452,7 @@ public:
   }
 };
 
-/// Represents an implicit conversion of 'T' into 'maybe T'
+/// Converts a 'T' into a 'maybe T'
 class ImplicitMaybeConversionExpr : public ImplicitConversionExpr {
 public:
   ImplicitMaybeConversionExpr(Expr *expr, Type type = Type())
@@ -460,6 +460,17 @@ public:
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::ImplicitMaybeConversion;
+  }
+};
+
+/// Converts an LValue into an RValue by performing a "load" operation.
+class LoadExpr : public ImplicitConversionExpr {
+public:
+  LoadExpr(Expr *expr, Type type = Type())
+      : ImplicitConversionExpr(ExprKind::Load, expr, type) {}
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::Load;
   }
 };
 
