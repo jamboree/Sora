@@ -123,17 +123,15 @@ public:
   Expr *tryInsertImplicitConversions(ConstraintSystem &cs, Expr *expr,
                                      Type toType);
 
-  /// Resolves a TypeLoc, giving it a type from its TypeRepr.
-  /// This can only be used if the TypeLoc has a TypeRepr.
+  /// Resolves a TypeLoc's type from its TypeRepr.
   /// \param tyLoc the TypeLoc to resolve (must have a TypeRepr* but no Type)
   /// \param file the file in which this TypeLoc lives
   void resolveTypeLoc(TypeLoc &tyLoc, SourceFile &file);
 
-  /// Resolves a TypeRepr \p tyRepr, returning its type.
+  /// Resolves a TypeRepr \p tyRepr
   /// \param tyRepr the TypeRepr to resolve
   /// \param file the file in which this TypeRepr lives
-  /// \returns the type of \p tyRepr, or ErrorType if resolution fails. Never
-  /// nullptr.
+  /// \returns the type of \p tyRepr, or ErrorType on failure.
   Type resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file);
 
   /// \returns whether we can emit a diagnostic involving \p type
