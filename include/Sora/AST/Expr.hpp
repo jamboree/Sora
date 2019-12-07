@@ -452,7 +452,11 @@ public:
   }
 };
 
-/// Represents an implicit conversion of 'T' into 'maybe T'
+/// Represents an implicit conversion a value into a maybe type.
+/// Often, this is used to represent T to maybe T conversions, but it can also
+/// be used to convert 'null' types into a maybe T.
+///
+/// This can be perceived as "constructing a maybe type from the subexpression".
 class ImplicitMaybeConversionExpr : public ImplicitConversionExpr {
 public:
   ImplicitMaybeConversionExpr(Expr *expr, Type type = Type())
