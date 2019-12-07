@@ -584,9 +584,10 @@ private:
       if (valueType->getCanonicalType()->is<MaybeType>())
         expr = visitExpr(expr, valueType);
 
-      // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
-      // does, insert the ImplicitMaybeConversionExpr.
-      if (cs.unify(toMaybe->getValueType(), expr->getType())) {
+      // If the Maybe Type's ValueType unifies w/ the expr's type, or if the
+      // expr's type is "null", insert the ImplicitMaybeConversionExpr.
+      Type exprTy = expr->getType();
+      if (exprTy->isNullType() || cs.unify(toMaybe->getValueType(), exprTy)) {
         // The Type of the ImplicitMaybeConversionExpr is the destination type.
         // for instance, in "let : maybe Foo = 0" where "Foo" is i32, we want
         // the the implicit conversion to have a "maybe Foo" type.

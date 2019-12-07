@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+// RUN: %sorac-typecheck -dump-ast %s | %filecheck %s
 
 func foo() {
   // CHECK: ImplicitMaybeConversionExpr implicit type=maybe i32
@@ -18,4 +18,14 @@ func foo() {
   // CHECK-NEXT:   ImplicitMaybeConversionExpr implicit type=maybe i32
   // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:20:84
   let (_, _, (_, _)) : (maybe i32, maybe i32, (maybe i32, maybe i32)) = (0, 0, (0, 0))
+  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe void
+  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:23:23 rParenLoc=line:23:24
+  let _: maybe void = ()
+  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe i32
+  // CHECK-NEXT: NullLiteralExpr type=null loc=line:26:22
+  let _: maybe i32 = null
+  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe maybe i32
+  // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
+  // CHECK-NEXT:   NullLiteralExpr type=null loc=line:30:28
+  let _: maybe maybe i32 = null
 }
