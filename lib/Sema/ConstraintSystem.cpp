@@ -288,7 +288,8 @@ public:
 
 //===--- ConstraintSystem -------------------------------------------------===//
 
-TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
+TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind,
+                                                       bool canBindToNull) {
   // Calculate the total size we need
   size_t size = sizeof(TypeVariableType) + sizeof(TypeVariableInfo);
   void *mem = ctxt.allocate(size, alignof(TypeVariableType),
@@ -297,7 +298,8 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   TypeVariableType *tyVar =
       new (mem) TypeVariableType(ctxt, typeVariables.size());
   // Create the info
-  new (reinterpret_cast<void *>(tyVar + 1)) TypeVariableInfo(kind);
+  new (reinterpret_cast<void *>(tyVar + 1))
+      TypeVariableInfo(kind, canBindToNull);
   // Store the TypeVariable
   typeVariables.push_back(tyVar);
   return tyVar;

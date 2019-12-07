@@ -41,10 +41,13 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
     return mem;
   }
 
-  TypeVariableInfo(TypeVariableKind tvKind) : tvKind(tvKind) {}
+  TypeVariableInfo(TypeVariableKind tvKind, bool canBindToNull = false)
+      : tvKind(tvKind), canBindToNull(canBindToNull) {}
 
   /// The kind of TypeVariable this is
   TypeVariableKind tvKind;
+  /// Whether this TV can bind to "null"
+  bool canBindToNull = false;
   /// This TypeVariable's substitution.
   /// Note that this can be another TypeVariable in case of an equivalence.
   Type substitution;
@@ -107,8 +110,13 @@ public:
       return false;
     // Never allow LValues into substitutions
     type = type->getRValue();
+    // Check if the substitution is legal.
     switch (getTypeVariableKind()) {
     case TypeVariableKind::General:
+      // If this is a null type, we can't bind to it unless canBindToNull is set
+      // to true.
+      if (type->getCanonicalType()->is<NullType>() && !canBindToNull)
+        return false;
       break;
     case TypeVariableKind::Integer:
       if (!isValidSubstitutionForIntegerTV(type))
@@ -203,20 +211,23 @@ private:
   const Type floatTVDefault;
 
   /// Creates a new type variable of kind \p kind
-  TypeVariableType *createTypeVariable(TypeVariableKind kind);
+  TypeVariableType *createTypeVariable(TypeVariableKind kind,
+                                       bool canBindToNull);
 
 public:
   /// Creates a new General type variable.
-  TypeVariableType *createGeneralTypeVariable() {
-    return createTypeVariable(TypeVariableKind::General);
+  TypeVariableType *createGeneralTypeVariable(bool canBindToNull = false) {
+    return createTypeVariable(TypeVariableKind::General, canBindToNull);
   }
   /// Create a new Integer type variable
   TypeVariableType *createIntegerTypeVariable() {
-    return createTypeVariable(TypeVariableKind::Integer);
+    return createTypeVariable(TypeVariableKind::Integer,
+                              /*canBindToNull=*/ false);
   }
   /// Create a new Float type variable
   TypeVariableType *createFloatTypeVariable() {
-    return createTypeVariable(TypeVariableKind::Float);
+    return createTypeVariable(TypeVariableKind::Float,
+                              /*canBindToNull=*/false);
   }
 
   /// \returns the default substitution for integer type variables
