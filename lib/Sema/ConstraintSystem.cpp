@@ -118,6 +118,7 @@ private:
       return cs.ctxt.errorType;
     }
     // If the substitution is also a type variable, simplify it as well.
+    assert(subst.getPtr() != type && "Type variable is bound to itself!");
     if (Type simplified = visit(subst))
       return simplified;
     return subst;
@@ -176,6 +177,11 @@ public:
     // Else, we must visit the types to check that their structure matches.
     if (type->getKind() != other->getKind())
       return false;
+
+    // Check if they're the same types, if they are, they're considered equal
+    // and we don't need to do anything else.
+    if (type.getPtr() == other.getPtr())
+      return true;
 
     switch (type->getKind()) {
 #define TYPE(ID, PARENT)                                                       \

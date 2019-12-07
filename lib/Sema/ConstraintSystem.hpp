@@ -49,22 +49,28 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   /// Note that this can be another TypeVariable in case of an equivalence.
   Type substitution;
 
-  static bool isIntegerTypeOrIntegerTypeVariable(Type type) {
+  // Checks if \p tv is a valid substitution for this TypeVariable
+  bool isValidSubstitutionForIntegerTV(Type type) {
     if (type->is<IntegerType>())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
     if (!tv)
       return false;
-    return TypeVariableInfo::get(tv).isIntegerTypeVariable();
+    // Allow both integer & general type variables.
+    auto &info = TypeVariableInfo::get(tv);
+    return info.isIntegerTypeVariable() || info.isGeneralTypeVariable();
   }
 
-  static bool isFloatTypeOrFloatTypeVariable(Type type) {
+  // Checks if \p tv is a valid substitution for this TypeVariable
+  bool isValidSubstitutionForFloatTV(Type type) {
     if (type->is<FloatType>())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
     if (!tv)
       return false;
-    return TypeVariableInfo::get(tv).isFloatTypeVariable();
+    // Allow both float & general type variables.
+    auto &info = TypeVariableInfo::get(tv);
+    return info.isFloatTypeVariable() || info.isGeneralTypeVariable();
   }
 
 public:
@@ -105,19 +111,25 @@ public:
     case TypeVariableKind::General:
       break;
     case TypeVariableKind::Integer:
-      if (!isIntegerTypeOrIntegerTypeVariable(type))
+      if (!isValidSubstitutionForIntegerTV(type))
         return false;
       break;
     case TypeVariableKind::Float:
-      if (!isFloatTypeOrFloatTypeVariable(type))
+      if (!isValidSubstitutionForFloatTV(type))
         return false;
       break;
     }
     substitution = type;
-    // If we set the substitution, make sure that we set this TV's kind to the
-    // same kind as the other TV.
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      tvKind = get(tv).getTypeVariableKind();
+    // If the substitution is a General TV but we aren't, make its kind equal to
+    // ours.
+    // FIXME: Is it better to do this here or in unify()?
+    if (!isGeneralTypeVariable()) {
+      if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
+        auto &info = TypeVariableInfo::get(tv);
+        if (info.isGeneralTypeVariable())
+          info.tvKind = getTypeVariableKind();
+      }
+    }
     return true;
   }
   /// \returns true if this TypeVariable has a substitution (whether it is
