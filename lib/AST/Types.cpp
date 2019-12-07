@@ -260,6 +260,12 @@ Type TypeBase::getRValue() const {
 
 bool TypeBase::isLValue() const { return isa<LValueType>(this); }
 
+bool TypeBase::isNullType() const { return getDesugaredType()->is<NullType>(); }
+
+bool TypeBase::isAnyIntegerType() const { return getDesugaredType()->is<IntegerType>(); }
+
+bool TypeBase::isAnyFloatType() const { return getDesugaredType()->is<FloatType>(); }
+
 void TypeBase::print(raw_ostream &out,
                      const TypePrintOptions &printOptions) const {
   Type(const_cast<TypeBase *>(this)).print(out, printOptions);

@@ -222,6 +222,15 @@ public:
   /// \returns whether this type is an LValue
   bool isLValue() const;
 
+  /// \returns whether this type is the "null" type.
+  bool isNullType() const;
+
+  /// \returns whether this type is an IntegerType
+  bool isAnyIntegerType() const;
+
+  /// \returns whether this type is a FloatType
+  bool isAnyFloatType() const;
+
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const {
     return TypeProperties(bits.TypeBase.typePropertiesValue);

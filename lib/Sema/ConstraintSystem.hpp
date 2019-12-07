@@ -54,7 +54,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
 
   // Checks if \p tv is a valid substitution for this TypeVariable
   bool isValidSubstitutionForIntegerTV(Type type) {
-    if (type->is<IntegerType>())
+    if (type->isAnyIntegerType())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
     if (!tv)
@@ -66,7 +66,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
 
   // Checks if \p tv is a valid substitution for this TypeVariable
   bool isValidSubstitutionForFloatTV(Type type) {
-    if (type->is<FloatType>())
+    if (type->isAnyFloatType())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
     if (!tv)
@@ -115,7 +115,7 @@ public:
     case TypeVariableKind::General:
       // If this is a null type, we can't bind to it unless canBindToNull is set
       // to true.
-      if (type->getCanonicalType()->is<NullType>() && !canBindToNull)
+      if (type->isNullType() && !canBindToNull)
         return false;
       break;
     case TypeVariableKind::Integer:
