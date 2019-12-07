@@ -587,10 +587,10 @@ private:
       // Check if the Maybe Type's ValueType unifies w/ the expr's type. If it
       // does, insert the ImplicitMaybeConversionExpr.
       if (cs.unify(toMaybe->getValueType(), expr->getType())) {
-        // The Type of the ImplicitMaybeConversionExpr is the subexpression's
-        // type (without LValues) wrapped in a MaybeType.
-        expr = new (ctxt) ImplicitMaybeConversionExpr(
-            expr, MaybeType::get(expr->getType()->getRValue()));
+        // The Type of the ImplicitMaybeConversionExpr is the destination type.
+        // for instance, in "let : maybe Foo = 0" where "Foo" is i32, we want
+        // the the implicit conversion to have a "maybe Foo" type.
+        expr = new (ctxt) ImplicitMaybeConversionExpr(expr, toMaybe);
         addedImplicitConversion = true;
       }
     }
