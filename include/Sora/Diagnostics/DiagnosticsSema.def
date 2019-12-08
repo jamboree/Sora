@@ -65,6 +65,9 @@ ERROR(cond_binding_must_have_maybe_type,
   "initializer for conditional binding must have a maybe type, not '%0'", 
   (Type))
 
+ERROR(cannot_create_var_of_type,
+  "cannot create a variable of type '%0'", (Type))
+
 //===- Exprs --------------------------------------------------------------===//
 
 ERROR(cannot_force_unwrap_value_of_type,

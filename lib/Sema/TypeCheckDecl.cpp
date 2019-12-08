@@ -154,6 +154,15 @@ public:
   void visitVarDecl(VarDecl *decl) {
     RAIIDeclChecking declChecking(decl);
     checkIsIllegalRedeclaration(decl);
+
+    Type type = decl->getValueType();
+    assert(type && "untyped variable");
+    // Don't allow VarDecls that contain "null" types.
+    // FIXME: Should this be here or in PatternCheckerEpilogue?
+    if (!type->hasErrorType() && type->hasNullType()) {
+      diagnose(decl->getLoc(), diag::cannot_create_var_of_type, type);
+      decl->setValueType(ctxt.errorType);
+    }
   }
 
   // Called by visitFuncDecl
@@ -275,19 +284,27 @@ public:
       init = tc.typecheckPatternAndInitializer(
           decl->getPattern(), init, decl->getDeclContext(),
           [&](Type initTy, Type patTy) {
-            complained = true;
             // If this is a "let" condition, we should simply complain that the
             // initializer should have a "maybe" type, so we don't confuse the
             // user too much (with the implicit MaybeValuePattern)
-            if (isCondition)
+            if (isCondition) {
+              complained = true;
               diagnoseInitShouldHaveMaybeType(initTy);
+            }
             // Else, just complain that we can't convert the type of the
             // initializer to the the pattern's type.
-            else if (canDiagnose(initTy) && canDiagnose(patTy))
+            else if (canDiagnose(initTy) && canDiagnose(patTy)) {
+              complained = true;
               diagnose(init->getLoc(), diag::cannot_convert_value_of_type,
                        initTy, patTy)
                   .highlight(pattern->getLoc())
                   .highlight(init->getSourceRange());
+            }
+
+            // Finally, set the type of every variable in the pattern to the
+            // ErrorType, so we don't complain about them.
+            decl->getPattern()->forEachVarDecl(
+                [&](VarDecl *var) { var->setValueType(ctxt.errorType); });
           });
       decl->setInitializer(init);
 
