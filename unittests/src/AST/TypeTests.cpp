@@ -101,29 +101,36 @@ TEST_F(TypeTest, TupleType) {
 // Test for the propagation of TypeProperties on "simple" wrapper types:
 // LValueType, ReferenceType, MaybeType
 TEST_F(TypeTest, simpleTypePropertiesPropagation) {
-#define CHECK(CREATE, HAS_TV, HAS_ERR)                                         \
+#define CHECK(CREATE, HAS_TV, HAS_ERR, HAS_NULL)                               \
   {                                                                            \
     auto ty = CREATE;                                                          \
     EXPECT_EQ(ty->hasTypeVariable(), HAS_TV);                                  \
     EXPECT_EQ(ty->hasErrorType(), HAS_ERR);                                    \
+    EXPECT_EQ(ty->hasNullType(), HAS_NULL);                                    \
   }
 
   // i32: no properties set
-  CHECK(LValueType::get(ctxt->i32Type), false, false);
-  CHECK(ReferenceType::get(ctxt->i32Type, false), false, false);
-  CHECK(MaybeType::get(ctxt->i32Type), false, false);
+  CHECK(LValueType::get(ctxt->i32Type), false, false, false);
+  CHECK(ReferenceType::get(ctxt->i32Type, false), false, false, false);
+  CHECK(MaybeType::get(ctxt->i32Type), false, false, false);
 
   // TypeVariableType
   ASSERT_TRUE(tyVar->hasTypeVariable());
-  CHECK(LValueType::get(tyVar), true, false);
-  CHECK(ReferenceType::get(tyVar, false), true, false);
-  CHECK(MaybeType::get(tyVar), true, false);
+  CHECK(LValueType::get(tyVar), true, false, false);
+  CHECK(ReferenceType::get(tyVar, false), true, false, false);
+  CHECK(MaybeType::get(tyVar), true, false, false);
 
   // ErrorType
   ASSERT_TRUE(ctxt->errorType->hasErrorType());
-  CHECK(LValueType::get(ctxt->errorType), false, true);
-  CHECK(ReferenceType::get(ctxt->errorType, false), false, true);
-  CHECK(MaybeType::get(ctxt->errorType), false, true);
+  CHECK(LValueType::get(ctxt->errorType), false, true, false);
+  CHECK(ReferenceType::get(ctxt->errorType, false), false, true, false);
+  CHECK(MaybeType::get(ctxt->errorType), false, true, false);
+
+  // NullType
+  ASSERT_TRUE(ctxt->nullType->hasNullType());
+  CHECK(LValueType::get(ctxt->nullType), false, false, true);
+  CHECK(ReferenceType::get(ctxt->nullType, false), false, false, true);
+  CHECK(MaybeType::get(ctxt->nullType), false, false, true);
 
 #undef CHECK
 }

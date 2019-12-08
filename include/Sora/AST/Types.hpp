@@ -41,7 +41,11 @@ enum class TypeKind : uint8_t {
 /// Small (byte-sized) struct to represent & manipulate type properties.
 struct TypeProperties {
   using value_t = uint8_t;
-  enum Property : value_t { hasErrorType = 0x01, hasTypeVariable = 0x02 };
+  enum Property : value_t {
+    hasErrorType = 0x01,
+    hasTypeVariable = 0x02,
+    hasNullType = 0x04
+  };
 
   value_t value;
 
@@ -197,6 +201,11 @@ public:
     return getTypeProperties() & TypeProperties::hasTypeVariable;
   }
 
+  /// \returns whether this type contains a "null" type
+  bool hasNullType() const {
+    return getTypeProperties() & TypeProperties::hasNullType;
+  }
+
   /// \returns the ASTContext in which this type is allocated
   ASTContext &getASTContext() const {
     if (ASTContext *ctxt = ctxtOrCanType.dyn_cast<ASTContext *>()) {
@@ -261,9 +270,8 @@ static_assert(sizeof(TypeBase) <= 16, "TypeBase is too large!");
 /// Common base class for builtin primitive types.
 class BuiltinType : public TypeBase {
 protected:
-  /// BuiltinTypes have no particular properties.
-  BuiltinType(TypeKind kind, ASTContext &ctxt)
-      : TypeBase(kind, TypeProperties(), ctxt, /*isCanonical*/ true) {}
+  BuiltinType(TypeKind kind, TypeProperties properties, ASTContext &ctxt)
+      : TypeBase(kind, properties, ctxt, /*isCanonical*/ true) {}
 
 public:
   static bool classof(const TypeBase *type) {
@@ -279,7 +287,7 @@ public:
 /// This type is always canonical.
 class IntegerType final : public BuiltinType {
   IntegerType(ASTContext &ctxt, IntegerWidth width, bool isSigned)
-      : BuiltinType(TypeKind::Integer, ctxt) {
+      : BuiltinType(TypeKind::Integer, TypeProperties(), ctxt) {
     assert((width.isFixedWidth() || width.isPointerSized()) &&
            "Can only create fixed or pointer-sized integer types!");
     bits.IntegerType.integerWidth = width.getOpaqueValue();
@@ -314,7 +322,7 @@ enum class FloatKind : uint8_t { IEEE32, IEEE64 };
 /// This type is always canonical.
 class FloatType final : public BuiltinType {
   FloatType(ASTContext &ctxt, FloatKind kind)
-      : BuiltinType(TypeKind::Float, ctxt) {
+      : BuiltinType(TypeKind::Float, TypeProperties(), ctxt) {
     bits.FloatType.floatKind = uint64_t(kind);
     assert(FloatKind(bits.FloatType.floatKind) == kind && "bits dropped");
   }
@@ -347,7 +355,8 @@ public:
 ///
 /// This type is always canonical.
 class VoidType final : public BuiltinType {
-  VoidType(ASTContext &ctxt) : BuiltinType(TypeKind::Void, ctxt) {}
+  VoidType(ASTContext &ctxt)
+      : BuiltinType(TypeKind::Void, TypeProperties(), ctxt) {}
   friend ASTContext;
 
 public:
@@ -360,7 +369,8 @@ public:
 ///
 /// This type is always canonical.
 class NullType final : public BuiltinType {
-  NullType(ASTContext &ctxt) : BuiltinType(TypeKind::Null, ctxt) {}
+  NullType(ASTContext &ctxt)
+      : BuiltinType(TypeKind::Null, TypeProperties::hasNullType, ctxt) {}
   friend ASTContext;
 
 public:
@@ -373,7 +383,8 @@ public:
 //
 /// This type is always canonical.
 class BoolType final : public BuiltinType {
-  BoolType(ASTContext &ctxt) : BuiltinType(TypeKind::Bool, ctxt) {}
+  BoolType(ASTContext &ctxt)
+      : BuiltinType(TypeKind::Bool, TypeProperties(), ctxt) {}
   friend ASTContext;
 
 public:
