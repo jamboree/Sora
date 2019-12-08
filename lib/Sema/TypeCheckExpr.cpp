@@ -462,7 +462,7 @@ public:
     type = cs.simplifyType(type, &isAmbiguous);
     expr->setType(type);
 
-    if (isAmbiguous && canComplain) {
+    if (isAmbiguous && canComplain && canDiagnose(expr)) {
       // This shouldn't happen with the current iteration of Sora.
       llvm_unreachable("Diagnostic emission for ambiguous expressions is "
                        "currently not supported");
