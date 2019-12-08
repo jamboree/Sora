@@ -177,7 +177,8 @@ public:
 
 //===- TypeChecker --------------------------------------------------------===//
 
-void TypeChecker::typecheckPattern(Pattern *pat, DeclContext *dc, bool canEmitInferenceErrors) {
+void TypeChecker::typecheckPattern(Pattern *pat, DeclContext *dc,
+                                   bool canEmitInferenceErrors) {
   assert(pat && dc);
   // Create a constraint system for this pattern
   ConstraintSystem cs(*this);
