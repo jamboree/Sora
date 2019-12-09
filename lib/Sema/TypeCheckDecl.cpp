@@ -151,6 +151,7 @@ public:
              earliest->getIdentifier());
   }
 
+  // Note: Those are visited through their VarPattern.
   void visitVarDecl(VarDecl *decl) {
     RAIIDeclChecking declChecking(decl);
     checkIsIllegalRedeclaration(decl);
@@ -158,7 +159,6 @@ public:
     Type type = decl->getValueType();
     assert(type && "untyped variable");
     // Don't allow VarDecls that contain "null" types.
-    // FIXME: Should this be here or in PatternCheckerEpilogue?
     if (!type->hasErrorType() && type->hasNullType()) {
       diagnose(decl->getLoc(), diag::cannot_create_var_of_type, type);
       decl->setValueType(ctxt.errorType);
@@ -175,6 +175,7 @@ public:
     // ParamDecls can shadow anything. Duplicate parameter names in the same
     // parameter list are handled by visitFuncDecl.
     tc.resolveTypeLoc(decl->getTypeLoc(), file);
+    assert(!decl->getValueType()->hasNullType() && "NullType in ParamDecl?");
   }
 
   void visitFuncDecl(FuncDecl *decl) {
@@ -251,7 +252,8 @@ public:
       decl->setPattern(letPat);
     }
 
-    // Collect the variables declared inside the pattern
+    // Collect the variables declared inside the pattern.
+    // NOTE: We don't type-check them here. They're handled by typecheckPattern!
     SmallVector<ValueDecl *, 4> vars;
     decl->forEachVarDecl([&](VarDecl *var) { vars.push_back(var); });
 
@@ -270,9 +272,11 @@ public:
                    decl->getIdentifier());
         });
 
+    // "let" decl w/ initializer
     if (decl->hasInitializer()) {
       Expr *init = decl->getInitializer();
 
+      // "let" conditions require that the initializer has a 'maybe' type.
       auto diagnoseInitShouldHaveMaybeType = [&](Type initTy) {
         if (canDiagnose(initTy))
           diagnose(init->getLoc(), diag::cond_binding_must_have_maybe_type,
@@ -302,15 +306,18 @@ public:
             }
 
             // Finally, set the type of every variable in the pattern to the
-            // ErrorType, so we don't complain about them.
+            // ErrorType, so we don't complain about them in the epilogue. It'd
+            // only confuse the user even more.
             decl->getPattern()->forEachVarDecl(
                 [&](VarDecl *var) { var->setValueType(ctxt.errorType); });
           });
+      // Replace the initializer w/ the type-checked one
       decl->setInitializer(init);
 
       // In conditions, also check that the initializer wasn't implicitly
       // converted to the "maybe" type, if that's the case, we're probably
-      // facing something like "if let x = 0" which isn't allowed
+      // facing something like "if let x = 0" which shouldn't be allowed,
+      // because even if it works, it's equivalent to "true".
       if (isCondition && !complained) {
         Expr *rawInit = init->ignoreImplicitConversions();
         Type rawInitTy = rawInit->getType()->getRValue();
@@ -318,14 +325,21 @@ public:
           diagnoseInitShouldHaveMaybeType(rawInitTy);
       }
     }
+    // "let" decl without initializer
     else {
       // If this is a "let" condition, we should have an initializer. Complain
       // about it!
       if (isCondition)
+        // FIXME: Should the user be also told that the init must have a 'maybe'
+        // type?
         diagnose(decl->getLetLoc(),
                  diag::variable_binding_in_cond_requires_initializer)
             .fixitInsertAfter(decl->getEndLoc(), "= <expression>")
             .highlight(decl->getLetLoc());
+      // TypeCheck the pattern in solo, and don't emit inference errors about
+      // the pattern as the fix for the user is simple (just add an
+      // initializer) and we don't want to bother him too much w/ useless
+      // diagnostics.
       tc.typecheckPattern(decl->getPattern(), decl->getDeclContext(),
                           /*canEmitInferenceErrors=*/!isCondition);
     }

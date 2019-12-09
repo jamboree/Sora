@@ -142,6 +142,9 @@ public:
     if (isAmbiguous && wasDiagnosable && canEmitInferenceErrors) {
       // We only complain about inference errors on VarPattern &
       // DiscardPatterns.
+      // If we don't do that, diagnostics would be emitted for every pattern,
+      // e.g. in '((x))' we'd complain thrice (once for the x and once per
+      // ParenPattern)!
       if ((isa<VarPattern>(pattern) || isa<DiscardPattern>(pattern))) {
         StringRef patternName;
         if (isa<DiscardPattern>(pattern))
