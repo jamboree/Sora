@@ -27,4 +27,14 @@ func test() {
     if let (x, y) = (z, z) { // expect-error: initializer for conditional binding must have a maybe type, not '(maybe i32, maybe i32)'
     
     }
+
+   if let x = null {}    // expect-error: initializer for conditional binding must have a maybe type, not 'null'
+                         // expect-error@-1: type of 'x' is ambiguous without more context
+                         // expect-note@-2:  add a type annotation to give 'x' a type
+   while let x = null {} // expect-error: initializer for conditional binding must have a maybe type, not 'null'
+                         // expect-error@-1: type of 'x' is ambiguous without more context
+                         // expect-note@-2:  add a type annotation to give 'x' a type
+
+   if let x {}           // expect-error: variable binding in a condition requires an initializer
+   while let x {}        // expect-error: variable binding in a condition requires an initializer
 }
