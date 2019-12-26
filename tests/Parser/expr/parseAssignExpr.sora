@@ -38,4 +38,7 @@ func badAssign() {
   {a|=}   // expect-error: expected an expression after '|='
   {a^=}   // expect-error: expected an expression after '^='
   {a??=}  // expect-error: expected an expression after '??='
+
+  a
+  =b      // expect-error: operator '=' cannot appear at the start of a line
 }

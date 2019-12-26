@@ -1,0 +1,21 @@
+// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+
+func errors() {
+  3
+  /3    // expect-error: operator '/' cannot appear at the start of a line
+  (3*)  // expect-error: expected an expression after '*'
+  3==   // expect-error: expected an expression after '=='
+}
+
+func correct() {
+  // CHECK: BinaryExpr type=<null_type> + (Add) opLoc=line:14:4
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:14:3 str='3' rawValue=3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:14:5 str='3' rawValue=3
+  3+3
+  
+  // CHECK: BinaryExpr type=<null_type> + (Add) opLoc=line:19:4
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:19:3 str='3' rawValue=3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:20:3 str='3' rawValue=3
+  3+
+  3
+}
