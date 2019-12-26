@@ -35,7 +35,7 @@ Parser::parseAssignementExpr(llvm::function_ref<void()> onNoExpr) {
   if (opLoc.isInvalid())
     return result;
 
-  // Binary operator can't appear at the start of a line
+  // Binary operators can't appear at the start of a line
   if (startOfLine)
     diagnose(opLoc, diag::binary_op_at_start_of_line, getSpelling(op));
 
