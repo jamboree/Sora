@@ -277,7 +277,7 @@ public:
     if (otherInfo.hasSubstitution()) {
       if (otherInfo.getSubstitution()->getAs<TypeVariableType>() == type)
         return true;
-      return typeInfo.setSubstitution(type);
+      return typeInfo.setSubstitution(other);
     }
 
     // Else, if both don't have a substitution, just set the substitution of
