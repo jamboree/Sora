@@ -124,9 +124,9 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
     if (Expr *condExpr = doIt(expr->getCond()))
       expr->setCond(condExpr);
     if (Expr *thenExpr = doIt(expr->getThen()))
-      expr->setCond(thenExpr);
+      expr->setThen(thenExpr);
     if (Expr *elseExpr = doIt(expr->getElse()))
-      expr->setCond(elseExpr);
+      expr->setElse(elseExpr);
   }
 
   void visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
