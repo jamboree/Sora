@@ -24,3 +24,7 @@ func foo(cond: bool) {
   let _ = 0 ? 1 : 2       // expect-error: value of type 'i32' cannot be used as a condition - value must have a 'bool' type
   let _ = () ? () : ()    // expect-error: value of type '()' cannot be used as a condition - value must have a 'bool' type
 }
+
+func bar(cond: bool) {
+  let _ = cond ? null : null
+}
