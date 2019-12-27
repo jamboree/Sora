@@ -108,6 +108,8 @@ private:
   Type visitTypeVariableType(TypeVariableType *type) {
     TypeVariableInfo &info = TypeVariableInfo::get(type);
     Type subst = info.getSubstitution();
+    assert(subst.getPtr() != type &&
+           "Type variable has itself as a substitution");
     // Return a default type or ErrorType when there are no substitutions
     if (!subst) {
       if (info.isFloatTypeVariable())
