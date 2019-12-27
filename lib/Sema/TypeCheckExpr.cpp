@@ -407,7 +407,45 @@ Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
 Expr *ExprChecker::visitCallExpr(CallExpr *expr) { return nullptr; }
 
 Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
-  return nullptr;
+  // Check that the condition has a boolean type
+  bool isValid = true;
+  {
+    Type condTy = expr->getCond()->getType();
+    condTy = condTy->getRValue();
+    if (!condTy->getDesugaredType()->is<BoolType>()) {
+      diagnose(expr->getCond()->getLoc(), diag::value_cannot_be_used_as_cond,
+               cs.simplifyType(condTy), ctxt.boolType)
+          .highlight(expr->getQuestionLoc());
+      isValid = false;
+    }
+  }
+  // Create a TypeVariable for the type of the expr
+  Type exprTV = cs.createGeneralTypeVariable();
+  expr->setType(exprTV);
+
+  Type thenTy = expr->getThen()->getType();
+  Type elseTy = expr->getElse()->getType();
+  // The type of both operands must unify w/ the TV.
+
+  // Start with the 'then' expr - the one between '?' and ':'
+  if (!cs.unify(thenTy, exprTV))
+    // Since the TV is general, unification should never fail here since the TV
+    // is unbound at this point
+    llvm_unreachable("First unification failed?");
+
+  // And now the else - the expr after ':'
+  if (!cs.unify(elseTy, exprTV)) {
+    // Simplify both types just in case
+    diagnose(expr->getColonLoc(),
+             diag::result_values_in_ternary_have_different_types,
+             cs.simplifyType(thenTy), cs.simplifyType(elseTy))
+        .highlight(expr->getColonLoc())
+        .highlight(expr->getThen()->getSourceRange())
+        .highlight(expr->getElse()->getSourceRange());
+    isValid = false;
+  }
+
+  return isValid ? expr : nullptr;
 }
 
 Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {

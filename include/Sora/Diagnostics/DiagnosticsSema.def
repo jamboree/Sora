@@ -40,6 +40,7 @@
 
 SORA_FWD_DECL(class Identifier)
 SORA_FWD_DECL(class Type)
+SORA_FWD_DECL(class CanType)
 
 //===- Decls --------------------------------------------------------------===//
 
@@ -73,6 +74,14 @@ ERROR(cannot_create_var_of_type,
 ERROR(cannot_force_unwrap_value_of_type,
   "cannot force unwrap value of type '%0' - value must have a 'maybe' type", 
   (Type))
+
+ERROR(result_values_in_ternary_have_different_types,
+  "result values in '? :' expression have different types: '%0' and '%1'", 
+  (Type, Type))
+
+ERROR(value_cannot_be_used_as_cond,
+  "value of type '%0' cannot be used as a condition "
+  "- value must have a '%1' type", (Type, CanType))
 
 ERROR(cannot_cast_value_of_type,
   "cannot cast value of type '%0' to '%1'", (Type, Type))
