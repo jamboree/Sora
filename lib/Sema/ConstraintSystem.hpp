@@ -41,8 +41,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
     return mem;
   }
 
-  TypeVariableInfo(TypeVariableKind tvKind)
-      : tvKind(tvKind) {}
+  TypeVariableInfo(TypeVariableKind tvKind) : tvKind(tvKind) {}
 
   /// The kind of TypeVariable this is
   TypeVariableKind tvKind;
@@ -108,6 +107,10 @@ public:
       return false;
     // Never allow LValues into substitutions
     type = type->getRValue();
+    // Check if we're not using this TV as its own subst
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
+      assert(this != &get(tv) &&
+             "Type variable using itself as a substitution");
     // Check if the substitution is legal.
     switch (getTypeVariableKind()) {
     case TypeVariableKind::General:
