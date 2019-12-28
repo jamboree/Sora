@@ -71,6 +71,9 @@ ERROR(cannot_create_var_of_type,
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(cannot_capture_dynamic_env_in_local_func,
+  "cannot capture dynamic environment inside a local function", ())
+
 ERROR(cannot_force_unwrap_value_of_type,
   "cannot force unwrap value of type '%0' - value must have a 'maybe' type", 
   (Type))

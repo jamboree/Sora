@@ -34,3 +34,25 @@ func bar(bar: i32) {
     bar
     bux // expect-error: cannot find value 'bux' in this scope
 }
+
+func nested(foo: i32, bar: i32) {
+  func nested2(foo: i32) {
+    let localvar: i32
+    foo
+    bar // expect-error: cannot capture dynamic environment inside a local function
+    func nested3() {
+      nested
+      nested2
+      nested3
+      localvar  // expect-error: cannot capture dynamic environment inside a local function
+      foo       // expect-error: cannot capture dynamic environment inside a local function
+      bar       // expect-error: cannot capture dynamic environment inside a local function
+    }
+  }
+  localvar  // expect-error: cannot find value 'localvar' in this scope
+  nested3   // expect-error: cannot find value 'nested3' in this scope
+  foo
+  bar
+  nested
+  nested2
+}

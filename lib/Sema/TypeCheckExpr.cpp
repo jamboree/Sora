@@ -90,8 +90,36 @@ public:
     return *sf;
   }
 
+  /// Called when the type-checker is sure that \p udre references \p resolved.
+  /// This will check that \p resolved can be referenced from inside this
+  /// DeclContext (if it can't, returns nullptr) and, on success, build a
+  /// DeclRefExpr.
+  /// \returns nullptr on failure, a new DeclRefExpr on success.
   DeclRefExpr *resolveDeclRefExpr(UnresolvedDeclRefExpr *udre,
                                   ValueDecl *resolved) {
+    // Check the DeclContext of \p resolved for particular restrictions.
+    // These restrictions don't apply on functions because they're values, but
+    // not "dynamic" ones (they're always constant)
+    if (!isa<FuncDecl>(resolved)) {
+      DeclContext *resolvedDC = resolved->getDeclContext();
+
+      if (dc->isFuncDecl() && resolvedDC->isFuncDecl()) {
+        // If we're inside a function, and resolvedDC is a function as well,
+        // check that the DeclContexts are the same.
+        if (dc != resolvedDC) {
+          // If they're not, this means that:
+          //  1 - We are inside a local function of \p resolvedDC
+          assert(resolvedDC->isParentOf(dc) && "Not inside a local function?!");
+          //  2 - We are attempting to capture the dynamic environment inside a
+          //      local function, which is not allowed (unless resolved is a
+          //      func)
+          diagnose(udre->getLoc(),
+                   diag::cannot_capture_dynamic_env_in_local_func);
+          // Add additional note? Ask on discord!
+          return nullptr;
+        }
+      }
+    }
     DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
     Type type = resolved->getValueType();
     assert(!type.isNull() && "VarDecl type is null!");
