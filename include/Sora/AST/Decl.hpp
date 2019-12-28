@@ -127,6 +127,13 @@ public:
     return declCtxtAndIsChecked.getPointer();
   }
 
+  /// Sets the parent DeclContext of this decl.
+  /// This must be used carefully, and \p dc can't be null.
+  void setDeclContext(DeclContext *dc) {
+    assert(dc && "dc can't be null!");
+    declCtxtAndIsChecked.setPointer(dc);
+  }
+
   /// If this Decl is also a DeclContext, returns it as a DeclContext*, else
   /// returns nullptr.
   DeclContext *getAsDeclContext() { return dyn_cast<DeclContext>(this); }
@@ -341,6 +348,15 @@ public:
 
   ParamDecl *operator[](unsigned n) const { return getParam(n); }
 
+  /// Replaces the parent DeclContext of every param with \p dc.
+  /// This must be used carefully.
+  /// \p dc can't be nullptr
+  void setDeclContextOfParams(DeclContext *dc) {
+    assert(dc && "dc can't be null!");
+    for (ParamDecl *param : *this)
+      param->setDeclContext(dc);
+  }
+
   iterator begin() const { return getParams().begin(); }
   iterator end() const { return getParams().end(); }
 
@@ -361,11 +377,18 @@ class FuncDecl final : public ValueDecl, public DeclContext {
   TypeLoc returnTypeLoc;
 
 public:
+  /// \param declContext the DeclContext in which this function lives
+  /// \param funcLoc the SourceLoc of the 'func' keyword
+  /// \param identLoc the SourceLoc of this function's identifier
+  /// \param ident the identifier of this function
+  /// \param params this function's ParamList. Can't be nullptr.
+  /// \param returnTypeLoc the TypeLoc of the return type, if present
   FuncDecl(DeclContext *declContext, SourceLoc funcLoc, SourceLoc identLoc,
-           Identifier ident, ParamList *params, TypeLoc returnTypeLoc)
+           Identifier ident, ParamList *params, TypeLoc returnTypeLoc = {})
       : ValueDecl(DeclKind::Func, declContext, identLoc, ident),
         DeclContext(DeclContextKind::FuncDecl, declContext), funcLoc(funcLoc),
-        paramList(params), returnTypeLoc(returnTypeLoc) {
+        returnTypeLoc(returnTypeLoc) {
+    setParamList(params);
     bits.FuncDecl.isBodyChecked = false;
   }
 
@@ -380,7 +403,14 @@ public:
   }
 
   ParamList *getParamList() const { return paramList; }
-  void setParamList(ParamList *params) { this->paramList = params; }
+  /// Sets the ParamList of this FuncDecl.
+  /// Note: the DeclContext of every param inside \p params will be replaced
+  /// with this FuncDecl.
+  void setParamList(ParamList *params) {
+    assert(params && "ParamList is null?!");
+    this->paramList = params;
+    params->setDeclContextOfParams(this);
+  }
 
   TypeLoc &getReturnTypeLoc() { return returnTypeLoc; }
   const TypeLoc &getReturnTypeLoc() const { return returnTypeLoc; }
