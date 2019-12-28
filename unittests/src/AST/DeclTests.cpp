@@ -32,7 +32,8 @@ protected:
     varDecl = new (*ctxt) VarDecl(nullptr, beg, {});
     TypeRepr *tyRepr = new (*ctxt) IdentifierTypeRepr(end, {});
     paramDecl = new (*ctxt) ParamDecl(nullptr, beg, {}, {tyRepr, {}});
-    funcDecl = new (*ctxt) FuncDecl(nullptr, beg, {}, {}, nullptr, {});
+    funcDecl = new (*ctxt) FuncDecl(nullptr, beg, {}, {},
+                                    ParamList::createEmpty(*ctxt, {}, {}), {});
     cast<FuncDecl>(funcDecl)->setBody(BlockStmt::createEmpty(*ctxt, mid, end));
     Pattern *pat = new (*ctxt) DiscardPattern(mid);
     Expr *init = new (*ctxt) DiscardExpr(end);
@@ -105,7 +106,8 @@ TEST_F(DeclTest, getSourceFile) {
   // SourceFile
   //    FuncDecl
   //      ParamDecl
-  FuncDecl *fn = new (*ctxt) FuncDecl(sf, {}, {}, {}, nullptr, {});
+  FuncDecl *fn = new (*ctxt)
+      FuncDecl(sf, {}, {}, {}, ParamList::createEmpty(*ctxt, {}, {}), {});
   ParamDecl *param = new (*ctxt) ParamDecl(fn, {}, {}, {});
   fn->setParamList(ParamList::create(*ctxt, {}, param, {}));
 
