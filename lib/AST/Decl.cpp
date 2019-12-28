@@ -132,6 +132,10 @@ SourceLoc FuncDecl::getEndLoc() const {
   return body->getEndLoc();
 }
 
+FuncDecl *DeclContext::getAsFuncDecl() const {
+  return dyn_cast<FuncDecl>(const_cast<DeclContext *>(this));
+}
+
 void PatternBindingDecl::forEachVarDecl(
     llvm::function_ref<void(VarDecl *)> fn) const {
   assert(pattern && "no pattern");

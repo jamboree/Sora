@@ -14,6 +14,7 @@
 
 namespace sora {
 class FuncDecl;
+class SourceFile;
 
 /// Kinds of DeclContext
 enum class DeclContextKind : uint8_t {
@@ -47,8 +48,30 @@ public:
     return getDeclContextKind() <= DeclContextKind::Last_LocalDeclContext;
   }
 
+  bool isFuncDecl() const {
+    return getDeclContextKind() == DeclContextKind::FuncDecl;
+  }
+
+  FuncDecl *getAsFuncDecl() const;
+
+  bool isSourceFile() const {
+    return getDeclContextKind() == DeclContextKind::SourceFile;
+  }
+
+  SourceFile *getAsSourceFile() const;
+
   /// \returns the parent of this DeclContext
   DeclContext *getParent() const { return parentAndKind.getPointer(); }
+
+  /// \returns true if this DeclContext is a parent of \p dc, false if this ==
+  /// \p dc or if this isn't a parent of \p dc.
+  bool isParentOf(DeclContext *dc) {
+    DeclContext *cur = dc;
+    while ((cur = cur->getParent()))
+      if (cur == this)
+        return true;
+    return false;
+  }
 
   /// \returns the parent SourceFile of this DeclContext, or nullptr if not
   /// found.

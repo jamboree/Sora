@@ -64,3 +64,7 @@ SourceFile *DeclContext::getParentSourceFile() const {
     return parent->getParentSourceFile();
   return nullptr;
 }
+
+SourceFile *DeclContext::getAsSourceFile() const {
+  return dyn_cast<SourceFile>(const_cast<DeclContext *>(this));
+}
