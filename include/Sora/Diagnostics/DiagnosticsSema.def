@@ -71,6 +71,27 @@ ERROR(cannot_create_var_of_type,
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(cannot_take_address_of_func,
+  "cannot take the address of function '%0'", (Identifier))
+
+ERROR(cannot_take_address_of_a_temp_value,
+  "cannot take the address of a temporary value or of one of its members", ())
+
+ERROR(cannot_take_address_of_literal,
+  "cannot take the address of a literal", ())
+
+ERROR(cannot_take_address_of_temp_tuple,
+  "cannot take the address of a temporary tuple or of one of its elements", ())
+
+ERROR(cannot_use_unary_oper_on_operand_of_type,
+  "cannot use unary operator '%0' on operand of type '%1'", (StringRef, Type))
+
+ERROR(cannot_deref_value_of_type,
+  "cannot dereference a value of type '%0'", (Type))
+
+NOTE(value_must_have_reference_type,
+  "value must have a reference type", ())
+
 ERROR(cannot_capture_dynamic_env_in_local_func,
   "cannot capture dynamic environment inside a local function", ())
 

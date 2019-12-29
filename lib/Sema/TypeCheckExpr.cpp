@@ -183,6 +183,72 @@ public:
     return {true, expr};
   }
 
+  bool isNumericTypeOrNumericTypeVariable(Type type) {
+    return isIntegerTypeOrIntegerTypeVariable(type) ||
+           isFloatTypeOrFloatTypeVariable(type);
+  }
+
+  bool isIntegerTypeOrIntegerTypeVariable(Type type) {
+    if (type->is<IntegerType>())
+      return true;
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
+      return TypeVariableInfo::get(tv).isIntegerTypeVariable();
+    return false;
+  }
+
+  bool isFloatTypeOrFloatTypeVariable(Type type) {
+    if (type->is<FloatType>())
+      return true;
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
+      return TypeVariableInfo::get(tv).isFloatTypeVariable();
+    return false;
+  }
+
+  /// Diagnoses a bad unary expression using a basic error message.
+  /// The simplified type of the subexpression is used the error message (as the
+  /// subexpression may contain type variables)
+  void diagnoseBadUnaryExpr(UnaryExpr *expr) {
+    diagnose(expr->getOpLoc(), diag::cannot_use_unary_oper_on_operand_of_type,
+             expr->getOpSpelling(),
+             cs.simplifyType(expr->getSubExpr()->getType()))
+        .highlight(expr->getSubExpr()->getSourceRange());
+  }
+
+  void diagnoseCannotTakeAddressOfExpr(UnaryExpr *expr, Expr *subExpr) {
+    TypedDiag<> diag;
+    if (isa<AnyLiteralExpr>(subExpr))
+      diag = diag::cannot_take_address_of_literal;
+    else if (isa<TupleExpr>(subExpr))
+      diag = diag::cannot_take_address_of_temp_tuple;
+    // FIXME: Pretty much all other expressions are guaranteed to be
+    // temporaries, right?
+    else
+      diag = diag::cannot_take_address_of_a_temp_value;
+    diagnose(subExpr->getLoc(), diag).highlight(expr->getOpLoc());
+  }
+
+  void diagnoseCannotTakeAddressOfFunc(UnaryExpr *expr, DeclRefExpr *subExpr,
+                                       FuncDecl *fn) {
+    diagnose(subExpr->getLoc(), diag::cannot_take_address_of_func,
+             fn->getIdentifier())
+        .highlight(expr->getOpLoc());
+  }
+
+  /// \returns true if we can take the address of \p subExpr.
+  /// If we can't, this function will emit the appropriate diagnostics.
+  bool checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr);
+
+  /// Checks a + or - unary operation
+  Expr *checkUnaryPlusOrMinus(UnaryExpr *expr);
+  /// Checks a * unary operation
+  Expr *checkUnaryDereference(UnaryExpr *expr);
+  /// Checks a & unary operation
+  Expr *checkUnaryAddressOf(UnaryExpr *expr);
+  /// Checks a ! unary operation
+  Expr *checkUnaryLNot(UnaryExpr *expr);
+  /// Checks a ~ unary operation
+  Expr *checkUnaryNot(UnaryExpr *expr);
+
   Expr *visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr);
   Expr *visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr);
 
@@ -225,6 +291,114 @@ void ExprChecker::findValidDiscardExprs(Expr *expr) {
   if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
     for (Expr *elem : tuple->getElements())
       findValidDiscardExprs(elem);
+}
+
+bool ExprChecker::checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr) {
+  subExpr = subExpr->ignoreParens();
+
+  // We can only take the address of:
+  //    - Variables/Parameters (DeclRefExprs)
+  //    - TupleElementExprs if we can also take the address of their base
+  if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(subExpr)) {
+    ValueDecl *valueDecl = dre->getValueDecl();
+    if (FuncDecl *fn = dyn_cast<FuncDecl>(valueDecl)) {
+      diagnoseCannotTakeAddressOfFunc(expr, dre, fn);
+      return false;
+    }
+    assert((isa<ParamDecl>(valueDecl) || isa<VarDecl>(valueDecl)) &&
+           "Unknown ValueDecl kind");
+    return true;
+  }
+  if (TupleElementExpr *tee = dyn_cast<TupleElementExpr>(subExpr))
+    return checkCanTakeAddressOf(expr, tee->getBase()->ignoreParens());
+  diagnoseCannotTakeAddressOfExpr(expr, subExpr);
+  return false;
+}
+
+// NOTE:
+//    None of the "checkUnary" methods simplify the subexpression's type before
+//    checking it. For now it's harmless because there are no situations where a
+//    generic type variable can end up as the type of the subexpression of a
+//    UnaryExpr, but if inference gets more complex and such situations start to
+//    happen, these methods will need to simplify the subexpression's type
+//    before checking it.
+
+Expr *ExprChecker::checkUnaryPlusOrMinus(UnaryExpr *expr) {
+  // Unary + and - require that the subexpression's type is a numeric type or
+  // numeric type variable.
+  Type subExprTy = expr->getSubExpr()->getType();
+  if (!isNumericTypeOrNumericTypeVariable(
+          subExprTy->getRValue()->getCanonicalType())) {
+    diagnoseBadUnaryExpr(expr);
+    return nullptr;
+  }
+  // The type of the expr is the type of its subexpression, minus LValues.
+  // Note: We need to keep the type variables intact so things like "let x: i8 =
+  // -10" can work (= 10 correctly inferred to i8)
+  expr->setType(subExprTy->getRValue());
+  return expr;
+}
+
+Expr *ExprChecker::checkUnaryDereference(UnaryExpr *expr) {
+  // Dereferencing requires that the subexpression's type is a reference.
+  Type subExprTy = expr->getSubExpr()->getType();
+  ReferenceType *referenceType =
+      subExprTy->getRValue()->getDesugaredType()->getAs<ReferenceType>();
+  if (!referenceType) {
+    diagnose(expr->getOpLoc(), diag::cannot_deref_value_of_type, subExprTy)
+        .highlight(expr->getSubExpr()->getSourceRange());
+    diagnose(expr->getLoc(), diag::value_must_have_reference_type);
+    return nullptr;
+  }
+  // The type of the expr is the pointee type of the reference type, plus an
+  // lvalue for mutable references.
+  Type type = referenceType->getPointeeType();
+  if (referenceType->isMut())
+    type = LValueType::get(type);
+  expr->setType(type);
+  return expr;
+}
+
+Expr *ExprChecker::checkUnaryAddressOf(UnaryExpr *expr) {
+  // Check if we can take the address of the value
+  if (!checkCanTakeAddressOf(expr, expr->getSubExpr()))
+    return nullptr;
+
+  // The type of this expr is a reference type, with 'mut' if the subExpr is an
+  // LValue.
+  Type subExprType = expr->getSubExpr()->getType();
+  bool isMut = subExprType->isLValue();
+  expr->setType(ReferenceType::get(subExprType->getRValue(), isMut));
+  return expr;
+}
+
+Expr *ExprChecker::checkUnaryLNot(UnaryExpr *expr) {
+  // Unary ! requires that the subexpression's type is a boolean type.
+  Type subExprTy = expr->getSubExpr()->getType();
+  if (!subExprTy->getRValue()->getCanonicalType()->is<BoolType>()) {
+    diagnoseBadUnaryExpr(expr);
+    return nullptr;
+  }
+  // The type of the expr is the type of its subexpression, minus LValues.
+  // (It isn't just 'bool' so sugar is preserved).
+  expr->setType(subExprTy);
+  return expr;
+}
+
+Expr *ExprChecker::checkUnaryNot(UnaryExpr *expr) {
+  // Unary ~ requires that the subexpression's type is an integer type or
+  // integer type variable.
+  Type subExprTy = expr->getSubExpr()->getType();
+  if (!isIntegerTypeOrIntegerTypeVariable(
+          subExprTy->getRValue()->getCanonicalType())) {
+    diagnoseBadUnaryExpr(expr);
+    return nullptr;
+  }
+  // The type of the expr is the type of its subexpression, minus LValues.
+  // Note: We need to keep the type variables intact so things like "let x: i8 =
+  // ~10" can work (= 10 correctly inferred to i8)
+  expr->setType(subExprTy->getRValue());
+  return expr;
 }
 
 Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
@@ -279,14 +453,14 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
     ReferenceType *ref = lookupTy->getRValue()->getAs<ReferenceType>();
     if (expr->isArrow()) {
       if (!ref) {
-        // It's not a reference type, emit a diagnostic: we want to point at the
-        // operator & highlight the base expression fully.
+        // It's not a reference type, emit a diagnostic: we want to point at
+        // the operator & highlight the base expression fully.
         diagnose(expr->getOpLoc(), diag::base_operand_of_arrow_isnt_ref_ty)
             .highlight(expr->getBase()->getSourceRange());
         return nullptr;
       }
-      // It's indeed a reference type, and we'll look into the pointee type, and
-      // the mutability depends on the mutability of the ref.
+      // It's indeed a reference type, and we'll look into the pointee type,
+      // and the mutability depends on the mutability of the ref.
       lookupTy = ref->getPointeeType();
       isMutable = ref->isMut();
     }
@@ -350,8 +524,8 @@ Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
 }
 
 Expr *ExprChecker::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
-  // integer literals have a "float" type variable that'll default to i32 unless
-  // unified with another floating point type.
+  // integer literals have a "float" type variable that'll default to i32
+  // unless unified with another floating point type.
   expr->setType(cs.createIntegerTypeVariable());
   return expr;
 }
@@ -457,8 +631,8 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
 
   // Start with the 'then' expr - the one between '?' and ':'
   if (!cs.unify(thenTy, exprTV))
-    // Since the TV is general, unification should never fail here since the TV
-    // is unbound at this point
+    // Since the TV is general, unification should never fail here since the
+    // TV is unbound at this point
     llvm_unreachable("First unification failed?");
 
   // And now the else - the expr after ':'
@@ -495,17 +669,38 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
           .highlight(expr->getSubExpr()->getSourceRange());
     return nullptr;
   }
-  // If it's indeed a maybe type, the type of this expression is the value type
-  // of the 'maybe'.
+  // If it's indeed a maybe type, the type of this expression is the value
+  // type of the 'maybe'.
   expr->setType(maybe->getValueType());
   return expr;
 }
 
 Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) { return nullptr; }
 
-Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) { return nullptr; }
+Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) {
+  using UOp = UnaryOperatorKind;
+  // Don't bother checking if the subexpression has an error type
+  if (expr->getSubExpr()->getType()->hasErrorType())
+    return nullptr;
 
-//===- ExprCheckerEpilogue ------------------------------------------------===//
+  switch (expr->getOpKind()) {
+  case UOp::Plus:
+  case UOp::Minus:
+    return checkUnaryPlusOrMinus(expr);
+  case UOp::AddressOf:
+    return checkUnaryAddressOf(expr);
+  case UOp::Deref:
+    return checkUnaryDereference(expr);
+  case UOp::Not:
+    return checkUnaryNot(expr);
+  case UOp::LNot:
+    return checkUnaryLNot(expr);
+  }
+  llvm_unreachable("Unknown UnaryOperatorKind");
+}
+
+//===- ExprCheckerEpilogue
+//------------------------------------------------===//
 
 class ExprCheckerEpilogue : public ASTChecker, public ASTWalker {
 public:
@@ -565,10 +760,11 @@ public:
   }
 };
 
-//===- ImplicitConversionBuilder ------------------------------------------===//
+//===- ImplicitConversionBuilder
+//------------------------------------------===//
 
-/// The ImplicitConversionBuilder attempts to insert implicit conversions inside
-/// an expression in order to make it convert to a certain type.
+/// The ImplicitConversionBuilder attempts to insert implicit conversions
+/// inside an expression in order to make it convert to a certain type.
 ///
 ///  When the ImplicitConversionBuilder succeeds,
 /// "ConstraintSystem::unify(destType, expr->getType())" will succeed.
@@ -644,8 +840,8 @@ private:
 
     // Check if we can insert an ImplicitMaybeConversionExpr
     if (MaybeType *toMaybe = destType->getAs<MaybeType>()) {
-      // If the MaybeType's ValueType is another MaybeType, just recurse first.
-      // Perhaps we're facing nested maybe types.
+      // If the MaybeType's ValueType is another MaybeType, just recurse
+      // first. Perhaps we're facing nested maybe types.
       Type valueType = toMaybe->getValueType();
       if (valueType->getCanonicalType()->is<MaybeType>())
         expr = visitExpr(expr, valueType);
@@ -654,9 +850,9 @@ private:
       // expr's type is "null", insert the ImplicitMaybeConversionExpr.
       Type exprTy = expr->getType();
       if (exprTy->isNullType() || cs.unify(toMaybe->getValueType(), exprTy)) {
-        // The Type of the ImplicitMaybeConversionExpr is the destination type.
-        // for instance, in "let : maybe Foo = 0" where "Foo" is i32, we want
-        // the the implicit conversion to have a "maybe Foo" type.
+        // The Type of the ImplicitMaybeConversionExpr is the destination
+        // type. for instance, in "let : maybe Foo = 0" where "Foo" is i32, we
+        // want the the implicit conversion to have a "maybe Foo" type.
         expr = new (ctxt) ImplicitMaybeConversionExpr(expr, toMaybe);
         addedImplicitConversion = true;
       }
