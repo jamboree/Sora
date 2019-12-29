@@ -164,26 +164,16 @@ public:
     else if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
       return setOrUnifySubstitution(otherTV, type);
 
+    // If both types are canonically equal, unification succeeds.
+    if (type->getCanonicalType() == other->getCanonicalType())
+      return true;
+
     type = type->getDesugaredType();
     other = other->getDesugaredType();
-
-    // If both types are just built-in types, compare them using the
-    // builtinTypeComparator.
-    {
-      auto builtinType = type->getCanonicalType()->getAs<BuiltinType>();
-      auto builtinOther = other->getCanonicalType()->getAs<BuiltinType>();
-      if (builtinType && builtinOther)
-        return options.builtinTypeComparator(builtinType, builtinOther);
-    }
 
     // Else, we must visit the types to check that their structure matches.
     if (type->getKind() != other->getKind())
       return false;
-
-    // Check if they're the same types, if they are, they're considered equal
-    // and we don't need to do anything else.
-    if (type.getPtr() == other.getPtr())
-      return true;
 
     switch (type->getKind()) {
 #define TYPE(ID, PARENT)                                                       \
@@ -195,12 +185,9 @@ public:
     llvm_unreachable("Unknown node");
   }
 
+  /// Builtin types must be strictly equal!
 #define BUILTIN_TYPE(TYPE)                                                     \
-  bool visit##TYPE(TYPE *type, TYPE *other) {                                  \
-    llvm_unreachable(                                                          \
-        "visit() on a builtin type should never be called - Builtin Types "    \
-        "are directly handled by unify()!");                                   \
-  }
+  bool visit##TYPE(TYPE *type, TYPE *other) { return false; }
 
   BUILTIN_TYPE(IntegerType)
   BUILTIN_TYPE(FloatType)

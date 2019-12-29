@@ -146,11 +146,6 @@ public:
 
 /// Options for type unification
 struct UnificationOptions {
-  /// Used to compare 2 built-in types.
-  std::function<bool(const BuiltinType *, const BuiltinType *)>
-      builtinTypeComparator =
-          [](const BuiltinType *a, const BuiltinType *b) { return a == b; };
-
   /// Whether LValues are ignored.
   /// e.g. if true, unification will succeed for "@lvalue i32" and"i32", if set
   /// to false, it'll fail.
