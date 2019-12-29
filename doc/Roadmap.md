@@ -49,6 +49,8 @@ Now that we got a solid foundation, we can add the more advanced stuff. These wi
 
 **Note:** Most of the features listed here are relatively vague. I don't have a real plan for their semantics yet. I just know that I may implement them someday.
 
+- Traits
+- Generics
 - Struct
   - Mostly Rust-like
     - Instantiate with `Foo{ field: value }`
@@ -60,12 +62,11 @@ Now that we got a solid foundation, we can add the more advanced stuff. These wi
   - Semantics of strings & string literals TBD
 - Includes/Modules/Whatever: Allow the user to compile multiple files
   - Semantics TBD
-- Begin writing a standard library
+- Basic Standard Library
 - Typealiases
-- `maybe` type
 - union/sum-type
-  - Semantics and Syntax TBD. Ideally, I'd want both a tagged and untagged union type.
-- Functions as first-class citizens: function type & closures.
+  - Semantics and Syntax TBD. Ideally, I'd want both a tagged and untagged union type. Perhaps `enum` and `unchecked enum`?
+- Functions as first-class citizens: function types & closures.
   - Semantics TBD, but it's probably going to be straightforward (Closures with a Rust-like syntax)
 - More advanced C interoperability
   - Semantics TBD (It should be a bit more advanced and capable of importing most C functions)
@@ -78,8 +79,6 @@ Now that we got a solid foundation, we can add the more advanced stuff. These wi
 
 **Note:** Ditto Part 2, but much worse. They're vague ideas about complex stuff; things I know I want to have but that take time to figure out and implement. Everything listed here is TBD, both for syntax and semantics. This is close to a "wish list", so absolutely no guarantees are made.
 
-- Traits
-- Generics
 - Hygienic Macros
 - Importing C/CPP headers through Clang (for the FFI)
 
