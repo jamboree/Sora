@@ -89,6 +89,14 @@ TEST_F(TypeTest, typeProperties) {
   EXPECT_FALSE(tyVar->hasErrorType());
 }
 
+TEST_F(TypeTest, ReferenceTypeWithoutMut) {
+  ReferenceType *immut = ReferenceType::get(ctxt->i32Type, false);
+  ReferenceType *mut = ReferenceType::get(ctxt->i32Type, true);
+
+  EXPECT_EQ(immut, immut->withoutMut());
+  EXPECT_EQ(immut, mut->withoutMut());
+}
+
 TEST_F(TypeTest, TupleType) {
   Type i32 = ctxt->i32Type;
   Type emptyTuple = TupleType::getEmpty(*ctxt);

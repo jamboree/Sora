@@ -412,6 +412,13 @@ public:
   Type getPointeeType() const { return pointeeAndIsMut.getPointer(); }
   bool isMut() const { return pointeeAndIsMut.getInt(); }
 
+  /// \returns this ReferenceType without the 'mut' flag set.
+  ReferenceType *withoutMut() const {
+    if (isMut())
+      return ReferenceType::get(getPointeeType(), false);
+    return const_cast<ReferenceType *>(this);
+  }
+
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Reference;
   }
