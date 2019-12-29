@@ -29,7 +29,7 @@ public:
   }
 
 #define VISIT_METHOD(NODE, PARENT)                                             \
-  Rtr visit##NODE##Type(NODE *node, Args... args) {                            \
+  Rtr visit##NODE##Type(NODE##Type *node, Args... args) {                            \
     return static_cast<Derived *>(this)->visit##PARENT(                        \
         node, ::std::forward<Args>(args)...);                                  \
   }
