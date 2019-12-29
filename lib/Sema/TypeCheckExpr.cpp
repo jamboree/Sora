@@ -567,25 +567,11 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   if (expr->getSubExpr()->getType()->hasErrorType() || toType->hasErrorType())
     return expr;
 
-  // Check if cast is legal:
-
-  // First, insert potential implicit conversions
+  // Insert potential implicit conversions
   expr->setSubExpr(tryInsertImplicitConversions(expr->getSubExpr(), toType));
 
-  // Second, unify with a custom comparator.
-  UnificationOptions options;
-  // Use a custom comparator
-  options.builtinTypeComparator = [&](const BuiltinType *a,
-                                      const BuiltinType *b) -> bool {
-    // Allow conversion between integer widths/signedness
-    // Allow conversion between float widths as well
-    // Allow "useless" conversions (same type to same type)
-    // TODO: int to bool conversion?
-    return (isa<IntegerType>(a) && isa<IntegerType>(b)) ||
-           (isa<FloatType>(a) && isa<FloatType>(b)) || (a == b);
-  };
-  // Unify the types
-  if (!cs.unify(expr->getSubExpr()->getType(), toType, options)) {
+  // Then check if the conversion can happen
+  if (!tc.canExplicitlyCast(cs, expr->getSubExpr()->getType(), toType)) {
     // When unification fails, conversion isn't possible
 
     // For the diagnostic, use the simplified type of the subexpression w/o

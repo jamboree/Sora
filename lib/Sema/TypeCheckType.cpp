@@ -9,11 +9,12 @@
 
 #include "TypeChecker.hpp"
 
+#include "ConstraintSystem.hpp"
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/NameLookup.hpp"
 #include "Sora/AST/TypeRepr.hpp"
+#include "Sora/AST/TypeVisitor.hpp"
 #include "Sora/AST/Types.hpp"
-#include <vector>
 
 using namespace sora;
 
@@ -72,6 +73,106 @@ public:
 };
 } // namespace
 
+//===- ExplicitTypeCastChecker --------------------------------------------===//
+
+/// The TypeCastCheckers checks that a cast from a given type to another type is
+/// valid.
+class ExplicitTypeCastChecker
+    : public ASTChecker,
+      public TypeVisitor<ExplicitTypeCastChecker, bool, Type> {
+  using Parent = TypeVisitor<ExplicitTypeCastChecker, bool, Type>;
+
+public:
+  ExplicitTypeCastChecker(TypeChecker &tc, ConstraintSystem &cs)
+      : ASTChecker(tc), cs(cs) {}
+
+  ConstraintSystem &cs;
+
+  bool visit(Type from, Type to) {
+    assert(!to->hasTypeVariable() && !to->hasErrorType() &&
+           "the 'to' type should be a bound, error-free type!");
+    assert(!from->hasErrorType() &&
+           "the 'from' types shouldn't contain ErrorTypes!");
+
+    // Ignore sugar & RValues on both sides.
+    from = from->getRValue()->getDesugaredType();
+    to = to->getRValue()->getDesugaredType();
+
+    // If the types are canonically equal, it's valid
+    if (from->getCanonicalType() == to->getCanonicalType())
+      return true;
+
+    // Else we must visit the 'from' type
+    return Parent::visit(from, to);
+  }
+
+  // Note: visit methods are only called when the types are already known to not
+  // be strictly equal. They should return true if the conversion can happen,
+  // false otherwise.
+
+  bool visitBuiltinType(BuiltinType *from, Type to) {
+    // We allow integer <-> float conversions, no matter the width/signedness.
+    if (isa<IntegerType>(from) || isa<FloatType>(from))
+      return to->is<IntegerType>() || to->is<FloatType>();
+    // Else the types must be strictly equal
+    return false;
+  }
+
+  bool visitReferenceType(ReferenceType *from, Type to) {
+    // We can't convert reference types between each other. If they're not
+    // strictly equal, conversion can't happen.
+    return false;
+  }
+
+  bool visitMaybeType(MaybeType *from, Type to) {
+    // We can only convert a maybe type to another maybe type, and only if the
+    // object types can also be converted.
+    if (MaybeType *toMaybe = to->getAs<MaybeType>())
+      return visit(from->getValueType(), toMaybe->getValueType());
+    return false;
+  }
+
+  bool visitTupleType(TupleType *from, Type to) {
+    // We can only convert a tuple type to another tuple type, and only they
+    // have the same number of elements and elements types can also be
+    // converted.
+    TupleType *toTuple = to->getAs<TupleType>();
+    if (!toTuple)
+      return false;
+    if (from->getNumElements() != toTuple->getNumElements())
+      return false;
+
+    size_t numElems = from->getNumElements();
+    for (size_t k = 0; k < numElems; ++k)
+      if (!visit(from->getElement(k), toTuple->getElement(k)))
+        return false;
+    return true;
+  }
+
+  bool visitFunctionType(FunctionType *from, Type to) {
+    // We can't convert function types between each other. If they're not
+    // strictly equal, conversion can't happen.
+    return false;
+  }
+
+  bool visitLValueType(LValueType *from, Type to) {
+    llvm_unreachable("LValues should be ignored!");
+  }
+
+  bool visitErrorType(ErrorType *from, Type to) {
+    llvm_unreachable("ErrorType are not allowed");
+  }
+
+  bool visitTypeVariableType(TypeVariableType *from, Type to) {
+    // If the TypeVariable has a substitution, check if we can convert to it
+    TypeVariableInfo &fromInfo = TypeVariableInfo::get(from);
+    if (fromInfo.hasSubstitution())
+      return visit(fromInfo.getSubstitution(), to);
+    // Else just unify
+    return cs.unify(from, to);
+  }
+};
+
 //===- TypeChecker --------------------------------------------------------===//
 
 void TypeChecker::resolveTypeLoc(TypeLoc &tyLoc, SourceFile &file) {
@@ -87,6 +188,10 @@ Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
   Type result = resolver.visit(tyRepr);
   assert(result);
   return result;
+}
+
+bool TypeChecker::canExplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
+  return ExplicitTypeCastChecker(*this, cs).visit(from, to);
 }
 
 //===- ASTChecker ---------------------------------------------------------===//

@@ -9,7 +9,14 @@ func intCast() {
   // CHECK: CastExpr type=u16 asLoc=line:10:5 useless
   0 as u16
 
-  // TODO: int-to-float, bool-to-int, bool-to-float, etc.
+  // Cannot cast through references
+  let refI8: &i8
+  refI8 as &i16                   // expect-error: cannot cast value of type '&i8' to '&i16'
+  (refI8, refI8) as (&i16, &i16)  // expect-error: cannot cast value of type '(&i8, &i8)' to '(&i16, &i16)'
+
+  // Can cast through maybe types
+  let maybeI8: maybe i8 = 0
+  (maybeI8, maybeI8) as (maybe i16, maybe i16)
 }
 
 // Test that those conversion work with added implicit casts

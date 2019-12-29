@@ -123,6 +123,11 @@ public:
   /// \returns the type of \p tyRepr, or ErrorType on failure.
   Type resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file);
 
+  /// \returns true if \p from can be explicitly cast to \p to.
+  /// \p to must not contain an error type or type variable.
+  /// \p from must not contain an error type.
+  bool canExplicitlyCast(ConstraintSystem &cs, Type from, Type to);
+
   /// \returns whether we can emit a diagnostic involving \p type
   static bool canDiagnose(Type type);
 
