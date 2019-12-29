@@ -29,12 +29,12 @@ public:
   }
 
 #define VISIT_METHOD(NODE, PARENT)                                             \
-  Rtr visit##NODE(NODE *node, Args... args) {                                  \
+  Rtr visit##NODE##Type(NODE *node, Args... args) {                            \
     return static_cast<Derived *>(this)->visit##PARENT(                        \
         node, ::std::forward<Args>(args)...);                                  \
   }
-#define TYPE(KIND, PARENT) VISIT_METHOD(KIND##Type, PARENT)
-#define ABSTRACT_TYPE(KIND, PARENT) VISIT_METHOD(KIND##Type, PARENT)
+#define TYPE(KIND, PARENT) VISIT_METHOD(KIND, PARENT)
+#define ABSTRACT_TYPE(KIND, PARENT) VISIT_METHOD(KIND, PARENT)
 #include "Sora/AST/TypeNodes.def"
 #undef VISIT_METHOD
 };
