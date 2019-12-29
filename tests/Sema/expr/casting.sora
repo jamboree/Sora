@@ -11,3 +11,15 @@ func intCast() {
 
   // TODO: int-to-float, bool-to-int, bool-to-float, etc.
 }
+
+// Test that those conversion work with added implicit casts
+func implCast(a: &mut i8, b: &i8) {
+  a as &i8
+  a as &mut i8     
+  b as &i8
+  b as &mut i8        // expect-error: cannot cast value of type '&i8' to '&mut i8'
+  a as maybe &i8
+  a as maybe &mut i8 
+  b as maybe &i8
+  b as maybe &mut i8  // expect-error: cannot cast value of type '&i8' to 'maybe &mut i8'
+}

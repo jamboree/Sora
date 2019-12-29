@@ -183,6 +183,10 @@ public:
     return {true, expr};
   }
 
+  Expr *tryInsertImplicitConversions(Expr *expr, Type toType) {
+    return tc.tryInsertImplicitConversions(cs, expr, toType);
+  }
+
   bool isNumericTypeOrNumericTypeVariable(Type type) {
     return isIntegerTypeOrIntegerTypeVariable(type) ||
            isFloatTypeOrFloatTypeVariable(type);
@@ -552,8 +556,6 @@ Expr *ExprChecker::visitNullLiteralExpr(NullLiteralExpr *expr) {
 Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   // Resolve the type after the 'as'.
   tc.resolveTypeLoc(expr->getTypeLoc(), getSourceFile());
-
-  Type fromType = expr->getSubExpr()->getType();
   Type toType = expr->getTypeLoc().getType();
 
   // The type of the CastExpr is always the 'to' type, even if the from/toType
@@ -562,10 +564,15 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
 
   // Don't bother checking if the cast is legit if there's an ErrorType
   // somewhere.
-  if (fromType->hasErrorType() || toType->hasErrorType())
+  if (expr->getSubExpr()->getType()->hasErrorType() || toType->hasErrorType())
     return expr;
 
-  // Check if cast is legal
+  // Check if cast is legal:
+
+  // First, insert potential implicit conversions
+  expr->setSubExpr(tryInsertImplicitConversions(expr->getSubExpr(), toType));
+
+  // Second, unify with a custom comparator.
   UnificationOptions options;
   // Use a custom comparator
   options.builtinTypeComparator = [&](const BuiltinType *a,
@@ -577,14 +584,16 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
     return (isa<IntegerType>(a) && isa<IntegerType>(b)) ||
            (isa<FloatType>(a) && isa<FloatType>(b)) || (a == b);
   };
-  // Unify the Canonical types
-  if (!cs.unify(fromType->getCanonicalType(), toType->getCanonicalType(),
-                options)) {
-    // Use the simplified "fromType" in the diagnostic
-    Type fromTypeSimplified = cs.simplifyType(fromType);
-    // Emit the diagnostic
+  // Unify the types
+  if (!cs.unify(expr->getSubExpr()->getType(), toType, options)) {
+    // When unification fails, conversion isn't possible
+
+    // For the diagnostic, use the simplified type of the subexpression w/o
+    // implicit conversions
+    Type fromType = cs.simplifyType(
+        expr->getSubExpr()->ignoreImplicitConversions()->getType());
     diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
-             fromTypeSimplified, toType)
+             fromType, toType)
         .highlight(expr->getAsLoc())
         .highlight(expr->getTypeLoc().getSourceRange());
   }
