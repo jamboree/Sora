@@ -389,7 +389,8 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
 }
 
 ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
-  assert(pointee && "pointee can't be null!");
+  assert(pointee && "pointee type can't be null!");
+  assert(!pointee->isLValue() && "pointee type can't be an LValue!");
   ASTContext &ctxt = pointee->getASTContext();
 
   size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
@@ -405,6 +406,7 @@ ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
 
 MaybeType *MaybeType::get(Type valueType) {
   assert(valueType && "value type is null");
+  assert(!valueType->isLValue() && "value type can't be an LValue!");
   ASTContext &ctxt = valueType->getASTContext();
 
   auto props = valueType->getTypeProperties();
@@ -465,6 +467,7 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
 
 LValueType *LValueType::get(Type objectType) {
   assert(objectType && "object type is null");
+  assert(!objectType->isLValue() && "LValues can't be nested!");
   ASTContext &ctxt = objectType->getASTContext();
 
   auto props = objectType->getTypeProperties();
@@ -479,12 +482,14 @@ LValueType *LValueType::get(Type objectType) {
 
 FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   assert(rtr && "return type is null");
+  assert(!rtr->isLValue() && "return type can't be an LValue");
   ASTContext &ctxt = rtr->getASTContext();
 
   TypeProperties props = rtr->getTypeProperties();
   bool isCanonical = rtr->isCanonical();
   for (Type arg : args) {
     assert(arg && "arg type is null");
+    assert(!arg->isLValue() && "arg type can't be an LValue!");
     isCanonical &= arg->isCanonical();
     props |= arg->getTypeProperties();
   }
