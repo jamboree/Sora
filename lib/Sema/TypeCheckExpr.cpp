@@ -699,8 +699,7 @@ Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) {
   llvm_unreachable("Unknown UnaryOperatorKind");
 }
 
-//===- ExprCheckerEpilogue
-//------------------------------------------------===//
+//===- ExprCheckerEpilogue ------------------------------------------------===//
 
 class ExprCheckerEpilogue : public ASTChecker, public ASTWalker {
 public:
@@ -760,14 +759,10 @@ public:
   }
 };
 
-//===- ImplicitConversionBuilder
-//------------------------------------------===//
+//===- ImplicitConversionBuilder ------------------------------------------===//
 
 /// The ImplicitConversionBuilder attempts to insert implicit conversions
-/// inside an expression in order to make it convert to a certain type.
-///
-///  When the ImplicitConversionBuilder succeeds,
-/// "ConstraintSystem::unify(destType, expr->getType())" will succeed.
+/// inside an expression in order to change its type to a desired type.
 class ImplicitConversionBuilder
     : private ExprVisitor<ImplicitConversionBuilder, Expr *, Type> {
 
@@ -786,6 +781,7 @@ public:
       return expr;
     // Else, visit the Expr
     expr = Inherited::visit(expr, destType);
+    assert(expr && "visit returned nullptr!");
     return expr;
   }
 
@@ -834,35 +830,51 @@ private:
   // For everything else, just try to insert an implicit conversion to type \p
   // destType.
   Expr *visitExpr(Expr *expr, Type destType) {
-    bool addedImplicitConversion = false;
-
     destType = destType->getRValue()->getDesugaredType();
 
-    // Check if we can insert an ImplicitMaybeConversionExpr
+    // If we want to convert to a "maybe" type, try to insert a
+    // ImplicitMaybeConversionExpr
     if (MaybeType *toMaybe = destType->getAs<MaybeType>()) {
-      // If the MaybeType's ValueType is another MaybeType, just recurse
-      // first. Perhaps we're facing nested maybe types.
       Type valueType = toMaybe->getValueType();
-      if (valueType->getCanonicalType()->is<MaybeType>())
-        expr = visitExpr(expr, valueType);
+      // First, recurse on the valuetype, so we can insert other implicit
+      // conversions if needed.
+      expr = visitExpr(expr, valueType);
 
+      Type exprTy = expr->getType();
       // If the Maybe Type's ValueType unifies w/ the expr's type, or if the
       // expr's type is "null", insert the ImplicitMaybeConversionExpr.
-      Type exprTy = expr->getType();
-      if (exprTy->isNullType() || cs.unify(toMaybe->getValueType(), exprTy)) {
+      if (exprTy->isNullType() || cs.unify(valueType, exprTy)) {
         // The Type of the ImplicitMaybeConversionExpr is the destination
         // type. for instance, in "let : maybe Foo = 0" where "Foo" is i32, we
         // want the the implicit conversion to have a "maybe Foo" type.
         expr = new (ctxt) ImplicitMaybeConversionExpr(expr, toMaybe);
-        addedImplicitConversion = true;
       }
+      return expr;
     }
 
-#ifndef NDEBUG
-    if (addedImplicitConversion)
-      assert(cs.unify(destType, expr->getType()) &&
-             "Added implicit conversions but still can't unify?");
-#endif
+    // If we want to convert to a reference type, check if we can insert a
+    // MutToImmutReferenceExpr.
+    if (ReferenceType *toRef = destType->getAs<ReferenceType>()) {
+      Type exprTy = expr->getType();
+      // Check if the Expression's type is also a ReferenceType
+      ReferenceType *exprRefTy =
+          exprTy->getRValue()->getDesugaredType()->getAs<ReferenceType>();
+      if (!exprRefTy)
+        return expr;
+
+      // Check if we're trying to go from '&mut' to '&'
+      //  - The type of the expr must be '&mut'
+      //  - The type that we wish to convert to must be '&'
+      if (!exprRefTy->isMut() || toRef->isMut())
+        return expr;
+
+      // Check if the pointee types are the same
+      if (!cs.unify(toRef->getPointeeType(), exprRefTy->getPointeeType()))
+        return expr;
+
+      // If everything's okay, insert the MutToImmutReferenceExpr.
+      return new (ctxt) MutToImmutReferenceExpr(expr, toRef->withoutMut());
+    }
 
     return expr;
   }

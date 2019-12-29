@@ -467,6 +467,18 @@ public:
   }
 };
 
+/// Represents an implicit conversion of '&mut T' into '&T' (removing 'mut' from
+/// the reference)
+class MutToImmutReferenceExpr : public ImplicitConversionExpr {
+public:
+  MutToImmutReferenceExpr(Expr *expr, Type type = Type())
+      : ImplicitConversionExpr(ExprKind::MutToImmutReference, expr, type) {}
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::MutToImmutReference;
+  }
+};
+
 /// Represents an error expr.
 ///
 /// This is created when Sema cannot resolve an UnresolvedExpr.

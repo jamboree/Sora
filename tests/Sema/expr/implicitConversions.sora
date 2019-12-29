@@ -29,3 +29,13 @@ func foo() {
   // CHECK-NEXT:   NullLiteralExpr type=null loc=line:30:28
   let _: maybe maybe i32 = null
 }
+
+func refs(a: &mut i8) {
+  // CHECK: MutToImmutReferenceExpr implicit type=&i8
+  // CHECK-NEXT: DeclRefExpr type=&mut i8 loc=line:36:16 decl='a'@line:33:11
+  let _: &i8 = a
+  // CHECK:     ImplicitMaybeConversionExpr implicit type=maybe &i8
+  // CHECK-NEXT:  MutToImmutReferenceExpr implicit type=&i8
+  // CHECK-NEXT:    DeclRefExpr type=&mut i8 loc=line:40:22 decl='a'@line:33:11
+  let _: maybe &i8 = a
+}

@@ -38,6 +38,7 @@ protected:
     boolLitExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLitExpr = new (*ctxt) NullLiteralExpr(beg);
     implicitMaybeConvExpr = new (*ctxt) ImplicitMaybeConversionExpr(begExpr);
+    mutToImmutRefExpr = new (*ctxt) MutToImmutReferenceExpr(begExpr);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
     castExpr = new (*ctxt)
         CastExpr(begExpr, mid, new (*ctxt) IdentifierTypeRepr(end, {}));
@@ -68,6 +69,7 @@ protected:
   Expr *boolLitExpr;
   Expr *nullLitExpr;
   Expr *implicitMaybeConvExpr;
+  Expr *mutToImmutRefExpr;
   Expr *errorExpr;
   Expr *castExpr;
   Expr *tupleEltExpr;
@@ -106,6 +108,9 @@ TEST_F(ExprTest, rtti) {
 
   EXPECT_TRUE(isa<ImplicitMaybeConversionExpr>(implicitMaybeConvExpr));
   EXPECT_TRUE(isa<ImplicitConversionExpr>(implicitMaybeConvExpr));
+
+  EXPECT_TRUE(isa<MutToImmutReferenceExpr>(mutToImmutRefExpr));
+  EXPECT_TRUE(isa<ImplicitConversionExpr>(mutToImmutRefExpr));
 
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
 
