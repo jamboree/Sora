@@ -1,33 +1,33 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func foo() {
-  // CHECK: VarPattern type=<null_type> loc=line:6:7 identifier=a
-  // CHECK-NEXT: VarDecl type=<null_type> identifier=a identifierLoc=line:6:7 immutable
+  // CHECK: VarPattern type=<null_type> loc=line:[[@LINE+2]]:7 identifier=a
+  // CHECK-NEXT: VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+1]]:7 immutable
   let a
-  // CHECK: MutPattern type=<null_type> mutLoc=line:10:7
-  // CHECK-NEXT: VarPattern type=<null_type> loc=line:10:11 identifier=a
-  // CHECK-NEXT:  VarDecl type=<null_type> identifier=a identifierLoc=line:10:11 mutable
+  // CHECK: MutPattern type=<null_type> mutLoc=line:[[@LINE+3]]:7
+  // CHECK-NEXT: VarPattern type=<null_type> loc=line:[[@LINE+2]]:11 identifier=a
+  // CHECK-NEXT:  VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+1]]:11 mutable
   let mut a
-  // CHECK: DiscardPattern type=<null_type> loc=line:12:7
+  // CHECK: DiscardPattern type=<null_type> loc=line:[[@LINE+1]]:7
   let _
-  // CHECK: MutPattern type=<null_type> mutLoc=line:15:7
-  // CHECK-NEXT: DiscardPattern type=<null_type> loc=line:15:11
+  // CHECK: MutPattern type=<null_type> mutLoc=line:[[@LINE+2]]:7
+  // CHECK-NEXT: DiscardPattern type=<null_type> loc=line:[[@LINE+1]]:11
   let mut _
   // CHECK: TypedPattern
-  // CHECK-NEXT: MutPattern type=<null_type> mutLoc=line:26:7
-  // CHECK-NEXT:  TuplePattern type=<null_type> numElements=2 lParenLoc=line:26:11 rParenLoc=line:26:16
-  // CHECK-NEXT:   VarPattern type=<null_type> loc=line:26:12 identifier=a
-  // CHECK-NEXT:    VarDecl type=<null_type> identifier=a identifierLoc=line:26:12 mutable
-  // CHECK-NEXT:   VarPattern type=<null_type> loc=line:26:15 identifier=b
-  // CHECK-NEXT:    VarDecl type=<null_type> identifier=b identifierLoc=line:26:15 mutable
+  // CHECK-NEXT: MutPattern type=<null_type> mutLoc=line:[[@LINE+9]]:7
+  // CHECK-NEXT:  TuplePattern type=<null_type> numElements=2 lParenLoc=line:[[@LINE+8]]:11 rParenLoc=line:[[@LINE+8]]:16
+  // CHECK-NEXT:   VarPattern type=<null_type> loc=line:[[@LINE+7]]:12 identifier=a
+  // CHECK-NEXT:    VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+6]]:12 mutable
+  // CHECK-NEXT:   VarPattern type=<null_type> loc=line:[[@LINE+5]]:15 identifier=b
+  // CHECK-NEXT:    VarDecl type=<null_type> identifier=b identifierLoc=line:[[@LINE+4]]:15 mutable
   // CHECK-NEXT: TupleTypeRepr
-  // CHECK-NEXT:   IdentifierTypeRepr loc=line:26:21 identifier=i32
-  // CHECK-NEXT:   IdentifierTypeRepr loc=line:26:26 identifier=i32
+  // CHECK-NEXT:   IdentifierTypeRepr loc=line:[[@LINE+2]]:21 identifier=i32
+  // CHECK-NEXT:   IdentifierTypeRepr loc=line:[[@LINE+1]]:26 identifier=i32
   let mut (a, b) : (i32, i32)
   // CHECK: TypedPattern
-  // CHECK-NEXT: VarPattern type=<null_type> loc=line:31:7 identifier=a
-  // CHECK-NEXT:   VarDecl type=<null_type> identifier=a identifierLoc=line:31:7 immutable
-  // CHECK-NEXT: IdentifierTypeRepr loc=line:31:10
+  // CHECK-NEXT: VarPattern type=<null_type> loc=line:[[@LINE+3]]:7 identifier=a
+  // CHECK-NEXT:   VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+2]]:7 immutable
+  // CHECK-NEXT: IdentifierTypeRepr loc=line:[[@LINE+1]]:10
   let a: i3
 }
 

@@ -2,40 +2,40 @@
 
 func foo() {
   // CHECK: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:6:22
+  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:22
   let _: maybe i32 = 0
   // CHECK: ImplicitMaybeConversionExpr implicit type=maybe maybe i32
   // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
   // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:10:28
   let _: maybe maybe i32 = 0
   // CHECK:      ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:20:74
+  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:[[@LINE+8]]:74
   // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:20:77
-  // CHECK-NEXT: TupleExpr type=(maybe i32, maybe i32) numElements=2 lParenLoc=line:20:80 rParenLoc=line:20:85
+  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:[[@LINE+6]]:77
+  // CHECK-NEXT: TupleExpr type=(maybe i32, maybe i32) numElements=2 lParenLoc=line:[[@LINE+5]]:80 rParenLoc=line:[[@LINE+5]]:85
   // CHECK-NEXT:   ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:20:81
+  // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:[[@LINE+3]]:81
   // CHECK-NEXT:   ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:20:84
+  // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:84
   let (_, _, (_, _)) : (maybe i32, maybe i32, (maybe i32, maybe i32)) = (0, 0, (0, 0))
   // CHECK: ImplicitMaybeConversionExpr implicit type=maybe void
-  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:23:23 rParenLoc=line:23:24
+  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:23 rParenLoc=line:[[@LINE+1]]:24
   let _: maybe void = ()
   // CHECK: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT: NullLiteralExpr type=null loc=line:26:22
+  // CHECK-NEXT: NullLiteralExpr type=null loc=line:[[@LINE+1]]:22
   let _: maybe i32 = null
   // CHECK: ImplicitMaybeConversionExpr implicit type=maybe maybe i32
   // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   NullLiteralExpr type=null loc=line:30:28
+  // CHECK-NEXT:   NullLiteralExpr type=null loc=line:[[@LINE+1]]:28
   let _: maybe maybe i32 = null
 }
 
 func refs(a: &mut i8) {
   // CHECK: MutToImmutReferenceExpr implicit type=&i8
-  // CHECK-NEXT: DeclRefExpr type=&mut i8 loc=line:36:16 decl='a'@line:33:11
+  // CHECK-NEXT: DeclRefExpr type=&mut i8 loc=line:[[@LINE+1]]:16 decl='a'@line:[[@LINE-2]]:11
   let _: &i8 = a
   // CHECK:     ImplicitMaybeConversionExpr implicit type=maybe &i8
   // CHECK-NEXT:  MutToImmutReferenceExpr implicit type=&i8
-  // CHECK-NEXT:    DeclRefExpr type=&mut i8 loc=line:40:22 decl='a'@line:33:11
+  // CHECK-NEXT:    DeclRefExpr type=&mut i8 loc=line:[[@LINE+1]]:22 decl='a'@line:[[@LINE-6]]:11
   let _: maybe &i8 = a
 }

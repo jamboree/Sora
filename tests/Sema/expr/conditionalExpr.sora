@@ -1,25 +1,25 @@
 // RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
 
 func foo(cond: bool) {
-  // CHECK: ConditionalExpr type=i8 questionLoc=line:8:20 colonLoc=line:8:24
-  // CHECK-NEXT: DeclRefExpr type=bool loc=line:8:15 decl='cond'@line:3:10
-  // CHECK-NEXT: IntegerLiteralExpr type=i8 loc=line:8:22 str='0' rawValue=0
-  // CHECK-NEXT: IntegerLiteralExpr type=i8 loc=line:8:26 str='1' rawValue=1
+  // CHECK: ConditionalExpr type=i8 questionLoc=line:[[@LINE+4]]:20 colonLoc=line:[[@LINE+4]]:24
+  // CHECK-NEXT: DeclRefExpr type=bool loc=line:[[@LINE+3]]:15 decl='cond'@line:[[@LINE-2]]:10
+  // CHECK-NEXT: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:22 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:26 str='1' rawValue=1
   let _: i8 = cond ? 0 : 1
-  // CHECK: ConditionalExpr type=<error_type> questionLoc=line:13:21 colonLoc=line:13:27
-  // CHECK-NEXT: DeclRefExpr type=bool loc=line:13:16 decl='cond'@line:3:10
-  // CHECK-NEXT: FloatLiteralExpr type=f32 loc=line:13:23 str='0.0'
-  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:13:29 str='1' rawValue=1
+  // CHECK: ConditionalExpr type=<error_type> questionLoc=line:[[@LINE+4]]:21 colonLoc=line:[[@LINE+4]]:27
+  // CHECK-NEXT: DeclRefExpr type=bool loc=line:[[@LINE+3]]:16 decl='cond'@line:[[@LINE-7]]:10
+  // CHECK-NEXT: FloatLiteralExpr type=f32 loc=line:[[@LINE+2]]:23 str='0.0'
+  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:29 str='1' rawValue=1
   let _: i16 = cond ? 0.0 : 1   // expect-error: result values in '? :' expression have different types: 'f32' and 'i32'
-  // CHECK: ConditionalExpr type=() questionLoc=line:18:21 colonLoc=line:18:26
-  // CHECK-NEXT: DeclRefExpr type=bool loc=line:18:16 decl='cond'@line:3:10
-  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:18:23 rParenLoc=line:18:24
-  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:18:28 rParenLoc=line:18:29
+  // CHECK: ConditionalExpr type=() questionLoc=line:[[@LINE+4]]:21 colonLoc=line:18:26
+  // CHECK-NEXT: DeclRefExpr type=bool loc=line:[[@LINE+3]]:16 decl='cond'@line:[[@LINE-12]]:10
+  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+2]]:23 rParenLoc=line:[[@LINE+2]]:24
+  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:28 rParenLoc=line:[[@LINE+1]]:29
   let _: i16 = cond ? () : ()   // expect-error: cannot convert value of type '()' to 'i16'
-  // CHECK: ConditionalExpr type=<error_type> questionLoc=line:23:21 colonLoc=line:23:25
-  // CHECK-NEXT: DeclRefExpr type=bool loc=line:23:16 decl='cond'@line:3:10
-  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:23:23 str='0' rawValue=0
-  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:23:27 rParenLoc=line:23:28
+  // CHECK: ConditionalExpr type=<error_type> questionLoc=line:[[@LINE+4]]:21 colonLoc=line:[[@LINE+4]]:25
+  // CHECK-NEXT: DeclRefExpr type=bool loc=line:[[@LINE+3]]:16 decl='cond'@line:[[@LINE-17]]:10
+  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:[[@LINE+2]]:23 str='0' rawValue=0
+  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:27 rParenLoc=line:[[@LINE+1]]:28
   let _: i16 = cond ? 0 : ()    // expect-error: result values in '? :' expression have different types: 'i32' and '()'
   let _ = 0 ? 1 : 2       // expect-error: value of type 'i32' cannot be used as a condition - value must have a 'bool' type
   let _ = () ? () : ()    // expect-error: value of type '()' cannot be used as a condition - value must have a 'bool' type

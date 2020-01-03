@@ -1,16 +1,16 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func whileStmt() {
-  // CHECK: WhileStmt whileLoc=line:7:3
+  // CHECK: WhileStmt whileLoc=line:[[@LINE+3]]:3
   // CHECK-NEXT: BooleanLiteralExpr
   // CHECK-NEXT: BlockStmt
   while true {}
-  // CHECK: WhileStmt whileLoc=line:12:3
+  // CHECK: WhileStmt whileLoc=line:[[@LINE+4]]:3
   // CHECK-NEXT: ParenExpr
   // CHECK-NEXT:  ParenExpr
   // CHECK-NEXT:   BooleanLiteralExpr
   while ((true)) {}
-  // CHECK: WhileStmt whileLoc=line:18:3
+  // CHECK: WhileStmt whileLoc=line:[[@LINE+5]]:3
   // CHECK-NEXT: LetDecl
   // CHECK-NEXT:  VarPattern
   // CHECK-NEXT:    VarDecl

@@ -1,34 +1,34 @@
 // RUN: %sorac -verify %s | %filecheck %s
 
-// CHECK: :4:12: error: expected '-'
+// CHECK: :[[@LINE+1]]:12: error: expected '-'
 // expect-1
 
-// CHECK: :7:11: error: expected number, 'remark', 'note', 'warning' or 'error'
+// CHECK: :[[@LINE+1]]:11: error: expected number, 'remark', 'note', 'warning' or 'error'
 // expect-cat
 
-// CHECK: :10:17: error: expected '+' or '-'
+// CHECK: :[[@LINE+1]]:17: error: expected '+' or '-'
 // expect-error@
 
-// CHECK: :13:18: error: offset number can't be zero
+// CHECK: :[[@LINE+1]]:18: error: offset number can't be zero
 // expect-error@+0
 
-// CHECK: :16:18: error: offset number can't be zero
+// CHECK: :[[@LINE+1]]:18: error: offset number can't be zero
 // expect-error@-0
 
-// CHECK: :19:16: error: expected ':' or '@'
+// CHECK: :[[@LINE+1]]:16: error: expected ':' or '@'
 // expect-error
 
-// CHECK: :22:4: error: cannot expect a diagnostic at a negative line number
+// CHECK: :[[@LINE+1]]:4: error: cannot expect a diagnostic at a negative line number
 // expect-error@-30: foobar
 
-// CHECK: :25:4: error: cannot expect a diagnostic at line 0
+// CHECK: :[[@LINE+1]]:4: error: cannot expect a diagnostic at line 0
 // expect-error@-25: foobar
 
-// CHECK: :28:4: error: expected diagnostic count must be greater than 1
+// CHECK: :[[@LINE+1]]:4: error: expected diagnostic count must be greater than 1
 // expect-1-error: foobar
 
-// CHECK: :31:4: error: expected diagnostic count must be greater than 1
+// CHECK: :[[@LINE+1]]:4: error: expected diagnostic count must be greater than 1
 // expect-0-error: foobar
 
-// CHECK: :34:4: error: diagnostic is expected at line 59 but the file's last line is line 35
+// CHECK: :[[@LINE+1]]:4: error: diagnostic is expected at line 59 but the file's last line is line 35
 // expect-error@+25: foobar

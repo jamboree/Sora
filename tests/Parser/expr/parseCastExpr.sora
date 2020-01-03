@@ -1,15 +1,15 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func correctCast() {
-  // CHECK: CastExpr type=<null_type> asLoc=line:7:5
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:7:3 str='0' rawValue=0
-  // CHECK-NEXT: IdentifierTypeRepr loc=line:7:8
+  // CHECK: CastExpr type=<null_type> asLoc=line:[[@LINE+3]]:5
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='0' rawValue=0
+  // CHECK-NEXT: IdentifierTypeRepr loc=line:[[@LINE+1]]:8
   0 as i32
-  // CHECK: CastExpr type=<null_type> asLoc=line:13:12
-  // CHECK-NEXT: CastExpr type=<null_type> asLoc=line:13:5
-  // CHECK-NEXT:    IntegerLiteralExpr type=<null_type> loc=line:13:3 str='0' rawValue=0
-  // CHECK-NEXT:    IdentifierTypeRepr loc=line:13:8
-  // CHECK-NEXT: IdentifierTypeRepr loc=line:13:15
+  // CHECK: CastExpr type=<null_type> asLoc=line:[[@LINE+5]]:12
+  // CHECK-NEXT: CastExpr type=<null_type> asLoc=line:[[@LINE+4]]:5
+  // CHECK-NEXT:    IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+3]]:3 str='0' rawValue=0
+  // CHECK-NEXT:    IdentifierTypeRepr loc=line:[[@LINE+2]]:8
+  // CHECK-NEXT: IdentifierTypeRepr loc=line:[[@LINE+1]]:15
   0 as i32 as i64
   0 as &mut (i32, i32)
 }

@@ -1,17 +1,17 @@
 // RUN: %sorac-typecheck -dump-ast %s | %filecheck %s
 
 func foo() {
-  // CHECK: TupleExpr type=() numElements=0 lParenLoc=line:5:3 rParenLoc=line:5:4
+  // CHECK: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:4
   ()
-  // CHECK: ParenExpr type=i32 lParenLoc=line:7:3 rParenLoc=line:7:5
+  // CHECK: ParenExpr type=i32 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:5
   (0)
-  // CHECK: TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:9:3 rParenLoc=line:9:8
+  // CHECK: TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:8
   (0, 1)
   let mut a = 0
-  // CHECK: ParenExpr type=@lvalue i32 lParenLoc=line:12:3 rParenLoc=line:12:5
+  // CHECK: ParenExpr type=@lvalue i32 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:5
   (a)
-  // CHECK: TupleExpr type=@lvalue (@lvalue i32, @lvalue i32) numElements=2 lParenLoc=line:14:3 rParenLoc=line:14:8
+  // CHECK: TupleExpr type=@lvalue (@lvalue i32, @lvalue i32) numElements=2 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:8
   (a, a)
-  // CHECK: TupleExpr type=(@lvalue i32, i32, @lvalue i32) numElements=3 lParenLoc=line:16:3 rParenLoc=line:16:11
+  // CHECK: TupleExpr type=(@lvalue i32, i32, @lvalue i32) numElements=3 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:11
   (a, 0, a)
 }

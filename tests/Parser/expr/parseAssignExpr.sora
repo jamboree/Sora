@@ -1,27 +1,27 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func assign() {
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:7:5
-  // CHECK-NEXT: DiscardExpr type=<null_type> loc=line:7:3
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:7:7
+  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:5
+  // CHECK-NEXT: DiscardExpr type=<null_type> loc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+1]]:7
   _ = a
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:11:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:11:3
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:11:7
+  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:5
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+1]]:7
   a = b
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:17:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:17:3
-  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:17:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:17:7
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:17:11
+  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+5]]:5
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+4]]:3
+  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:9
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+2]]:7
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:[[@LINE+1]]:11
   a = b = c
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:25:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:25:3
-  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:25:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:25:7
-  // CHECK-NEXT:  BinaryExpr type=<null_type> = (Assign) opLoc=line:25:13
-  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:25:11
-  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=d loc=line:25:15
+  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+7]]:5
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+6]]:3
+  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+5]]:9
+  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+4]]:7
+  // CHECK-NEXT:  BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:13
+  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:[[@LINE+2]]:11
+  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=d loc=line:[[@LINE+1]]:15
   a = b = c = d
 }
 

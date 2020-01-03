@@ -2,44 +2,44 @@
 
 func plusAndMinus(x: i8) {
   let mut y: u8 = 0
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:6:3
+  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +0
-  // CHECK: UnaryExpr type=i32 - (Minus) opLoc=line:8:3
+  // CHECK: UnaryExpr type=i32 - (Minus) opLoc=line:[[@LINE+1]]:3
   -0
-  // CHECK: UnaryExpr type=f32 + (Plus) opLoc=line:10:3
+  // CHECK: UnaryExpr type=f32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +1.1
-  // CHECK: UnaryExpr type=f32 - (Minus) opLoc=line:12:3
+  // CHECK: UnaryExpr type=f32 - (Minus) opLoc=line:[[@LINE+1]]:3
   -1.2
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:14:3
+  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +x
-  // CHECK: UnaryExpr type=i8 - (Minus) opLoc=line:16:3
+  // CHECK: UnaryExpr type=i8 - (Minus) opLoc=line:[[@LINE+1]]:3
   -x
-  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:18:3
+  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +y
-  // CHECK: UnaryExpr type=u8 - (Minus) opLoc=line:20:3
+  // CHECK: UnaryExpr type=u8 - (Minus) opLoc=line:[[@LINE+1]]:3
   -y
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:22:3
+  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(0)
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:24:3
+  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +((0))
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:26:3
+  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(((0)))
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:28:3
+  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(x)
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:30:3
+  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +((x))
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:32:3
+  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(((x)))
-  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:34:3
+  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(y)
-  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:36:3
+  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +((y))
-  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:38:3
+  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(((y)))
 
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:41:16
+  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:16
   let _: i8 = -0
-  // CHECK: IntegerLiteralExpr type=usize loc=line:43:24
+  // CHECK: IntegerLiteralExpr type=usize loc=line:[[@LINE+1]]:24
   let _: usize = -(+(-(0)))
 }
 
@@ -49,13 +49,13 @@ func dereference() {
   let c: &mut i32
   let mut d: &mut i32
 
-  // CHECK: UnaryExpr type=i32 * (Deref) opLoc=line:53:3
+  // CHECK: UnaryExpr type=i32 * (Deref) opLoc=line:[[@LINE+1]]:3
   *a
-  // CHECK: UnaryExpr type=i32 * (Deref) opLoc=line:55:3
+  // CHECK: UnaryExpr type=i32 * (Deref) opLoc=line:[[@LINE+1]]:3
   *b 
-  // CHECK: UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:57:3
+  // CHECK: UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:[[@LINE+1]]:3
   *c
-  // CHECK: UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:59:3
+  // CHECK: UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:[[@LINE+1]]:3
   *d
 }
 
@@ -64,17 +64,17 @@ func addressOf(x: i32) {
   let mut y = 0
   let tuple = (0, 1)
   let mut mutTuple = (0, 1)
-  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:68:3
+  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+1]]:3
   &x
-  // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:70:3
+  // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:[[@LINE+1]]:3
   &y
-  // CHECK: UnaryExpr type=&(i32, i32) & (AddressOf) opLoc=line:72:3
+  // CHECK: UnaryExpr type=&(i32, i32) & (AddressOf) opLoc=line:[[@LINE+1]]:3
   &tuple
-  // CHECK: UnaryExpr type=&mut (i32, i32) & (AddressOf) opLoc=line:74:3
+  // CHECK: UnaryExpr type=&mut (i32, i32) & (AddressOf) opLoc=line:[[@LINE+1]]:3
   &mutTuple
-  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:76:3
+  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+1]]:3
   &tuple.0
-  // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:78:3
+  // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:[[@LINE+1]]:3
   &mutTuple.0
 
   &0              // expect-error: cannot take the address of a literal
@@ -89,11 +89,11 @@ func addressOf(x: i32) {
 }
 
 func lNot(x: bool) {
-  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:93:3
+  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:[[@LINE+1]]:3
   !x
-  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:95:3
+  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:[[@LINE+1]]:3
   !false
-  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:97:3
+  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:[[@LINE+1]]:3
   !true
 
   !0              // expect-error: cannot use unary operator '!' on operand of type 'i32'
@@ -106,14 +106,14 @@ func not() {
   let a = 0
   let mut b = 0
 
-  // CHECK: UnaryExpr type=i32 ~ (Not) opLoc=line:110:3
+  // CHECK: UnaryExpr type=i32 ~ (Not) opLoc=line:[[@LINE+1]]:3
   ~a
-  // CHECK: UnaryExpr type=i32 ~ (Not) opLoc=line:112:3
+  // CHECK: UnaryExpr type=i32 ~ (Not) opLoc=line:[[@LINE+1]]:3
   ~b
 
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:115:16
+  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:16
   let _: i8 = ~0
-  // CHECK: IntegerLiteralExpr type=u8 loc=line:117:18
+  // CHECK: IntegerLiteralExpr type=u8 loc=line:[[@LINE+1]]:18
   let _: u8 = ~(~0)
 
   ~0.0       // expect-error: cannot use unary operator '~' on operand of type 'f32'

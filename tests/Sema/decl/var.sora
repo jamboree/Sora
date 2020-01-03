@@ -1,10 +1,10 @@
 // RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
 
 func foo() {
-  // CHECK: VarDecl type=<error_type> identifier=a identifierLoc=line:5:7 immutable
+  // CHECK: VarDecl type=<error_type> identifier=a identifierLoc=line:[[@LINE+1]]:7 immutable
   let a = null                         // expect-error:   cannot create a variable of type 'null'
-  // CHECK: VarDecl type=<error_type> identifier=x identifierLoc=line:9:8 immutable
-  // CHECK: VarDecl type=<error_type> identifier=y identifierLoc=line:9:11 immutable
-  // CHECK: VarDecl type=<error_type> identifier=z identifierLoc=line:9:14 immutable
+  // CHECK: VarDecl type=<error_type> identifier=x identifierLoc=line:[[@LINE+3]]:8 immutable
+  // CHECK: VarDecl type=<error_type> identifier=y identifierLoc=line:[[@LINE+2]]:11 immutable
+  // CHECK: VarDecl type=<error_type> identifier=z identifierLoc=line:[[@LINE+1]]:14 immutable
   let (x, y, z) = (null, null, null)   // expect-3-error: cannot create a variable of type 'null'
 }

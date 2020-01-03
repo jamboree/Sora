@@ -1,57 +1,57 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func suffix() {
-  // CHECK: UnresolvedMemberRefExpr type=<null_type> dot memberIdent=0 memberIdentLoc=line:6:7
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:6:3
+  // CHECK: UnresolvedMemberRefExpr type=<null_type> dot memberIdent=0 memberIdentLoc=line:[[@LINE+2]]:7
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo.0
-  // CHECK: UnresolvedMemberRefExpr type=<null_type> dot memberIdent=bar memberIdentLoc=line:9:7
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:9:3
+  // CHECK: UnresolvedMemberRefExpr type=<null_type> dot memberIdent=bar memberIdentLoc=line:[[@LINE+2]]:7
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo.bar
-  // CHECK: UnresolvedMemberRefExpr type=<null_type> arrow memberIdent=0 memberIdentLoc=line:12:8
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:12:3
+  // CHECK: UnresolvedMemberRefExpr type=<null_type> arrow memberIdent=0 memberIdentLoc=line:[[@LINE+2]]:8
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo->0
-  // CHECK: UnresolvedMemberRefExpr type=<null_type> arrow memberIdent=bar memberIdentLoc=line:15:8
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:15:3
+  // CHECK: UnresolvedMemberRefExpr type=<null_type> arrow memberIdent=bar memberIdentLoc=line:[[@LINE+2]]:8
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo->bar
-  // CHECK: ForceUnwrapExpr type=<null_type> exclaimLoc=line:18:6
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:18:3
+  // CHECK: ForceUnwrapExpr type=<null_type> exclaimLoc=line:[[@LINE+2]]:6
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo!
-  // CHECK: CallExpr type=<null_type> lParenLoc=line:21:6 rParenLoc=line:21:7 numArgs=0
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:21:3
+  // CHECK: CallExpr type=<null_type> lParenLoc=line:[[@LINE+2]]:6 rParenLoc=line:[[@LINE+2]]:7 numArgs=0
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo() 
-  // CHECK: CallExpr type=<null_type> lParenLoc=line:25:6 rParenLoc=line:25:8 numArgs=1
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:25:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:25:7 str='0' rawValue=0
+  // CHECK: CallExpr type=<null_type> lParenLoc=line:[[@LINE+3]]:6 rParenLoc=line:[[@LINE+3]]:8 numArgs=1
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:7 str='0' rawValue=0
   foo(0)
-  // CHECK: CallExpr type=<null_type> lParenLoc=line:30:6 rParenLoc=line:30:11 numArgs=2
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:30:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:30:7 str='1' rawValue=1
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:30:10 str='2' rawValue=2
+  // CHECK: CallExpr type=<null_type> lParenLoc=line:[[@LINE+4]]:6 rParenLoc=line:[[@LINE+4]]:11 numArgs=2
+  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+3]]:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:7 str='1' rawValue=1
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:10 str='2' rawValue=2
   foo(1, 2)
 
   // Shouldn't be treated as a call.
   // CHECK-NOT: CallExpr
-  // CHECK: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:35:3
+  // CHECK: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3
   foo 
-  // CHECK: TupleExpr type=<null_type> numElements=0 lParenLoc=line:37:3 rParenLoc=line:37:4
+  // CHECK: TupleExpr type=<null_type> numElements=0 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:37:4
   ()
 
   // Shouldn't be treated as unwrap expr.
   // CHECK-NOT: ForceUnwrapExpr
-  // CHECK: IntegerLiteralExpr type=<null_type> loc=line:42:3 str='0' rawValue=0
+  // CHECK: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3 str='0' rawValue=0
   0 
-  // CHECK: UnaryExpr type=<null_type> ! (LNot) opLoc=line:45:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:45:4 str='0' rawValue=0
+  // CHECK: UnaryExpr type=<null_type> ! (LNot) opLoc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
   !0
 }
 
 // test suffix chains
 func suffixChain() {
-  // CHECK: ForceUnwrapExpr type=<null_type> exclaimLoc=line:55:11
-  // CHECK-NEXT: CallExpr type=<null_type> lParenLoc=line:55:9 rParenLoc=line:55:10 numArgs=0
-  // CHECK-NEXT:   UnresolvedMemberRefExpr type=<null_type> dot memberIdent=c memberIdentLoc=line:55:8
-  // CHECK-NEXT:    UnresolvedMemberRefExpr type=<null_type> arrow memberIdent=b memberIdentLoc=line:55:6
-  // CHECK-NEXT:     UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:55:3
+  // CHECK: ForceUnwrapExpr type=<null_type> exclaimLoc=line:[[@LINE+5]]:11
+  // CHECK-NEXT: CallExpr type=<null_type> lParenLoc=line:[[@LINE+4]]:9 rParenLoc=line:[[@LINE+4]]:10 numArgs=0
+  // CHECK-NEXT:   UnresolvedMemberRefExpr type=<null_type> dot memberIdent=c memberIdentLoc=line:[[@LINE+3]]:8
+  // CHECK-NEXT:    UnresolvedMemberRefExpr type=<null_type> arrow memberIdent=b memberIdentLoc=line:[[@LINE+2]]:6
+  // CHECK-NEXT:     UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+1]]:3
   a->b.c()!
 }
 

@@ -1,23 +1,23 @@
 // RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
 
 func correct() {
-  // CHECK: ReturnStmt loc=line:5:3
+  // CHECK: ReturnStmt loc=line:[[@LINE+1]]:3
   return
-  // CHECK: ReturnStmt loc=line:8:3
-  // CHECK-NEXT: TupleExpr type=<null_type> numElements=0 lParenLoc=line:8:10 rParenLoc=line:8:11
+  // CHECK: ReturnStmt loc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: TupleExpr type=<null_type> numElements=0 lParenLoc=line:[[@LINE+1]]:10 rParenLoc=line:[[@LINE+1]]:11
   return ()
-  // CHECK: ReturnStmt loc=line:13:3
+  // CHECK: ReturnStmt loc=line:[[@LINE+4]]:3
   // CHECK-NEXT: BinaryExpr
   // CHECK-NEXT:   IntegerLiteralExpr
   // CHECK-NEXT:   IntegerLiteralExpr
   return 3+3
-  // CHECK: ReturnStmt loc=line:15:3
+  // CHECK: ReturnStmt loc=line:[[@LINE+1]]:3
   return 
-  // CHECK: BreakStmt loc=line:17:3
+  // CHECK: BreakStmt loc=line:[[@LINE+1]]:3
   break
-  // CHECK: ContinueStmt loc=line:19:3
+  // CHECK: ContinueStmt loc=line:[[@LINE+1]]:3
   continue
-  // CHECK: ReturnStmt loc=line:21:3
+  // CHECK: ReturnStmt loc=line:[[@LINE+1]]:3
   return
 }
 
