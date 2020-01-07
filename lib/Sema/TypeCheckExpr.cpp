@@ -196,7 +196,7 @@ public:
     if (type->is<IntegerType>())
       return true;
     if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      return TypeVariableInfo::get(tv).isIntegerTypeVariable();
+      return cs.isIntegerTypeVariable(tv);
     return false;
   }
 
@@ -204,7 +204,7 @@ public:
     if (type->is<FloatType>())
       return true;
     if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      return TypeVariableInfo::get(tv).isFloatTypeVariable();
+      return cs.isFloatTypeVariable(tv);
     return false;
   }
 

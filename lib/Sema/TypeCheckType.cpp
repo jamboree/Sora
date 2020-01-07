@@ -160,9 +160,8 @@ public:
 
   bool visitTypeVariableType(TypeVariableType *from, Type to) {
     // If the TypeVariable has a substitution, check if we can convert to it
-    TypeVariableInfo &fromInfo = TypeVariableInfo::get(from);
-    if (fromInfo.hasSubstitution())
-      return visit(fromInfo.getSubstitution(), to);
+    if (Type fromSubst = cs.getSubstitution(from))
+      return visit(fromSubst, to);
     // Else just unify
     return cs.unify(from, to);
   }

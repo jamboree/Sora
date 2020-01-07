@@ -12,6 +12,126 @@
 
 using namespace sora;
 
+//===--- TypeVariableInfo -------------------------------------------------===//
+
+/// TypeVariable extra information
+class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
+  friend class ConstraintSystem;
+
+  // Disable vanilla new/delete for TypeVariableInfo
+  void *operator new(size_t) noexcept = delete;
+  void operator delete(void *)noexcept = delete;
+
+  void *operator new(size_t, void *mem) noexcept {
+    assert(mem);
+    return mem;
+  }
+
+  TypeVariableInfo(TypeVariableKind tvKind) : tvKind(tvKind) {}
+
+  /// The kind of TypeVariable this is
+  TypeVariableKind tvKind;
+  /// This TypeVariable's substitution.
+  /// Note that this can be another TypeVariable in case of an equivalence.
+  Type substitution;
+
+  // Checks if \p tv is a valid substitution for this TypeVariable
+  bool isValidSubstitutionForIntegerTV(Type type) {
+    if (type->isAnyIntegerType())
+      return true;
+    TypeVariableType *tv = type->getAs<TypeVariableType>();
+    if (!tv)
+      return false;
+    // Allow both integer & general type variables.
+    auto &info = TypeVariableInfo::get(tv);
+    return info.isIntegerTypeVariable() || info.isGeneralTypeVariable();
+  }
+
+  // Checks if \p tv is a valid substitution for this TypeVariable
+  bool isValidSubstitutionForFloatTV(Type type) {
+    if (type->isAnyFloatType())
+      return true;
+    TypeVariableType *tv = type->getAs<TypeVariableType>();
+    if (!tv)
+      return false;
+    // Allow both float & general type variables.
+    auto &info = TypeVariableInfo::get(tv);
+    return info.isFloatTypeVariable() || info.isGeneralTypeVariable();
+  }
+
+public:
+  /// Make TypeVariableInfo noncopyable, so we don't copy it by mistake.
+  TypeVariableInfo(const TypeVariableInfo &) = delete;
+  TypeVariableInfo &operator=(const TypeVariableInfo &) = delete;
+
+  /// \returns the TypeVariableInfo object for \p type
+  static TypeVariableInfo &get(const TypeVariableType *type) {
+    return *reinterpret_cast<TypeVariableInfo *>(
+        const_cast<TypeVariableType *>(type) + 1);
+  }
+
+  TypeVariableKind getTypeVariableKind() const { return tvKind; }
+
+  bool isGeneralTypeVariable() const {
+    return getTypeVariableKind() == TypeVariableKind::General;
+  }
+
+  bool isIntegerTypeVariable() const {
+    return getTypeVariableKind() == TypeVariableKind::Integer;
+  }
+
+  bool isFloatTypeVariable() const {
+    return getTypeVariableKind() == TypeVariableKind::Float;
+  }
+
+  /// Sets this TypeVariable's substitution.
+  /// \returns false if the substitution was rejected (because there's already a
+  /// substitution, or because it's not compatible), true if the substitution
+  /// was accepted.
+  bool setSubstitution(Type type) {
+    if (hasSubstitution())
+      return false;
+    // Never allow LValues into substitutions
+    type = type->getRValue();
+    // Check if we're not using this TV as its own subst
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
+      assert(this != &get(tv) &&
+             "Type variable using itself as a substitution");
+    // Check if the substitution is legal.
+    switch (getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      break;
+    case TypeVariableKind::Integer:
+      if (!isValidSubstitutionForIntegerTV(type))
+        return false;
+      break;
+    case TypeVariableKind::Float:
+      if (!isValidSubstitutionForFloatTV(type))
+        return false;
+      break;
+    }
+    substitution = type;
+    // If the substitution is a General TV but we aren't, make its kind equal to
+    // ours.
+    // FIXME: Is it better to do this here or in unify()?
+    if (!isGeneralTypeVariable()) {
+      if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
+        auto &info = TypeVariableInfo::get(tv);
+        if (info.isGeneralTypeVariable())
+          info.tvKind = getTypeVariableKind();
+      }
+    }
+    return true;
+  }
+
+  /// \returns true if this TypeVariable has a substitution (whether it is
+  /// bound)
+  bool hasSubstitution() const { return (bool)substitution; }
+
+  /// \returns this TypeVariable's substitution
+  Type getSubstitution() const { return substitution; }
+};
+
 //===--- TypeSimplifier ---------------------------------------------------===//
 
 namespace {
@@ -290,6 +410,23 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   // Store the TypeVariable
   typeVariables.push_back(tyVar);
   return tyVar;
+}
+
+TypeVariableKind
+ConstraintSystem::getTypeVariableKind(TypeVariableType *tv) const {
+  return TypeVariableInfo::get(tv).getTypeVariableKind();
+}
+
+bool ConstraintSystem::setSubstitution(TypeVariableType *tv, Type subst) const {
+  return TypeVariableInfo::get(tv).setSubstitution(subst);
+}
+
+bool ConstraintSystem::hasSubstitution(TypeVariableType *tv) const {
+  return TypeVariableInfo::get(tv).hasSubstitution();
+}
+
+Type ConstraintSystem::getSubstitution(TypeVariableType *tv) const {
+  return TypeVariableInfo::get(tv).getSubstitution();
 }
 
 Type ConstraintSystem::simplifyType(Type type, bool *hadUnboundTypeVariable) {
