@@ -39,3 +39,26 @@ func refs(a: &mut i8) {
   // CHECK-NEXT:    DeclRefExpr type=&mut i8 loc=line:[[@LINE+1]]:22 decl='a'@line:[[@LINE-6]]:11
   let _: maybe &i8 = a
 }
+
+func destructure(a: i8) {
+    let a = (a, a)
+    // CHECK:     DestructuredTupleExpr implicit type=(maybe i8, maybe i8)
+    // CHECK-NEXT:  DeclRefExpr type=(i8, i8) loc=line:[[@LINE+6]]:36 decl='a'@line:[[@LINE-2]]:9
+    // CHECK-NEXT:  TupleExpr implicit type=(maybe i8, maybe i8) numElements=2 range=[line:[[@LINE+5]]:36, line:[[@LINE+5]]:36]
+    // CHECK-NEXT:    ImplicitMaybeConversionExpr implicit type=maybe i8
+    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=i8 index=0
+    // CHECK-NEXT:    ImplicitMaybeConversionExpr implicit type=maybe i8
+    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=i8 index=1
+    let _ : (maybe i8, maybe i8) = a
+
+    let mut foo = 0
+    let b : (&mut i32, &mut i32) = (&foo, &foo)
+    // CHECK:    DestructuredTupleExpr implicit type=(&i32, &i32)
+    // CHECK-NEXT: DeclRefExpr type=(&mut i32, &mut i32) loc=line:[[@LINE+6]]:28 decl='b'@line:[[@LINE-2]]:9
+    // CHECK-NEXT: TupleExpr implicit type=(&i32, &i32) numElements=2 range=[line:[[@LINE+5]]:28, line:[[@LINE+5]]:28]
+    // CHECK-NEXT:    MutToImmutReferenceExpr implicit type=&i32
+    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=&mut i32 index=0
+    // CHECK-NEXT:    MutToImmutReferenceExpr implicit type=&i32
+    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=&mut i32 index=1
+    let _ : (&i32, &i32) = b
+}

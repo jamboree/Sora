@@ -78,22 +78,17 @@ public:
 /// The TypeCastCheckers checks that a cast from a given type to another type is
 /// valid.
 class ExplicitTypeCastChecker
-    : public ASTChecker,
-      public TypeVisitor<ExplicitTypeCastChecker, bool, Type> {
+    : public TypeVisitor<ExplicitTypeCastChecker, bool, Type> {
   using Parent = TypeVisitor<ExplicitTypeCastChecker, bool, Type>;
 
 public:
   ExplicitTypeCastChecker(TypeChecker &tc, ConstraintSystem &cs)
-      : ASTChecker(tc), cs(cs) {}
+      : tc(tc), cs(cs) {}
 
+  TypeChecker &tc;
   ConstraintSystem &cs;
 
   bool visit(Type from, Type to) {
-    assert(!to->hasTypeVariable() && !to->hasErrorType() &&
-           "the 'to' type should be a bound, error-free type!");
-    assert(!from->hasErrorType() &&
-           "the 'from' types shouldn't contain ErrorTypes!");
-
     // Ignore sugar & RValues on both sides.
     from = from->getRValue()->getDesugaredType();
     to = to->getRValue()->getDesugaredType();
@@ -191,10 +186,66 @@ Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
 }
 
 bool TypeChecker::canExplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
+  assert(!to->hasTypeVariable() &&
+         "the 'to' type cannot contain type variables");
+  assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
+  assert(!from->hasErrorType() && "the 'from' type cannot contain error types");
   return ExplicitTypeCastChecker(*this, cs).visit(from, to);
 }
 
 //===- ASTChecker ---------------------------------------------------------===//
+
+bool TypeChecker::canImplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
+  assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
+  assert(!from->hasErrorType() && "the 'from' type cannot contain error types");
+
+  if (cs.unify(from, to))
+    return true;
+
+  to = to->getRValue()->getDesugaredType();
+
+  // T to maybe T conversions, or null to maybe T conversion
+  if (MaybeType *toMaybe = to->getAs<MaybeType>())
+    return canImplicitlyCast(cs, from, toMaybe->getValueType()) ||
+           from->isNullType();
+
+  // &mut T to &T conversions
+  if (ReferenceType *toRef = to->getAs<ReferenceType>()) {
+    // "from" must also be a reference type
+    ReferenceType *fromRef = from->getAs<ReferenceType>();
+    if (!fromRef)
+      return false;
+    // toRef must be immutable and fromRef must be mutable
+    if (fromRef->isMut() && !toRef->isMut()) {
+      // The pointee types must unify
+      return cs.unify(fromRef->getPointeeType(), toRef->getPointeeType());
+    }
+    return false;
+  }
+
+  // Tuple to Tuple conversions
+  if (TupleType *toTuple = to->getAs<TupleType>()) {
+    // "from" must also be a tuple type
+    TupleType *fromTuple = from->getAs<TupleType>();
+
+    // Both must have the same number of elts
+    if (toTuple->getNumElements() != fromTuple->getNumElements())
+      return false;
+
+    // Every element in 'fromTuple' must be convertible to its counterpart in
+    // 'toTuple'
+    size_t numElts = toTuple->getNumElements();
+    for (size_t k = 0; k < numElts; ++k) {
+      if (!canImplicitlyCast(cs, fromTuple->getElement(k),
+                             toTuple->getElement(k)))
+        return false;
+    }
+
+    return true;
+  }
+
+  return false;
+}
 
 bool TypeChecker::canDiagnose(Type type) {
   return type && !type->hasErrorType();

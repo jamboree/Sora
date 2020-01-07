@@ -279,6 +279,10 @@ public:
     llvm_unreachable("Expression checked twice!");
   }
 
+  Expr *visitDestructuredTupleElementExpr(DestructuredTupleElementExpr *expr) {
+    llvm_unreachable("Expression checked twice!");
+  }
+
   Expr *visitErrorExpr(ErrorExpr *expr) {
     llvm_unreachable("Expr visited twice!");
   }
@@ -571,9 +575,8 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   expr->setSubExpr(tryInsertImplicitConversions(expr->getSubExpr(), toType));
 
   // Then check if the conversion can happen
-  if (!tc.canExplicitlyCast(cs, expr->getSubExpr()->getType(), toType)) {
-    // When unification fails, conversion isn't possible
-
+  Type subExprType = expr->getSubExpr()->getType();
+  if (!tc.canExplicitlyCast(cs, subExprType, toType)) {
     // For the diagnostic, use the simplified type of the subexpression w/o
     // implicit conversions
     Type fromType = cs.simplifyType(
@@ -764,9 +767,46 @@ class ImplicitConversionBuilder
   using Inherited = ExprVisitor<ImplicitConversionBuilder, Expr *, Type>;
   friend Inherited;
 
-public:
-  ImplicitConversionBuilder(ConstraintSystem &cs) : cs(cs), ctxt(cs.ctxt) {}
+  /// Destructures a tuple value \p expr, creating a DestructuredTupleExpr in
+  /// which implicit conversions can be inserted.
+  DestructuredTupleExpr *destructureTupleValue(Expr *expr) {
+    assert(!isa<TupleExpr>(expr) && !isa<ParenExpr>(expr) &&
+           !isa<ImplicitConversionExpr>(expr));
+    // Fetch the TupleType
+    TupleType *tt =
+        expr->getType()->getRValue()->getDesugaredType()->getAs<TupleType>();
+    assert(tt && "Not a value of type TupleType!");
 
+    // Create the DTE
+    DestructuredTupleExpr *dte = new (ctxt) DestructuredTupleExpr(expr);
+
+    // Create the DestructuredTupleElementExprs
+    SmallVector<Expr *, 8> destructuredElts;
+    destructuredElts.reserve(tt->getNumElements());
+
+    {
+      SourceRange exprRange = expr->getSourceRange();
+      size_t counter = 0;
+      for (Type elt : tt->getElements())
+        destructuredElts.push_back(
+            new (ctxt) DestructuredTupleElementExpr(exprRange, counter++, elt));
+    }
+
+    // Create the result expression : an implicit TupleExpr
+    TupleExpr *result = TupleExpr::createImplicit(ctxt, destructuredElts);
+    rebuildTupleExprType(ctxt, result);
+
+    dte->setResultExpr(result);
+    dte->setType(result->getType());
+
+    return dte;
+  }
+
+public:
+  ImplicitConversionBuilder(TypeChecker &tc, ConstraintSystem &cs)
+      : tc(tc), cs(cs), ctxt(cs.ctxt) {}
+
+  TypeChecker &tc;
   ConstraintSystem &cs;
   ASTContext &ctxt;
 
@@ -774,9 +814,30 @@ public:
     // If both types already unify, we don't have anything to do
     if (cs.unify(destType, expr->getType()))
       return expr;
-    // Else, visit the Expr
-    expr = Inherited::visit(expr, destType);
-    assert(expr && "visit returned nullptr!");
+
+    if (!tc.canImplicitlyCast(cs, expr->getType(), destType))
+      return expr;
+
+    // Check if we're trying to convert from a tuple type to another tuple
+    // type
+    if (destType->isTupleType() && expr->getType()->isTupleType()) {
+      bool needsDestructuring = false;
+      // If the expr isn't a TupleExpr, we may need to destructure the tuple in
+      // order to apply implicit conversions.
+      if (!isa<TupleExpr>(expr->ignoreParens())) {
+        // Only destructure if the expr isn't a ParenExpr - we want to
+        // destructure the expr inside ParenExprs, not the ParenExpr itself.
+        needsDestructuring =
+            !isa<ParenExpr>(expr) && !isa<ImplicitConversionExpr>(expr);
+      }
+      // Destructure the tuple if needed
+      if (needsDestructuring)
+        expr = destructureTupleValue(expr);
+    }
+
+    // Visit the Expr using the desugared destination type.
+    expr = Inherited::visit(expr, destType->getRValue()->getDesugaredType());
+    assert(expr && "visit returned nullptr?");
     return expr;
   }
 
@@ -795,6 +856,13 @@ private:
     return expr;
   }
 
+  Expr *visitDestructuredTupleExpr(DestructuredTupleExpr *expr, Type destType) {
+    Expr *result = visit(expr->getResultExpr(), destType);
+    expr->setResultExpr(result);
+    expr->setType(result->getType());
+    return expr;
+  }
+
   Expr *visitTupleExpr(TupleExpr *expr, Type destType) {
     // destType must be a TupleType with the same number of elements as this
     // expr, else, we can't do anything.
@@ -802,8 +870,6 @@ private:
     /// Empty tuples are covered by visitExpr.
     if (expr->isEmpty())
       return visitExpr(expr, destType);
-
-    destType = destType->getRValue()->getDesugaredType();
 
     TupleType *destTupleType = destType->getAs<TupleType>();
     if (!destTupleType)
@@ -825,8 +891,6 @@ private:
   // For everything else, just try to insert an implicit conversion to type \p
   // destType.
   Expr *visitExpr(Expr *expr, Type destType) {
-    destType = destType->getRValue()->getDesugaredType();
-
     // If we want to convert to a "maybe" type, try to insert a
     // ImplicitMaybeConversionExpr
     if (MaybeType *toMaybe = destType->getAs<MaybeType>()) {
@@ -881,7 +945,7 @@ private:
 
 Expr *TypeChecker::tryInsertImplicitConversions(ConstraintSystem &cs,
                                                 Expr *expr, Type toType) {
-  return ImplicitConversionBuilder(cs).doIt(toType, expr);
+  return ImplicitConversionBuilder(*this, cs).doIt(toType, expr);
 }
 
 Expr *TypeChecker::typecheckExpr(
@@ -895,7 +959,8 @@ Expr *TypeChecker::typecheckExpr(
 
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
-    expr = tryInsertImplicitConversions(cs, expr, ofType);
+    if (!expr->getType()->hasErrorType() && !ofType->hasErrorType())
+      expr = tryInsertImplicitConversions(cs, expr, ofType);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
       if (onUnificationFailure)
