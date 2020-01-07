@@ -124,7 +124,7 @@ public:
   Type getSubstitution(TypeVariableType *tv) const;
 
   /// \returns true if \p tv is a general type variable
-  bool isGeneralTypeVariable(TypeVariableType* tv) const {
+  bool isGeneralTypeVariable(TypeVariableType *tv) const {
     return getTypeVariableKind(tv) == TypeVariableKind::General;
   }
 
@@ -150,10 +150,15 @@ public:
   /// \returns the simplified type, or the ErrorType on error (never nullptr)
   Type simplifyType(Type type, bool *hadUnboundTypeVariable = nullptr);
 
-  /// Unifies \p a with \p b with \p options.
+  /// Unifies \p a with \p b using \p options.
   /// \returns true if unification was successful, false otherwise.
   bool unify(Type a, Type b,
              const UnificationOptions &options = UnificationOptions());
+
+  /// Checks if \p a can unify with \p b using \p options.
+  /// \returns true if unification is possible, false otherwise.
+  bool canUnify(Type a, Type b,
+                const UnificationOptions &options = UnificationOptions()) const;
 
   /// Prints \p type and its TypeVariableInfo to \p out
   void print(raw_ostream &out, const TypeVariableType *type,

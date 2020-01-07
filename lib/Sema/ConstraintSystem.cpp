@@ -402,7 +402,8 @@ public:
 
     // Else, if both don't have a substitution, just set the substitution of
     // 'type' to 'other', or 'other' to 'type if the first one doesn't work out.
-    return trySetSubstitution(typeInfo, other) || trySetSubstitution(otherInfo, type);
+    return trySetSubstitution(typeInfo, other) ||
+           trySetSubstitution(otherInfo, type);
   }
 };
 
@@ -458,6 +459,15 @@ bool ConstraintSystem::unify(Type a, Type b,
   assert(a && "a is null");
   assert(b && "b is null");
   return TypeUnifier(*this, options, /*canSetSubstitutions*/ true).unify(a, b);
+}
+
+bool ConstraintSystem::canUnify(Type a, Type b,
+                                const UnificationOptions &options) const {
+  assert(a && "a is null");
+  assert(b && "b is null");
+  return TypeUnifier(*const_cast<ConstraintSystem *>(this), options,
+                     /*canSetSubstitutions*/ false)
+      .unify(a, b);
 }
 
 void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
