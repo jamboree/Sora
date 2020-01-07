@@ -82,11 +82,11 @@ class ExplicitTypeCastChecker
   using Parent = TypeVisitor<ExplicitTypeCastChecker, bool, Type>;
 
 public:
-  ExplicitTypeCastChecker(TypeChecker &tc, ConstraintSystem &cs)
+  ExplicitTypeCastChecker(TypeChecker &tc, const ConstraintSystem &cs)
       : tc(tc), cs(cs) {}
 
   TypeChecker &tc;
-  ConstraintSystem &cs;
+  const ConstraintSystem &cs;
 
   bool visit(Type from, Type to) {
     // Ignore sugar & RValues on both sides.
@@ -162,8 +162,8 @@ public:
     // If the TypeVariable has a substitution, check if we can convert to it
     if (Type fromSubst = cs.getSubstitution(from))
       return visit(fromSubst, to);
-    // Else just unify
-    return cs.unify(from, to);
+    // Else just call canUnify
+    return cs.canUnify(from, to);
   }
 };
 
@@ -184,7 +184,7 @@ Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
   return result;
 }
 
-bool TypeChecker::canExplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
+bool TypeChecker::canExplicitlyCast(const ConstraintSystem &cs, Type from, Type to) {
   assert(!to->hasTypeVariable() &&
          "the 'to' type cannot contain type variables");
   assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
@@ -194,12 +194,15 @@ bool TypeChecker::canExplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
 
 //===- ASTChecker ---------------------------------------------------------===//
 
-bool TypeChecker::canImplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
+bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
+                                    Type to) {
   // FIXME: Ideally this should follow the same pattern as canExplicitlyCast
   assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
   assert(!from->hasErrorType() && "the 'from' type cannot contain error types");
 
-  if (cs.unify(from, to))
+  // FIXME: Calling canUnify here isn't ideal, especially since recursion is
+  // involved. This can have a huge performance cost for complex types.
+  if (cs.canUnify(from, to))
     return true;
 
   to = to->getRValue()->getDesugaredType();
@@ -218,7 +221,7 @@ bool TypeChecker::canImplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
     // toRef must be immutable and fromRef must be mutable
     if (fromRef->isMut() && !toRef->isMut()) {
       // The pointee types must unify
-      return cs.unify(fromRef->getPointeeType(), toRef->getPointeeType());
+      return cs.canUnify(fromRef->getPointeeType(), toRef->getPointeeType());
     }
     return false;
   }

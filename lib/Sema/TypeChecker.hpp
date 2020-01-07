@@ -123,21 +123,20 @@ public:
   /// \returns the type of \p tyRepr, or ErrorType on failure.
   Type resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file);
 
-  /// \returns true if \p from can be explicitly converted to \p to.
-  /// Note that this doesn't call canImplicitlyCast. This strictly checks for
-  /// explicit casts-only rules, but "CastExpr" ('as') applies both implicit &
-  /// explicit rules. 
-  /// \param to must not contain an error type or type variable. 
+  /// \returns true if \p from can be explicitly converted to \p to, or if \p
+  /// from can unify with \p to.
+  /// \param to must not contain an error type or
+  /// type variable.
   /// \param from must not contain an error type.
-  /// NOTE: This unifies the types
-  bool canExplicitlyCast(ConstraintSystem &cs, Type from, Type to);
+  /// NOTE: This does NOT unify the types
+  bool canExplicitlyCast(const ConstraintSystem &cs, Type from, Type to);
 
   /// \returns true if \p from can be implicitly converted to \p to, or if \p
-  /// unifies with \p to.
-  /// \param to must not contain an error type 
+  /// can unify with \p to.
+  /// \param to must not contain an error type
   /// \param from must not contain an error type.
-  /// NOTE: This unifies the types.
-  bool canImplicitlyCast(ConstraintSystem &cs, Type from, Type to);
+  /// NOTE: This does NOT unify the types
+  bool canImplicitlyCast(const ConstraintSystem &cs, Type from, Type to);
 
   /// \returns whether we can emit a diagnostic involving \p type
   static bool canDiagnose(Type type);
