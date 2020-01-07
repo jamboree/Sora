@@ -147,6 +147,10 @@ public:
       other = other->getRValue();
     }
 
+    // If both types are equal, unification succeeds.
+    if (type->getCanonicalType() == other->getCanonicalType())
+      return true;
+
     auto setOrUnifySubstitution = [&](TypeVariableType *tv, Type subst) {
       TypeVariableInfo &info = TypeVariableInfo::get(tv);
       if (info.hasSubstitution())
@@ -163,10 +167,6 @@ public:
     }
     else if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
       return setOrUnifySubstitution(otherTV, type);
-
-    // If both types are canonically equal, unification succeeds.
-    if (type->getCanonicalType() == other->getCanonicalType())
-      return true;
 
     type = type->getDesugaredType();
     other = other->getDesugaredType();
