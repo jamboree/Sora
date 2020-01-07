@@ -305,6 +305,8 @@ Type ConstraintSystem::simplifyType(Type type, bool *hadUnboundTypeVariable) {
 
 bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
+  assert(a && "a is null");
+  assert(b && "b is null");
   return TypeUnifier(*this, options).unify(a, b);
 }
 
