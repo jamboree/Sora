@@ -587,9 +587,10 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
         .highlight(expr->getTypeLoc().getSourceRange());
   }
 
-  // If it can happen, unify the types. We don't care about the result, we just
-  // want to unify so type variables can correctly be set.
-  cs.unify(subExprType, toType);
+  // Finally, unify the types if the subexpression's type contains a type
+  // variable
+  if (subExprType->hasTypeVariable())
+    cs.unify(subExprType, toType);
 
   return expr;
 }
