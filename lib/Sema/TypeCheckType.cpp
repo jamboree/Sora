@@ -195,6 +195,7 @@ bool TypeChecker::canExplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
 //===- ASTChecker ---------------------------------------------------------===//
 
 bool TypeChecker::canImplicitlyCast(ConstraintSystem &cs, Type from, Type to) {
+  // FIXME: Ideally this should follow the same pattern as canExplicitlyCast
   assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
   assert(!from->hasErrorType() && "the 'from' type cannot contain error types");
 
