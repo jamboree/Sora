@@ -260,11 +260,21 @@ Type TypeBase::getRValue() const {
 
 bool TypeBase::isLValue() const { return isa<LValueType>(this); }
 
-bool TypeBase::isNullType() const { return getDesugaredType()->is<NullType>(); }
+bool TypeBase::isNullType() const {
+  return getCanonicalType()->getRValue()->is<NullType>();
+}
 
-bool TypeBase::isAnyIntegerType() const { return getDesugaredType()->is<IntegerType>(); }
+bool TypeBase::isAnyIntegerType() const {
+  return getCanonicalType()->getRValue()->is<IntegerType>();
+}
 
-bool TypeBase::isAnyFloatType() const { return getDesugaredType()->is<FloatType>(); }
+bool TypeBase::isAnyFloatType() const {
+  return getCanonicalType()->getRValue()->is<FloatType>();
+}
+
+bool TypeBase::isTupleType() const {
+  return getCanonicalType()->getRValue()->is<TupleType>();
+}
 
 void TypeBase::print(raw_ostream &out,
                      const TypePrintOptions &printOptions) const {

@@ -240,6 +240,9 @@ public:
   /// \returns whether this type is a FloatType
   bool isAnyFloatType() const;
 
+  /// \returns whether this type is a TupleType
+  bool isTupleType() const;
+
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const {
     return TypeProperties(bits.TypeBase.typePropertiesValue);
