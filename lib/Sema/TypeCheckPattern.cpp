@@ -206,7 +206,6 @@ Expr *TypeChecker::typecheckPatternAndInitializer(
   // Fully check the expr, unifying it with the type of the pattern
   bool emitInferenceErrors = true;
   init = typecheckExpr(cs, init, dc, pat->getType(), [&](Type from, Type to) {
-    // FIXME: This diagnostic can be improved.
     if (onUnificationFailure)
       onUnificationFailure(from, to);
     // Don't emit inference errors in the pattern
