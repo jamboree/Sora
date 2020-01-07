@@ -78,11 +78,16 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   TRIVIAL_VISIT(DeclRefExpr)
   TRIVIAL_VISIT(DiscardExpr)
   TRIVIAL_VISIT(AnyLiteralExpr)
+  TRIVIAL_VISIT(DestructuredTupleElementExpr)
   TRIVIAL_VISIT(ErrorExpr)
 
   void visitImplicitConversionExpr(ImplicitConversionExpr *expr) {
     if (Expr *subExpr = doIt(expr->getSubExpr()))
       expr->setSubExpr(subExpr);
+
+    if (DestructuredTupleExpr *dte = dyn_cast<DestructuredTupleExpr>(expr))
+      if (Expr *result = doIt(dte->getResultExpr()))
+        dte->setResultExpr(result);
   }
 
   void visitCastExpr(CastExpr *expr) {

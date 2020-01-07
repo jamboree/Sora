@@ -71,6 +71,12 @@ protected:
       value : 1  
     );
 
+    /// DestructuredTupleElementExpr bits
+    SORA_INLINE_BITFIELD_FULL(DestructuredTupleElementExpr, Expr, 32,
+      : NumPadBits,
+      index : 32
+    );
+
     // CastExpr
     SORA_INLINE_BITFIELD(CastExpr, Expr, 1,
       isUseless : 1  
@@ -479,6 +485,78 @@ public:
   }
 };
 
+/// Represents a destructured tuple value.
+/// This is used to insert per-element implicit conversions inside tuple values
+/// that aren't TupleExprs. Essentially, this node destructures the
+/// subexpression (the source) into DestructuredTupleElementExprs which are used
+/// by the result expression, which is then evaluated to produce the value we're
+/// looking for.
+///
+/// This expression always has the same type as its result expression.
+///
+/// example:
+/// \verbatim
+///   foo is a DeclRefExpr of type (i32, i32) that has to be converted to
+///   (maybe i32, i32)
+///   > let x : (maybe i32, i32) = foo
+///   We'll create a DestructuredTupleExpr like this:
+///   > DestructuredTupleExpr // (i32, i32)
+///       DeclRefExpr 'foo' type=(i32, i32)
+///       TupleExpr implicit // (i32, i32)
+///         DestructuredTupleElementExpr '0' // i32
+///         DestructuredTupleElementExpr '1' // i32
+///   and insert a ImplicitMaybeConversion before the first element, to end up
+///   with the expression we're looking for.
+///   > DestructuredTupleExpr // now has type (maybe i32, i32)
+///       DeclRefExpr 'foo' type=(i32, i32)
+///       TupleExpr implicit // now has type (maybe i32, i32)
+///         ImplicitMaybeConversionExpr // 'i32' to 'maybe i32'
+///           DestructuredTupleElementExpr '0' // i32
+///         DestructuredTupleElementExpr '1' // i32
+/// \endverbatim
+class DestructuredTupleExpr : public ImplicitConversionExpr {
+  Expr *result;
+
+public:
+  DestructuredTupleExpr(Expr *sourceTuple, Expr *result = nullptr)
+      : ImplicitConversionExpr(ExprKind::DestructuredTuple, sourceTuple),
+        result(result) {}
+
+  Expr *getResultExpr() const { return result; }
+  void setResultExpr(Expr *expr) { result = expr; }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::DestructuredTuple;
+  }
+};
+
+/// Represents an element of a destructured tuple. See \c DestructuredTupleExpr
+/// This expression is always implicit
+class DestructuredTupleElementExpr : public Expr {
+  SourceRange range;
+
+public:
+  DestructuredTupleElementExpr(SourceRange range, unsigned index,
+                               Type type = {})
+      : Expr(ExprKind::DestructuredTupleElement), range(range) {
+    bits.DestructuredTupleElementExpr.index = index;
+    assert(getIndex() == index && "Bits dropped?");
+    setImplicit();
+    if (type)
+      setType(type);
+  }
+
+  size_t getIndex() const {
+    return (size_t)bits.DestructuredTupleElementExpr.index;
+  }
+
+  SourceRange getSourceRange() const { return range; }
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::DestructuredTupleElement;
+  }
+};
+
 /// Represents an error expr.
 ///
 /// This is created when Sema cannot resolve an UnresolvedExpr.
@@ -634,6 +712,12 @@ public:
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
 
+  static TupleExpr *createImplicit(ASTContext &ctxt, ArrayRef<Expr *> exprs) {
+    TupleExpr *result = create(ctxt, {}, exprs, {});
+    result->setImplicit();
+    return result;
+  }
+
   bool isEmpty() const { return getNumElements() == 0; }
   size_t getNumElements() const { return (size_t)bits.TupleExpr.numElements; }
   MutableArrayRef<Expr *> getElements() {
@@ -642,16 +726,16 @@ public:
   ArrayRef<Expr *> getElements() const {
     return {getTrailingObjects<Expr *>(), getNumElements()};
   }
-  Expr *getElement(size_t n) { return getElements()[n]; }
+  Expr *getElement(size_t n) const { return getElements()[n]; }
   void setElement(size_t n, Expr *expr) { getElements()[n] = expr; }
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
   /// \returns the SourceLoc of the first token of the expression
-  SourceLoc getBegLoc() const { return lParenLoc; }
+  SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the expression
-  SourceLoc getEndLoc() const { return rParenLoc; }
+  SourceLoc getEndLoc() const;
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::Tuple;

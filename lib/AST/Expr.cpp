@@ -109,6 +109,27 @@ TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
   return new (mem) TupleExpr(lParenLoc, exprs, rParenLoc);
 }
 
+SourceLoc TupleExpr::getBegLoc() const {
+  if (lParenLoc.isValid())
+    return lParenLoc;
+  // If we have no '(' loc, use the first valid beg loc in the elements array
+  for (Expr *expr : getElements())
+    if (SourceLoc loc = expr->getBegLoc())
+      return loc;
+  return {};
+}
+
+SourceLoc TupleExpr::getEndLoc() const {
+  if (rParenLoc.isValid())
+    return rParenLoc;
+  // If we have no ')' loc, use the last valid end loc in the elements array
+  auto elems = getElements();
+  for (auto it = elems.rbegin(); it != elems.rend(); ++it)
+    if (SourceLoc loc = (*it)->getEndLoc())
+      return loc;
+  return {};
+}
+
 CallExpr *CallExpr::create(ASTContext &ctxt, Expr *fn, SourceLoc lParen,
                            ArrayRef<Expr *> args, SourceLoc rParen) {
   // Need manual memory allocation here because of trailing objects.

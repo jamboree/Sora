@@ -38,7 +38,8 @@ protected:
     boolLitExpr = new (*ctxt) BooleanLiteralExpr("0", beg);
     nullLitExpr = new (*ctxt) NullLiteralExpr(beg);
     implicitMaybeConvExpr = new (*ctxt) ImplicitMaybeConversionExpr(begExpr);
-    mutToImmutRefExpr = new (*ctxt) MutToImmutReferenceExpr(begExpr);
+    destructuredTupleEltExpr =
+        new (*ctxt) DestructuredTupleElementExpr({beg, end}, 0);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
     castExpr = new (*ctxt)
         CastExpr(begExpr, mid, new (*ctxt) IdentifierTypeRepr(end, {}));
@@ -69,7 +70,7 @@ protected:
   Expr *boolLitExpr;
   Expr *nullLitExpr;
   Expr *implicitMaybeConvExpr;
-  Expr *mutToImmutRefExpr;
+  Expr *destructuredTupleEltExpr;
   Expr *errorExpr;
   Expr *castExpr;
   Expr *tupleEltExpr;
@@ -109,8 +110,15 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<ImplicitMaybeConversionExpr>(implicitMaybeConvExpr));
   EXPECT_TRUE(isa<ImplicitConversionExpr>(implicitMaybeConvExpr));
 
-  EXPECT_TRUE(isa<MutToImmutReferenceExpr>(mutToImmutRefExpr));
-  EXPECT_TRUE(isa<ImplicitConversionExpr>(mutToImmutRefExpr));
+  Expr *mtire = new (*ctxt) MutToImmutReferenceExpr(nullptr);
+  EXPECT_TRUE(isa<MutToImmutReferenceExpr>(mtire));
+  EXPECT_TRUE(isa<ImplicitConversionExpr>(mtire));
+
+  Expr *dte = new (*ctxt) DestructuredTupleExpr(nullptr, nullptr);
+  EXPECT_TRUE(isa<DestructuredTupleExpr>(dte));
+  EXPECT_TRUE(isa<ImplicitConversionExpr>(dte));
+
+  EXPECT_TRUE(isa<DestructuredTupleElementExpr>(destructuredTupleEltExpr));
 
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
 
@@ -202,6 +210,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(beg, implicitMaybeConvExpr->getLoc());
   EXPECT_EQ(beg, implicitMaybeConvExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, beg), implicitMaybeConvExpr->getSourceRange());
+
+  // DestructuredTupleElementExpr
+  EXPECT_EQ(beg, destructuredTupleEltExpr->getBegLoc());
+  EXPECT_EQ(beg, destructuredTupleEltExpr->getLoc());
+  EXPECT_EQ(end, destructuredTupleEltExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, end), destructuredTupleEltExpr->getSourceRange());
 
   // ErrorExpr
   EXPECT_EQ(beg, errorExpr->getBegLoc());

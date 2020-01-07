@@ -345,6 +345,14 @@ public:
 
     auto indent = increaseIndent();
     visit(expr->getSubExpr());
+
+    if (DestructuredTupleExpr *dte = dyn_cast<DestructuredTupleExpr>(expr))
+      visit(dte->getResultExpr());
+  }
+
+  void visitDestructuredTupleElementExpr(DestructuredTupleElementExpr *expr) {
+    dumpCommon(expr);
+    out << " index=" << expr->getIndex() << '\n';
   }
 
   void visitErrorExpr(ErrorExpr *expr) {
@@ -382,9 +390,14 @@ public:
   void visitTupleExpr(TupleExpr *expr) {
     dumpCommon(expr);
     out << " numElements=" << expr->getNumElements() << ' ';
-    dumpLoc(expr->getLParenLoc(), "lParenLoc");
-    out << ' ';
-    dumpLoc(expr->getRParenLoc(), "rParenLoc");
+    if (expr->isImplicit()) {
+      dumpRange(expr->getSourceRange(), "range");
+    }
+    else {
+      dumpLoc(expr->getLParenLoc(), "lParenLoc");
+      out << ' ';
+      dumpLoc(expr->getRParenLoc(), "rParenLoc");
+    }
     out << '\n';
 
     auto indent = increaseIndent();
