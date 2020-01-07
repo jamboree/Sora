@@ -36,7 +36,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   Type substitution;
 
   // Checks if \p tv is a valid substitution for this TypeVariable
-  bool isValidSubstitutionForIntegerTV(Type type) {
+  bool isValidSubstitutionForIntegerTV(Type type) const {
     if (type->isAnyIntegerType())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
@@ -48,7 +48,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
   }
 
   // Checks if \p tv is a valid substitution for this TypeVariable
-  bool isValidSubstitutionForFloatTV(Type type) {
+  bool isValidSubstitutionForFloatTV(Type type) const {
     if (type->isAnyFloatType())
       return true;
     TypeVariableType *tv = type->getAs<TypeVariableType>();
@@ -84,33 +84,39 @@ public:
     return getTypeVariableKind() == TypeVariableKind::Float;
   }
 
+  /// Checks if \p type is a valid substitution for this TV
+  /// \returns true if this type variable has no substitution & \p type is a
+  /// compatible substitution
+  bool isValidSubstitution(Type type) const {
+    if (hasSubstitution())
+      return false;
+    // Ignore LValues
+    type = type->getRValue();
+    // Check that \p type != this
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
+      if (&(get(tv)) == this)
+        return false;
+    // Check if the substitution is legal.
+    switch (getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      return true;
+    case TypeVariableKind::Integer:
+      return isValidSubstitutionForIntegerTV(type);
+    case TypeVariableKind::Float:
+      return isValidSubstitutionForFloatTV(type);
+    }
+  }
+
   /// Sets this TypeVariable's substitution.
   /// \returns false if the substitution was rejected (because there's already a
   /// substitution, or because it's not compatible), true if the substitution
   /// was accepted.
   bool setSubstitution(Type type) {
-    if (hasSubstitution())
+    // Check if the substitution is legal.
+    if (!isValidSubstitution(type))
       return false;
     // Never allow LValues into substitutions
-    type = type->getRValue();
-    // Check if we're not using this TV as its own subst
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      assert(this != &get(tv) &&
-             "Type variable using itself as a substitution");
-    // Check if the substitution is legal.
-    switch (getTypeVariableKind()) {
-    case TypeVariableKind::General:
-      break;
-    case TypeVariableKind::Integer:
-      if (!isValidSubstitutionForIntegerTV(type))
-        return false;
-      break;
-    case TypeVariableKind::Float:
-      if (!isValidSubstitutionForFloatTV(type))
-        return false;
-      break;
-    }
-    substitution = type;
+    substitution = type->getRValue();
     // If the substitution is a General TV but we aren't, make its kind equal to
     // ours.
     // FIXME: Is it better to do this here or in unify()?
