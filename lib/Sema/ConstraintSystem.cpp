@@ -260,11 +260,18 @@ private:
 class TypeUnifier {
 
 public:
-  TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options)
-      : cs(cs), options(options) {}
+  TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options,
+              bool canSetSubstitutions)
+      : cs(cs), options(options), canSetSubstitutions(canSetSubstitutions) {}
 
   ConstraintSystem &cs;
   const UnificationOptions &options;
+  const bool canSetSubstitutions;
+
+  bool trySetSubstitution(TypeVariableInfo &info, Type subst) {
+    return canSetSubstitutions ? info.setSubstitution(subst)
+                               : info.isValidSubstitution(subst);
+  }
 
   bool unify(Type type, Type other) {
     // Ignore LValues if allowed to
@@ -281,7 +288,7 @@ public:
       TypeVariableInfo &info = TypeVariableInfo::get(tv);
       if (info.hasSubstitution())
         return unify(info.getSubstitution(), subst);
-      return info.setSubstitution(subst);
+      return trySetSubstitution(info, subst);
     };
 
     // If one is a type variable, and the other isn't, just set the
@@ -382,7 +389,7 @@ public:
     if (typeInfo.hasSubstitution()) {
       if (typeInfo.getSubstitution()->getAs<TypeVariableType>() == other)
         return true;
-      return otherInfo.setSubstitution(type);
+      return trySetSubstitution(otherInfo, type);
     }
 
     // if only 'other' has a substitution, set the substitution of 'type' to
@@ -390,12 +397,12 @@ public:
     if (otherInfo.hasSubstitution()) {
       if (otherInfo.getSubstitution()->getAs<TypeVariableType>() == type)
         return true;
-      return typeInfo.setSubstitution(other);
+      return trySetSubstitution(typeInfo, other);
     }
 
     // Else, if both don't have a substitution, just set the substitution of
     // 'type' to 'other', or 'other' to 'type if the first one doesn't work out.
-    return typeInfo.setSubstitution(other) || otherInfo.setSubstitution(type);
+    return trySetSubstitution(typeInfo, other) || trySetSubstitution(otherInfo, type);
   }
 };
 
@@ -450,7 +457,7 @@ bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
   assert(a && "a is null");
   assert(b && "b is null");
-  return TypeUnifier(*this, options).unify(a, b);
+  return TypeUnifier(*this, options, /*canSetSubstitutions*/ true).unify(a, b);
 }
 
 void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
