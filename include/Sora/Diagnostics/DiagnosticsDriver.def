@@ -39,7 +39,7 @@
 // Argument parsing
 ERROR(unknown_arg, "unknown argument '%0'", (StringRef))
 ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)", 
-  (StringRef, unsigned))
+  (StringRef, size_t))
 ERROR(unknown_argv_for, "unknown argument value '%0' for '%1'", 
   (StringRef, StringRef))
 
