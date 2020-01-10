@@ -246,6 +246,25 @@ public:
              calledFn->getNumArgs(), expr->getNumArgs());
   }
 
+  void tryNoteCalledFunction(CallExpr *expr) {
+    Expr *fn = expr->getFn()->ignoreImplicitConversions()->ignoreParens();
+    if (!isa<DeclRefExpr>(fn))
+      return;
+    DeclRefExpr *dre = cast<DeclRefExpr>(fn);
+
+    ValueDecl *decl = dre->getValueDecl();
+    if (!isa<FuncDecl>(decl))
+      return;
+    FuncDecl *fnDecl = cast<FuncDecl>(decl);
+
+    SourceLoc fnLoc = fnDecl->getLoc();
+    if (fnLoc.isInvalid())
+      return;
+
+    diagnose(fnLoc, diag::func_of_type_declared_here, fnDecl->getIdentifier(),
+             fnDecl->getValueType());
+  }
+
   /// \returns true if we can take the address of \p subExpr.
   /// If we can't, this function will emit the appropriate diagnostics.
   bool checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr);
@@ -628,10 +647,11 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
   FunctionType *calledFn =
       calleeType->getDesugaredType()->getAs<FunctionType>();
   if (!calledFn) {
-    // Use cs.simplifyType so things like 0() are correctly diagnosed as i32 and not
-    // diagnosed as '_'
+    // Use cs.simplifyType so things like 0() are correctly diagnosed as i32 and
+    // not diagnosed as '_'
     diagnose(expr->getFn()->getLoc(),
-             diag::value_of_non_function_type_isnt_callable, cs.simplifyType(calleeType))
+             diag::value_of_non_function_type_isnt_callable,
+             cs.simplifyType(calleeType))
         .highlight({expr->getLParenLoc(), expr->getRParenLoc()});
     return nullptr;
   }
@@ -643,6 +663,7 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
   // Now, check if we're passing the right amount of parameters to the function
   if (expr->getNumArgs() != calledFn->getNumArgs()) {
     diagnoseCallWithIncorrectNumberOfArguments(expr, calledFn);
+    tryNoteCalledFunction(expr);
     return expr;
   }
 
@@ -663,6 +684,7 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
       diagnose(arg->getLoc(),
                diag::cannot_convert_value_of_ty_to_expected_arg_ty, argType,
                expectedType);
+      tryNoteCalledFunction(expr);
 
       callIsCorrect = false;
     }
