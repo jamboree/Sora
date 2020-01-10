@@ -238,6 +238,14 @@ public:
         .highlight(expr->getOpLoc());
   }
 
+  void diagnoseCallWithIncorrectNumberOfArguments(CallExpr *expr,
+                                                  FunctionType *calledFn) {
+    assert(expr->getNumArgs() != calledFn->getNumArgs());
+    diagnose(expr->getFn()->getLoc(),
+             diag::fn_called_with_incorrect_number_of_args, calledFn,
+             calledFn->getNumArgs(), expr->getNumArgs());
+  }
+
   /// \returns true if we can take the address of \p subExpr.
   /// If we can't, this function will emit the appropriate diagnostics.
   bool checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr);
@@ -609,7 +617,59 @@ Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
   return expr;
 }
 
-Expr *ExprChecker::visitCallExpr(CallExpr *expr) { return nullptr; }
+Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
+  // First, check if the callee is a FunctionType
+  Type calleeType = expr->getFn()->getType()->getRValue();
+
+  // Don't bother checking if we have an ErrorType
+  if (calleeType->hasErrorType())
+    return nullptr;
+
+  FunctionType *calledFn =
+      calleeType->getDesugaredType()->getAs<FunctionType>();
+  if (!calledFn) {
+    // Use cs.simplifyType so things like 0() are correctly diagnosed as i32 and not
+    // diagnosed as '_'
+    diagnose(expr->getFn()->getLoc(),
+             diag::value_of_non_function_type_isnt_callable, cs.simplifyType(calleeType))
+        .highlight({expr->getLParenLoc(), expr->getRParenLoc()});
+    return nullptr;
+  }
+
+  // The type of the CallExpr is the return type of the function, even on error.
+  // (= after this point, return expr on error and not nullptr!);
+  expr->setType(calledFn->getReturnType());
+
+  // Now, check if we're passing the right amount of parameters to the function
+  if (expr->getNumArgs() != calledFn->getNumArgs()) {
+    diagnoseCallWithIncorrectNumberOfArguments(expr, calledFn);
+    return expr;
+  }
+
+  // Finally, check if the call is correct
+  bool callIsCorrect = true;
+  for (size_t k = 0; k < expr->getNumArgs(); ++k) {
+    Type expectedType = calledFn->getArg(k);
+    Expr *arg = expr->getArg(k);
+
+    // Try to apply implicit conversions
+    arg = tc.tryInsertImplicitConversions(cs, arg, expectedType);
+    expr->setArg(k, arg);
+
+    // Unify
+    if (!cs.unify(arg->getType(), expectedType)) {
+      // Don't forget to use the type without implicit conversions
+      Type argType = arg->ignoreImplicitConversions()->getType();
+      diagnose(arg->getLoc(),
+               diag::cannot_convert_value_of_ty_to_expected_arg_ty, argType,
+               expectedType);
+
+      callIsCorrect = false;
+    }
+  }
+
+  return expr;
+}
 
 Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
   // Check that the condition has a boolean type

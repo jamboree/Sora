@@ -71,6 +71,16 @@ ERROR(cannot_create_var_of_type,
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(cannot_convert_value_of_ty_to_expected_arg_ty,
+  "cannot convert value of type '%0' to expected argument type '%1'", (Type, Type))
+
+ERROR(fn_called_with_incorrect_number_of_args,
+  "function of type '%0' takes '%1' parameter but '%2' were supplied", 
+  (Type, size_t, size_t))
+
+ERROR(value_of_non_function_type_isnt_callable,
+  "value of non-function type '%0' is not callable", (Type))
+
 ERROR(cannot_take_address_of_func,
   "cannot take the address of function '%0'", (Identifier))
 
