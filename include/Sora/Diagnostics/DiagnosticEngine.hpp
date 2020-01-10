@@ -75,6 +75,8 @@ template <typename Ty> struct DiagnosticArgumentFormatter {
         !std::is_same<Ty, Ty>::value,
         "No specialization of DiagnosticArgumentFormatter for this type.");
   }
+
+  // Add a specialization for size_t in case it differs from "unsigned int" on some systems.
 };
 
 /// Provide some implementation for basic types.
@@ -84,7 +86,7 @@ template <typename Ty> struct DiagnosticArgumentFormatter {
   template <> struct DiagnosticArgumentFormatter<Ty> {                         \
     static std::string format(Ty value) Body                                   \
   }
-SIMPLE_DAF_IMPL(unsigned, unsigned, { return std::to_string(value); });
+SIMPLE_DAF_IMPL(size_t, size_t, { return std::to_string(value); });
 SIMPLE_DAF_IMPL(int, int, { return std::to_string(value); });
 SIMPLE_DAF_IMPL(char, char, { return std::string(1, value); });
 SIMPLE_DAF_IMPL(StringRef, StringRef, { return value.str(); });
