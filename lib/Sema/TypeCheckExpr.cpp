@@ -193,18 +193,28 @@ public:
   }
 
   bool isIntegerTypeOrIntegerTypeVariable(Type type) {
+    assert(type);
     if (type->is<IntegerType>())
       return true;
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      return cs.isIntegerTypeVariable(tv);
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
+      if (cs.isIntegerTypeVariable(tv))
+        return true;
+      if (cs.hasSubstitution(tv))
+        return isIntegerTypeOrIntegerTypeVariable(cs.simplifyType(tv));
+    }
     return false;
   }
 
   bool isFloatTypeOrFloatTypeVariable(Type type) {
+    assert(type);
     if (type->is<FloatType>())
       return true;
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      return cs.isFloatTypeVariable(tv);
+    if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
+      if (cs.isFloatTypeVariable(tv))
+        return true;
+      if (cs.hasSubstitution(tv))
+        return isFloatTypeOrFloatTypeVariable(cs.simplifyType(type));
+    }
     return false;
   }
 
@@ -267,14 +277,20 @@ public:
   Expr *checkBinaryOp(BinaryExpr *expr);
   /// Checks if a binary operation \p op can be applied to types \p lhs and \p
   /// rhs. This will unify the types.
+  /// \p lhs and \p rhs are passed by reference so implicit conversions can be
+  /// inserted if \p allowImplicitConversions is true
   /// \returns the type of the operation if it's valid, otherwise returns
   /// nullptr if it's invalid.
-  Type checkBinaryOperatorApplication(Type lhs, BinaryOperatorKind op,
-                                      Type rhs);
+  Type checkBinaryOperatorApplication(Expr *&lhs, BinaryOperatorKind op,
+                                      Expr *&rhs,
+                                      bool allowImplicitConversions);
   // Checks if ?? can be applied to \p lhs and \p rhs
+  /// \p lhs and \p rhs are passed by reference so implicit conversions can be
+  /// inserted if \p allowImplicitConversions is true
   /// \returns the type of the operation if it's valid, otherwise returns
   /// nullptr if it's invalid.
-  Type checkNullCoalesceApplication(Type lhs, Type rhs);
+  Type checkNullCoalesceApplication(Expr *&lhs, Expr *&rhs,
+                                    bool allowImplicitConversions);
 
   Expr *visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr);
   Expr *visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr);
@@ -439,15 +455,22 @@ Expr *ExprChecker::checkAssignement(BinaryExpr *expr) {
 
 Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
   assert(!expr->isAssignementOp());
-  Type lhsTy = expr->getLHS()->getType();
-  Type rhsTy = expr->getRHS()->getType();
+  Expr *lhs = expr->getLHS();
+  Expr *rhs = expr->getRHS();
+
+  Type lhsTy = lhs->getType();
+  Type rhsTy = rhs->getType();
   assert(!lhsTy->hasErrorType() && !rhsTy->hasErrorType());
 
-  Type opType = checkBinaryOperatorApplication(lhsTy, expr->getOpKind(), rhsTy);
+  Type opType = checkBinaryOperatorApplication(
+      lhs, expr->getOpKind(), rhs, /*allowImplicitConversions*/ true);
+  expr->setLHS(lhs);
+  expr->setRHS(rhs);
+
   if (!opType) {
-    diagnose(expr->getOpLoc(),
-             diag::cannot_use_binary_oper_on_operands_of_types,
-             expr->getOpSpelling(), lhsTy, rhsTy);
+    diagnose(
+        expr->getOpLoc(), diag::cannot_use_binary_oper_on_operands_of_types,
+        expr->getOpSpelling(), cs.simplifyType(lhsTy), cs.simplifyType(rhsTy));
     return nullptr;
   }
 
@@ -460,6 +483,7 @@ Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
 static bool isEqualityComparable(Type type) {
   // == and != support integer, floats, boolean, references and tuples thereof.
   // FIXME: Should they support "maybe" types as well?
+  type = type->getRValue()->getCanonicalType();
   switch (type->getKind()) {
   default:
     return false;
@@ -478,21 +502,25 @@ static bool isEqualityComparable(Type type) {
   }
 }
 
-Type ExprChecker::checkBinaryOperatorApplication(Type lhs,
-                                                 BinaryOperatorKind op,
-                                                 Type rhs) {
-  assert(!lhs->hasErrorType() && !rhs->hasErrorType());
+Type ExprChecker::checkBinaryOperatorApplication(
+    Expr *&lhs, BinaryOperatorKind op, Expr *&rhs,
+    bool allowImplicitConversions) {
+  // Fetch the type of the LHS and RHS and strip LValues, as they're irrelevant
+  // here.
+  Type lhsType = lhs->getType()->getRValue();
+  Type rhsType = rhs->getType()->getRValue();
+  assert(!lhsType->hasErrorType() && !rhsType->hasErrorType());
   using Op = BinaryOperatorKind;
   // NullCoalesce is a special case
   if (op == Op::NullCoalesce)
-    return checkNullCoalesceApplication(lhs, rhs);
+    return checkNullCoalesceApplication(lhs, rhs, allowImplicitConversions);
 
   // Unifies the LHS and RHS with a fresh, general type variable.
   // Returns the type variable on success, nullptr if it failed to unify with
   // the lhs/rhs.
   auto inferReturnTypeOfOperator = [&]() -> Type {
     Type tyVar = cs.createGeneralTypeVariable();
-    if (cs.unify(lhs, tyVar) && cs.unify(rhs, tyVar))
+    if (cs.unify(lhsType, tyVar) && cs.unify(rhsType, tyVar))
       return tyVar;
     return nullptr;
   };
@@ -500,30 +528,38 @@ Type ExprChecker::checkBinaryOperatorApplication(Type lhs,
   switch (op) {
   case Op::Eq:
   case Op::NEq: {
-    // == and != requires that the LHS and RHS are exactly equal
-    if (!cs.unify(lhs, rhs))
+    // == and != requires that the LHS and RHS are exactly equal, but we allow
+    // differences in reference mutability (e.g. compare &T with &mut T)
+    // FIXME: Wouldn't it be more correct to insert a MutToImmut conversion
+    // here? It's not an easy task but would result in a more complete AST.
+    UnificationOptions options;
+    options.ignoreReferenceMutability = true;
+    if (!cs.unify(lhsType, rhsType, options))
       return nullptr;
-    // Extract the type of the operation
-    Type opType = cs.simplifyType(lhs)->getRValue()->getCanonicalType();
-    // Check if == and != can be used with that type
-    if (!isEqualityComparable(opType))
+    // Check if == and != can be used here
+    if (!isEqualityComparable(cs.simplifyType(lhsType)))
       return nullptr;
-    // Equality operators always have bool type
+    // Equality operators always return bool
     return ctxt.boolType;
   }
     // Operators that work on any numeric types.
   case Op::Add:
   case Op::Sub:
   case Op::Mul:
-  case Op::Div:
+  case Op::Div: {
+    Type type = inferReturnTypeOfOperator();
+    if (type.isNull() || !isNumericTypeOrNumericTypeVariable(type))
+      return nullptr;
+    return type;
+  }
   case Op::LT:
   case Op::LE:
   case Op::GT:
   case Op::GE: {
     Type type = inferReturnTypeOfOperator();
-    if (!isNumericTypeOrNumericTypeVariable(type))
+    if (type.isNull() || !isNumericTypeOrNumericTypeVariable(type))
       return nullptr;
-    return type;
+    return ctxt.boolType;
   }
     // Operator that only work on integer types
   case Op::Rem:
@@ -533,7 +569,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Type lhs,
   case Op::Or:
   case Op::XOr: {
     Type type = inferReturnTypeOfOperator();
-    if (!isIntegerTypeOrIntegerTypeVariable(type))
+    if (type.isNull() || !isIntegerTypeOrIntegerTypeVariable(type))
       return nullptr;
     return type;
   }
@@ -543,7 +579,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Type lhs,
     // The type of those operators is '(bool, bool) -> bool'.
     // FIXME: Normally, there should be no general type variable as LHS/RHS of
     // this, so checking using ->isBoolType is fine.
-    if (lhs->isBoolType() && rhs->isBoolType())
+    if (lhsType->isBoolType() && rhsType->isBoolType())
       return ctxt.boolType;
     return nullptr;
   default:
@@ -551,13 +587,16 @@ Type ExprChecker::checkBinaryOperatorApplication(Type lhs,
   }
 }
 
-Type ExprChecker::checkNullCoalesceApplication(Type lhs, Type rhs) {
+Type ExprChecker::checkNullCoalesceApplication(Expr *&lhs, Expr *&rhs,
+                                               bool allowImplicitConversions) {
   // LHS must be "maybe T" and RHS must be "T".
-  lhs = lhs->getRValue()->getDesugaredType();
-  MaybeType *maybeType = lhs->getAs<MaybeType>();
+  Type lhsType = lhs->getType()->getRValue()->getDesugaredType();
+  MaybeType *maybeType = lhsType->getAs<MaybeType>();
   if (!maybeType)
     return nullptr;
-  if (!cs.unify(maybeType->getValueType(), rhs))
+  if (allowImplicitConversions)
+    rhs = tryInsertImplicitConversions(rhs, maybeType->getValueType());
+  if (!cs.unify(maybeType->getValueType(), rhs->getType()))
     return nullptr;
   return maybeType->getValueType();
 }
@@ -798,7 +837,7 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
     Expr *arg = expr->getArg(k);
 
     // Try to apply implicit conversions
-    arg = tc.tryInsertImplicitConversions(cs, arg, expectedType);
+    arg = tryInsertImplicitConversions(arg, expectedType);
     expr->setArg(k, arg);
 
     // Unify

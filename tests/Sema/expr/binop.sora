@@ -1,0 +1,251 @@
+// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+
+func coalesce(x: maybe i32, y: maybe &i32, z: maybe &mut i32) {
+  let mut a = 0
+  let b = 0
+  y ?? &a
+  y ?? &b
+  z ?? &a  
+  z ?? &b   // expect-error: cannot use binary operator '??' on operands of type 'maybe &mut i32' and '&i32'
+  y ?? 0    // expect-error: cannot use binary operator '??' on operands of type 'maybe &i32' and 'i32'
+  x ?? x    // expect-error: cannot use binary operator '??' on operands of type 'maybe i32' and 'maybe i32'
+  x ?? 0
+  0 ?? 0  // expect-error: cannot use binary operator '??' on operands of type 'i32' and 'i32'
+  x ?? () // expect-error: cannot use binary operator '??' on operands of type 'maybe i32' and '()'
+}
+
+func eq(x: &i32, y: &mut i32) {
+  let (mut a, b) = (0, 1)
+  a == b
+
+  a == x    // expect-error: cannot use binary operator '==' on operands of type 'i32' and '&i32'
+  x == a    // expect-error: cannot use binary operator '==' on operands of type '&i32' and 'i32'
+
+  (a, x) == (b, y)
+  (a, x, b, y) == (b, y, a, x)
+
+  x == x
+  y == y
+
+  x == y
+  y == x
+
+  func foo() {}
+  func bar() {}
+
+  foo == bar  // expect-error: cannot use binary operator '==' on operands of type '() -> void' and '() -> void'
+}
+
+func binOp() {
+  let vBool = true
+
+  let vF32: f32 = 0.0
+  let vF64: f64 = 0.0
+
+  let vI8: i8 = 0
+  let vI16: i16 = 0
+  let vI32: i32 = 0
+  let vI64: i64 = 0
+  let vISIZE: isize = 0
+  let vU8: u8 = 0
+  let vU16: u16 = 0
+  let vU32: u32 = 0
+  let vU64: u64 = 0
+  let vUSIZE: usize = 0
+
+  vF32 + vF32
+  vF32 - vF32
+  vF32 * vF32
+  vF32 / vF32
+  vF32 < vF32
+  vF32 > vF32
+  vF32 >= vF32
+  vF32 <= vF32
+  vF32 % vF32   // expect-error: cannot use binary operator '%' on operands of type 'f32' and 'f32'
+  vF32 << vF32  // expect-error: cannot use binary operator '<<' on operands of type 'f32' and 'f32'
+  vF32 >> vF32  // expect-error: cannot use binary operator '>>' on operands of type 'f32' and 'f32'
+  vF32 | vF32   // expect-error: cannot use binary operator '|' on operands of type 'f32' and 'f32'
+  vF32 & vF32   // expect-error: cannot use binary operator '&' on operands of type 'f32' and 'f32'
+  vF32 ^ vF32   // expect-error: cannot use binary operator '^' on operands of type 'f32' and 'f32'
+
+  vF64 + vF64
+  vF64 - vF64
+  vF64 * vF64
+  vF64 / vF64
+  vF64 < vF64
+  vF64 > vF64
+  vF64 >= vF64
+  vF64 <= vF64
+  vF64 % vF64   // expect-error: cannot use binary operator '%' on operands of type 'f64' and 'f64'
+  vF64 << vF64  // expect-error: cannot use binary operator '<<' on operands of type 'f64' and 'f64'
+  vF64 >> vF64  // expect-error: cannot use binary operator '>>' on operands of type 'f64' and 'f64'
+  vF64 | vF64   // expect-error: cannot use binary operator '|' on operands of type 'f64' and 'f64'
+  vF64 & vF64   // expect-error: cannot use binary operator '&' on operands of type 'f64' and 'f64'
+  vF64 ^ vF64   // expect-error: cannot use binary operator '^' on operands of type 'f64' and 'f64'
+
+  vI8 + vI8
+  vI8 - vI8
+  vI8 * vI8
+  vI8 / vI8
+  vI8 < vI8
+  vI8 > vI8
+  vI8 >= vI8
+  vI8 <= vI8
+  vI8 % vI8
+  vI8 << vI8
+  vI8 >> vI8
+  vI8 | vI8
+  vI8 & vI8
+  vI8 ^ vI8
+
+  vI16 + vI16
+  vI16 - vI16
+  vI16 * vI16
+  vI16 / vI16
+  vI16 < vI16
+  vI16 > vI16
+  vI16 >= vI16
+  vI16 <= vI16
+  vI16 % vI16
+  vI16 << vI16
+  vI16 >> vI16
+  vI16 | vI16
+  vI16 & vI16
+  vI16 ^ vI16
+
+  vI32 + vI32
+  vI32 - vI32
+  vI32 * vI32
+  vI32 / vI32
+  vI32 < vI32
+  vI32 > vI32
+  vI32 >= vI32
+  vI32 <= vI32
+  vI32 % vI32
+  vI32 << vI32
+  vI32 >> vI32
+  vI32 | vI32
+  vI32 & vI32
+  vI32 ^ vI32
+
+  vI64 + vI64
+  vI64 - vI64
+  vI64 * vI64
+  vI64 / vI64
+  vI64 < vI64
+  vI64 > vI64
+  vI64 >= vI64
+  vI64 <= vI64
+  vI64 % vI64
+  vI64 << vI64
+  vI64 >> vI64
+  vI64 | vI64
+  vI64 & vI64
+  vI64 ^ vI64
+
+  vISIZE + vISIZE
+  vISIZE - vISIZE
+  vISIZE * vISIZE
+  vISIZE / vISIZE
+  vISIZE < vISIZE
+  vISIZE > vISIZE
+  vISIZE >= vISIZE
+  vISIZE <= vISIZE
+  vISIZE % vISIZE
+  vISIZE << vISIZE
+  vISIZE >> vISIZE
+  vISIZE | vISIZE
+  vISIZE & vISIZE
+  vISIZE ^ vISIZE
+
+  vU8 + vU8
+  vU8 - vU8
+  vU8 * vU8
+  vU8 / vU8
+  vU8 < vU8
+  vU8 > vU8
+  vU8 >= vU8
+  vU8 <= vU8
+  vU8 % vU8
+  vU8 << vU8
+  vU8 >> vU8
+  vU8 | vU8
+  vU8 & vU8
+  vU8 ^ vU8
+
+  vU16 + vU16
+  vU16 - vU16
+  vU16 * vU16
+  vU16 / vU16
+  vU16 < vU16
+  vU16 > vU16
+  vU16 >= vU16
+  vU16 <= vU16
+  vU16 % vU16
+  vU16 << vU16
+  vU16 >> vU16
+  vU16 | vU16
+  vU16 & vU16
+  vU16 ^ vU16
+
+  vU32 + vU32
+  vU32 - vU32
+  vU32 * vU32
+  vU32 / vU32
+  vU32 < vU32
+  vU32 > vU32
+  vU32 > vU32
+  vU32 >= vU32
+  vU32 <= vU32
+  vU32 % vU32
+  vU32 << vU32
+  vU32 >> vU32
+  vU32 | vU32
+  vU32 & vU32
+  vU32 ^ vU32
+
+  vU64 + vU64
+  vU64 - vU64
+  vU64 * vU64
+  vU64 / vU64
+  vU64 < vU64
+  vU64 > vU64
+  vU64 >= vU64
+  vU64 <= vU64
+  vU64 % vU64
+  vU64 << vU64
+  vU64 >> vU64
+  vU64 | vU64
+  vU64 & vU64
+  vU64 ^ vU64
+
+  vUSIZE + vUSIZE
+  vUSIZE - vUSIZE
+  vUSIZE * vUSIZE
+  vUSIZE / vUSIZE
+  vUSIZE < vUSIZE
+  vUSIZE > vUSIZE
+  vUSIZE >= vUSIZE
+  vUSIZE <= vUSIZE
+  vUSIZE % vUSIZE
+  vUSIZE << vUSIZE
+  vUSIZE >> vUSIZE
+  vUSIZE | vUSIZE
+  vUSIZE & vUSIZE
+  vUSIZE ^ vUSIZE
+
+  vBool && vBool
+  vBool || vBool
+  (vI8 < vI8) && (vI8 > vI8) || (vI8 == vI8)
+
+
+  vI8 && vI8        // expect-error: cannot use binary operator '&&' on operands of type 'i8' and 'i8'
+  vI8 || vI8        // expect-error: cannot use binary operator '||' on operands of type 'i8' and 'i8'
+  vI8 + vU8         // expect-error: cannot use binary operator '+' on operands of type 'i8' and 'u8'
+  vI8 + vI16        // expect-error: cannot use binary operator '+' on operands of type 'i8' and 'i16'
+  vI8 + vF32        // expect-error: cannot use binary operator '+' on operands of type 'i8' and 'f32'
+  null < ()         // expect-error: cannot use binary operator '<' on operands of type 'null' and '()'
+  null + null       // expect-error: cannot use binary operator '+' on operands of type 'null' and 'null'
+  true + false      // expect-error: cannot use binary operator '+' on operands of type 'bool' and 'bool'
+  () % ()           // expect-error: cannot use binary operator '%' on operands of type '()' and '()'
+}
