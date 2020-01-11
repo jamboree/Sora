@@ -30,3 +30,9 @@ func foo() { // expect-error: value 'foo' is already defined in this scope
 }
 
 func bar(bar: i32) {} // this is allowed, but not really useful. 
+
+func boo() {
+  let a = 0   // expect-note: previous definition of 'a' is here
+  let b = 0
+  let a = 0   // expect-error: value 'a' is already defined in this scope
+}

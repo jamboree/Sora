@@ -113,9 +113,11 @@ public:
     UnqualifiedValueLookup uvl(decl->getSourceFile());
 
     // Since Sora has quite loose shadowing rules, we want lookup to stop after
-    // looking into the first scope, unless we're checking a FuncDecl and we're
-    // looking into its own scope.
+    // looking into the first scope, unless it's an implicit one or we're
+    // checking a FuncDecl and we're looking into its own scope.
     uvl.options.shouldStop = [&](const ASTScope *scope) {
+      if (scope->isImplicit())
+        return false;
       if (const FuncDeclScope *fnScope = dyn_cast<FuncDeclScope>(scope))
         return fnScope->getFuncDecl() != decl;
       return true;
