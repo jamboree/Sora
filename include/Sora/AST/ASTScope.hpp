@@ -55,12 +55,15 @@ class alignas(ASTScopeAlignement) ASTScope {
   static_assert(
       unsigned(ASTScopeKind::Last_Scope) <= (1 << 3),
       "Not enough bits in parentAndKind to represent every ASTScopeKind");
+
   /// The sorted vector of children scopes
   SmallVector<ASTScope *, 4> children;
   /// Whether a cleanup for this ASTScope has been registered
-  bool hasCleanup = false;
+  bool hasCleanup : 1;
   /// Whether this scope has built its children scope.
-  bool expanded = false;
+  bool expanded : 1;
+  /// Whether this scope is implicit
+  bool implicit : 2;
 
   /// \returns true if this ASTScope needs cleanup
   bool needsCleanup() const {
@@ -78,9 +81,13 @@ class alignas(ASTScopeAlignement) ASTScope {
   }
 
 protected:
-  ASTScope(ASTScopeKind kind, ASTScope *parent) : parentAndKind(parent, kind) {
+  ASTScope(ASTScopeKind kind, ASTScope *parent, bool isImplicit = false)
+      : parentAndKind(parent, kind) {
     assert((parent || (kind == ASTScopeKind::SourceFile)) &&
            "Every scope except SourceFileScopes must have a parent");
+    hasCleanup = false;
+    expanded = false;
+    implicit = isImplicit;
   }
 
   // Allow derived classes to allocate ASTScopes using the ASTContext.
@@ -117,6 +124,9 @@ public:
   /// innermost scope.
   /// \p loc must be within this scope's SourceRange.
   ASTScope *findInnermostScope(SourceLoc loc);
+
+  /// \returns true if this ASTScope is implicit
+  bool isImplicit() const { return implicit; }
 
   /// \returns true if this scope overlaps \p other
   bool overlaps(const ASTScope *other) const;
@@ -217,7 +227,7 @@ public:
   }
 };
 
-/// Represents the scope of a local LetDecl.
+/// Represents the implicit scope following a local LetDecl.
 ///
 /// \verbatim
 /// // code
@@ -261,7 +271,9 @@ public:
 /// body (the "then" block for IfStmts and the loop's body for WhileStmts)
 class LocalLetDeclScope final : public ASTScope {
   LocalLetDeclScope(LetDecl *decl, ASTScope *parent, SourceRange range)
-      : ASTScope(ASTScopeKind::LocalLetDecl, parent), decl(decl), range(range) {
+      : ASTScope(ASTScopeKind::LocalLetDecl, parent,
+                 /*isImplicit*/ true /*always implicit!*/),
+        decl(decl), range(range) {
     assert(parent && "LocalLetDeclScope must have a valid parent");
     assert(range && "range isn't valid");
     assert(isLocalAndNonNull() &&
