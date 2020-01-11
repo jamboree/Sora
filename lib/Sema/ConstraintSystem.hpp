@@ -34,6 +34,8 @@ struct UnificationOptions {
   /// e.g. if true, unification will succeed for "@lvalue i32" and"i32", if set
   /// to false, it'll fail.
   bool ignoreLValues = true;
+  /// Whether mutability is ignored when checking equality of reference types
+  bool ignoreReferenceMutability = false;
 };
 
 /// The ConstraintSystem serves a context for constraint generation, solving

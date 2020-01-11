@@ -331,8 +331,9 @@ public:
 #undef BUILTIN_TYPE
 
   bool visitReferenceType(ReferenceType *type, ReferenceType *other) {
-    if (type->isMut() != other->isMut())
-      return false;
+    if (!options.ignoreReferenceMutability)
+      if (type->isMut() != other->isMut())
+        return false;
     return unify(type->getPointeeType(), other->getPointeeType());
   }
 
