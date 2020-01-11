@@ -249,6 +249,9 @@ public:
   /// \returns whether this type is a TupleType (or a sugared version thereof)
   bool isTupleType() const;
 
+  /// \returns true if this type has an LValueType (if it's an LValue)
+  bool hasLValue() const;
+
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const {
     return TypeProperties(bits.TypeBase.typePropertiesValue);
@@ -269,7 +272,7 @@ public:
   TypeKind getKind() const { return TypeKind(bits.TypeBase.kind); }
 
   template <typename Ty> Ty *getAs() { return dyn_cast<Ty>(this); }
-  template <typename Ty> bool is() { return isa<Ty>(this); }
+  template <typename Ty> bool is() const { return isa<Ty>(this); }
   template <typename Ty> Ty *castTo() { return cast<Ty>(this); }
 };
 
@@ -598,6 +601,8 @@ public:
     return type->getKind() == TypeKind::LValue;
   }
 };
+
+inline bool TypeBase::hasLValue() const { return is<LValueType>(); }
 
 /// Error Type
 ///
