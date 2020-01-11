@@ -30,6 +30,9 @@ func infer() {
   // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:20
   // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:25
   ((0 as i8 + 0) * 0) + 0 
+  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:15
+  // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:20
+  let _ :i8 = 1 << 8
 }
 
 func eq(x: &i32, y: &mut i32) {
@@ -256,6 +259,11 @@ func binOp() {
   vBool || vBool
   (vI8 < vI8) && (vI8 > vI8) || (vI8 == vI8)
 
+  vI8 << vI64
+  vI64 << vI8
+  vU8 >> vI8
+  vU64 << vU8
+  vUSIZE >> vISIZE
 
   vI8 && vI8        // expect-error: cannot use binary operator '&&' on operands of type 'i8' and 'i8'
   vI8 || vI8        // expect-error: cannot use binary operator '||' on operands of type 'i8' and 'i8'

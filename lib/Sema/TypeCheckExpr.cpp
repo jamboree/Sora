@@ -464,6 +464,8 @@ Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
 
   Type opType = checkBinaryOperatorApplication(
       lhs, expr->getOpKind(), rhs, /*allowImplicitConversions*/ true);
+  assert((opType.isNull() || !opType->hasLValue()) &&
+         "Operator return type cannot have an LValue");
   expr->setLHS(lhs);
   expr->setRHS(rhs);
 
@@ -562,9 +564,16 @@ Type ExprChecker::checkBinaryOperatorApplication(
     return ctxt.boolType;
   }
     // Operator that only work on integer types
-  case Op::Rem:
   case Op::Shl:
-  case Op::Shr:
+  case Op::Shr: {
+    // Both << and >> have type "(T, U) -> T" where T and U are integer types
+    if (!isIntegerTypeOrIntegerTypeVariable(lhsType))
+      return nullptr;
+    if (!isIntegerTypeOrIntegerTypeVariable(rhsType))
+      return nullptr;
+    return lhsType;
+  }
+  case Op::Rem:
   case Op::And:
   case Op::Or:
   case Op::XOr: {
