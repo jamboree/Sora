@@ -246,25 +246,6 @@ public:
              calledFn->getNumArgs(), expr->getNumArgs());
   }
 
-  void tryNoteCalledFunction(CallExpr *expr) {
-    Expr *fn = expr->getFn()->ignoreImplicitConversions()->ignoreParens();
-    if (!isa<DeclRefExpr>(fn))
-      return;
-    DeclRefExpr *dre = cast<DeclRefExpr>(fn);
-
-    ValueDecl *decl = dre->getValueDecl();
-    if (!isa<FuncDecl>(decl))
-      return;
-    FuncDecl *fnDecl = cast<FuncDecl>(decl);
-
-    SourceLoc fnLoc = fnDecl->getLoc();
-    if (fnLoc.isInvalid())
-      return;
-
-    diagnose(fnLoc, diag::func_of_type_declared_here, fnDecl->getIdentifier(),
-             fnDecl->getValueType());
-  }
-
   /// \returns true if we can take the address of \p subExpr.
   /// If we can't, this function will emit the appropriate diagnostics.
   bool checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr);
@@ -663,12 +644,10 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
   // Now, check if we're passing the right amount of parameters to the function
   if (expr->getNumArgs() != calledFn->getNumArgs()) {
     diagnoseCallWithIncorrectNumberOfArguments(expr, calledFn);
-    tryNoteCalledFunction(expr);
     return expr;
   }
 
   // Finally, check if the call is correct
-  bool callIsCorrect = true;
   for (size_t k = 0; k < expr->getNumArgs(); ++k) {
     Type expectedType = calledFn->getArg(k);
     Expr *arg = expr->getArg(k);
@@ -684,9 +663,7 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
       diagnose(arg->getLoc(),
                diag::cannot_convert_value_of_ty_to_expected_arg_ty, argType,
                expectedType);
-      tryNoteCalledFunction(expr);
 
-      callIsCorrect = false;
     }
   }
 
