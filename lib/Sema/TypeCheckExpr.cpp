@@ -261,6 +261,21 @@ public:
   /// Checks a ~ unary operation
   Expr *checkUnaryNot(UnaryExpr *expr);
 
+  /// Checks an assignement
+  Expr *checkAssignement(BinaryExpr *expr);
+  /// Checks a infix binary operation
+  Expr *checkBinaryOp(BinaryExpr *expr);
+  /// Checks if a binary operation \p op can be applied to types \p lhs and \p
+  /// rhs. This will unify the types.
+  /// \returns the type of the operation if it's valid, otherwise returns
+  /// nullptr if it's invalid.
+  Type checkBinaryOperatorApplication(Type lhs, BinaryOperatorKind op,
+                                      Type rhs);
+  // Checks if ?? can be applied to \p lhs and \p rhs
+  /// \returns the type of the operation if it's valid, otherwise returns
+  /// nullptr if it's invalid.
+  Type checkNullCoalesceApplication(Type lhs, Type rhs);
+
   Expr *visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr);
   Expr *visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr);
 
@@ -415,6 +430,136 @@ Expr *ExprChecker::checkUnaryNot(UnaryExpr *expr) {
   // ~10" can work (= 10 correctly inferred to i8)
   expr->setType(subExprTy->getRValue());
   return expr;
+}
+
+Expr *ExprChecker::checkAssignement(BinaryExpr *expr) {
+  assert(expr->isAssignementOp());
+  return nullptr;
+}
+
+Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
+  assert(!expr->isAssignementOp());
+  Type lhsTy = expr->getLHS()->getType();
+  Type rhsTy = expr->getRHS()->getType();
+  assert(!lhsTy->hasErrorType() && !rhsTy->hasErrorType());
+
+  Type opType = checkBinaryOperatorApplication(lhsTy, expr->getOpKind(), rhsTy);
+  if (!opType) {
+    diagnose(expr->getOpLoc(),
+             diag::cannot_use_binary_oper_on_operands_of_types,
+             expr->getOpSpelling(), lhsTy, rhsTy);
+    return nullptr;
+  }
+
+  expr->setType(opType);
+  return expr;
+}
+
+// Helper for the function below.
+// Checks if operator == or != can be used on operands of type \p type.
+static bool isEqualityComparable(Type type) {
+  // == and != support integer, floats, boolean, references and tuples thereof.
+  // FIXME: Should they support "maybe" types as well?
+  switch (type->getKind()) {
+  default:
+    return false;
+  case TypeKind::Integer:
+  case TypeKind::Float:
+  case TypeKind::Bool:
+  case TypeKind::Reference:
+    return true;
+  case TypeKind::Tuple: {
+    TupleType *tt = type->castTo<TupleType>();
+    for (Type elt : tt->getElements())
+      if (!isEqualityComparable(elt))
+        return false;
+    return true;
+  }
+  }
+}
+
+Type ExprChecker::checkBinaryOperatorApplication(Type lhs,
+                                                 BinaryOperatorKind op,
+                                                 Type rhs) {
+  assert(!lhs->hasErrorType() && !rhs->hasErrorType());
+  using Op = BinaryOperatorKind;
+  // NullCoalesce is a special case
+  if (op == Op::NullCoalesce)
+    return checkNullCoalesceApplication(lhs, rhs);
+
+  // Unifies the LHS and RHS with a fresh, general type variable.
+  // Returns the type variable on success, nullptr if it failed to unify with
+  // the lhs/rhs.
+  auto inferReturnTypeOfOperator = [&]() -> Type {
+    Type tyVar = cs.createGeneralTypeVariable();
+    if (cs.unify(lhs, tyVar) && cs.unify(rhs, tyVar))
+      return tyVar;
+    return nullptr;
+  };
+
+  switch (op) {
+  case Op::Eq:
+  case Op::NEq: {
+    // == and != requires that the LHS and RHS are exactly equal
+    if (!cs.unify(lhs, rhs))
+      return nullptr;
+    // Extract the type of the operation
+    Type opType = cs.simplifyType(lhs)->getRValue()->getCanonicalType();
+    // Check if == and != can be used with that type
+    if (!isEqualityComparable(opType))
+      return nullptr;
+    // Equality operators always have bool type
+    return ctxt.boolType;
+  }
+    // Operators that work on any numeric types.
+  case Op::Add:
+  case Op::Sub:
+  case Op::Mul:
+  case Op::Div:
+  case Op::LT:
+  case Op::LE:
+  case Op::GT:
+  case Op::GE: {
+    Type type = inferReturnTypeOfOperator();
+    if (!isNumericTypeOrNumericTypeVariable(type))
+      return nullptr;
+    return type;
+  }
+    // Operator that only work on integer types
+  case Op::Rem:
+  case Op::Shl:
+  case Op::Shr:
+  case Op::And:
+  case Op::Or:
+  case Op::XOr: {
+    Type type = inferReturnTypeOfOperator();
+    if (!isIntegerTypeOrIntegerTypeVariable(type))
+      return nullptr;
+    return type;
+  }
+    // Logical AND and OR
+  case Op::LAnd:
+  case Op::LOr:
+    // The type of those operators is '(bool, bool) -> bool'.
+    // FIXME: Normally, there should be no general type variable as LHS/RHS of
+    // this, so checking using ->isBoolType is fine.
+    if (lhs->isBoolType() && rhs->isBoolType())
+      return ctxt.boolType;
+    return nullptr;
+  default:
+    llvm_unreachable("Unknown Operator?");
+  }
+}
+
+Type ExprChecker::checkNullCoalesceApplication(Type lhs, Type rhs) {
+  // LHS must be "maybe T" and RHS must be "T".
+  lhs = lhs->getRValue()->getDesugaredType();
+  MaybeType *maybeType = lhs->getAs<MaybeType>();
+  if (!maybeType)
+    return nullptr;
+  if (!cs.unify(maybeType->getValueType(), rhs))
+    return nullptr;
+  return maybeType->getValueType();
 }
 
 Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
@@ -663,7 +808,6 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
       diagnose(arg->getLoc(),
                diag::cannot_convert_value_of_ty_to_expected_arg_ty, argType,
                expectedType);
-
     }
   }
 
@@ -737,7 +881,16 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   return expr;
 }
 
-Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) { return nullptr; }
+Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) {
+  // If one operand has an error type, don't bother checking the expr.
+  if (expr->getLHS()->getType()->hasErrorType() ||
+      expr->getRHS()->getType()->hasErrorType())
+    return nullptr;
+
+  if (expr->isAssignementOp())
+    return checkAssignement(expr);
+  return checkBinaryOp(expr);
+}
 
 Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) {
   using UOp = UnaryOperatorKind;

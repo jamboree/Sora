@@ -96,6 +96,10 @@ ERROR(cannot_take_address_of_temp_tuple,
 ERROR(cannot_use_unary_oper_on_operand_of_type,
   "cannot use unary operator '%0' on operand of type '%1'", (StringRef, Type))
 
+ERROR(cannot_use_binary_oper_on_operands_of_types,
+  "cannot use binary operator '%0' on operands of type '%1' and '%2'", 
+  (StringRef, Type, Type))
+
 ERROR(cannot_deref_value_of_type,
   "cannot dereference a value of type '%0'", (Type))
 
