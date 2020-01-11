@@ -231,16 +231,22 @@ public:
   /// \returns whether this type is an LValue
   bool isLValue() const;
 
-  /// \returns whether this type is the "null" type.
+  /// \returns whether this type is the "null" type (or a sugared version
+  /// thereof)
   bool isNullType() const;
 
-  /// \returns whether this type is an IntegerType
+  /// \returns whether this type is the "bool" type (or a sugared version
+  /// thereof)
+  bool isBoolType() const;
+
+  /// \returns whether this type is an IntegerType (or a sugared version
+  /// thereof)
   bool isAnyIntegerType() const;
 
-  /// \returns whether this type is a FloatType
+  /// \returns whether this type is a FloatType (or a sugared version thereof)
   bool isAnyFloatType() const;
 
-  /// \returns whether this type is a TupleType
+  /// \returns whether this type is a TupleType (or a sugared version thereof)
   bool isTupleType() const;
 
   /// \returns the TypeProperties of this type

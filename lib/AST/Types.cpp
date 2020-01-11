@@ -260,6 +260,10 @@ Type TypeBase::getRValue() const {
 
 bool TypeBase::isLValue() const { return isa<LValueType>(this); }
 
+bool TypeBase::isBoolType() const {
+  return getCanonicalType()->getRValue()->is<BoolType>();
+}
+
 bool TypeBase::isNullType() const {
   return getCanonicalType()->getRValue()->is<NullType>();
 }
