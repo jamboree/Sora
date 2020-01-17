@@ -271,8 +271,16 @@ public:
   /// Checks a ~ unary operation
   Expr *checkUnaryNot(UnaryExpr *expr);
 
-  /// Checks an assignement
+  /// Checks any assignement
   Expr *checkAssignement(BinaryExpr *expr);
+  /// Checks a compound assignement (a binary operator + =, e.g. +=, /=)
+  Expr *checkCompoundAssignement(BinaryExpr *expr);
+  /// Checks a basic assignement (=)
+  Expr *checkBasicAssignement(BinaryExpr *expr);
+  /// Checks if \p expr can be assigned to. If it can't, diagnoses it.
+  /// \returns true if \p expr can be assigned to, false otherwise.
+  bool checkExprIsAssignable(Expr *expr, SourceLoc eqLoc);
+
   /// Checks a infix binary operation
   Expr *checkBinaryOp(BinaryExpr *expr);
   /// Checks if a binary operation \p op can be applied to types \p lhs and \p
@@ -448,7 +456,67 @@ Expr *ExprChecker::checkUnaryNot(UnaryExpr *expr) {
 
 Expr *ExprChecker::checkAssignement(BinaryExpr *expr) {
   assert(expr->isAssignementOp());
+  return expr->isCompoundAssignementOp() ? checkCompoundAssignement(expr)
+                                         : checkBasicAssignement(expr);
+}
+
+Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
+  llvm_unreachable("unimplemented");
   return nullptr;
+}
+
+Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
+  assert(expr->getOpKind() == BinaryOperatorKind::Assign);
+  Expr *lhs = expr->getLHS();
+  Expr *rhs = expr->getRHS();
+
+  // 1. Check that the LHS is assignable
+  if (!checkExprIsAssignable(lhs, expr->getOpLoc()))
+    return nullptr;
+
+  // 2. Insert implicit conversions in the RHS to the LHS's type
+  rhs = tryInsertImplicitConversions(rhs, lhs->getType());
+  expr->setRHS(rhs);
+
+  // 3. Check if LHS and RHS unify.
+  if (!cs.unify(lhs->getType(), rhs->getType())) {
+    diagnose(rhs->getLoc(), diag::cannot_assign_value_of_type_to_type,
+             cs.simplifyType(rhs->getType()), cs.simplifyType(lhs->getType()))
+        .highlight(lhs->getSourceRange())
+        .highlight(rhs->getSourceRange())
+        .highlight(expr->getOpLoc());
+    return nullptr;
+  }
+
+  /// Same type as its LHS, minus LValues.
+  expr->setType(lhs->getType()->getRValue());
+  return expr;
+}
+
+bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc) {
+  /// It must have an LValue type.
+  Type type = expr->getType();
+  if (type->isLValue())
+    return true;
+
+  // Emit a diagnostic if needed
+  if (type->hasErrorType())
+    return false;
+
+  expr = expr->ignoreParens();
+
+  SourceLoc loc = expr->getLoc();
+  InFlightDiagnostic diag;
+  if (isa<AnyLiteralExpr>(expr))
+    diag = diagnose(loc, diag::cannot_assign_to_literal);
+  else if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(expr))
+    diag = diagnose(loc, diag::cannot_assign_to_immutable_named_value,
+                    dre->getValueDecl()->getIdentifier());
+  else
+    diag = diagnose(loc, diag::cannot_assign_to_immutable_expr_of_type,
+                    cs.simplifyType(type));
+  diag.highlight(eqLoc).highlight(expr->getSourceRange());
+  return false;
 }
 
 Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
@@ -460,8 +528,7 @@ Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
   Type rhsTy = rhs->getType();
   assert(!lhsTy->hasErrorType() && !rhsTy->hasErrorType());
 
-  Type opType = checkBinaryOperatorApplication(
-      lhs, expr->getOpKind(), rhs);
+  Type opType = checkBinaryOperatorApplication(lhs, expr->getOpKind(), rhs);
   assert((opType.isNull() || !opType->hasLValue()) &&
          "Operator return type cannot have an LValue");
   expr->setRHS(rhs);

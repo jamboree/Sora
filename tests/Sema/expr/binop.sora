@@ -275,3 +275,39 @@ func binOp() {
   true + false      // expect-error: cannot use binary operator '+' on operands of type 'bool' and 'bool'
   () % ()           // expect-error: cannot use binary operator '%' on operands of type '()' and '()'
 }
+
+func assign(p1: i32) {
+    // Basic assignement tests
+    null = 0            // expect-error: cannot assign to a literal value
+    true = true         // expect-error: cannot assign to a literal value
+    (0, 1) = (0, 1)     // expect-error: cannot assign to immutable expression of type '(i32, i32)'
+    p1 = 0              // expect-error: cannot assign to immutable value 'p1'    
+    let immut: i32  
+    immut = 0           // expect-error: cannot assign to immutable value 'immut'
+    assign = assign     // expect-error: cannot assign to immutable value 'assign'
+
+    let (mut a, b) = (0, 1)
+    a = 0
+    b = 0               // expect-error: cannot assign to immutable value 'b'
+    a = false           // expect-error: cannot assign value of type 'bool' to type 'i32'
+    b = false           // expect-error: cannot assign to immutable value 'b'
+
+    // Implicit conversions
+    let mut m1: maybe i32
+    let mut m2: maybe maybe i32
+    m1 = 0
+    m2 = 0
+    m2 = m1 
+
+    let mut ref: &i32
+    ref = &a
+    ref = &b
+    ref = &m1           // expect-error: cannot assign value of type '&mut maybe i32' to type '&i32'
+
+    let mut emptyTuple = ()
+    let mut voidVal: void 
+    // CHECK: BinaryExpr type=void = (Assign) opLoc=line:[[@LINE+1]]:13
+    voidVal = emptyTuple
+    // CHECK: BinaryExpr type=() = (Assign) opLoc=line:[[@LINE+1]]:16
+    emptyTuple = voidVal
+}

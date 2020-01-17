@@ -71,6 +71,18 @@ ERROR(cannot_create_var_of_type,
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(cannot_assign_to_literal,
+  "cannot assign to a literal value", ())
+
+ERROR(cannot_assign_to_immutable_named_value,
+  "cannot assign to immutable value '%0'", (Identifier))
+
+ERROR(cannot_assign_to_immutable_expr_of_type, 
+  "cannot assign to immutable expression of type '%0'", (Type))
+
+ERROR(cannot_assign_value_of_type_to_type,
+  "cannot assign value of type '%0' to type '%1'", (Type, Type))
+
 ERROR(cannot_convert_value_of_ty_to_expected_arg_ty,
   "cannot convert value of type '%0' to expected argument type '%1'", (Type, Type))
 
