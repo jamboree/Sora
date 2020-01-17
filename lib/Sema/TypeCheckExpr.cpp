@@ -277,20 +277,18 @@ public:
   Expr *checkBinaryOp(BinaryExpr *expr);
   /// Checks if a binary operation \p op can be applied to types \p lhs and \p
   /// rhs. This will unify the types.
-  /// \p lhs and \p rhs are passed by reference so implicit conversions can be
-  /// inserted if \p allowImplicitConversions is true
+  /// \p rhs is passed by reference so implicit conversions can be inserted
+  /// (needed for NullCoalesce).
   /// \returns the type of the operation if it's valid, otherwise returns
-  /// nullptr if it's invalid.
-  Type checkBinaryOperatorApplication(Expr *&lhs, BinaryOperatorKind op,
-                                      Expr *&rhs,
-                                      bool allowImplicitConversions);
+  /// nullptr.
+  Type checkBinaryOperatorApplication(Expr *lhs, BinaryOperatorKind op,
+                                      Expr *&rhs);
   // Checks if ?? can be applied to \p lhs and \p rhs
-  /// \p lhs and \p rhs are passed by reference so implicit conversions can be
-  /// inserted if \p allowImplicitConversions is true
+  /// \p rhs is passed by reference so implicit conversions can be inserted
+  /// (needed for NullCoalesce).
   /// \returns the type of the operation if it's valid, otherwise returns
-  /// nullptr if it's invalid.
-  Type checkNullCoalesceApplication(Expr *&lhs, Expr *&rhs,
-                                    bool allowImplicitConversions);
+  /// nullptr.
+  Type checkNullCoalesceApplication(Expr *lhs, Expr *&rhs);
 
   Expr *visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr);
   Expr *visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr);
@@ -463,10 +461,9 @@ Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
   assert(!lhsTy->hasErrorType() && !rhsTy->hasErrorType());
 
   Type opType = checkBinaryOperatorApplication(
-      lhs, expr->getOpKind(), rhs, /*allowImplicitConversions*/ true);
+      lhs, expr->getOpKind(), rhs);
   assert((opType.isNull() || !opType->hasLValue()) &&
          "Operator return type cannot have an LValue");
-  expr->setLHS(lhs);
   expr->setRHS(rhs);
 
   if (!opType) {
@@ -504,9 +501,9 @@ static bool isEqualityComparable(Type type) {
   }
 }
 
-Type ExprChecker::checkBinaryOperatorApplication(
-    Expr *&lhs, BinaryOperatorKind op, Expr *&rhs,
-    bool allowImplicitConversions) {
+Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
+                                                 BinaryOperatorKind op,
+                                                 Expr *&rhs) {
   // Fetch the type of the LHS and RHS and strip LValues, as they're irrelevant
   // here.
   Type lhsType = lhs->getType()->getRValue();
@@ -515,7 +512,7 @@ Type ExprChecker::checkBinaryOperatorApplication(
   using Op = BinaryOperatorKind;
   // NullCoalesce is a special case
   if (op == Op::NullCoalesce)
-    return checkNullCoalesceApplication(lhs, rhs, allowImplicitConversions);
+    return checkNullCoalesceApplication(lhs, rhs);
 
   // Unifies the LHS and RHS with a fresh, general type variable.
   // Returns the type variable on success, nullptr if it failed to unify with
@@ -596,15 +593,13 @@ Type ExprChecker::checkBinaryOperatorApplication(
   }
 }
 
-Type ExprChecker::checkNullCoalesceApplication(Expr *&lhs, Expr *&rhs,
-                                               bool allowImplicitConversions) {
+Type ExprChecker::checkNullCoalesceApplication(Expr *lhs, Expr *&rhs) {
   // LHS must be "maybe T" and RHS must be "T".
   Type lhsType = lhs->getType()->getRValue()->getDesugaredType();
   MaybeType *maybeType = lhsType->getAs<MaybeType>();
   if (!maybeType)
     return nullptr;
-  if (allowImplicitConversions)
-    rhs = tryInsertImplicitConversions(rhs, maybeType->getValueType());
+  rhs = tryInsertImplicitConversions(rhs, maybeType->getValueType());
   if (!cs.unify(maybeType->getValueType(), rhs->getType()))
     return nullptr;
   return maybeType->getValueType();
