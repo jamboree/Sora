@@ -76,7 +76,8 @@ template <typename Ty> struct DiagnosticArgumentFormatter {
         "No specialization of DiagnosticArgumentFormatter for this type.");
   }
 
-  // Add a specialization for size_t in case it differs from "unsigned int" on some systems.
+  // Add a specialization for size_t in case it differs from "unsigned int" on
+  // some systems.
 };
 
 /// Provide some implementation for basic types.
@@ -193,6 +194,17 @@ class InFlightDiagnostic {
 
 public:
   InFlightDiagnostic() = default;
+
+  InFlightDiagnostic(const InFlightDiagnostic &) = delete;
+  InFlightDiagnostic &operator=(const InFlightDiagnostic &) = delete;
+
+  InFlightDiagnostic(InFlightDiagnostic &&other) { *this = std::move(other); }
+
+  InFlightDiagnostic &operator=(InFlightDiagnostic &&other) {
+    diagEngine = other.diagEngine;
+    other.diagEngine = nullptr;
+    return *this;
+  }
 
   /// Emits the Diagnostic
   ~InFlightDiagnostic();
