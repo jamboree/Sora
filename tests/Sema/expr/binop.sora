@@ -310,6 +310,21 @@ func assign(p1: i32) {
     voidVal = emptyTuple
     // CHECK: BinaryExpr type=() = (Assign) opLoc=line:[[@LINE+1]]:16
     emptyTuple = voidVal
+
+    let maybeVI32: maybe i32
+    let maybeMaybeVI32: maybe maybe i32
+    let maybeVI8: maybe i8
+    let maybeMaybeVI8: maybe maybe i8
+
+    maybeVI32 ?? 0
+    maybeMaybeVI32 ?? 0
+    // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:17
+    maybeVI8 ?? 0
+    // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:22
+    maybeMaybeVI8 ?? 0
+
+    maybeVI32 ?? true          // expect-error: cannot use binary operator '??' on operands of type 'maybe i32' and 'bool'
+    maybeMaybeVI8 ?? 0 as i32  // expect-error: cannot use binary operator '??' on operands of type 'maybe maybe i8' and 'i32'
 }
 
 
