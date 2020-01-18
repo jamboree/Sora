@@ -249,6 +249,13 @@ public:
   /// \returns whether this type is a TupleType (or a sugared version thereof)
   bool isTupleType() const;
 
+  /// \returns whether this type is a MaybeType (or a sugared version thereof)
+  bool isMaybeType() const;
+
+  /// \returns the value type of this MaybeType, or null if isMaybeType()
+  /// returns false.
+  Type getMaybeTypeValueType() const;
+
   /// \returns true if this type has an LValueType (if it's an LValue)
   bool hasLValue() const;
 

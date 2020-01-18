@@ -277,7 +277,17 @@ bool TypeBase::isAnyFloatType() const {
 }
 
 bool TypeBase::isTupleType() const {
-  return getCanonicalType()->getRValue()->is<TupleType>();
+  return getDesugaredType()->getRValue()->is<TupleType>();
+}
+
+bool TypeBase::isMaybeType() const {
+  return getCanonicalType()->getRValue()->is<MaybeType>();
+}
+
+Type TypeBase::getMaybeTypeValueType() const {
+  if (!isMaybeType())
+    return nullptr;
+  return getDesugaredType()->getRValue()->castTo<MaybeType>()->getValueType();
 }
 
 void TypeBase::print(raw_ostream &out,
