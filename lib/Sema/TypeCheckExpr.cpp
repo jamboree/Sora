@@ -280,6 +280,8 @@ public:
   /// Checks if \p expr can be assigned to. If it can't, diagnoses it.
   /// \returns true if \p expr can be assigned to, false otherwise.
   bool checkExprIsAssignable(Expr *expr, SourceLoc eqLoc);
+  /// Finishes type-checking of an assignement, giving it a type.
+  Expr *finalizeAssignBinaryExpr(BinaryExpr *expr);
 
   /// Checks a infix binary operation
   Expr *checkBinaryOp(BinaryExpr *expr);
@@ -504,9 +506,7 @@ Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
              cs.simplifyType(rhs->getType()));
   }
 
-  // The assignement's type is its LHS'
-  expr->setType(lhs->getType()->getRValue());
-  return expr;
+  return finalizeAssignBinaryExpr(expr);
 }
 
 Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
@@ -532,9 +532,7 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
     return nullptr;
   }
 
-  // The assignement's type is its LHS'
-  expr->setType(lhs->getType()->getRValue());
-  return expr;
+  return finalizeAssignBinaryExpr(expr);
 }
 
 bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc) {
@@ -561,6 +559,12 @@ bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc) {
                     cs.simplifyType(type));
   diag.highlight(eqLoc).highlight(expr->getSourceRange());
   return false;
+}
+
+Expr *ExprChecker::finalizeAssignBinaryExpr(BinaryExpr *expr) {
+  // The assignement's type is its LHS'
+  expr->setType(expr->getLHS()->getType()->getRValue());
+  return expr;
 }
 
 Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
