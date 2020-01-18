@@ -461,8 +461,52 @@ Expr *ExprChecker::checkAssignement(BinaryExpr *expr) {
 }
 
 Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
-  llvm_unreachable("unimplemented");
-  return nullptr;
+  assert(expr->isCompoundAssignementOp());
+  Expr *lhs = expr->getLHS();
+  Expr *rhs = expr->getRHS();
+
+  // 1. Check that the LHS is assignable
+  if (!checkExprIsAssignable(lhs, expr->getOpLoc()))
+    return nullptr;
+
+  // 2. Check if we can apply that operator to these operands.
+  BinaryOperatorKind op = expr->getOpForCompoundAssignementOp();
+  Type opType = checkBinaryOperatorApplication(lhs, op, rhs);
+  expr->setRHS(rhs);
+
+  if (opType) {
+    // Unify the op's type with the LHS. With Sora's type system, this step
+    // should always succeed since the type of binary operations is mostly
+    // decided by the LHS (note: except for relational operators where the
+    // opType is always bool, but there's no "relational compound assignement"
+    // obviously since it wouldn't make sense, so it doesn't apply here.)
+    //
+    // NOTE: This step is ignored for NullCoalesceAssign since it's already
+    // performed by checkNullCoalesceApplication. For that operator, just check
+    // that the types are right.
+
+    if (expr->getOpKind() != BinaryOperatorKind::NullCoalesceAssign) {
+      bool success = cs.unify(expr->getLHS()->getType(), opType);
+      assert(success && "This step should never fail for valid binary ops!");
+    }
+    else {
+#ifndef NDEBUG
+      Type valueType = lhs->getType()->getMaybeTypeValueType();
+      assert(valueType->getRValue()->getCanonicalType() ==
+             opType->getRValue()->getCanonicalType());
+#endif
+    }
+  }
+  else {
+    diagnose(expr->getOpLoc(),
+             diag::cannot_use_binary_oper_on_operands_of_types,
+             expr->getOpSpelling(), cs.simplifyType(lhs->getType()),
+             cs.simplifyType(rhs->getType()));
+  }
+
+  // The assignement's type is its LHS'
+  expr->setType(lhs->getType()->getRValue());
+  return expr;
 }
 
 Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
@@ -488,7 +532,7 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
     return nullptr;
   }
 
-  /// Same type as its LHS, minus LValues.
+  // The assignement's type is its LHS'
   expr->setType(lhs->getType()->getRValue());
   return expr;
 }

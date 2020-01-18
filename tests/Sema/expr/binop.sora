@@ -311,3 +311,200 @@ func assign(p1: i32) {
     // CHECK: BinaryExpr type=() = (Assign) opLoc=line:[[@LINE+1]]:16
     emptyTuple = voidVal
 }
+
+
+func compoundAssign() {
+  let mut vBool = true
+
+  let mut vF32: f32 = 0.0
+  let mut vF64: f64 = 0.0
+
+  let mut vI8: i8 = 0
+  let mut vI16: i16 = 0
+  let mut vI32: i32 = 0
+  let mut vI64: i64 = 0
+  let mut vISIZE: isize = 0
+  let mut vU8: u8 = 0
+  let mut vU16: u16 = 0
+  let mut vU32: u32 = 0
+  let mut vU64: u64 = 0
+  let mut vUSIZE: usize = 0
+
+  vBool += vBool    // expect-error: cannot use binary operator '+=' on operands of type 'bool' and 'bool'
+  vBool -= vBool    // expect-error: cannot use binary operator '-=' on operands of type 'bool' and 'bool'    
+  vBool *= vBool    // expect-error: cannot use binary operator '*=' on operands of type 'bool' and 'bool'    
+  vBool /= vBool    // expect-error: cannot use binary operator '/=' on operands of type 'bool' and 'bool'
+  vBool %= vBool    // expect-error: cannot use binary operator '%=' on operands of type 'bool' and 'bool'
+  vBool <<= vBool   // expect-error: cannot use binary operator '<<=' on operands of type 'bool' and 'bool'
+  vBool >>= vBool   // expect-error: cannot use binary operator '>>=' on operands of type 'bool' and 'bool'
+  vBool &= vBool    // expect-error: cannot use binary operator '&=' on operands of type 'bool' and 'bool'
+  vBool |= vBool    // expect-error: cannot use binary operator '|=' on operands of type 'bool' and 'bool'
+  vBool ^= vBool    // expect-error: cannot use binary operator '^=' on operands of type 'bool' and 'bool'
+  vBool ??= vBool   // expect-error: cannot use binary operator '??=' on operands of type 'bool' and 'bool'
+
+  vF32 += vF32
+  vF32 -= vF32
+  vF32 *= vF32
+  vF32 /= vF32
+  vF32 %= vF32  // expect-error: cannot use binary operator '%=' on operands of type 'f32' and 'f32'
+  vF32 <<= vF32 // expect-error: cannot use binary operator '<<=' on operands of type 'f32' and 'f32'
+  vF32 >>= vF32 // expect-error: cannot use binary operator '>>=' on operands of type 'f32' and 'f32'
+  vF32 &= vF32  // expect-error: cannot use binary operator '&=' on operands of type 'f32' and 'f32'
+  vF32 |= vF32  // expect-error: cannot use binary operator '|=' on operands of type 'f32' and 'f32'
+  vF32 ^= vF32  // expect-error: cannot use binary operator '^=' on operands of type 'f32' and 'f32'
+  vF32 ??= vF32 // expect-error: cannot use binary operator '??=' on operands of type 'f32' and 'f32'   
+
+  
+  vF64 += vF64
+  vF64 -= vF64
+  vF64 *= vF64
+  vF64 /= vF64
+  vF64 %= vF64  // expect-error: cannot use binary operator '%=' on operands of type 'f64' and 'f64'
+  vF64 <<= vF64 // expect-error: cannot use binary operator '<<=' on operands of type 'f64' and 'f64'
+  vF64 >>= vF64 // expect-error: cannot use binary operator '>>=' on operands of type 'f64' and 'f64'
+  vF64 &= vF64  // expect-error: cannot use binary operator '&=' on operands of type 'f64' and 'f64'
+  vF64 |= vF64  // expect-error: cannot use binary operator '|=' on operands of type 'f64' and 'f64'
+  vF64 ^= vF64  // expect-error: cannot use binary operator '^=' on operands of type 'f64' and 'f64'
+  vF64 ??= vF64 // expect-error: cannot use binary operator '??=' on operands of type 'f64' and 'f64'
+  
+  vI8 += vI8
+  vI8 -= vI8
+  vI8 *= vI8
+  vI8 /= vI8
+  vI8 %= vI8 
+  vI8 <<= vI8
+  vI8 >>= vI8
+  vI8 &= vI8 
+  vI8 |= vI8 
+  vI8 ^= vI8 
+  vI8 ??= vI8     // expect-error: cannot use binary operator '??=' on operands of type 'i8' and 'i8'
+  
+  vI16 += vI16
+  vI16 -= vI16
+  vI16 *= vI16
+  vI16 /= vI16
+  vI16 %= vI16 
+  vI16 <<= vI16
+  vI16 >>= vI16
+  vI16 &= vI16 
+  vI16 |= vI16 
+  vI16 ^= vI16 
+  vI16 ??= vI16   // expect-error: cannot use binary operator '??=' on operands of type 'i16' and 'i16'
+  
+  vI32 += vI32
+  vI32 -= vI32
+  vI32 *= vI32
+  vI32 /= vI32
+  vI32 %= vI32 
+  vI32 <<= vI32
+  vI32 >>= vI32
+  vI32 &= vI32 
+  vI32 |= vI32 
+  vI32 ^= vI32 
+  vI32 ??= vI32   // expect-error: cannot use binary operator '??=' on operands of type 'i32' and 'i32'
+  
+  vI64 += vI64
+  vI64 -= vI64
+  vI64 *= vI64
+  vI64 /= vI64
+  vI64 %= vI64 
+  vI64 <<= vI64
+  vI64 >>= vI64
+  vI64 &= vI64 
+  vI64 |= vI64 
+  vI64 ^= vI64 
+  vI64 ??= vI64   // expect-error: cannot use binary operator '??=' on operands of type 'i64' and 'i64'
+  
+  vISIZE += vISIZE
+  vISIZE -= vISIZE
+  vISIZE *= vISIZE
+  vISIZE /= vISIZE
+  vISIZE %= vISIZE 
+  vISIZE <<= vISIZE
+  vISIZE >>= vISIZE
+  vISIZE &= vISIZE 
+  vISIZE |= vISIZE 
+  vISIZE ^= vISIZE 
+  vISIZE ??= vISIZE   // expect-error: cannot use binary operator '??=' on operands of type 'isize' and 'isize'
+  
+  vU8 += vU8
+  vU8 -= vU8
+  vU8 *= vU8
+  vU8 /= vU8
+  vU8 %= vU8 
+  vU8 <<= vU8
+  vU8 >>= vU8
+  vU8 &= vU8 
+  vU8 |= vU8 
+  vU8 ^= vU8 
+  vU8 ??= vU8   // expect-error: cannot use binary operator '??=' on operands of type 'u8' and 'u8'
+  
+  vU16 += vU16
+  vU16 -= vU16
+  vU16 *= vU16
+  vU16 /= vU16
+  vU16 %= vU16 
+  vU16 <<= vU16
+  vU16 >>= vU16
+  vU16 &= vU16 
+  vU16 |= vU16 
+  vU16 ^= vU16 
+  vU16 ??= vU16   // expect-error: cannot use binary operator '??=' on operands of type 'u16' and 'u16'
+  
+  vU32 += vU32
+  vU32 -= vU32
+  vU32 *= vU32
+  vU32 /= vU32
+  vU32 %= vU32 
+  vU32 <<= vU32
+  vU32 >>= vU32
+  vU32 &= vU32 
+  vU32 |= vU32 
+  vU32 ^= vU32 
+  vU32 ??= vU32   // expect-error: cannot use binary operator '??=' on operands of type 'u32' and 'u32'
+  
+  vU64 += vU64
+  vU64 -= vU64
+  vU64 *= vU64
+  vU64 /= vU64
+  vU64 %= vU64 
+  vU64 <<= vU64
+  vU64 >>= vU64
+  vU64 &= vU64 
+  vU64 |= vU64 
+  vU64 ^= vU64 
+  vU64 ??= vU64   // expect-error: cannot use binary operator '??=' on operands of type 'u64' and 'u64'
+  
+  vUSIZE += vUSIZE
+  vUSIZE -= vUSIZE
+  vUSIZE *= vUSIZE
+  vUSIZE /= vUSIZE
+  vUSIZE %= vUSIZE 
+  vUSIZE <<= vUSIZE
+  vUSIZE >>= vUSIZE
+  vUSIZE &= vUSIZE 
+  vUSIZE |= vUSIZE 
+  vUSIZE ^= vUSIZE 
+  vUSIZE ??= vUSIZE   // expect-error: cannot use binary operator '??=' on operands of type 'usize' and 'usize'
+
+  vUSIZE <<= vI8
+  vI8 >>= vUSIZE
+  vI8 <<= vI16
+  vI16 <<= vU64
+  vI64 >>= vI8
+
+  let mut maybeVI32: maybe i32
+  let mut maybeMaybeVI32: maybe maybe i32
+  let mut maybeVI8: maybe i8
+  let mut maybeMaybeVI8: maybe maybe i8
+
+  maybeVI32 ??= 0
+  maybeMaybeVI32 ??= 0
+  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:16
+  maybeVI8 ??= 0
+  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:21
+  maybeMaybeVI8 ??= 0
+
+  maybeVI32 ??= true          // expect-error: cannot use binary operator '??=' on operands of type 'maybe i32' and 'bool'
+  maybeMaybeVI8 ??= 0 as i32  // expect-error: cannot use binary operator '??=' on operands of type 'maybe maybe i8' and 'i32'
+}
