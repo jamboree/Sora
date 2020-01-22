@@ -71,6 +71,9 @@ ERROR(cannot_create_var_of_type,
 
 //===- Exprs --------------------------------------------------------------===//
 
+ERROR(value_of_non_bool_type_used_as_cond,
+  "value of non-boolean type '%0' used as a condition", (Type))
+
 ERROR(cannot_assign_to_literal,
   "cannot assign to a literal value", ())
 

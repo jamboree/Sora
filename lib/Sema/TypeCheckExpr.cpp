@@ -1323,6 +1323,19 @@ Expr *TypeChecker::tryInsertImplicitConversions(ConstraintSystem &cs,
   return ImplicitConversionBuilder(*this, cs).doIt(toType, expr);
 }
 
+Expr *TypeChecker::typecheckBooleanCondition(Expr *expr, DeclContext *dc) {
+  assert(expr && "Expr* is null");
+  assert(dc && "DeclContext* is null");
+  return typecheckExpr(
+      expr, dc, ctxt.boolType, [&](Type exprType, Type boolType) {
+        assert(exprType);
+        assert(boolType.getPtr() == ctxt.boolType.getPtr());
+        if (!exprType->hasErrorType())
+          diagnose(expr->getLoc(), diag::value_of_non_bool_type_used_as_cond,
+                   exprType);
+      });
+}
+
 Expr *TypeChecker::typecheckExpr(
     ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType,
     llvm::function_ref<void(Type, Type)> onUnificationFailure) {

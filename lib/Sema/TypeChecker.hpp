@@ -54,10 +54,7 @@ public:
   /// \param expr the expression to typecheck
   /// \param dc th DeclContext in which this Expr lives. Cannot be null.
   /// \returns \p expr or the expr that should replace it in the tree.
-  Expr *typecheckBooleanCondition(Expr *expr, DeclContext *dc) {
-    /// FIXME: Handle these differently
-    return typecheckExpr(expr, dc);
-  }
+  Expr *typecheckBooleanCondition(Expr *expr, DeclContext *dc);
 
   /// Typechecks the body of the functions in \c definedFunctions
   void typecheckDefinedFunctions();
