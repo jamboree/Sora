@@ -1,0 +1,19 @@
+// RUN: %sorac-typecheck %s
+
+func factorial(n: isize) -> isize {
+    if n >= 1 {
+        return n * factorial(n - 1)
+    }
+}
+
+func main() -> i32 {
+    let mut acc: isize = 0
+    {
+        let mut x = 10
+        while x > 0 {
+            acc += factorial(x as isize)
+            x -= 1
+        }
+    }
+    return acc as i32
+}
