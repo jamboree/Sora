@@ -21,6 +21,8 @@ using namespace sora;
 namespace {
 class StmtChecker : public ASTChecker, public StmtVisitor<StmtChecker> {
 public:
+  SmallVector<WhileStmt *, 4> loops;
+
   DeclContext *dc;
 
   StmtChecker(TypeChecker &tc, DeclContext *dc) : ASTChecker(tc), dc(dc) {}
@@ -30,11 +32,13 @@ public:
   void visitExpr(Expr *expr) { tc.typecheckExpr(expr, dc); }
 
   void visitContinueStmt(ContinueStmt *stmt) {
-    // TODO
+    if (loops.empty())
+      diagnose(stmt->getLoc(), diag::is_only_allowed_inside_loop, "continue");
   }
 
   void visitBreakStmt(BreakStmt *stmt) {
-    // TODO
+    if (loops.empty())
+      diagnose(stmt->getLoc(), diag::is_only_allowed_inside_loop, "break");
   }
 
   void visitReturnStmt(ReturnStmt *stmt) {
@@ -45,7 +49,7 @@ public:
 
   void checkNode(ASTNode &node) {
     if (node.is<Stmt *>())
-      tc.typecheckStmt(node.get<Stmt *>(), dc);
+      visit(node.get<Stmt *>());
     else if (node.is<Expr *>())
       node = tc.typecheckExpr(node.get<Expr *>(), dc);
     else if (node.is<Decl *>())
@@ -109,7 +113,10 @@ public:
 
   void visitWhileStmt(WhileStmt *stmt) {
     checkCondition(stmt);
+
+    loops.push_back(stmt);
     visitBlockStmt(stmt->getBody());
+    loops.pop_back();
   }
 };
 } // namespace

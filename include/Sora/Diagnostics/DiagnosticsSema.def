@@ -171,6 +171,11 @@ ERROR(type_of_pattern_is_ambiguous_without_more_ctxt,
 NOTE(add_type_annot_to_give_pattern_a_type,
   "add a type annotation to give '%0' a type", (StringRef))
 
+//===- Stmts --------------------------------------------------------------===//
+
+ERROR(is_only_allowed_inside_loop,
+  "'%0' is only allowed inside a loop", (StringRef))
+
 //===- Types --------------------------------------------------------------===//
 
 ERROR(cannot_find_type_in_scope,

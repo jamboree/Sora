@@ -1,0 +1,34 @@
+// RUN: %sorac-typecheck -verify %s
+
+func test() {
+  continue  // expect-error: 'continue' is only allowed inside a loop
+  break     // expect-error: 'break' is only allowed inside a loop
+
+  if true {
+    continue  // expect-error: 'continue' is only allowed inside a loop
+    break     // expect-error: 'break' is only allowed inside a loop
+  }
+
+  while true {
+    continue
+    break
+    if true {
+      continue
+      break
+      {
+        continue
+        break
+        while true {
+          {
+            continue
+            break
+          }
+        }
+      }
+    }
+    else {
+      continue
+      break
+    }
+  }
+}
