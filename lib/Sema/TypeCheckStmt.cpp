@@ -31,6 +31,12 @@ public:
 
   void visitExpr(Expr *expr) { tc.typecheckExpr(expr, dc); }
 
+  FuncDecl *getCurrentFunction() {
+    // Currently, the DC should always be the function.
+    assert(dc->isFuncDecl() && "Not in a function?!");
+    return cast<FuncDecl>(dc);
+  }
+
   void visitContinueStmt(ContinueStmt *stmt) {
     if (loops.empty())
       diagnose(stmt->getLoc(), diag::is_only_allowed_inside_loop, "continue");
@@ -42,9 +48,28 @@ public:
   }
 
   void visitReturnStmt(ReturnStmt *stmt) {
-    // TODO
-    if (stmt->hasResult())
-      stmt->setResult(tc.typecheckExpr(stmt->getResult(), dc));
+    FuncDecl *fn = getCurrentFunction();
+    Type fnRetTy = fn->getReturnTypeLoc().getType();
+    assert(fnRetTy && "fn signature not checked yet?!");
+
+    // If the 'return' has an expression, check that its type is correct
+    if (stmt->hasResult()) {
+      auto onError = [&](Type a, Type b) {
+        // Check that 'b' is indeed the 'ofType' (fnRetTy in this case),
+        // else the diag will not be correct
+        assert(b.getPtr() == fnRetTy.getPtr());
+        diagnose(stmt->getLoc(), diag::cannot_convert_ret_expr, a, b);
+      };
+
+      Expr *result = stmt->getResult();
+      result = tc.typecheckExpr(result, dc, fnRetTy, onError);
+      stmt->setResult(result);
+    }
+    // If the 'return' has no expression, check that the function returns 'void'
+    else {
+      if (!fnRetTy->isVoidType())
+        diagnose(stmt->getLoc(), diag::non_void_fn_should_return_value);
+    }
   }
 
   void checkNode(ASTNode &node) {

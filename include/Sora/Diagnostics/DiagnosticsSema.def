@@ -176,6 +176,13 @@ NOTE(add_type_annot_to_give_pattern_a_type,
 ERROR(is_only_allowed_inside_loop,
   "'%0' is only allowed inside a loop", (StringRef))
 
+ERROR(non_void_fn_should_return_value,
+  "non-void function should return a value", ())
+
+ERROR(cannot_convert_ret_expr,
+  "cannot convert return expression of type '%0' to return type '%1'", 
+  (Type, Type))
+
 //===- Types --------------------------------------------------------------===//
 
 ERROR(cannot_find_type_in_scope,
