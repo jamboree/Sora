@@ -239,6 +239,10 @@ public:
   /// thereof)
   bool isBoolType() const;
 
+  /// \returns whether this type is the "void" type (or a sugared version
+  /// thereof)
+  bool isVoidType() const;
+
   /// \returns whether this type is an IntegerType (or a sugared version
   /// thereof)
   bool isAnyIntegerType() const;

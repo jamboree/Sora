@@ -264,6 +264,10 @@ bool TypeBase::isBoolType() const {
   return getCanonicalType()->getRValue()->is<BoolType>();
 }
 
+bool TypeBase::isVoidType() const {
+  return getCanonicalType()->getRValue()->is<VoidType>();
+}
+
 bool TypeBase::isNullType() const {
   return getCanonicalType()->getRValue()->is<NullType>();
 }
