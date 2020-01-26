@@ -20,9 +20,9 @@ class Decl;
 
 /// The ASTNode is a intrusive pointer union that can contain a pointer
 /// to any major AST Node: Declaration, Statements and Expressions.
-struct ASTNode : public llvm::PointerUnion3<Expr *, Stmt *, Decl *> {
+struct ASTNode : public llvm::PointerUnion<Expr *, Stmt *, Decl *> {
   // Inherit the constructors from PointerUnion
-  using llvm::PointerUnion3<Expr *, Stmt *, Decl *>::PointerUnion3;
+  using llvm::PointerUnion<Expr *, Stmt *, Decl *>::PointerUnion;
 
   /// \returns the SourceRange of the Decl/Expr/Stmt
   SourceRange getSourceRange() const;

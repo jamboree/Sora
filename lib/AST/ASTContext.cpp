@@ -233,7 +233,7 @@ void ASTContext::buildBuiltinTypesLookupMap() {
 }
 
 ASTContext::Impl &ASTContext::getImpl() {
-  return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, alignof(Impl)));
+  return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, llvm::Align(alignof(Impl))));
 }
 
 std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
@@ -250,13 +250,13 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
   // The ASTContext's memory begins at the first correctly aligned address
   // of the memory.
   void *astContextMemory =
-      reinterpret_cast<void *>(llvm::alignAddr(memory, alignof(ASTContext)));
+      reinterpret_cast<void *>(llvm::alignAddr(memory, llvm::Align(alignof(ASTContext))));
 
   // The Impl's memory begins at the first correctly aligned address after
   // the ASTContext's memory.
   void *implMemory = (char *)astContextMemory + sizeof(ASTContext);
   implMemory =
-      reinterpret_cast<void *>(llvm::alignAddr(implMemory, alignof(Impl)));
+      reinterpret_cast<void *>(llvm::alignAddr(implMemory, llvm::Align(alignof(Impl))));
 
   // Do some checking because I'm kinda paranoïd.
   //  Check that we aren't going out of bounds and going to segfault later.
