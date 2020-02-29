@@ -110,7 +110,7 @@ InFlightDiagnostic &InFlightDiagnostic::fixitInsertAfter(SourceLoc loc,
 InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
                                                      StringRef text) {
   assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
-  getRawDiagnostic().addFixit(FixIt(text, range));
+  getRawDiagnostic().addFixit(FixIt(text.str(), range));
   return *this;
 }
 
@@ -210,7 +210,7 @@ void replaceArgument(std::string &str, std::size_t index,
 std::string
 getFormattedDiagnosticString(DiagID id,
                              ArrayRef<DiagnosticArgumentProvider> providers) {
-  std::string str = getRawDiagnosticString(id);
+  std::string str = getRawDiagnosticString(id).str();
   for (std::size_t k = 0, size = providers.size(); k < size; ++k)
     replaceArgument(str, k, providers[k]());
   return str;

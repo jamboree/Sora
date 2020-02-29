@@ -36,7 +36,7 @@ public:
   LexerTest() {
     diagEngine.createConsumer<ForwardingDiagnosticConsumer>(
         [&](const SourceManager &, const Diagnostic &diag) {
-          diagMsg = diag.message;
+          diagMsg = diag.message.str();
           diagLoc = diag.loc;
           ++diagCount;
         });
