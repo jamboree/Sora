@@ -83,3 +83,9 @@ add_subdirectory(include/Sora)
 add_library(libsora STATIC ${libsora_src})
 add_dependencies(libsora DriverOptionsTableGen)
 target_link_libraries(libsora ${llvm_libs})
+
+# Add a check-sora target
+add_custom_target(check-sorac
+        COMMAND llvm-lit ${CMAKE_SOURCE_DIR}/tests -v -D sora_bin_dir=${CMAKE_BINARY_DIR}/bin
+        DEPENDS sorac
+)
