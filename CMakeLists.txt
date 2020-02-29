@@ -49,11 +49,6 @@ include_directories(include)                              # lib includes
 include_directories(${LLVM_INCLUDE_DIRS})                 # llvm includes 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)  # tablegen'd stuff
 
-# find the libraries that we want to use
-llvm_map_components_to_libnames(llvm_libs support option)
-
-add_subdirectory(tools/sorac)
-
 # Disable RTTI, exceptions and enable /Wall
 # FIXME: Only add the flags if we don't have them already
 # FIXME: Is disabling exception handling needed or is D_HAS_EXCEPTIONS 0 above enough?
@@ -80,9 +75,15 @@ add_subdirectory(lib)
 add_subdirectory(include/Sora)
 
 # create lib target, make it depend on tablegen'd stuff and link it with LLVM libs.
-add_library(libsora STATIC ${libsora_src})
+add_library(libsora SHARED ${libsora_src})
 add_dependencies(libsora DriverOptionsTableGen)
-target_link_libraries(libsora ${llvm_libs})
+
+# find the libraries that we want to use
+llvm_map_components_to_libnames(libsora_llvm_libs support option)
+
+target_link_libraries(libsora ${libsora_llvm_libs})
+
+add_subdirectory(tools/sorac)
 
 # Add a check-sora target
 add_custom_target(check-sorac
