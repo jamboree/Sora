@@ -7,7 +7,7 @@ project(Sora)
 # set minimal C++ standard
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
@@ -74,8 +74,18 @@ add_subdirectory(unittests)
 add_subdirectory(lib)
 add_subdirectory(include/Sora)
 
+option(LIBSORA_AS_SHARED_LIB "Whether to build libsora as a shared library" OFF)
+
+if(${LIBSORA_AS_SHARED_LIB}) 
+  set(LIBSORA_LIB_KIND "SHARED")
+else()
+  set(LIBSORA_LIB_KIND "STATIC")
+endif()
+
 # create lib target, make it depend on tablegen'd stuff and link it with LLVM libs.
-add_library(libsora SHARED ${libsora_src})
+add_library(libsora ${LIBSORA_LIB_KIND} ${libsora_src})
+SET_TARGET_PROPERTIES(libsora PROPERTIES PREFIX "")
+
 add_dependencies(libsora DriverOptionsTableGen)
 
 # find the libraries that we want to use
@@ -86,7 +96,9 @@ target_link_libraries(libsora ${libsora_llvm_libs})
 add_subdirectory(tools/sorac)
 
 # Add a check-sora target
+set(LLVM_LIT_PATH "lit" CACHE STRING "Path to llvm-lit")
+
 add_custom_target(check-sorac
-        COMMAND llvm-lit ${CMAKE_SOURCE_DIR}/tests -v -D sora_bin_dir=${CMAKE_BINARY_DIR}/bin
+        COMMAND ${LLVM_LIT_PATH} ${CMAKE_SOURCE_DIR}/tests -v -D sora_bin_dir=${CMAKE_BINARY_DIR}/bin
         DEPENDS sorac
 )
