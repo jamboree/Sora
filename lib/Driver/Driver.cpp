@@ -14,6 +14,7 @@
 #include "Sora/Driver/DiagnosticVerifier.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "Sora/Parser/Parser.hpp"
+#include "Sora/IR/Dialect.hpp"
 #include "Sora/Sema/Sema.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -24,6 +25,9 @@ using namespace llvm::opt;
 Driver::Driver(raw_ostream &out)
     : driverDiags(driverDiagsSrcMgr), optTable(createSoraOptTable()) {
   driverDiags.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+
+  // Register the Sora MLIR Dialect
+  mlir::registerDialect<SoraDialect>();
 }
 
 InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {

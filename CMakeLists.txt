@@ -88,8 +88,10 @@ SET_TARGET_PROPERTIES(libsora PROPERTIES PREFIX "")
 
 add_dependencies(libsora DriverOptionsTableGen)
 
-# find the libraries that we want to use
+# get the LLVM Libraries that we need.
 llvm_map_components_to_libnames(libsora_llvm_libs support option)
+# add MLIR libraries.
+list(APPEND libsora_llvm_libs MLIRIR)
 
 target_link_libraries(libsora ${libsora_llvm_libs})
 
