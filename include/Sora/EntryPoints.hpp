@@ -18,6 +18,10 @@
 
 #pragma once
 
+namespace mlir {
+class MLIRContext;
+}
+
 namespace sora {
 class SourceFile;
 
@@ -36,6 +40,11 @@ void parseSourceFile(SourceFile &sf);
 /// Memory will be allocated using the SourceFile's ASTContext, and Diagnostics
 /// will be emitted using the ASTContext's DiagnosticEngine.
 void performSema(SourceFile &sf);
+
+//===- IRGen - IR Generation Library --------------------------------------===//
+
+/// Performs IR Generation on \p sf
+void performIRGen(mlir::MLIRContext &mlirContext, SourceFile &sf);
 
 //===----------------------------------------------------------------------===//
 
