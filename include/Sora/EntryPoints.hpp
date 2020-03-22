@@ -44,7 +44,7 @@ void performSema(SourceFile &sf);
 //===- IRGen - IR Generation Library --------------------------------------===//
 
 /// Performs IR Generation on \p sf
-void performIRGen(mlir::MLIRContext &mlirContext, SourceFile &sf);
+void performIRGen(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 
 //===----------------------------------------------------------------------===//
 
