@@ -49,8 +49,10 @@ public:
   ArrayRef<ValueDecl *> getMembers() const { return members; }
   /// Adds a member to this source file
   void addMember(ValueDecl *decl) { return members.push_back(decl); }
-  /// \returns the buffer id of this SourceFile
+  /// \returns the BufferID of this SourceFile
   BufferID getBufferID() const { return bufferID; }
+  /// \returns the buffer identifier of this Sourcefile
+  StringRef getBufferIdentifier() const;
   /// \returns true if this SourceFile is empty
   bool empty() const { return members.empty(); }
 

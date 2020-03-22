@@ -31,6 +31,10 @@ bool SourceFile::walk(ASTWalker &walker) {
   return true;
 }
 
+StringRef SourceFile::getBufferIdentifier() const {
+  return astContext.srcMgr.getBufferIdentifier(bufferID);
+}
+
 bool SourceFile::contains(SourceLoc loc) const {
   return bufferID == astContext.srcMgr.findBufferContainingLoc(loc);
 }
