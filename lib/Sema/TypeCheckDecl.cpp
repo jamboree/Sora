@@ -80,11 +80,12 @@ void checkForDuplicateBindingsInList(
 /// Note that this doesn't check if a declaration is an illegal redeclaration -
 /// that's handled by checkForRedeclaration which is usually called after this
 /// class.
-class DeclChecker : public ASTChecker, public DeclVisitor<DeclChecker> {
+class DeclChecker : public ASTCheckerBase, public DeclVisitor<DeclChecker> {
 public:
   SourceFile &file;
 
-  DeclChecker(TypeChecker &tc, SourceFile &file) : ASTChecker(tc), file(file) {}
+  DeclChecker(TypeChecker &tc, SourceFile &file)
+      : ASTCheckerBase(tc), file(file) {}
 
   // An RAII object that marks a declaratin as being checked on destruction.
   class RAIIDeclChecking {

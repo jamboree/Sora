@@ -69,7 +69,7 @@ void rebuildParenExprType(ParenExpr *expr) {
 ///     multiple files.
 ///     - Handling of DiscardExprs isn't ideal, perhaps they should be checked
 ///     by another class?
-class ExprChecker : public ASTChecker,
+class ExprChecker : public ASTCheckerBase,
                     public ASTWalker,
                     public ExprVisitor<ExprChecker, Expr *> {
 public:
@@ -81,7 +81,7 @@ public:
   llvm::SmallPtrSet<DiscardExpr *, 4> validDiscardExprs;
 
   ExprChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
-      : ASTChecker(tc), cs(cs), dc(dc) {}
+      : ASTCheckerBase(tc), cs(cs), dc(dc) {}
 
   SourceFile &getSourceFile() const {
     assert(dc && "no DeclContext?");
@@ -1074,14 +1074,14 @@ Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) {
 
 //===- ExprCheckerEpilogue ------------------------------------------------===//
 
-class ExprCheckerEpilogue : public ASTChecker, public ASTWalker {
+class ExprCheckerEpilogue : public ASTCheckerBase, public ASTWalker {
 public:
   ConstraintSystem &cs;
   bool canComplain = true;
   Expr *parentWithErrorType = nullptr;
 
   ExprCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs)
-      : ASTChecker(tc), cs(cs) {}
+      : ASTCheckerBase(tc), cs(cs) {}
 
   /// Simplifies the type of \p expr.
   void simplifyTypeOfExpr(Expr *expr) {
@@ -1371,7 +1371,7 @@ Expr *TypeChecker::typecheckExpr(
   return typecheckExpr(cs, expr, dc, ofType, onUnificationFailure);
 }
 
-//===- ASTChecker ---------------------------------------------------------===//
+//===- ASTCheckerBase -----------------------------------------------------===//
 
 bool TypeChecker::canDiagnose(Expr *expr) {
   return canDiagnose(expr->getType());

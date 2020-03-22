@@ -19,13 +19,13 @@ using namespace sora;
 //===- StmtChecker --------------------------------------------------------===//
 
 namespace {
-class StmtChecker : public ASTChecker, public StmtVisitor<StmtChecker> {
+class StmtChecker : public ASTCheckerBase, public StmtVisitor<StmtChecker> {
 public:
   SmallVector<WhileStmt *, 4> loops;
 
   DeclContext *dc;
 
-  StmtChecker(TypeChecker &tc, DeclContext *dc) : ASTChecker(tc), dc(dc) {}
+  StmtChecker(TypeChecker &tc, DeclContext *dc) : ASTCheckerBase(tc), dc(dc) {}
 
   void visitDecl(Decl *decl) { tc.typecheckDecl(decl); }
 

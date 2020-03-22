@@ -22,13 +22,13 @@ using namespace sora;
 
 namespace {
 /// Resolves TypeReprs into types.
-class TypeReprResolver : public ASTChecker,
+class TypeReprResolver : public ASTCheckerBase,
                          public TypeReprVisitor<TypeReprResolver, Type> {
 public:
   SourceFile &file;
 
   TypeReprResolver(TypeChecker &tc, SourceFile &file)
-      : ASTChecker(tc), file(file) {}
+      : ASTCheckerBase(tc), file(file) {}
 
   Type visitIdentifierTypeRepr(IdentifierTypeRepr *tyRepr) {
     UnqualifiedTypeLookup utl(file);
@@ -184,7 +184,8 @@ Type TypeChecker::resolveTypeRepr(TypeRepr *tyRepr, SourceFile &file) {
   return result;
 }
 
-bool TypeChecker::canExplicitlyCast(const ConstraintSystem &cs, Type from, Type to) {
+bool TypeChecker::canExplicitlyCast(const ConstraintSystem &cs, Type from,
+                                    Type to) {
   assert(!to->hasTypeVariable() &&
          "the 'to' type cannot contain type variables");
   assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
@@ -192,7 +193,7 @@ bool TypeChecker::canExplicitlyCast(const ConstraintSystem &cs, Type from, Type 
   return ExplicitTypeCastChecker(*this, cs).visit(from, to);
 }
 
-//===- ASTChecker ---------------------------------------------------------===//
+//===- ASTCheckerBase -----------------------------------------------------===//
 
 bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
                                     Type to) {

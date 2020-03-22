@@ -151,9 +151,9 @@ public:
 
 /// A small common base between AST "Checkers" (ExprChecker, DeclChecker,
 /// etc.) that provides some basic functionalities.
-class ASTChecker {
+class ASTCheckerBase {
 public:
-  ASTChecker(TypeChecker &tc)
+  ASTCheckerBase(TypeChecker &tc)
       : tc(tc), ctxt(tc.ctxt), diagEngine(tc.diagEngine) {}
 
   bool canDiagnose(Expr *expr) { return TypeChecker::canDiagnose(expr); }

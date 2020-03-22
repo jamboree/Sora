@@ -26,7 +26,7 @@ namespace {
 ///
 /// Note that pattern type checking is quite similar to expression type checking
 /// (it also uses type variables & a constraint system).
-class PatternChecker : public ASTChecker,
+class PatternChecker : public ASTCheckerBase,
                        public ASTWalker,
                        public PatternVisitor<PatternChecker> {
 public:
@@ -36,7 +36,7 @@ public:
   DeclContext *dc;
 
   PatternChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
-      : ASTChecker(tc), cs(cs), dc(dc) {}
+      : ASTCheckerBase(tc), cs(cs), dc(dc) {}
 
   SourceFile &getSourceFile() const {
     assert(dc && "no DeclContext?");
@@ -118,15 +118,15 @@ void PatternChecker::visitMaybeValuePattern(MaybeValuePattern *pattern) {
 
 //===- PatternCheckerEpilogue ---------------------------------------------===//
 
-class PatternCheckerEpilogue : public ASTChecker, public ASTWalker {
+class PatternCheckerEpilogue : public ASTCheckerBase, public ASTWalker {
 public:
   ConstraintSystem &cs;
   const bool canEmitInferenceErrors;
 
   PatternCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs,
                          bool canEmitInferenceErrors)
-      : ASTChecker(tc), cs(cs), canEmitInferenceErrors(canEmitInferenceErrors) {
-  }
+      : ASTCheckerBase(tc), cs(cs),
+        canEmitInferenceErrors(canEmitInferenceErrors) {}
 
   void simplifyTypeOfPattern(Pattern *pattern) {
     Type type = pattern->getType();
