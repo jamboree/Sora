@@ -401,5 +401,7 @@ bool CompilerInstance::doIRGen(mlir::MLIRContext &mlirContext,
 
 void CompilerInstance::emitIRModule(mlir::ModuleOp &mlirModule) {
   // FIXME: Once I have a working -o option, write it to a file.
-  mlirModule.print(llvm::outs());
+  mlir::OpPrintingFlags flags;
+  flags.enableDebugInfo();
+  mlirModule.print(llvm::outs(), flags);
 }
