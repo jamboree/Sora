@@ -10,6 +10,10 @@ def h : Flag<["-"], "h">,
 def parse_only : Flag<["-"], "parse-only">,
   HelpText<"Stops compilation after parsing">;
 
+// Semantic Analysis-related options
+def sema_only : Flag<["-"], "sema-only">,
+  HelpText<"Stops compilation after semantic analysis">;
+
 // Diagnostic Verification
 def verify : Flag<["-"], "verify">,
   HelpText<"Enables diagnostic verification">;

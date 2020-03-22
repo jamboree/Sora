@@ -76,11 +76,15 @@ Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &argList) {
 
 bool CompilerInstance::handleOptions(InputArgList &argList) {
   bool success = true;
+
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
+
   options.dumpAST = argList.hasArg(opt::OPT_dump_ast);
-  options.parseOnly = argList.hasArg(opt::OPT_parse_only);
+
   options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
+
   options.printMemUsage = argList.hasArg(opt::OPT_print_mem_usage);
+
   if (Arg *arg = argList.getLastArg(opt::OPT_dump_scope_maps)) {
     StringRef value = arg->getValue();
     if (value == "lazy")
@@ -92,6 +96,13 @@ bool CompilerInstance::handleOptions(InputArgList &argList) {
       diagnose(diag::unknown_argv_for, value, arg->getSpelling());
     }
   }
+
+  // "x-only" options, from the least to the most restrictive
+  if (argList.hasArg(opt::OPT_parse_only))
+    options.stopAfterStep = Step::Parsing;
+  if (argList.hasArg(opt::OPT_sema_only))
+    options.stopAfterStep = Step::Sema;
+
   return success;
 }
 
@@ -126,22 +137,29 @@ void CompilerInstance::dump(raw_ostream &out) const {
   /// Dump options
   DUMP_BOOL(options.dumpParse);
   DUMP_BOOL(options.dumpAST);
-  DUMP_BOOL(options.parseOnly);
   DUMP_BOOL(options.verifyModeEnabled);
   DUMP_BOOL(options.printMemUsage);
   out << "options.scopeMapPrintingMode: ";
   switch (options.scopeMapPrintingMode) {
   case ScopeMapPrintingMode::None:
-    out << "None";
+    out << "None\n";
     break;
   case ScopeMapPrintingMode::Lazy:
-    out << "Lazy";
+    out << "Lazy\n";
     break;
   case ScopeMapPrintingMode::Expanded:
-    out << "Expanded";
+    out << "Expanded\n";
     break;
   }
-  out << "\n";
+  out << "options.stopAfterStep: ";
+  switch (options.stopAfterStep) {
+  case Step::Parsing:
+    out << " Parsing\n";
+    break;
+  case Step::Sema:
+    out << " Sema\n";
+    break;
+  }
 #undef DUMP_BOOL
 }
 
@@ -170,7 +188,6 @@ bool CompilerInstance::isLoaded(StringRef filePath, bool isAbsolute) {
 
 bool CompilerInstance::run() {
   assert(!ran && "already ran this CompilerInstance!");
-  Step stopAfter = options.parseOnly ? Step::Parsing : Step::Last;
   ran = true;
   // Check if we have input files
   if (inputBuffers.empty()) {
@@ -199,8 +216,8 @@ bool CompilerInstance::run() {
   bool success = true;
 
   // Helper function, returns true if we can continue, false otherwise.
-  auto canContinue = [&](Step currentStep) {
-    return success && stopAfter != currentStep;
+  auto canContinue = [&](Step lastStep) {
+    return success && options.stopAfterStep != lastStep;
   };
 
   // Helper function to finish processing. Returns true on success, false on
@@ -219,12 +236,17 @@ bool CompilerInstance::run() {
 
   // Perform Parsing
   success = doParsing(sf);
-  if (!canContinue(Step::Parsing))
+  if (!canContinue(Step::Parsing)) {
+    dumpScopeMaps(debug_os, sf);
     return finish();
+  }
+
   // Perform Semantic Analysis
   success = doSema(sf);
+  dumpScopeMaps(debug_os, sf);
   if (!canContinue(Step::Sema))
     return finish();
+
   // TODO: Other steps
   return finish();
 }
@@ -286,20 +308,17 @@ void CompilerInstance::printASTContextMemoryUsage(Step step) const {
 bool CompilerInstance::doParsing(SourceFile &file) {
   parseSourceFile(file);
   if (options.dumpParse)
-    file.dump(llvm::outs());
+    file.dump(debug_os);
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Parsing);
-  if (options.parseOnly)
-    dumpScopeMaps(llvm::outs(), file);
   return !diagEng.hadAnyError();
 }
 
 bool CompilerInstance::doSema(SourceFile &file) {
   performSema(file);
   if (options.dumpAST)
-    file.dump(llvm::outs());
+    file.dump(debug_os);
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Parsing);
-  dumpScopeMaps(llvm::outs(), file);
   return !diagEng.hadAnyError();
 }

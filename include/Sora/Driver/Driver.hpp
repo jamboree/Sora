@@ -70,9 +70,9 @@ public:
     /// If "true", dumps the typechecked AST after Sema
     /// Honored by doSema()
     bool dumpAST = false;
-    /// If "true", the compiler will stop after the parsing step.
-    /// Honored by run()
-    bool parseOnly = false;
+    /// The step after which compilation should stop.
+    /// By default, stops after the last step.
+    Step stopAfterStep = Step::Last;
     /// Whether verify mode is enabled.
     /// Honored by run()
     bool verifyModeEnabled = false;
