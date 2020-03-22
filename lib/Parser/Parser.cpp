@@ -9,16 +9,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/Parser/Parser.hpp"
+#include "Sora/EntryPoints.hpp"
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/Lexer/Lexer.hpp"
 
 using namespace sora;
 
-Parser::Parser(ASTContext &ctxt, SourceFile &file)
-    : ctxt(ctxt), diagEng(ctxt.diagEngine), sourceFile(file),
-      declContext(&file),
-      lexer(ctxt.srcMgr, sourceFile.getBufferID(), &diagEng) {
+Parser::Parser(SourceFile &file)
+    : ctxt(file.astContext), diagEng(file.astContext.diagEngine),
+      sourceFile(file), declContext(&file),
+      lexer(file.astContext.srcMgr, sourceFile.getBufferID(), &diagEng) {
   tok = lexer.lex();
 }
 
@@ -187,4 +188,11 @@ Identifier Parser::getIdentifier(const Token &tok) {
 int Parser::getColumnDifference(SourceLoc a, SourceLoc b) const {
   const SourceManager &srcMgr = ctxt.srcMgr;
   return srcMgr.getLineAndColumn(b).second - srcMgr.getLineAndColumn(a).second;
+}
+
+//===- parseSourceFile ----------------------------------------------------===//
+
+void sora::parseSourceFile(SourceFile &sf) {
+  Parser parser(sf);
+  parser.parseSourceFile();
 }

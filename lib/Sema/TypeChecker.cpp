@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TypeChecker.hpp"
-#include "Sora/Sema/Sema.hpp"
+#include "Sora/EntryPoints.hpp"
 
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"

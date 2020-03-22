@@ -47,11 +47,10 @@ class Parser final {
   Parser &operator=(const Parser &) = delete;
 
 public:
-  /// \param ctxt the ASTContext that owns the SourceFile. This is where we'll
-  /// allocate memory for the AST. We'll also use its DiagnosticEngine to emit
-  /// diagnostic and its SourceManager to retrieve the SourceFile's contents.
-  /// \param sf the SourceFile that this parser will be working on
-  Parser(ASTContext &ctxt, SourceFile &file);
+  /// \param sf the SourceFile that this parser will be working on.
+  /// Its ASTContext, DiagnosticEngine and SourceManager will be used to
+  /// allocate memory, emit diagnostics and access the file's text.
+  Parser(SourceFile &file);
 
   /// The ASTContext
   ASTContext &ctxt;

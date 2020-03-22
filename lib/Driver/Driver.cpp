@@ -13,9 +13,8 @@
 #include "Sora/Diagnostics/DiagnosticsDriver.hpp"
 #include "Sora/Driver/DiagnosticVerifier.hpp"
 #include "Sora/Driver/Options.hpp"
-#include "Sora/Parser/Parser.hpp"
+#include "Sora/EntryPoints.hpp"
 #include "Sora/IR/Dialect.hpp"
-#include "Sora/Sema/Sema.hpp"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -285,8 +284,7 @@ void CompilerInstance::printASTContextMemoryUsage(Step step) const {
 }
 
 bool CompilerInstance::doParsing(SourceFile &file) {
-  Parser parser(*astContext, file);
-  parser.parseSourceFile();
+  parseSourceFile(file);
   if (options.dumpParse)
     file.dump(llvm::outs());
   if (options.printMemUsage)
