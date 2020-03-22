@@ -20,7 +20,8 @@
 
 namespace mlir {
 class MLIRContext;
-}
+class ModuleOp;
+} // namespace mlir
 
 namespace sora {
 class SourceFile;
@@ -43,8 +44,18 @@ void performSema(SourceFile &sf);
 
 //===- IRGen - IR Generation Library --------------------------------------===//
 
-/// Performs IR Generation on \p sf
-void performIRGen(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
+/// Creates a MLIR Module for \p sf using \p mlirCtxt
+mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
+
+/// Performs IR Generation on \p sf using \p mlirCtxt.
+///   \param mlirCtxt the MLIRContext to use
+///   \param mlirModule the MLIR Module in which the contents of \p sf will be
+///     emitted.
+///   \param sf the target SourceFile
+///   \param enableDebugInfo Whether Debug information will be generated -
+///     defaults to true.
+void performIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,
+                  SourceFile &sf, bool enableDebugInfo = true);
 
 //===----------------------------------------------------------------------===//
 

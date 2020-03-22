@@ -15,6 +15,8 @@
 #include "Sora/Driver/Options.hpp"
 #include "Sora/EntryPoints.hpp"
 #include "Sora/IR/Dialect.hpp"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Module.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -99,9 +101,40 @@ bool CompilerInstance::handleOptions(InputArgList &argList) {
 
   // "x-only" options, from the least to the most restrictive
   if (argList.hasArg(opt::OPT_parse_only))
-    options.stopAfterStep = Step::Parsing;
+    setStopAfterStep(Step::Parsing);
   if (argList.hasArg(opt::OPT_sema_only))
-    options.stopAfterStep = Step::Sema;
+    setStopAfterStep(Step::Sema);
+
+  Arg *emitArg = nullptr;
+  auto checkCanUseEmitArg = [&](Arg *arg) {
+    if (!emitArg) {
+      emitArg = arg;
+      return true;
+    }
+
+    Arg *arg1 = arg;
+    Arg *arg2 = emitArg;
+    if (arg1->getIndex() < arg2->getIndex())
+      std::swap(arg1, arg2);
+    diagnose(diag::cannot_use_arg1_with_arg2, arg1->getSpelling(),
+             arg2->getSpelling());
+    success = false;
+    return false;
+  };
+
+  if (Arg *arg = argList.getLastArg(opt::OPT_emit_raw_ir)) {
+    if (checkCanUseEmitArg(arg)) {
+      options.desiredOutput = CompilerOutputType::IR;
+      setStopAfterStep(Step::IRGen);
+    }
+  }
+
+  if (Arg *arg = argList.getLastArg(opt::OPT_emit_ir)) {
+    if (checkCanUseEmitArg(arg)) {
+      options.desiredOutput = CompilerOutputType::IR;
+      setStopAfterStep(Step::IRTransform);
+    }
+  }
 
   return success;
 }
@@ -154,10 +187,28 @@ void CompilerInstance::dump(raw_ostream &out) const {
   out << "options.stopAfterStep: ";
   switch (options.stopAfterStep) {
   case Step::Parsing:
-    out << " Parsing\n";
+    out << "Parsing\n";
     break;
   case Step::Sema:
-    out << " Sema\n";
+    out << "Sema\n";
+    break;
+  case Step::IRGen:
+    out << "IRGen\n";
+    break;
+  case Step::IRTransform:
+    out << "IRTransform\n";
+    break;
+  case Step::LLVMGen:
+    out << "LLVMGen\n";
+    break;
+  }
+  out << "options.desiredOutput: ";
+  switch (options.desiredOutput) {
+  case CompilerOutputType::IR:
+    out << "IR\n";
+    break;
+  case CompilerOutputType::Executable:
+    out << "Executable\n";
     break;
   }
 #undef DUMP_BOOL
@@ -216,8 +267,8 @@ bool CompilerInstance::run() {
   bool success = true;
 
   // Helper function, returns true if we can continue, false otherwise.
-  auto canContinue = [&](Step lastStep) {
-    return success && options.stopAfterStep != lastStep;
+  auto isDone = [&](Step lastStep) {
+    return !success || options.stopAfterStep == lastStep;
   };
 
   // Helper function to finish processing. Returns true on success, false on
@@ -236,7 +287,7 @@ bool CompilerInstance::run() {
 
   // Perform Parsing
   success = doParsing(sf);
-  if (!canContinue(Step::Parsing)) {
+  if (isDone(Step::Parsing)) {
     dumpScopeMaps(debug_os, sf);
     return finish();
   }
@@ -244,8 +295,18 @@ bool CompilerInstance::run() {
   // Perform Semantic Analysis
   success = doSema(sf);
   dumpScopeMaps(debug_os, sf);
-  if (!canContinue(Step::Sema))
+  if (isDone(Step::Sema))
     return finish();
+
+  // Perform IRGen
+  mlir::MLIRContext mlirCtxt;
+  mlir::ModuleOp mlirModule = createMLIRModule(mlirCtxt, sf);
+  success = doIRGen(mlirCtxt, mlirModule, sf);
+  if (isDone(Step::IRGen)) {
+    if (success && options.desiredOutput == CompilerOutputType::IR)
+      emitIRModule(mlirModule);
+    return finish();
+  }
 
   // TODO: Other steps
   return finish();
@@ -298,6 +359,15 @@ void CompilerInstance::printASTContextMemoryUsage(Step step) const {
   case Step::Sema:
     debug_os << "semantic analysis";
     break;
+  case Step::IRGen:
+    debug_os << "ir generation";
+    break;
+  case Step::IRTransform:
+    debug_os << "ir lowering/optimization";
+    break;
+  case Step::LLVMGen:
+    debug_os << "llvm ir generation";
+    break;
   }
   debug_os << ": ";
   llvm::write_integer(debug_os, astContext->getTotalMemoryUsed(), 0,
@@ -319,6 +389,17 @@ bool CompilerInstance::doSema(SourceFile &file) {
   if (options.dumpAST)
     file.dump(debug_os);
   if (options.printMemUsage)
-    printASTContextMemoryUsage(Step::Parsing);
+    printASTContextMemoryUsage(Step::Sema);
   return !diagEng.hadAnyError();
+}
+
+bool CompilerInstance::doIRGen(mlir::MLIRContext &mlirContext,
+                               mlir::ModuleOp &mlirModule, SourceFile &file) {
+  performIRGen(mlirContext, mlirModule, file);
+  return !diagEng.hadAnyError();
+}
+
+void CompilerInstance::emitIRModule(mlir::ModuleOp &mlirModule) {
+  // FIXME: Once I have a working -o option, write it to a file.
+  mlirModule.print(llvm::outs());
 }

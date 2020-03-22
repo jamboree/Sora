@@ -14,6 +14,12 @@ def parse_only : Flag<["-"], "parse-only">,
 def sema_only : Flag<["-"], "sema-only">,
   HelpText<"Stops compilation after semantic analysis">;
 
+// IRGen-related options
+def emit_ir : Flag<["-"], "emit-ir">,
+  HelpText<"Emits IR">;
+def emit_raw_ir : Flag<["-"], "emit-raw-ir">,
+  HelpText<"Emits raw IR (as emitted by IRGen)">;
+
 // Diagnostic Verification
 def verify : Flag<["-"], "verify">,
   HelpText<"Enables diagnostic verification">;

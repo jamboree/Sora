@@ -8,8 +8,8 @@
 #pragma once
 
 #include "Sora/Common/LLVM.hpp"
-#include "llvm/Support/Error.h"
 #include "mlir/IR/Function.h"
+#include "llvm/Support/Error.h"
 
 namespace mlir {
 class MLIRContext;
@@ -25,11 +25,13 @@ class SourceFile;
 class Type;
 
 class IRGen {
+  bool debugInfoEnabled;
+
 public:
-  IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt);
+  IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt, bool enableDebugInfo);
 
   /// Generates IR for \p sf, returning the MLIR Module.
-  mlir::ModuleOp genSourceFile(SourceFile &sf);
+  void genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule);
 
   /// Generates IR for \p func, returning the MLIR function.
   mlir::FuncOp genFunction(FuncDecl *func);

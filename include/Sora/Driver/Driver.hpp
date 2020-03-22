@@ -20,9 +20,14 @@
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
+
+namespace mlir {
+class ModuleOp;
+class MLIRContext;
+} // namespace mlir
 
 namespace sora {
 class DiagnosticVerifier;
@@ -43,17 +48,23 @@ class CompilerInstance {
   CompilerInstance &operator=(const CompilerInstance &) = delete;
 
 public:
-  /// A step in the compilation process
   enum class Step : uint8_t {
     /// Parsing, done by the Lexer and Parser components
     Parsing,
     /// Semantic Analysis, done by Sema
     Sema,
+    /// IR Generation, done by IRGen
+    IRGen,
+    /// IR Transformations (optimization & dialect lowering passes)
+    /// (Not implemented yet)
+    IRTransform,
+    /// Generation of LLVM IR from the lowered IR
+    /// (Not implemented yet)
+    LLVMGen,
     /// The last step of the process
-    Last = Sema
+    Last = IRGen
   };
 
-  /// Scope Maps printing mode
   enum class ScopeMapPrintingMode : uint8_t {
     /// Don't print scope maps
     None,
@@ -61,6 +72,13 @@ public:
     Lazy,
     /// Fully expand the scope map and print it
     Expanded
+  };
+
+  enum class CompilerOutputType : uint8_t {
+    /// Emit IR (after IRGen or IRTransform, depending on options.stopAfterStep)
+    IR,
+    /// Emit a linked executable file
+    Executable
   };
 
   struct {
@@ -73,6 +91,9 @@ public:
     /// The step after which compilation should stop.
     /// By default, stops after the last step.
     Step stopAfterStep = Step::Last;
+    /// The desired output of the compiler.
+    /// Defaults to a linked executable file.
+    CompilerOutputType desiredOutput = CompilerOutputType::Executable;
     /// Whether verify mode is enabled.
     /// Honored by run()
     bool verifyModeEnabled = false;
@@ -107,6 +128,13 @@ public:
   ///         If \p isAbsolute is set to true, the path will not be converted to
   ///         an absolute path before the check if performed.
   bool isLoaded(StringRef filePath, bool isAbsolute = false);
+
+  /// Sets the options.stopAfterStep option if \p step is before the current
+  /// value of the option.
+  void setStopAfterStep(Step step) {
+    if (step < options.stopAfterStep)
+      options.stopAfterStep = step;
+  }
 
   /// Runs this CompilerInstance.
   ///
@@ -165,6 +193,14 @@ private:
   /// Performs the semantic analysis step on \p file
   /// \returns false if errors were emitted during semantic analysis
   bool doSema(SourceFile &file);
+
+  /// Performs the IR Generation step on \p file
+  /// \returns false if errors were emitted during IR Generation
+  bool doIRGen(mlir::MLIRContext &mlirContext, mlir::ModuleOp &mlirModule,
+               SourceFile &file);
+
+  /// Emits mlirModule as a product of the compilation process.
+  void emitIRModule(mlir::ModuleOp &mlirModule);
 };
 
 /// This is a high-level compiler driver. It handles command-line options and

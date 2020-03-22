@@ -42,6 +42,8 @@ ERROR(missing_argv, "missing argument value for '%0', expected '%1' argument(s)"
   (StringRef, size_t))
 ERROR(unknown_argv_for, "unknown argument value '%0' for '%1'", 
   (StringRef, StringRef))
+ERROR(cannot_use_arg1_with_arg2, "cannot use '%0' with '%1'", 
+  (StringRef, StringRef))
 
 // Input files loading
 ERROR(couldnt_load_input_file, "could not load input file '%0'", (StringRef))

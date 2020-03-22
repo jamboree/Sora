@@ -15,15 +15,25 @@
 
 using namespace sora;
 
-IRGen::IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt)
-    : astCtxt(astCtxt), mlirCtxt(mlirCtxt) {}
+IRGen::IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt,
+             bool enableDebugInfo)
+    : debugInfoEnabled(enableDebugInfo), astCtxt(astCtxt), mlirCtxt(mlirCtxt) {}
 
-mlir::ModuleOp IRGen::genSourceFile(SourceFile &sf) {
+void IRGen::genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule) {
   llvm_unreachable("genSourceFile - unimplemented");
 }
 
-//===- performIRGen -------------------------------------------------------===//
+//===- Entry Points -------------------------------------------------------===//
 
-void sora::performIRGen(mlir::MLIRContext &mlirCtxt, SourceFile &sf) {
-  IRGen irGen(sf.astContext, mlirCtxt);
+mlir::ModuleOp sora::createMLIRModule(mlir::MLIRContext &mlirCtxt,
+                                      SourceFile &sf) {
+  // FIXME: Use a correct loc
+  return mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirCtxt),
+                                sf.getBufferIdentifier());
+}
+
+void sora::performIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,
+                        SourceFile &sf, bool enableDebugInfo) {
+  IRGen irGen(sf.astContext, mlirCtxt, enableDebugInfo);
+  irGen.genSourceFile(sf, mlirModule);
 }
