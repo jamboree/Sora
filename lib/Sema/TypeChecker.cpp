@@ -6,11 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TypeChecker.hpp"
-#include "Sora/EntryPoints.hpp"
 
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/SourceFile.hpp"
+#include "Sora/EntryPoints.hpp"
 
 using namespace sora;
 
