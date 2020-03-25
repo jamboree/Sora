@@ -91,7 +91,7 @@ add_dependencies(libsora DriverOptionsTableGen)
 # get the LLVM Libraries that we need.
 llvm_map_components_to_libnames(libsora_llvm_libs support option)
 # add MLIR libraries.
-list(APPEND libsora_llvm_libs MLIRIR)
+list(APPEND libsora_llvm_libs MLIRIR MLIRLLVMIR)
 
 target_link_libraries(libsora ${libsora_llvm_libs})
 

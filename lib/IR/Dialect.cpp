@@ -8,6 +8,7 @@
 #include "Sora/IR/Dialect.hpp"
 
 using namespace sora;
+using namespace sora::ir;
 
 SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
     : mlir::Dialect("sora", mlirCtxt) {}

@@ -27,8 +27,7 @@ Driver::Driver(raw_ostream &out)
     : driverDiags(driverDiagsSrcMgr), optTable(createSoraOptTable()) {
   driverDiags.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
 
-  // Register the Sora MLIR Dialect
-  mlir::registerDialect<SoraDialect>();
+  registerMLIRDialects();
 }
 
 InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {

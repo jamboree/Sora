@@ -44,6 +44,14 @@ void performSema(SourceFile &sf);
 
 //===- IRGen - IR Generation Library --------------------------------------===//
 
+/// Adds the MLIR Dialects necessary for IRGen to MLIR's Dialect Registry.
+/// Currently, this adds the Sora and LLVM Dialects.
+///
+/// This function must be called once before attempting any IR Generation
+/// operation. Ideally it should only be called once, but calling it multiple
+/// times is not an issue (it'll just be a no-op).
+void registerMLIRDialects();
+
 /// Creates a MLIR Module for \p sf using \p mlirCtxt
 mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 

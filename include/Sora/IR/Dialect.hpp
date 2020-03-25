@@ -10,10 +10,12 @@
 #include "mlir/IR/Dialect.h"
 
 namespace sora {
+namespace ir {
 class SoraDialect : public mlir::Dialect {
 public:
   explicit SoraDialect(mlir::MLIRContext *mlirCtxt);
 
   static llvm::StringRef getDialectNamespace() { return "sora"; }
 };
+} // namespace ir
 } // namespace sora
