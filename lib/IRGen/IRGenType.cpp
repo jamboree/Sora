@@ -9,7 +9,6 @@
 
 #include "Sora/AST/TypeVisitor.hpp"
 #include "Sora/AST/Types.hpp"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StandardTypes.h"
 
@@ -21,17 +20,10 @@ namespace {
 /// Converts Sora Types to MLIR Types.
 class TypeConverter : public IRGeneratorBase,
                       public TypeVisitor<TypeConverter, mlir::Type> {
-  friend TypeVisitor<TypeConverter, mlir::Type>;
-
-  mlir::LLVM::LLVMDialect &llvmDialect;
-
 public:
   TypeConverter(IRGen &irGen)
-      : IRGeneratorBase(irGen), llvmDialect(irGen.llvmDialect) {}
+      : IRGeneratorBase(irGen) {}
 
-  mlir::Type get(Type type) { return visit(type); }
-
-private:
   mlir::Type visitIntegerType(IntegerType *type) {
     IntegerWidth integerWidth = type->getWidth();
     assert(!integerWidth.isArbitraryPrecision() &&
@@ -63,11 +55,7 @@ private:
   }
 
   mlir::Type visitNullType(NullType *type) {
-    // FIXME: How will this be generated?
-    // The "null" type cannot be written, so maybe it just nevers needs to be
-    // lowered? Else, it'll need some refactoring for proper lowering (e.g.
-    // contain a type)
-    llvm_unreachable("TODO - visitNullType");
+    llvm_unreachable("Cannot lower a Null Type");
   }
 
   mlir::Type visitReferenceType(ReferenceType *type) {
@@ -113,10 +101,11 @@ private:
 //===- IRGen --------------------------------------------------------------===//
 
 mlir::Type IRGen::getMLIRType(Type type) {
+  assert(!type->hasNullType() && "Cannot lower Null Types");
   auto iter = typeCache.find(type.getPtr());
   if (iter != typeCache.end())
     return iter->second;
-  mlir::Type mlirType = TypeConverter(*this).get(type);
+  mlir::Type mlirType = TypeConverter(*this).visit(type);
   typeCache.insert({type.getPtr(), mlirType});
   return mlirType;
 }

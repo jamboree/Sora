@@ -17,12 +17,7 @@
 
 using namespace sora;
 
-static mlir::LLVM::LLVMDialect &getLLVMDialect(mlir::MLIRContext &mlirCtxt) {
-  auto *dialect = mlirCtxt.getRegisteredDialect<mlir::LLVM::LLVMDialect>();
-  assert(dialect && "LLVMDialect not registered! Did you call "
-                    "'sora::registerMLIRDialects()'?");
-  return *dialect;
-}
+//===- IRGen --------------------------------------------------------------===//
 
 static ir::SoraDialect &getSoraDialect(mlir::MLIRContext &mlirCtxt) {
   auto *dialect = mlirCtxt.getRegisteredDialect<ir::SoraDialect>();
@@ -35,11 +30,31 @@ IRGen::IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt,
              bool enableDebugInfo)
     : debugInfoEnabled(enableDebugInfo), astCtxt(astCtxt),
       srcMgr(astCtxt.srcMgr), mlirCtxt(mlirCtxt),
-      llvmDialect(getLLVMDialect(mlirCtxt)), soraDialect(soraDialect) {}
+      soraDialect(getSoraDialect(mlirCtxt)) {}
 
 void IRGen::genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule) {
   for (ValueDecl *decl : sf.getMembers())
-    mlirModule.push_back(genFunction(cast<FuncDecl>(decl)));
+    mlirModule.push_back(genFunctionBody(cast<FuncDecl>(decl)));
+}
+
+mlir::Location IRGen::getMLIRLoc(ASTNode node) {
+  return getMLIRLoc(node.getSourceRange());
+}
+
+mlir::Location IRGen::getMLIRLoc(SourceRange range) {
+  // FIXME: Represent the full range!
+  return getMLIRLoc(range.begin);
+}
+
+mlir::Location IRGen::getMLIRLoc(SourceLoc loc) {
+  if (!debugInfoEnabled)
+    return mlir::UnknownLoc::get(&mlirCtxt);
+
+  BufferID buffer = srcMgr.findBufferContainingLoc(loc);
+  StringRef filename = srcMgr.getBufferIdentifier(buffer);
+  std::pair<unsigned, unsigned> lineAndCol = srcMgr.getLineAndColumn(loc);
+  return mlir::FileLineColLoc::get(filename, lineAndCol.first,
+                                   lineAndCol.second, &mlirCtxt);
 }
 
 mlir::Identifier IRGen::getMLIRIdentifier(StringRef str) {
@@ -52,7 +67,6 @@ static bool areMLIRDialectsRegistered = false;
 
 void sora::registerMLIRDialects() {
   if (!areMLIRDialectsRegistered) {
-    mlir::registerDialect<mlir::LLVM::LLVMDialect>();
     mlir::registerDialect<ir::SoraDialect>();
     areMLIRDialectsRegistered = true;
   }
