@@ -10,6 +10,8 @@
 #include "Sora/AST/TypeRepr.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "gtest/gtest.h"
 
 using namespace sora;
@@ -139,6 +141,36 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<BinaryExpr>(binaryExpr));
 
   EXPECT_TRUE(isa<UnaryExpr>(unaryExpr));
+}
+
+TEST_F(ExprTest, IntegerLiteralExpr_getValue) {
+  IntegerLiteralExpr *expr = new (*ctxt) IntegerLiteralExpr("300", {});
+  expr->setType(ctxt->i8Type);
+  EXPECT_EQ(expr->getValue().toString(10, true), "44");
+  expr->setType(ctxt->u8Type);
+  EXPECT_EQ(expr->getValue().toString(10, false), "44");
+  expr->setType(ctxt->i16Type);
+  EXPECT_EQ(expr->getValue().toString(10, true), "300");
+
+  expr = new (*ctxt) IntegerLiteralExpr("200", {});
+  expr->setType(ctxt->i8Type);
+  EXPECT_EQ(expr->getValue().toString(10, true), "-56");
+  expr->setType(ctxt->u8Type);
+  EXPECT_EQ(expr->getValue().toString(10, false), "200");
+  expr->setType(ctxt->i16Type);
+  EXPECT_EQ(expr->getValue().toString(10, true), "200");
+}
+
+TEST_F(ExprTest, FloatLiteralExpr_getValue) {
+  FloatLiteralExpr *expr = new (*ctxt) FloatLiteralExpr("3.14", {});
+  expr->setType(ctxt->f32Type);
+  SmallVector<char, 8> strVec;
+  expr->getValue().toString(strVec);
+  EXPECT_EQ(StringRef(strVec.data(), 4), "3.14");
+  strVec.clear();
+  expr->setType(ctxt->f64Type);
+  expr->getValue().toString(strVec);
+  EXPECT_EQ(StringRef(strVec.data(), 4), "3.14");
 }
 
 TEST_F(ExprTest, UnresolvedExprs) {

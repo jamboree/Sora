@@ -9,6 +9,7 @@
 #include "ASTNodeLoc.hpp"
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Decl.hpp"
+#include "Sora/AST/Types.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include <type_traits>
@@ -92,13 +93,30 @@ DeclRefExpr::DeclRefExpr(UnresolvedDeclRefExpr *udre, ValueDecl *decl)
 }
 
 APInt IntegerLiteralExpr::getRawValue() const {
-  APInt result;
-  /// For now Sora only has base 10 literals.
-  unsigned radix = 10;
-  /// Parse it (true = error)
-  if (strValue.getAsInteger(radix, result))
-    llvm_unreachable("Integer Parsing Error - Ill-formed integer token?");
+  IntegerWidth::Status status;
+  APInt result = IntegerWidth::arbitrary().parse(
+      getString(), /*isNegative*/ false, 0, &status);
+  assert(status != IntegerWidth::Status::Error &&
+         "Integer Parsing Error - Ill-formed integer token?");
   return result;
+}
+
+APInt IntegerLiteralExpr::getValue() const {
+  Type type = getType();
+  assert(type && type->is<IntegerType>());
+  IntegerWidth intWidth = type->castTo<IntegerType>()->getWidth();
+
+  IntegerWidth::Status status;
+  APInt result = intWidth.parse(getString(), /*isNegative*/ false, 0, &status);
+  assert(status != IntegerWidth::Status::Error &&
+         "Integer Parsing Error - Ill-formed integer token?");
+  return result;
+}
+
+APFloat FloatLiteralExpr::getValue() const {
+  Type type = getType();
+  assert(type && type->is<FloatType>());
+  return APFloat(type->castTo<FloatType>()->getAPFloatSemantics(), getString());
 }
 
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,

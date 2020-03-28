@@ -368,9 +368,7 @@ public:
   ///
   /// This is relatively expensive (parsing isn't cached), so don't abuse it
   /// where performance matters.
-  /* unimplemented for now - requires llvm::fltSemantics which should be
-     fetched from the type */
-  // APFloat getValue() const;
+  APInt getValue() const;
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::IntegerLiteral;
@@ -397,9 +395,7 @@ public:
   ///
   /// This is relatively expensive (parsing isn't cached), so don't abuse it
   /// where performance matters.
-  /* unimplemented for now - requires llvm::fltSemantics which should be
-     fetched from the FloatType */
-  // APFloat getValue() const;
+  APFloat getValue() const;
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::FloatLiteral;
