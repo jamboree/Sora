@@ -8,14 +8,32 @@
 #pragma once
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/Interfaces/SideEffects.h"
 
+namespace mlir {
 namespace sora {
-namespace ir {
 class SoraDialect : public mlir::Dialect {
 public:
   explicit SoraDialect(mlir::MLIRContext *mlirCtxt);
 
   static llvm::StringRef getDialectNamespace() { return "sora"; }
 };
+
+// Include the TableGen'd file containing the declarations of the Sora IR
+// Operations.
+#define GET_OP_CLASSES
+#include "Sora/IR/Ops.h.inc"
+} // namespace sora
+} // namespace mlir
+
+namespace sora {
+namespace ir {
+/// This is a dirty hack to have the Sora IR reside in the sora::ir namespace.
+/// Why? The MLIR TableGen backend doesn't fully qualify names, so the dialect
+/// *has* to be in the mlir namespace, but typing "mlir::sora" will get verbose
+/// quickly when manipulating IR, so this is a way of shortening the namespace.
+///
+/// TL;DR: Always use sora::ir to manipulate IR classes.
+using namespace ::mlir::sora;
 } // namespace ir
 } // namespace sora

@@ -6,9 +6,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/IR/Dialect.hpp"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/Builders.h"
 
-using namespace sora;
-using namespace sora::ir;
+using namespace ::mlir;
+using namespace ::sora;
+using namespace ::sora::ir;
 
 SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
-    : mlir::Dialect("sora", mlirCtxt) {}
+    : mlir::Dialect("sora", mlirCtxt) {
+  addOperations<
+#define GET_OP_LIST
+#include "Sora/IR/Ops.cpp.inc"
+      >();
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd Method Definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "Sora/IR/Ops.cpp.inc"

@@ -9,6 +9,7 @@
 
 #include "Sora/AST/ASTVisitor.hpp"
 #include "Sora/AST/Expr.hpp"
+#include "Sora/AST/Types.hpp"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace sora;
@@ -41,17 +42,24 @@ public:
   }
 
   mlir::Value visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
-    llvm_unreachable("Unimplemented - visitIntegerLiteralExpr");
+    assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
+    return builder.create<ir::IntegerConstantOp>(
+        irGen.getMLIRLoc(expr), expr->getValue(),
+        irGen.getMLIRType(expr->getType()));
   }
 
   mlir::Value visitFloatLiteralExpr(FloatLiteralExpr *expr) {
-    llvm_unreachable("Unimplemented - visitFloatLiteralExpr");
+    assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
+    mlir::Type type = irGen.getMLIRType(expr->getType());
+    assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
+    return builder.create<mlir::ConstantFloatOp>(
+        irGen.getMLIRLoc(expr), expr->getValue(), type.cast<mlir::FloatType>());
   }
 
   mlir::Value visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
-    return builder.create<mlir::ConstantIntOp>(
-        irGen.getMLIRLoc(expr), expr->getValue() ? 1 : 0,
-        irGen.getMLIRType(expr->getType()));
+    assert(expr->getType()->isBoolType() && "Not a Bool Type?!");
+    return builder.create<ir::BoolConstantOp>(irGen.getMLIRLoc(expr),
+                                              expr->getValue());
   }
 
   mlir::Value visitNullLiteralExpr(NullLiteralExpr *expr) {
@@ -80,7 +88,8 @@ public:
   }
 
   mlir::Value visitCastExpr(CastExpr *expr) {
-    llvm_unreachable("Unimplemented - visitCastExpr");
+    // FIXME: Dynamic conversions?
+    return visit(expr->getSubExpr());
   }
 
   mlir::Value visitTupleElementExpr(TupleElementExpr *expr) {

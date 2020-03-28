@@ -24,7 +24,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 #   Executables go in the /bin folder
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# add LLVM 
+# add LLVM
 find_package(LLVM REQUIRED CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 add_definitions(${LLVM_DEFINITIONS})
@@ -38,9 +38,11 @@ message(STATUS "LLVM Tools binary dir: ${LLVM_TOOLS_BINARY_DIR}")
 
 # set tablegen exe location (should be in ${LLVM_TOOLS_BINARY_DIR}/llvm-tblgen)
 set(LLVM_TABLEGEN_EXE "${LLVM_TOOLS_BINARY_DIR}/llvm-tblgen")
+set(MLIR_TABLEGEN_EXE "${LLVM_TOOLS_BINARY_DIR}/mlir-tblgen")
 
-# include relevant llvm scripts
+# include relevant LLVM/MLIR scripts
 include(AddLLVM)
+include(AddMLIR)
 include(HandleLLVMOptions)
 include(TableGen)
 
@@ -84,9 +86,9 @@ endif()
 
 # create lib target, make it depend on tablegen'd stuff and link it with LLVM libs.
 add_library(libsora ${LIBSORA_LIB_KIND} ${libsora_src})
-SET_TARGET_PROPERTIES(libsora PROPERTIES PREFIX "")
+set_target_properties(libsora PROPERTIES PREFIX "")
 
-add_dependencies(libsora DriverOptionsTableGen)
+add_dependencies(libsora DriverOptionsTableGen SoraIROpsGen)
 
 # get the LLVM Libraries that we need.
 llvm_map_components_to_libnames(libsora_llvm_libs support option)
