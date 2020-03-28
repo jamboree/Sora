@@ -37,7 +37,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "LLVM Tools binary dir: ${LLVM_TOOLS_BINARY_DIR}")
 
 # set tablegen exe location (should be in ${LLVM_TOOLS_BINARY_DIR}/llvm-tblgen)
-SET(LLVM_TABLEGEN_EXE "${LLVM_TOOLS_BINARY_DIR}/llvm-tblgen")
+set(LLVM_TABLEGEN_EXE "${LLVM_TOOLS_BINARY_DIR}/llvm-tblgen")
 
 # include relevant llvm scripts
 include(AddLLVM)
@@ -91,7 +91,7 @@ add_dependencies(libsora DriverOptionsTableGen)
 # get the LLVM Libraries that we need.
 llvm_map_components_to_libnames(libsora_llvm_libs support option)
 # add MLIR libraries.
-list(APPEND libsora_llvm_libs MLIRIR MLIRLLVMIR)
+list(APPEND libsora_llvm_libs MLIRIR MLIRLLVMIR MLIRStandardOps)
 
 target_link_libraries(libsora ${libsora_llvm_libs})
 
