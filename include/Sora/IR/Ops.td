@@ -50,8 +50,7 @@ def BoolConstantOp : Sora_Op<"bool_constant", [NoSideEffect]> {
   let results = (outs I1);
 
   let builders = [
-    /// Shorthand builder that just takes a bool and a type
-    /// FIXME: Stop taking a type - just use I1!
+    /// Shorthand builder that just takes a bool
     OpBuilder<"Builder *builder, OperationState &state, bool value", [{
       build(builder, state, builder->getI1Type(), builder->getBoolAttr(value));
     }]>,
