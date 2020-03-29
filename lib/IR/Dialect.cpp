@@ -6,11 +6,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/IR/Dialect.hpp"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/IR/Builders.h"
+#include "mlir/Support/LogicalResult.h"
 
-using namespace ::mlir;
 using namespace ::sora;
 using namespace ::sora::ir;
 
@@ -22,9 +22,23 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
       >();
 }
 
+//===- Operation Verification ---------------------------------------------===//
+
+namespace {
+
+/// The IntegerConstant's attribute's type must match its return type.
+mlir::LogicalResult verify(IntegerConstantOp &op) {
+  if (op.getType() != op.valueAttr().getType())
+    return mlir::failure();
+  return mlir::success();
+}
+
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // TableGen'd Method Definitions
 //===----------------------------------------------------------------------===//
 
+using namespace ::mlir;
 #define GET_OP_CLASSES
 #include "Sora/IR/Ops.cpp.inc"
