@@ -899,7 +899,11 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   }
 
   // Finally, unify the types if the subexpression's type contains a type
-  // variable
+  // variable.
+  // Note that we do not check whether unification was successful because, in
+  // some cases, it may not be successful (e.g. int TV to bool), in that case we
+  // just want to leave the TV alone so it can be bound to its default type
+  // during the epilogue.
   if (subExprType->hasTypeVariable())
     cs.unify(subExprType, toType);
 

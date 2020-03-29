@@ -105,11 +105,29 @@ public:
   // be strictly equal. They should return true if the conversion can happen,
   // false otherwise.
 
+  /// \returns true if ANY integer type can be explicitly converted to the type
+  /// \p to.
+  bool canConvertIntegerTypeTo(Type to) {
+    return to->isAnyIntegerType() || to->isAnyFloatType() || to->isBoolType();
+  }
+
+  /// \returns true if ANY floating-point type can be explicitly converted to
+  /// the type \p to.
+  bool canConvertFloatTypeTo(Type to) {
+    return to->isAnyIntegerType() || to->isAnyFloatType() || to->isBoolType();
+  }
+
   bool visitBuiltinType(BuiltinType *from, Type to) {
-    // We allow integer <-> float conversions, no matter the width/signedness.
-    if (isa<IntegerType>(from) || isa<FloatType>(from))
-      return to->is<IntegerType>() || to->is<FloatType>();
-    // Else the types must be strictly equal
+    // Check bools.
+    if (from->isAnyIntegerType())
+      return canConvertIntegerTypeTo(to);
+    // Check floats.
+    if (from->isAnyFloatType())
+      return canConvertFloatTypeTo(to);
+    // Booleans can be converted to int/float.
+    if (from->isBoolType())
+      return to->isAnyIntegerType() || to->isAnyFloatType();
+    // Else the types must be strictly equal.
     return false;
   }
 
@@ -159,10 +177,16 @@ public:
   }
 
   bool visitTypeVariableType(TypeVariableType *from, Type to) {
-    // If the TypeVariable has a substitution, check if we can convert to it
+    // Dereference bound type variables
     if (Type fromSubst = cs.getSubstitution(from))
       return visit(fromSubst, to);
-    // Else just call canUnify
+    // For Integer Type Variables, use canConvertIntegerTypeTo
+    if (cs.isIntegerTypeVariable(from) && canConvertIntegerTypeTo(to))
+      return true;
+    // For Float Type Variables, use canConvertFloatTypeTo
+    if (cs.isFloatTypeVariable(from) && canConvertFloatTypeTo(to))
+      return true;
+    // Else, the conversion is only possible if unification can happen.
     return cs.canUnify(from, to);
   }
 };
