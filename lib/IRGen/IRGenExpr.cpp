@@ -46,57 +46,51 @@ public:
     llvm_unreachable("Unimplemented - visitDiscardExpr");
   }
 
+  // UnaryExpr Helpers
+  mlir::Value genUnaryAddressOf(UnaryExpr *expr);
+  mlir::Value genUnaryDeref(UnaryExpr *expr);
+  mlir::Value genUnaryNot(UnaryExpr *expr);
+  mlir::Value genUnaryLNot(UnaryExpr *expr);
+  mlir::Value genUnaryMinus(UnaryExpr *expr);
+  mlir::Value genUnaryPlus(UnaryExpr *expr);
+
+  // Visit Methods
   mlir::Value visitIntegerLiteralExpr(IntegerLiteralExpr *expr);
-
   mlir::Value visitFloatLiteralExpr(FloatLiteralExpr *expr);
-
   mlir::Value visitBooleanLiteralExpr(BooleanLiteralExpr *expr);
-
   mlir::Value visitNullLiteralExpr(NullLiteralExpr *expr);
-
   mlir::Value
   visitImplicitMaybeConversionExpr(ImplicitMaybeConversionExpr *expr);
-
   mlir::Value visitMutToImmutReferenceExpr(MutToImmutReferenceExpr *expr);
-
   mlir::Value visitDestructuredTupleExpr(DestructuredTupleExpr *expr);
-
   mlir::Value
   visitDestructuredTupleElementExpr(DestructuredTupleElementExpr *expr);
-
   mlir::Value visitCastExpr(CastExpr *expr);
-
   mlir::Value visitTupleElementExpr(TupleElementExpr *expr);
-
   mlir::Value visitTupleExpr(TupleExpr *expr);
-
   mlir::Value visitParenExpr(ParenExpr *expr);
-
   mlir::Value visitCallExpr(CallExpr *expr);
-
   mlir::Value visitConditionalExpr(ConditionalExpr *expr);
-
   mlir::Value visitForceUnwrapExpr(ForceUnwrapExpr *expr);
-
   mlir::Value visitBinaryExpr(BinaryExpr *expr);
-
   mlir::Value visitUnaryExpr(UnaryExpr *expr);
 };
 } // namespace
 
 mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
-  return builder.create<ir::IntegerConstantOp>(
-      irGen.getMLIRLoc(expr), expr->getValue(),
-      irGen.getMLIRType(expr->getType()));
+  mlir::Type type = irGen.getMLIRType(expr->getType());
+  assert(type.isa<mlir::IntegerType>() && "Not an IntegerType?!");
+  return builder.create<ir::IntegerConstantOp>(irGen.getMLIRLoc(expr),
+                                               expr->getValue(), type);
 }
 
 mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
   mlir::Type type = irGen.getMLIRType(expr->getType());
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
-  return builder.create<mlir::ConstantFloatOp>(
-      irGen.getMLIRLoc(expr), expr->getValue(), type.cast<mlir::FloatType>());
+  return builder.create<ir::FloatConstantOp>(irGen.getMLIRLoc(expr),
+                                             expr->getValue(), type);
 }
 
 mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
@@ -114,12 +108,15 @@ mlir::Value ExprIRGenerator::visitNullLiteralExpr(NullLiteralExpr *expr) {
 
 mlir::Value ExprIRGenerator::visitImplicitMaybeConversionExpr(
     ImplicitMaybeConversionExpr *expr) {
+  // TODO: Handle "NullLiteralExpr" as child expr as a special case.
   llvm_unreachable("Unimplemented - visitImplicitMaybeConversionExpr");
 }
 
 mlir::Value
 ExprIRGenerator::visitMutToImmutReferenceExpr(MutToImmutReferenceExpr *expr) {
-  llvm_unreachable("Unimplemented - visitMutToImmutReferenceExpr");
+  // This is a purely static cast, and, as there is no distinction between
+  // mutable and immutable references in the IR, we don't have to do anything.
+  return visit(expr->getSubExpr());
 }
 
 mlir::Value
@@ -139,18 +136,14 @@ mlir::Value ExprIRGenerator::visitCastExpr(CastExpr *expr) {
   if (expr->isUseless())
     return subExprValue;
 
-  Type subExprType = subExpr->getType();
   Type type = expr->getType();
 
   // Convert the result type and the loc to their MLIR equivalent.
   mlir::Type mlirType = irGen.getMLIRType(type);
   mlir::Location loc = irGen.getMLIRLoc(expr->getLoc());
 
-  // Integer conversions
-  if (isIntegerOrIntegerLike(subExprType) && isIntegerOrIntegerLike(type))
-    return builder.create<ir::IntegerCastOp>(loc, mlirType, subExprValue);
-
-  llvm_unreachable("Unimplemented Cast Kind");
+  // Currently, all sora casts are static casts, so just emit a static_cast op.
+  return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
 }
 
 mlir::Value ExprIRGenerator::visitTupleElementExpr(TupleElementExpr *expr) {
@@ -181,8 +174,47 @@ mlir::Value ExprIRGenerator::visitBinaryExpr(BinaryExpr *expr) {
   llvm_unreachable("Unimplemented - visitBinaryExpr");
 }
 
+mlir::Value ExprIRGenerator::genUnaryAddressOf(UnaryExpr *expr) {
+  llvm_unreachable("Unimplemented - genUnaryAddressOf");
+}
+
+mlir::Value ExprIRGenerator::genUnaryDeref(UnaryExpr *expr) {
+  llvm_unreachable("Unimplemented - genUnaryDeref");
+}
+
+mlir::Value ExprIRGenerator::genUnaryNot(UnaryExpr *expr) {
+  llvm_unreachable("Unimplemented - genUnaryNot");
+}
+
+mlir::Value ExprIRGenerator::genUnaryLNot(UnaryExpr *expr) {
+  llvm_unreachable("Unimplemented - genUnaryLNot");
+}
+
+mlir::Value ExprIRGenerator::genUnaryMinus(UnaryExpr *expr) {
+  llvm_unreachable("Unimplemented - genUnaryMinus");
+}
+
+mlir::Value ExprIRGenerator::genUnaryPlus(UnaryExpr *expr) {
+  llvm_unreachable("Unimplemented - visitBinaryExpr");
+}
+
 mlir::Value ExprIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - visitUnaryExpr");
+  switch (expr->getOpKind()) {
+  case UnaryOperatorKind::AddressOf:
+    return genUnaryAddressOf(expr);
+  case UnaryOperatorKind::Deref:
+    return genUnaryDeref(expr);
+  case UnaryOperatorKind::Not:
+    return genUnaryNot(expr);
+  case UnaryOperatorKind::LNot:
+    return genUnaryLNot(expr);
+  case UnaryOperatorKind::Minus:
+    return genUnaryMinus(expr);
+  case UnaryOperatorKind::Plus:
+    return genUnaryPlus(expr);
+  default:
+    llvm_unreachable("Unknown Unary Operator Kind");
+  }
 }
 
 //===- IRGen --------------------------------------------------------------===//

@@ -33,6 +33,13 @@ mlir::LogicalResult verify(IntegerConstantOp &op) {
   return mlir::success();
 }
 
+/// The FloatConstant's attribute's type must match its return type.
+mlir::LogicalResult verify(FloatConstantOp &op) {
+  if (op.getType() != op.valueAttr().getType())
+    return mlir::failure();
+  return mlir::success();
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
