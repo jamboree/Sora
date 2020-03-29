@@ -14,19 +14,14 @@ include "mlir/Interfaces/SideEffects.td"
 // Provide a definition of the 'sora' dialect in the ODS framework so that we
 // can define our operations.
 def Sora_Dialect : Dialect {
-  // The namespace of our dialect, this corresponds 1-1 with the string we
-  // provided in `ToyDialect::getDialectNamespace`.
+  // The namespace of our dialect
   let name = "sora";
 
   // The C++ namespace that the dialect class definition resides in.
   let cppNamespace = "::mlir::sora";
 }
 
-// Base class for toy dialect operations. This operation inherits from the base
-// `Op` class in OpBase.td, and provides:
-//   * The parent dialect of the operation.
-//   * The mnemonic for the operation, or the name without the dialect prefix.
-//   * A list of traits for the operation.
+// Base class Sora Dialect Operations 
 class Sora_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<Sora_Dialect, mnemonic, traits>;
 
