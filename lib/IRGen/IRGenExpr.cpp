@@ -79,23 +79,23 @@ public:
 
 mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
-  mlir::Type type = irGen.getMLIRType(expr->getType());
+  mlir::Type type = irGen.getIRType(expr->getType());
   assert(type.isa<mlir::IntegerType>() && "Not an IntegerType?!");
-  return builder.create<ir::IntegerConstantOp>(irGen.getMLIRLoc(expr),
+  return builder.create<ir::IntegerConstantOp>(irGen.getIRLoc(expr),
                                                expr->getValue(), type);
 }
 
 mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
-  mlir::Type type = irGen.getMLIRType(expr->getType());
+  mlir::Type type = irGen.getIRType(expr->getType());
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
-  return builder.create<ir::FloatConstantOp>(irGen.getMLIRLoc(expr),
+  return builder.create<ir::FloatConstantOp>(irGen.getIRLoc(expr),
                                              expr->getValue(), type);
 }
 
 mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   assert(expr->getType()->isBoolType() && "Not a Bool Type?!");
-  return builder.create<ir::BoolConstantOp>(irGen.getMLIRLoc(expr),
+  return builder.create<ir::BoolConstantOp>(irGen.getIRLoc(expr),
                                             expr->getValue());
 }
 
@@ -139,8 +139,8 @@ mlir::Value ExprIRGenerator::visitCastExpr(CastExpr *expr) {
   Type type = expr->getType();
 
   // Convert the result type and the loc to their MLIR equivalent.
-  mlir::Type mlirType = irGen.getMLIRType(type);
-  mlir::Location loc = irGen.getMLIRLoc(expr->getLoc());
+  mlir::Type mlirType = irGen.getIRType(type);
+  mlir::Location loc = irGen.getIRLoc(expr->getLoc());
 
   // Currently, all sora casts are static casts, so just emit a static_cast op.
   return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
@@ -223,6 +223,6 @@ mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder builder) {
   return ExprIRGenerator(*this, builder).visit(expr);
 }
 
-mlir::Type IRGen::getMLIRType(Expr *expr) {
-  return getMLIRType(expr->getType());
+mlir::Type IRGen::getIRType(Expr *expr) {
+  return getIRType(expr->getType());
 }

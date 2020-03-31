@@ -37,16 +37,16 @@ void IRGen::genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule) {
     mlirModule.push_back(genFunctionBody(cast<FuncDecl>(decl)));
 }
 
-mlir::Location IRGen::getMLIRLoc(ASTNode node) {
-  return getMLIRLoc(node.getSourceRange());
+mlir::Location IRGen::getIRLoc(ASTNode node) {
+  return getIRLoc(node.getSourceRange());
 }
 
-mlir::Location IRGen::getMLIRLoc(SourceRange range) {
-  // FIXME: Represent the full range!
-  return getMLIRLoc(range.begin);
+mlir::Location IRGen::getIRLoc(SourceRange range) {
+  // FIXME: Represent the full range?
+  return getIRLoc(range.begin);
 }
 
-mlir::Location IRGen::getMLIRLoc(SourceLoc loc) {
+mlir::Location IRGen::getIRLoc(SourceLoc loc) {
   if (!debugInfoEnabled)
     return mlir::UnknownLoc::get(&mlirCtxt);
 
@@ -57,7 +57,7 @@ mlir::Location IRGen::getMLIRLoc(SourceLoc loc) {
                                    lineAndCol.second, &mlirCtxt);
 }
 
-mlir::Identifier IRGen::getMLIRIdentifier(StringRef str) {
+mlir::Identifier IRGen::getIRIdentifier(StringRef str) {
   return mlir::Identifier::get(str, &mlirCtxt);
 }
 
@@ -74,14 +74,6 @@ void sora::registerMLIRDialects() {
 
 mlir::ModuleOp sora::createMLIRModule(mlir::MLIRContext &mlirCtxt,
                                       SourceFile &sf) {
-  // FIXME: The Module's name and NameLoc should really be different.
-  //    - The name should be shorter, probably something like the file name's
-  //    minus the project's root.
-  //    - The NameLoc should still be the path.
-  //  The question is how to achieve this. This may require some changes to the
-  //  SourceManager so it can remember the path of files (in a separate map or
-  //  something, then the buffer identifier can stay like this, and it'll be the
-  //  responsability of the Driver to assign a clear name to the file)
   auto bufferID = mlir::Identifier::get(sf.getBufferIdentifier(), &mlirCtxt);
   auto nameLoc = mlir::NameLoc::get(bufferID, &mlirCtxt);
   return mlir::ModuleOp::create(nameLoc, sf.getBufferIdentifier());

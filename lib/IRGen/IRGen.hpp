@@ -94,35 +94,35 @@ public:
 
   /// \returns the MLIR Location for \p node's SourceRange, or mlir::UnknownLoc
   /// if debug info is disabled.
-  mlir::Location getMLIRLoc(ASTNode node);
+  mlir::Location getIRLoc(ASTNode node);
 
   /// \returns the MLIR Location for \p loc, or mlir::UnknownLoc if debug info
   /// is disabled.
-  mlir::Location getMLIRLoc(SourceLoc loc);
+  mlir::Location getIRLoc(SourceLoc loc);
 
   /// \returns the MLIR Location for \p range, or mlir::UnknownLoc if debug info
   /// is disabled.
-  mlir::Location getMLIRLoc(SourceRange range);
+  mlir::Location getIRLoc(SourceRange range);
 
   /// \returns the MLIR Type equivalent of \p type.
   /// Note that this can NOT lower types that contain Null types.
-  mlir::Type getMLIRType(Type type);
+  mlir::Type getIRType(Type type);
 
   /// \returns the MLIR Type equivalent of \p expr's type.
   /// Note that this can NOT lower types that contain Null types.
-  mlir::Type getMLIRType(Expr *expr);
+  mlir::Type getIRType(Expr *expr);
 
   /// \returns the MLIR Identifier for \p str
-  mlir::Identifier getMLIRIdentifier(StringRef str);
+  mlir::Identifier getIRIdentifier(StringRef str);
 
   /// \returns the MLIR Identifier for \p str
-  mlir::Identifier getMLIRIdentifier(const char *str) {
-    return getMLIRIdentifier(StringRef(str));
+  mlir::Identifier getIRIdentifier(const char *str) {
+    return getIRIdentifier(StringRef(str));
   }
 
   /// \returns the MLIR Identifier for \p ident
-  mlir::Identifier getMLIRIdentifier(Identifier ident) {
-    return getMLIRIdentifier(ident.c_str());
+  mlir::Identifier getIRIdentifier(Identifier ident) {
+    return getIRIdentifier(ident.c_str());
   }
 
   //===--------------------------------------------------------------------===//

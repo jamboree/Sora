@@ -26,12 +26,12 @@ mlir::FuncOp IRGen::getFuncOp(FuncDecl *func) {
   if (it != funcCache.end())
     return it->second;
 
-  auto name = getMLIRIdentifier(func->getIdentifier());
-  mlir::Location loc = getMLIRLoc(func->getLoc());
+  auto name = getIRIdentifier(func->getIdentifier());
+  mlir::Location loc = getIRLoc(func->getLoc());
 
   Type fnTy = func->getValueType()->getAs<FunctionType>();
   assert(fnTy->is<FunctionType>() && "Function's type is not a FunctionType?!");
-  auto mlirFuncTy = getMLIRType(fnTy).cast<mlir::FunctionType>();
+  auto mlirFuncTy = getIRType(fnTy).cast<mlir::FunctionType>();
 
   auto funcOp = mlir::FuncOp::create(loc, name, mlirFuncTy);
   funcCache.insert({func, funcOp});
