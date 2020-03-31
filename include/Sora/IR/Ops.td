@@ -48,6 +48,8 @@ def APFloatAttr : Attr<CPred<"$_self.isa<FloatAttr>()">,
 class ConstantOp<string mnemonic, list<OpTrait> traits = []> :
     Sora_Op<mnemonic, traits> {
   let assemblyFormat = "$value attr-dict `->` type(results)";
+
+  let hasFolder = 1;
 }
 
 def IntegerConstantOp : ConstantOp<"integer_constant", [NoSideEffect]> {

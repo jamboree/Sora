@@ -11,8 +11,8 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LogicalResult.h"
 
-using namespace ::sora;
-using namespace ::sora::ir;
+using namespace sora;
+using namespace sora::ir;
 
 SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
     : mlir::Dialect("sora", mlirCtxt) {
@@ -25,6 +25,7 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 //===- Operation Verification ---------------------------------------------===//
 
 namespace {
+
 
 /// The IntegerConstant's attribute's type must match its return type.
 mlir::LogicalResult verify(IntegerConstantOp &op) {
