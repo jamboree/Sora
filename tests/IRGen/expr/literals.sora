@@ -1,0 +1,38 @@
+// RUN: %sorac -emit-raw-ir %s | %filecheck %s
+
+func int_literals() {
+  // CHECK: %{{.+}} = sora.integer_constant 1 : si8 -> si8
+  1 as i8
+  // CHECK: %{{.+}} = sora.integer_constant 2 : si16 -> si16
+  2 as i16
+  // CHECK: %{{.+}} = sora.integer_constant 3 : si32 -> si32
+  3 as i32
+  // CHECK: %{{.+}} = sora.integer_constant 4 : si64 -> si64
+  4 as i64
+  // CHECK: %{{.+}} = sora.integer_constant 5 : [[ISIZE:si64]] -> [[ISIZE]]
+  5 as isize
+  // CHECK: %{{.+}} = sora.integer_constant 6 : ui8 -> ui8
+  6 as u8
+  // CHECK: %{{.+}} = sora.integer_constant 7 : ui16 -> ui16
+  7 as u16
+  // CHECK: %{{.+}} = sora.integer_constant 8 : ui32 -> ui32
+  8 as u32
+  // CHECK: %{{.+}} = sora.integer_constant 9 : ui64 -> ui64
+  9 as u64
+  // CHECK: %{{.+}} = sora.integer_constant 10 : [[USIZE:ui64]] -> [[USIZE]]
+  10 as usize
+}
+
+func bool_literals() {
+  // CHECK: %{{.+}} = sora.bool_constant true -> i1
+  true
+  // CHECK: %{{.+}} = sora.bool_constant false -> i1
+  false
+}
+
+func float_literals() {
+  // CHECK: %{{.+}} = sora.float_constant 0.000000e+00 : f32 -> f32
+  0.0 as f32
+  // CHECK: %{{.+}} = sora.float_constant 1.000000e-01 : f64 -> f64
+  0.1 as f64
+}
