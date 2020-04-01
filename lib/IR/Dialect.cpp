@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/IR/Dialect.hpp"
+#include "Sora/IR/Types.hpp"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
@@ -20,12 +21,13 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 #define GET_OP_LIST
 #include "Sora/IR/Ops.cpp.inc"
       >();
+
+  addTypes<MaybeIRType>();
 }
 
 //===- Operation Verification ---------------------------------------------===//
 
 namespace {
-
 
 /// The IntegerConstant's attribute's type must match its return type.
 mlir::LogicalResult verify(IntegerConstantOp &op) {
