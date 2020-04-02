@@ -15,7 +15,7 @@ using namespace sora::ir;
 //===- Dialect ------------------------------------------------------------===//
 
 namespace {
-void print(MaybeIRType type, mlir::DialectAsmPrinter &os) {
+void print(MaybeType type, mlir::DialectAsmPrinter &os) {
   os << "maybe<" << type.getValueType() << ">";
 }
 } // namespace
@@ -24,13 +24,13 @@ void SoraDialect::printType(mlir::Type type,
                             mlir::DialectAsmPrinter &os) const {
   switch (SoraTypeKind(type.getKind())) {
   case SoraTypeKind::Maybe:
-    return print(type.cast<MaybeIRType>(), os);
+    return print(type.cast<MaybeType>(), os);
   default:
     llvm_unreachable("Unknown Sora Type!");
   }
 }
 
-//===- MaybeIRType ----------------------------------------------------------===//
+//===- MaybeType ----------------------------------------------------------===//
 
 namespace sora {
 namespace ir {
@@ -54,10 +54,10 @@ struct MaybeTypeStorage : public mlir::TypeStorage {
 } // namespace ir
 } // namespace sora
 
-MaybeIRType MaybeIRType::get(mlir::Type valueType) {
+MaybeType MaybeType::get(mlir::Type valueType) {
   assert(valueType && "value type cannot be null!");
   return Base::get(valueType.getContext(), (unsigned)SoraTypeKind::Maybe,
                    valueType);
 }
 
-mlir::Type MaybeIRType::getValueType() const { return getImpl()->valueType; }
+mlir::Type MaybeType::getValueType() const { return getImpl()->valueType; }

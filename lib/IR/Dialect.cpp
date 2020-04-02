@@ -22,7 +22,7 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 #include "Sora/IR/Ops.cpp.inc"
       >();
 
-  addTypes<MaybeIRType>();
+  addTypes<MaybeType>();
 }
 
 //===- Operation Verification ---------------------------------------------===//

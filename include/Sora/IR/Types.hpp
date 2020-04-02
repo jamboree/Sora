@@ -39,7 +39,7 @@ public:
 /// The IR Representation of "maybe" type.
 ///
 /// This type is written "sora.maybe<T>"
-class MaybeIRType : public mlir::Type::TypeBase<MaybeIRType, SoraIRType,
+class MaybeType : public mlir::Type::TypeBase<MaybeType, SoraIRType,
                                               detail::MaybeTypeStorage> {
 public:
   using Base::Base;
@@ -48,7 +48,7 @@ public:
     return kind == (unsigned)SoraTypeKind::Maybe;
   }
 
-  static MaybeIRType get(mlir::Type valueType);
+  static MaybeType get(mlir::Type valueType);
 
   mlir::Type getValueType() const;
 };
