@@ -26,7 +26,7 @@ enum class SoraTypeKind {
 };
 
 /// Common base for all Sora IR Types.
-class SoraIRType : public mlir::Type {
+class SoraType : public mlir::Type {
 public:
   using Type::Type;
 
@@ -39,7 +39,7 @@ public:
 /// The IR Representation of "maybe" type.
 ///
 /// This type is written "sora.maybe<T>"
-class MaybeType : public mlir::Type::TypeBase<MaybeType, SoraIRType,
+class MaybeType : public mlir::Type::TypeBase<MaybeType, SoraType,
                                               detail::MaybeTypeStorage> {
 public:
   using Base::Base;

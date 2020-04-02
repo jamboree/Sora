@@ -45,7 +45,7 @@ def APFloatAttr : Attr<CPred<"$_self.isa<FloatAttr>()">,
 
 // Sora IR Type
 def Sora_Type : DialectType<Sora_Dialect,
-                            CPred<"$_self.isa<::mlir::sora::SoraIRType>()">,
+                            CPred<"$_self.isa<::mlir::sora::SoraType>()">,
                             "Sora dialect type">;
 
 //===----------------------------------------------------------------------===//
