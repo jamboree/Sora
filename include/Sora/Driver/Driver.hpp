@@ -21,6 +21,7 @@
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -41,8 +42,8 @@ class SourceFile;
 /// (simply because it's not needed)
 class CompilerInstance {
   friend class Driver;
-  CompilerInstance() : diagEng(srcMgr), debug_os(llvm::outs()) {
-    diagEng.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+  CompilerInstance() : diagEng(srcMgr), debug_os(llvm::dbgs()) {
+    diagEng.createConsumer<PrintingDiagnosticConsumer>(llvm::errs());
   }
   CompilerInstance(const CompilerInstance &) = delete;
   CompilerInstance &operator=(const CompilerInstance &) = delete;
@@ -178,7 +179,6 @@ private:
   SmallVector<BufferID, 1> inputBuffers;
 
   /// The output stream used to print debug message/statistics.
-  /// Usually llvm::outs();
   raw_ostream &debug_os;
 
   /// Prints the memory usage of the ASTContext after \p step to debug_os.

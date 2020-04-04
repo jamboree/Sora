@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   // we don't have to create one for nothing.
   SourceManager driverDiagsSrcMgr;
   DiagnosticEngine driverDiagEngine(driverDiagsSrcMgr);
-  driverDiagEngine.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+  driverDiagEngine.createConsumer<PrintingDiagnosticConsumer>(llvm::errs());
 
   // Create the driver
   Driver driver(driverDiagEngine, "sorac", "Sora Compiler");
