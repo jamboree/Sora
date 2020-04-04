@@ -134,6 +134,35 @@ public:
     return getTypeVariableKind(tv) == TypeVariableKind::Float;
   }
 
+  /// \returns true if \p tv is a integer type variable or any int type.
+  /// This only looks through LValues, nothing else.
+  bool isIntegerTypeOrTypeVariable(Type type) const {
+    if (auto *tv = type->getRValue()->getAs<TypeVariableType>()) {
+      if (isIntegerTypeVariable(tv))
+        return true;
+      if (isGeneralTypeVariable(tv)) {
+        if (Type subst = getSubstitution(tv))
+          return isIntegerTypeOrTypeVariable(subst);
+      }
+    }
+    return type->isAnyIntegerType();
+  }
+
+  /// \returns true if \p tv is a float type variable or any float type.
+  /// This only looks through LValues, nothing else.
+  bool isFloatTypeOrTypeVariable(Type type) const {
+    assert(type);
+    if (auto *tv = type->getRValue()->getAs<TypeVariableType>()) {
+      if (isFloatTypeVariable(tv))
+        return true;
+      if (isGeneralTypeVariable(tv)) {
+        if (Type subst = getSubstitution(tv))
+          return isFloatTypeOrTypeVariable(subst);
+      }
+    }
+    return type->isAnyFloatType();
+  }
+
   /// Simplifies \p type, replacing type variables with their substitutions.
   /// If a general type variable has no substitution, an ErrorType is used, if
   /// an Integer or Float type variable has no substitution, the default type

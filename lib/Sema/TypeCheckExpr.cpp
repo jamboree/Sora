@@ -187,35 +187,11 @@ public:
     return tc.tryInsertImplicitConversions(cs, expr, toType);
   }
 
-  bool isNumericTypeOrNumericTypeVariable(Type type) {
-    return isIntegerTypeOrIntegerTypeVariable(type) ||
-           isFloatTypeOrFloatTypeVariable(type);
-  }
-
-  bool isIntegerTypeOrIntegerTypeVariable(Type type) {
-    assert(type);
-    if (type->is<IntegerType>())
-      return true;
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
-      if (cs.isIntegerTypeVariable(tv))
-        return true;
-      if (cs.hasSubstitution(tv))
-        return isIntegerTypeOrIntegerTypeVariable(cs.simplifyType(tv));
-    }
-    return false;
-  }
-
-  bool isFloatTypeOrFloatTypeVariable(Type type) {
-    assert(type);
-    if (type->is<FloatType>())
-      return true;
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
-      if (cs.isFloatTypeVariable(tv))
-        return true;
-      if (cs.hasSubstitution(tv))
-        return isFloatTypeOrFloatTypeVariable(cs.simplifyType(type));
-    }
-    return false;
+  /// \returns true if \p type is an Integer Type, a Float Type, or a Float/Int
+  /// Type Variable;
+  bool isNumericTypeOrTypeVariable(Type type) {
+    return cs.isFloatTypeOrTypeVariable(type) ||
+           cs.isIntegerTypeOrTypeVariable(type);
   }
 
   /// Diagnoses a bad unary expression using a basic error message.
@@ -382,7 +358,7 @@ Expr *ExprChecker::checkUnaryPlusOrMinus(UnaryExpr *expr) {
   // Unary + and - require that the subexpression's type is a numeric type or
   // numeric type variable.
   Type subExprTy = expr->getSubExpr()->getType();
-  if (!isNumericTypeOrNumericTypeVariable(
+  if (!isNumericTypeOrTypeVariable(
           subExprTy->getRValue()->getCanonicalType())) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
@@ -444,7 +420,7 @@ Expr *ExprChecker::checkUnaryNot(UnaryExpr *expr) {
   // Unary ~ requires that the subexpression's type is an integer type or
   // integer type variable.
   Type subExprTy = expr->getSubExpr()->getType();
-  if (!isIntegerTypeOrIntegerTypeVariable(
+  if (!cs.isIntegerTypeOrTypeVariable(
           subExprTy->getRValue()->getCanonicalType())) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
@@ -662,7 +638,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
   case Op::Mul:
   case Op::Div: {
     Type type = inferReturnTypeOfOperator();
-    if (type.isNull() || !isNumericTypeOrNumericTypeVariable(type))
+    if (type.isNull() || !isNumericTypeOrTypeVariable(type))
       return nullptr;
     return type;
   }
@@ -671,7 +647,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
   case Op::GT:
   case Op::GE: {
     Type type = inferReturnTypeOfOperator();
-    if (type.isNull() || !isNumericTypeOrNumericTypeVariable(type))
+    if (type.isNull() || !isNumericTypeOrTypeVariable(type))
       return nullptr;
     return ctxt.boolType;
   }
@@ -679,9 +655,9 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
   case Op::Shl:
   case Op::Shr: {
     // Both << and >> have type "(T, U) -> T" where T and U are integer types
-    if (!isIntegerTypeOrIntegerTypeVariable(lhsType))
+    if (!cs.isIntegerTypeOrTypeVariable(lhsType))
       return nullptr;
-    if (!isIntegerTypeOrIntegerTypeVariable(rhsType))
+    if (!cs.isIntegerTypeOrTypeVariable(rhsType))
       return nullptr;
     return lhsType;
   }
@@ -690,7 +666,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
   case Op::Or:
   case Op::XOr: {
     Type type = inferReturnTypeOfOperator();
-    if (type.isNull() || !isIntegerTypeOrIntegerTypeVariable(type))
+    if (type.isNull() || !cs.isIntegerTypeOrTypeVariable(type))
       return nullptr;
     return type;
   }
