@@ -11,6 +11,7 @@
 #include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 #include "Sora/Driver/Driver.hpp"
 #include "Sora/Driver/Options.hpp"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 
