@@ -18,17 +18,7 @@ class OptTable;
 } // namespace llvm
 
 namespace sora {
-// TODO: Find better names for this. I must have C enums for llvm's OptTable,
-// but this naming conventionn (borrowed from Swift) kinda sucks.
 namespace opt {
-/// Option flags, must not overlap with llvm::opt::DriverFlag.
-/* UNUSED FOR NOW
-enum SoraFlags : unsigned {
-  /// Options that affect the Sora front-end, this includes the Driver, Lexer,
-  /// Parser, etc. up to CodeGen.
-  FrontendOption = (1 << 4)
-};
-*/
 enum OptionID : unsigned {
   OPT_INVALID,
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
@@ -39,7 +29,7 @@ enum OptionID : unsigned {
 };
 } // namespace opt
 
-/// \returns a Sora command-line option table (llvm::opt::OptTable)
+/// \returns a Sora command-line option table.
 std::unique_ptr<llvm::opt::OptTable> createSoraOptTable();
 
 } // namespace sora

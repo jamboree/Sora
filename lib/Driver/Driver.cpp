@@ -18,74 +18,86 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 
 using namespace sora;
 using namespace llvm::opt;
 
-Driver::Driver(raw_ostream &out)
-    : driverDiags(driverDiagsSrcMgr), optTable(createSoraOptTable()) {
-  driverDiags.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+//===- Driver -------------------------------------------------------------===//
 
+Driver::Driver(raw_ostream &out, DiagnosticEngine &diagEngine,
+               StringRef driverName, StringRef driverDesc)
+    : diagEngine(diagEngine), name(driverName), description(driverDesc),
+      optTable(createSoraOptTable()) {
   registerMLIRDialects();
 }
 
-InputArgList Driver::parseArgs(ArrayRef<const char *> args, bool &hadError) {
-  hadError = false;
+std::unique_ptr<llvm::opt::InputArgList>
+Driver::parseArgs(ArrayRef<const char *> args) {
+  assert(optTable && "no option table?!");
   unsigned missingArgIndex = 0, missingArgCount = 0;
   // Parse the arguments, set the argList.
-  llvm::opt::InputArgList argList =
-      optTable->ParseArgs(args, missingArgIndex, missingArgCount);
+  auto argList = std::make_unique<llvm::opt::InputArgList>(
+      optTable->ParseArgs(args, missingArgIndex, missingArgCount));
+
   // Check for unknown arguments & diagnose them
-  for (const Arg *arg : argList.filtered(opt::OPT_UNKNOWN)) {
-    hadError = true;
-    diagnose(diag::unknown_arg, arg->getAsString(argList));
-  }
+  for (const Arg *arg : argList->filtered(opt::OPT_UNKNOWN))
+    diagnose(diag::unknown_arg, arg->getAsString(*argList));
+
   // Diagnose missing arguments values
-  if (missingArgCount) {
-    diagnose(diag::missing_argv, argList.getArgString(missingArgIndex),
+  if (missingArgCount)
+    diagnose(diag::missing_argv, argList->getArgString(missingArgIndex),
              missingArgCount);
-    hadError = true;
+
+  // Handle -Xllvm
+  {
+    SmallVector<const char *, 4> llvmArgs;
+    std::string llvmOptionParsingName = name.str() + " (llvm option parsing)";
+    llvmArgs.push_back(llvmOptionParsingName.c_str());
+    for (const Arg *arg : argList->filtered(opt::OPT_Xllvm))
+      llvmArgs.push_back(arg->getValue());
+
+    if (llvmArgs.size() > 1) {
+      llvmArgs.push_back(nullptr);
+      llvm::cl::ParseCommandLineOptions(llvmArgs.size() - 1, llvmArgs.data());
+    }
   }
+
   return argList;
 }
 
-bool Driver::handleImmediateArgs(InputArgList &argList) {
-  // handle -h/-help
-  if (argList.hasArg(opt::OPT_help)) {
-    optTable->PrintHelp(llvm::outs(), "sorac (options | inputs)",
-                        "Sora Compiler");
-    return false;
-  }
-  return true;
+void Driver::printHelp(raw_ostream &out, bool showHidden) {
+  assert(optTable && "no option table?!");
+  std::string usage = name.str() += " (options | input files)";
+  optTable->PrintHelp(llvm::outs(), usage.c_str(), description.data());
 }
 
+//===- CompilerInstance ---------------------------------------------------===//
+
 std::unique_ptr<CompilerInstance>
-Driver::tryCreateCompilerInstance(llvm::opt::InputArgList &argList) {
+Driver::tryCreateCompilerInstance(std::unique_ptr<InputArgList> argList) {
   // To make make_unique work with the private constructor, we must
   // use a small trick.
   struct CompilerInstanceCreator : public CompilerInstance {
     using CompilerInstance::CompilerInstance;
   };
   auto CI = std::make_unique<CompilerInstanceCreator>();
-  if (!CI->handleOptions(argList))
+  if (!CI->handleOptions(*argList) || !CI->loadInputs(*argList))
     return nullptr;
-  if (!CI->loadInputs(argList))
-    return nullptr;
-  return std::move(CI);
+  return CI;
 }
 
 bool CompilerInstance::handleOptions(InputArgList &argList) {
   bool success = true;
 
+  // Trivial options
+  options.printMemUsage = argList.hasArg(opt::OPT_print_mem_usage);
+  options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
-
   options.dumpAST = argList.hasArg(opt::OPT_dump_ast);
 
-  options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
-
-  options.printMemUsage = argList.hasArg(opt::OPT_print_mem_usage);
-
+  // -dump-scope-maps
   if (Arg *arg = argList.getLastArg(opt::OPT_dump_scope_maps)) {
     StringRef value = arg->getValue();
     if (value == "lazy")
@@ -98,12 +110,13 @@ bool CompilerInstance::handleOptions(InputArgList &argList) {
     }
   }
 
-  // "x-only" options, from the least to the most restrictive
+  // "-x-only" options, from the least to the most restrictive
   if (argList.hasArg(opt::OPT_parse_only))
     setStopAfterStep(Step::Parsing);
   if (argList.hasArg(opt::OPT_sema_only))
     setStopAfterStep(Step::Sema);
 
+  // -emit-x
   Arg *emitArg = nullptr;
   auto checkCanUseEmitArg = [&](Arg *arg) {
     if (!emitArg) {
@@ -223,17 +236,6 @@ BufferID CompilerInstance::loadFile(StringRef filepath) {
   diagnose(diag::couldnt_load_input_file, filepath);
   hadFileLoadError = true;
   return BufferID();
-}
-
-bool CompilerInstance::isLoaded(StringRef filePath, bool isAbsolute) {
-  SmallVector<char, 16> path(filePath.begin(), filePath.end());
-  if (!isAbsolute) {
-    auto errc = llvm::sys::fs::make_absolute(path);
-    // TODO: handle the error_code properly
-    assert(!errc && "make_absolute failed");
-  }
-  // TODO
-  return false;
 }
 
 bool CompilerInstance::run() {

@@ -5,11 +5,12 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 #include "Sora/Common/InitLLVM.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
+#include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 #include "Sora/Driver/Driver.hpp"
+#include "Sora/Driver/Options.hpp"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 
@@ -18,28 +19,34 @@ using namespace llvm::opt;
 
 int main(int argc, char **argv) {
   PROGRAM_START(argc, argv);
+  // FIXME: It'd be great if the DiagEngine worked without a SourceManager, so
+  // we don't have to create one for nothing.
+  SourceManager driverDiagsSrcMgr;
+  DiagnosticEngine driverDiagEngine(driverDiagsSrcMgr);
+  driverDiagEngine.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
+
   // Create the driver
-  Driver driver(llvm::outs());
-  // Parse the arguments
-  bool hadError;
+  Driver driver(llvm::outs(), driverDiagEngine, "sorac", "Sora Compiler");
+
+  // Prepare the arguments
   ArrayRef<const char *> rawArgs = ArrayRef<const char *>(argv, argv + argc);
   // Remove the first argument from the array, as it's the executable's path
-  // and we aren't interested in it. Plus, the Driver will consider it as an
-  // input if we don't remove it.
+  // and the Driver isn't interested in it.
   rawArgs = rawArgs.slice(1);
-  // Ask the driver to parse the argument
-  InputArgList inputArgs = driver.parseArgs(rawArgs, hadError);
-  /// Stop here if an error occured during the parsing of the arguments (because
-  /// the arguments cannot be trusted)
-  if (hadError)
+
+  std::unique_ptr<llvm::opt::InputArgList> argList = driver.parseArgs(rawArgs);
+
+  if (driver.hadAnyError())
     return EXIT_FAILURE;
-  // Handle immediate arguments and return if we don't have anything else
-  // to do after that.
-  if (!driver.handleImmediateArgs(inputArgs))
+
+  if (argList->hasArg(opt::OPT_help)) {
+    driver.getOptTable().PrintHelp(llvm::outs(), "sorac (options | inputs)",
+                                   "Sora Compiler");
     return EXIT_SUCCESS;
+  }
+
   // Try to create the CompilerInstance
-  auto compilerInstance = driver.tryCreateCompilerInstance(inputArgs);
-  if (!compilerInstance)
-    return EXIT_FAILURE;
-  return compilerInstance->run() ? EXIT_SUCCESS : EXIT_FAILURE;
+  auto compilerInstance = driver.tryCreateCompilerInstance(std::move(argList));
+  return (compilerInstance && compilerInstance->run()) ? EXIT_SUCCESS
+                                                       : EXIT_FAILURE;
 }

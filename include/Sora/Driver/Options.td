@@ -24,7 +24,7 @@ def emit_raw_ir : Flag<["-"], "emit-raw-ir">,
 def verify : Flag<["-"], "verify">,
   HelpText<"Enables diagnostic verification">;
 
-// Debugging/Others
+// Debugging
 def print_mem_usage : Flag<["-"], "print-memory-usage">,
   HelpText<"Regularly print the memory usage of various compiler datastructures">;
 def dump_parse : Flag<["-"], "dump-parse">,
@@ -35,3 +35,8 @@ def dump_scope_maps : Separate<["-"], "dump-scope-maps">,
   HelpText<"Dumps the scope maps after typechecking, or"
     " after parsing if used in combination with -parse-only">,
   MetaVarName<"<expanded | lazy>">;
+
+// LLVM
+def Xllvm : Separate<["-"], "Xllvm">,
+  Flags<[HelpHidden]>,
+  MetaVarName<"<arg>">, HelpText<"Passes <arg> to the LLVM Option Parser">;

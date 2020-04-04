@@ -10,6 +10,7 @@
 #include "llvm/Option/Option.h"
 
 using namespace sora::opt;
+using namespace llvm::opt;
 
 namespace {
 // Create the prefixes
