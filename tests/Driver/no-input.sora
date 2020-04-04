@@ -1,2 +1,2 @@
-// RUN: %sorac | %filecheck %s
+// RUN: %sorac 2>&1 | %filecheck %s
 // CHECK: error: no input file

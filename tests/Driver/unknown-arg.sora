@@ -1,2 +1,2 @@
-// RUN: %sorac -blargh %s | %filecheck %s
+// RUN: %sorac -blargh %s 2>&1 | %filecheck %s
 // CHECK: error: unknown argument '-blargh'
