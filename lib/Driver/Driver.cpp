@@ -26,7 +26,7 @@ using namespace llvm::opt;
 
 //===- Driver -------------------------------------------------------------===//
 
-Driver::Driver(raw_ostream &out, DiagnosticEngine &diagEngine,
+Driver::Driver(DiagnosticEngine &diagEngine,
                StringRef driverName, StringRef driverDesc)
     : diagEngine(diagEngine), name(driverName), description(driverDesc),
       optTable(createSoraOptTable()) {

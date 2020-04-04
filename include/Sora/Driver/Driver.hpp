@@ -109,7 +109,6 @@ public:
   /// Dumps the state of this CompilerInstance
   void dump(raw_ostream &out) const;
 
-
   /// Sets the options.stopAfterStep option if \p step is before the current
   /// value of the option.
   void setStopAfterStep(Step step) {
@@ -209,13 +208,12 @@ class Driver {
   Driver &operator=(const Driver &) = delete;
 
 public:
-  /// \param out the stream where the driver will print diagnostics
   /// \param diagEngine the DiagnosticEngine to be used by the driver. This will
   ///     not be used by the CompilerInstance!
   /// \param driverName the driver name. This should match the executable's
   ///     name.
   /// \param driverDesc the driver's description.
-  Driver(raw_ostream &out, DiagnosticEngine &diagEngine, StringRef driverName,
+  Driver(DiagnosticEngine &diagEngine, StringRef driverName,
          StringRef driverDesc);
 
   /// Parses \p args, diagnosing ill-formed arguments and returning the

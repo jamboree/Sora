@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   driverDiagEngine.createConsumer<PrintingDiagnosticConsumer>(llvm::outs());
 
   // Create the driver
-  Driver driver(llvm::outs(), driverDiagEngine, "sorac", "Sora Compiler");
+  Driver driver(driverDiagEngine, "sorac", "Sora Compiler");
 
   // Prepare the arguments
   ArrayRef<const char *> rawArgs = ArrayRef<const char *>(argv, argv + argc);
