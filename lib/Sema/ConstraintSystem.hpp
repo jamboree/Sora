@@ -113,12 +113,6 @@ public:
   /// \returns the kind of TypeVariable that \p tv is
   TypeVariableKind getTypeVariableKind(TypeVariableType *tv) const;
 
-  /// Sets \p tv's substitution.
-  /// \returns false if the substitution was rejected (because there's already a
-  /// substitution, or because it's not compatible), true if the substitution
-  /// was accepted.
-  bool setSubstitution(TypeVariableType *tv, Type subst) const;
-
   /// \returns whether \p tv has a substitution
   bool hasSubstitution(TypeVariableType *tv) const;
 

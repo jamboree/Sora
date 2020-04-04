@@ -14,9 +14,12 @@ using namespace sora;
 
 //===--- TypeVariableInfo -------------------------------------------------===//
 
-/// TypeVariable extra information
+/// TypeVariable information, which is a trailing object of the
+/// TypeVariableType.
+namespace {
 class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
-  friend class ConstraintSystem;
+  friend class ::sora::ConstraintSystem;
+  friend class TypeUnifier;
 
   // Disable vanilla new/delete for TypeVariableInfo
   void *operator new(size_t) noexcept = delete;
@@ -59,6 +62,11 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
     return info.isFloatTypeVariable() || info.isGeneralTypeVariable();
   }
 
+  void setSubstitution(Type type) {
+    assert(!substitution && "Type Variable already has a substitution!");
+    substitution = type;
+  }
+
 public:
   /// Make TypeVariableInfo noncopyable, so we don't copy it by mistake.
   TypeVariableInfo(const TypeVariableInfo &) = delete;
@@ -72,6 +80,8 @@ public:
 
   TypeVariableKind getTypeVariableKind() const { return tvKind; }
 
+  void setTypeVariableKind(TypeVariableKind newKind) { tvKind = newKind; }
+
   bool isGeneralTypeVariable() const {
     return getTypeVariableKind() == TypeVariableKind::General;
   }
@@ -84,52 +94,6 @@ public:
     return getTypeVariableKind() == TypeVariableKind::Float;
   }
 
-  /// Checks if \p type is a valid substitution for this TV
-  /// \returns true if this type variable has no substitution & \p type is a
-  /// compatible substitution
-  bool isValidSubstitution(Type type) const {
-    if (hasSubstitution())
-      return false;
-    // Ignore LValues
-    type = type->getRValue();
-    // Check that \p type != this
-    if (TypeVariableType *tv = type->getAs<TypeVariableType>())
-      if (&(get(tv)) == this)
-        return false;
-    // Check if the substitution is legal.
-    switch (getTypeVariableKind()) {
-    case TypeVariableKind::General:
-      return true;
-    case TypeVariableKind::Integer:
-      return isValidSubstitutionForIntegerTV(type);
-    case TypeVariableKind::Float:
-      return isValidSubstitutionForFloatTV(type);
-    }
-  }
-
-  /// Sets this TypeVariable's substitution.
-  /// \returns false if the substitution was rejected (because there's already a
-  /// substitution, or because it's not compatible), true if the substitution
-  /// was accepted.
-  bool setSubstitution(Type type) {
-    // Check if the substitution is legal.
-    if (!isValidSubstitution(type))
-      return false;
-    // Never allow LValues into substitutions
-    substitution = type->getRValue();
-    // If the substitution is a General TV but we aren't, make its kind equal to
-    // ours.
-    // FIXME: Is it better to do this here or in unify()?
-    if (!isGeneralTypeVariable()) {
-      if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
-        auto &info = TypeVariableInfo::get(tv);
-        if (info.isGeneralTypeVariable())
-          info.tvKind = getTypeVariableKind();
-      }
-    }
-    return true;
-  }
-
   /// \returns true if this TypeVariable has a substitution (whether it is
   /// bound)
   bool hasSubstitution() const { return (bool)substitution; }
@@ -137,15 +101,16 @@ public:
   /// \returns this TypeVariable's substitution
   Type getSubstitution() const { return substitution; }
 };
+} // namespace
 
 //===--- TypeSimplifier ---------------------------------------------------===//
 
-namespace {
 /// The TypeVariableType simplifier, which replaces type variables with their
 /// substitutions.
 ///
 /// Note that visit methods return null when no substitutions are needed, so
 /// visit() returns null for type with no type variables.
+namespace {
 class TypeSimplifier : public TypeVisitor<TypeSimplifier, Type> {
 public:
   using Parent = TypeVisitor<TypeSimplifier, Type>;
@@ -252,11 +217,14 @@ private:
     return subst;
   }
 };
+} // namespace
+
 //===--- TypeUnifier ------------------------------------------------------===//
 
 /// Implements ConstraintSystem::unify()
 ///
 /// visit() methods return true on success, false on failure.
+namespace {
 class TypeUnifier {
 
 public:
@@ -268,9 +236,90 @@ public:
   const UnificationOptions &options;
   const bool canSetSubstitutions;
 
-  bool trySetSubstitution(TypeVariableInfo &info, Type subst) {
-    return canSetSubstitutions ? info.setSubstitution(subst)
-                               : info.isValidSubstitution(subst);
+  void unifyTypeVariableKinds(TypeVariableInfo &a, TypeVariableInfo &b) {
+    switch (a.getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      if (!b.isGeneralTypeVariable())
+        a.setTypeVariableKind(b.getTypeVariableKind());
+      break;
+    case TypeVariableKind::Integer:
+      assert(b.isIntegerTypeVariable() ||
+             b.isGeneralTypeVariable() && "Incompatible Kinds!");
+      if (b.isGeneralTypeVariable())
+        b.setTypeVariableKind(TypeVariableKind::Integer);
+      break;
+    case TypeVariableKind::Float:
+      assert(b.isFloatTypeVariable() ||
+             b.isGeneralTypeVariable() && "Incompatible Kinds!");
+      if (b.isGeneralTypeVariable())
+        b.setTypeVariableKind(TypeVariableKind::Float);
+      break;
+    default:
+      llvm_unreachable("Unknown TypeVariable Kind");
+    }
+  }
+
+  bool trySetSubstitution(TypeVariableType *tv, TypeVariableInfo &tvInfo,
+                          Type subst) {
+    if (!isValidSubstitution(tv, tvInfo, subst))
+      return false;
+    if (canSetSubstitutions) {
+      tvInfo.setSubstitution(subst);
+      if (auto *substTV = subst->getCanonicalType()->getAs<TypeVariableType>())
+        unifyTypeVariableKinds(tvInfo, TypeVariableInfo::get(substTV));
+    }
+    return true;
+  }
+
+  static bool isIntegerTypeVariable(CanType type) {
+    if (auto *tv = type->getAs<TypeVariableType>())
+      return TypeVariableInfo::get(tv).isIntegerTypeVariable();
+    return false;
+  }
+
+  static bool isFloatTypeVariable(CanType type) {
+    if (auto *tv = type->getAs<TypeVariableType>())
+      return TypeVariableInfo::get(tv).isFloatTypeVariable();
+    return false;
+  }
+
+  static bool isGeneralTypeVariable(CanType type) {
+    if (auto *tv = type->getAs<TypeVariableType>())
+      return TypeVariableInfo::get(tv).isGeneralTypeVariable();
+    return false;
+  }
+
+  /// Checks if \p type is a valid substitution for \p TV.
+  ///   \param tv the Type Variable
+  ///   \param tvInfo \p tv's TypeVariableInfo
+  ///   \param type the proposed substitution
+  /// \returns true if \p TV has no substitution & \p type is an acceptable
+  /// substitution
+  bool isValidSubstitution(TypeVariableType *tv, TypeVariableInfo &tvInfo,
+                           Type type) const {
+    if (tvInfo.hasSubstitution())
+      return false;
+    // Ignore LValues
+    type = type->getRValue();
+    // Check that \p type != tv
+    CanType canonicalType = type->getCanonicalType();
+    if (tv == type->getCanonicalType().getPtr())
+      return false;
+    // Check if the substitution is legal.
+    switch (tvInfo.getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      return true;
+    case TypeVariableKind::Integer:
+      return canonicalType->isAnyIntegerType() ||
+             isIntegerTypeVariable(canonicalType) ||
+             isGeneralTypeVariable(canonicalType);
+    case TypeVariableKind::Float:
+      return canonicalType->isAnyFloatType() ||
+             isFloatTypeVariable(canonicalType) ||
+             isGeneralTypeVariable(canonicalType);
+    default:
+      llvm_unreachable("Unknown TypeVariableKind!");
+    }
   }
 
   bool unify(Type type, Type other) {
@@ -288,7 +337,7 @@ public:
       TypeVariableInfo &info = TypeVariableInfo::get(tv);
       if (info.hasSubstitution())
         return unify(info.getSubstitution(), subst);
-      return trySetSubstitution(info, subst);
+      return trySetSubstitution(tv, info, subst);
     };
 
     // If one is a type variable, and the other isn't, just set the
@@ -390,7 +439,7 @@ public:
     if (typeInfo.hasSubstitution()) {
       if (typeInfo.getSubstitution()->getAs<TypeVariableType>() == other)
         return true;
-      return trySetSubstitution(otherInfo, type);
+      return trySetSubstitution(other, otherInfo, type);
     }
 
     // if only 'other' has a substitution, set the substitution of 'type' to
@@ -398,16 +447,15 @@ public:
     if (otherInfo.hasSubstitution()) {
       if (otherInfo.getSubstitution()->getAs<TypeVariableType>() == type)
         return true;
-      return trySetSubstitution(typeInfo, other);
+      return trySetSubstitution(type, typeInfo, other);
     }
 
     // Else, if both don't have a substitution, just set the substitution of
-    // 'type' to 'other', or 'other' to 'type if the first one doesn't work out.
-    return trySetSubstitution(typeInfo, other) ||
-           trySetSubstitution(otherInfo, type);
+    // 'type' to 'other', or 'other' to 'type if the first one doesn't work.
+    return trySetSubstitution(type, typeInfo, other) ||
+           trySetSubstitution(other, otherInfo, type);
   }
 };
-
 } // namespace
 
 //===--- ConstraintSystem -------------------------------------------------===//
@@ -430,10 +478,6 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
 TypeVariableKind
 ConstraintSystem::getTypeVariableKind(TypeVariableType *tv) const {
   return TypeVariableInfo::get(tv).getTypeVariableKind();
-}
-
-bool ConstraintSystem::setSubstitution(TypeVariableType *tv, Type subst) const {
-  return TypeVariableInfo::get(tv).setSubstitution(subst);
 }
 
 bool ConstraintSystem::hasSubstitution(TypeVariableType *tv) const {

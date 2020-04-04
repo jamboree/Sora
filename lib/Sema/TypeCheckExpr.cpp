@@ -959,6 +959,10 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
     Type expectedType = calledFn->getArg(k);
     Expr *arg = expr->getArg(k);
 
+    // Don't bother checking an ill-formed arg.
+    if (arg->getType()->hasErrorType())
+      continue;
+
     // Try to apply implicit conversions
     arg = tryInsertImplicitConversions(arg, expectedType);
     expr->setArg(k, arg);
