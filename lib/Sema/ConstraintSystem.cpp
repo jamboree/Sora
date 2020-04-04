@@ -96,7 +96,7 @@ public:
   using Parent = TypeVisitor<TypeSimplifier, Type>;
   friend Parent;
 
-  TypeSimplifier(ConstraintSystem &cs, Type defaultInt, Type defaultFloat)
+  TypeSimplifier(const ConstraintSystem &cs, Type defaultInt, Type defaultFloat)
       : cs(cs), defaultInt(defaultInt), defaultFloat(defaultFloat) {
     assert(defaultInt && "No Default Integer Type!");
     assert(!defaultInt->hasErrorType() ||
@@ -106,7 +106,7 @@ public:
            !defaultFloat->hasTypeVariable() && "Invalid Default Float Type!");
   }
 
-  ConstraintSystem &cs;
+  const ConstraintSystem &cs;
   Type defaultInt, defaultFloat;
   bool hadUnboundTypeVariable = false;
 
@@ -288,12 +288,10 @@ public:
       return true;
     case TypeVariableKind::Integer:
       return canonicalType->isAnyIntegerType() ||
-             isIntegerTypeVariable(canonicalType) ||
-             isGeneralTypeVariable(canonicalType);
+             isIntegerTypeVariable(canonicalType);
     case TypeVariableKind::Float:
       return canonicalType->isAnyFloatType() ||
-             isFloatTypeVariable(canonicalType) ||
-             isGeneralTypeVariable(canonicalType);
+             isFloatTypeVariable(canonicalType);
     default:
       llvm_unreachable("Unknown TypeVariableKind!");
     }
@@ -464,7 +462,8 @@ Type ConstraintSystem::getSubstitution(TypeVariableType *tv) const {
   return TypeVariableInfo::get(tv).getSubstitution();
 }
 
-Type ConstraintSystem::simplifyType(Type type, bool *hadUnboundTypeVariable) {
+Type ConstraintSystem::simplifyType(Type type,
+                                    bool *hadUnboundTypeVariable) const {
   if (!type->hasTypeVariable())
     return type;
   auto typeSimplifier = TypeSimplifier(*this, intTVDefault, floatTVDefault);
@@ -517,6 +516,8 @@ void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
     out << " bound to '";
     type.print(out, printOptions);
     out << "'";
+    if (type->hasTypeVariable())
+      out << " AKA '" << simplifyType(type) << "'";
   }
   else
     out << " unbound";
@@ -524,22 +525,12 @@ void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
 
 void ConstraintSystem::dumpTypeVariables(
     raw_ostream &out, const TypePrintOptions &printOptions) const {
-  out << "Type Variables Created By ConstraintSystem 0x" << (void *)this
-      << "\n";
-  for (TypeVariableType *tv : typeVariables) {
-    out << "    ";
-    print(out, tv, printOptions);
-    out << "\n";
-  }
   if (typeVariables.empty())
-    out << "    <empty>\n";
-}
-
-std::string
-ConstraintSystem::getString(const TypeVariableType *type,
-                            const TypePrintOptions &printOptions) const {
-  std::string str;
-  llvm::raw_string_ostream out(str);
-  print(out, type, printOptions);
-  return out.str();
+    out << "    <no type variables>\n";
+  else
+    for (TypeVariableType *tv : typeVariables) {
+      out << "    ";
+      print(out, tv, printOptions);
+      out << "\n";
+    }
 }

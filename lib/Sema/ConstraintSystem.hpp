@@ -160,7 +160,7 @@ public:
   /// \param hadUnboundTypeVariable whether the type contained an unbound
   /// general type variable.
   /// \returns the simplified type, or the ErrorType on error (never nullptr)
-  Type simplifyType(Type type, bool *hadUnboundTypeVariable = nullptr);
+  Type simplifyType(Type type, bool *hadUnboundTypeVariable = nullptr) const;
 
   /// Unifies \p a with \p b using \p options.
   /// \returns true if unification was successful, false otherwise.
@@ -180,9 +180,9 @@ public:
       raw_ostream &out,
       const TypePrintOptions &printOptions = TypePrintOptions()) const;
 
-  /// Same as \c print, but returns a string instead of printing to a stream.
-  std::string
-  getString(const TypeVariableType *type,
-            const TypePrintOptions &printOptions = TypePrintOptions()) const;
+  void dumpTypeVariable(const TypeVariableType *type) const {
+    print(llvm::dbgs(), type, TypePrintOptions::forDebug());
+    llvm::dbgs() << "\n";
+  }
 };
 } // namespace sora

@@ -523,3 +523,12 @@ func compoundAssign() {
   maybeVI32 ??= true          // expect-error: cannot use binary operator '??=' on operands of type 'maybe i32' and 'bool'
   maybeMaybeVI8 ??= 0 as i32  // expect-error: cannot use binary operator '??=' on operands of type 'maybe maybe i8' and 'i32'
 }
+
+
+func nullOps() {
+  null + null  // expect-error: cannot use binary operator '+' on operands of type 'null' and 'null'
+  null + 0     // expect-error: cannot use binary operator '+' on operands of type 'null' and 'i32'
+  0 + null     // expect-error: cannot use binary operator '+' on operands of type 'i32' and 'null'
+  0.0 + null   // expect-error: cannot use binary operator '+' on operands of type 'f32' and 'null'
+  null + 0.0   // expect-error: cannot use binary operator '+' on operands of type 'null' and 'f32'
+}
