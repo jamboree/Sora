@@ -30,19 +30,13 @@ enum class TypeVariableKind : uint8_t {
 
 /// Options for type unification
 struct UnificationOptions {
-  /// Whether LValues are ignored.
-  /// e.g. if true, unification will succeed for "@lvalue i32" and"i32", if set
-  /// to false, it'll fail.
-  bool ignoreLValues = true;
-  /// Whether mutability is ignored when checking equality of reference types
+  /// Whether mutability is ignored when checking equality of reference types.
   bool ignoreReferenceMutability = false;
 };
 
-/// The ConstraintSystem serves a context for constraint generation, solving
-/// and diagnosing.
-///
-/// It creates TypeVariables, keeps track of their substitutions, of the
-/// current constraints, etc.
+/// The Constraint System serves as a context for type-checking of expressions.
+/// It handles the mapping of type variables to their substitution and kinds,
+/// an allows unification of types.
 ///
 /// It also possesses a RAIIConstraintSystemArena object, so while this object
 /// is alive, the ConstraintSystem arena is available.
@@ -92,15 +86,17 @@ private:
   TypeVariableType *createTypeVariable(TypeVariableKind kind);
 
 public:
-  /// Creates a new General type variable.
+  /// Creates a new General type variable inside this ConstraintSystem.
   TypeVariableType *createGeneralTypeVariable() {
     return createTypeVariable(TypeVariableKind::General);
   }
-  /// Create a new Integer type variable
+
+  /// Create a new Integer type variable inside this ConstraintSystem.
   TypeVariableType *createIntegerTypeVariable() {
     return createTypeVariable(TypeVariableKind::Integer);
   }
-  /// Create a new Float type variable
+
+  /// Create a new Float type variable inside this ConstraintSystem.
   TypeVariableType *createFloatTypeVariable() {
     return createTypeVariable(TypeVariableKind::Float);
   }
@@ -137,14 +133,10 @@ public:
   /// \returns true if \p tv is a integer type variable or any int type.
   /// This only looks through LValues, nothing else.
   bool isIntegerTypeOrTypeVariable(Type type) const {
-    if (auto *tv = type->getRValue()->getAs<TypeVariableType>()) {
+    assert(type);
+    if (auto *tv = type->getRValue()->getAs<TypeVariableType>())
       if (isIntegerTypeVariable(tv))
         return true;
-      if (isGeneralTypeVariable(tv)) {
-        if (Type subst = getSubstitution(tv))
-          return isIntegerTypeOrTypeVariable(subst);
-      }
-    }
     return type->isAnyIntegerType();
   }
 
@@ -152,14 +144,9 @@ public:
   /// This only looks through LValues, nothing else.
   bool isFloatTypeOrTypeVariable(Type type) const {
     assert(type);
-    if (auto *tv = type->getRValue()->getAs<TypeVariableType>()) {
+    if (auto *tv = type->getRValue()->getAs<TypeVariableType>())
       if (isFloatTypeVariable(tv))
         return true;
-      if (isGeneralTypeVariable(tv)) {
-        if (Type subst = getSubstitution(tv))
-          return isFloatTypeOrTypeVariable(subst);
-      }
-    }
     return type->isAnyFloatType();
   }
 
