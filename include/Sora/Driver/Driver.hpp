@@ -42,7 +42,7 @@ class SourceFile;
 /// (simply because it's not needed)
 class CompilerInstance {
   friend class Driver;
-  CompilerInstance() : diagEng(srcMgr), debug_os(llvm::dbgs()) {
+  CompilerInstance() : diagEng(srcMgr) {
     diagEng.createConsumer<PrintingDiagnosticConsumer>(llvm::errs());
   }
   CompilerInstance(const CompilerInstance &) = delete;
@@ -178,8 +178,8 @@ private:
   /// The BufferIDs of the input files.
   SmallVector<BufferID, 1> inputBuffers;
 
-  /// The output stream used to print debug message/statistics.
-  raw_ostream &debug_os;
+  /// The output stream where dumps (e.g. ast dumps) will be printed.
+  raw_ostream &dump_os = llvm::outs();
 
   /// Prints the memory usage of the ASTContext after \p step to debug_os.
   void printASTContextMemoryUsage(Step step) const;

@@ -289,13 +289,13 @@ bool CompilerInstance::run() {
   // Perform Parsing
   success = doParsing(sf);
   if (isDone(Step::Parsing)) {
-    dumpScopeMaps(debug_os, sf);
+    dumpScopeMaps(dump_os, sf);
     return finish();
   }
 
   // Perform Semantic Analysis
   success = doSema(sf);
-  dumpScopeMaps(debug_os, sf);
+  dumpScopeMaps(dump_os, sf);
   if (isDone(Step::Sema))
     return finish();
 
@@ -352,34 +352,34 @@ void CompilerInstance::createASTContext() {
 }
 
 void CompilerInstance::printASTContextMemoryUsage(Step step) const {
-  debug_os << "ASTContext memory usage after ";
+  dump_os << "ASTContext memory usage after ";
   switch (step) {
   case Step::Parsing:
-    debug_os << "parsing";
+    dump_os << "parsing";
     break;
   case Step::Sema:
-    debug_os << "semantic analysis";
+    dump_os << "semantic analysis";
     break;
   case Step::IRGen:
-    debug_os << "ir generation";
+    dump_os << "ir generation";
     break;
   case Step::IRTransform:
-    debug_os << "ir lowering/optimization";
+    dump_os << "ir lowering/optimization";
     break;
   case Step::LLVMGen:
-    debug_os << "llvm ir generation";
+    dump_os << "llvm ir generation";
     break;
   }
-  debug_os << ": ";
-  llvm::write_integer(debug_os, astContext->getTotalMemoryUsed(), 0,
+  dump_os << ": ";
+  llvm::write_integer(dump_os, astContext->getTotalMemoryUsed(), 0,
                       llvm::IntegerStyle::Number);
-  debug_os << " bytes\n";
+  dump_os << " bytes\n";
 }
 
 bool CompilerInstance::doParsing(SourceFile &file) {
   parseSourceFile(file);
   if (options.dumpParse)
-    file.dump(debug_os);
+    file.dump(dump_os);
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Parsing);
   return !diagEng.hadAnyError();
@@ -388,7 +388,7 @@ bool CompilerInstance::doParsing(SourceFile &file) {
 bool CompilerInstance::doSema(SourceFile &file) {
   performSema(file);
   if (options.dumpAST)
-    file.dump(debug_os);
+    file.dump(dump_os);
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Sema);
   return !diagEng.hadAnyError();
