@@ -8,9 +8,18 @@
 #include "ConstraintSystem.hpp"
 #include "Sora/AST/TypeVisitor.hpp"
 #include "Sora/AST/Types.hpp"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
+
+#define DEBUG_TYPE "Constraint System "
+
+STATISTIC(numSuccessfulUnifications, "# of successful type unifications");
+STATISTIC(numFailedUnifications, "# of failed type unifications");
+STATISTIC(numCanUnifyCalls, "# of calls to canUnify");
+STATISTIC(numTypeVariablesBound, "# of type variables bound");
+STATISTIC(numTypeVariablesCreated, "# of type variables created");
 
 //===--- TypeVariableInfo -------------------------------------------------===//
 
@@ -39,6 +48,7 @@ class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
     // Check if the substitution is legal
     assert(!type->hasLValue() && !type->hasErrorType() &&
            "Illegal Substitution!");
+    ++numTypeVariablesBound;
     substitution = type;
   }
 
@@ -435,6 +445,9 @@ TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
   new (reinterpret_cast<void *>(tyVar + 1)) TypeVariableInfo(kind);
   // Store the TypeVariable
   typeVariables.push_back(tyVar);
+
+  ++numTypeVariablesCreated;
+
   return tyVar;
 }
 
@@ -466,13 +479,17 @@ bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
   assert(a && "a is null");
   assert(b && "b is null");
-  return TypeUnifier(*this, options, /*canSetSubstitutions*/ true).unify(a, b);
+  TypeUnifier unifier(*this, options, /*canSetSubstitutions*/ true);
+  bool result = unifier.unify(a, b);
+  result ? ++numSuccessfulUnifications : ++numFailedUnifications;
+  return result;
 }
 
 bool ConstraintSystem::canUnify(Type a, Type b,
                                 const UnificationOptions &options) const {
   assert(a && "a is null");
   assert(b && "b is null");
+  ++numCanUnifyCalls;
   return TypeUnifier(*const_cast<ConstraintSystem *>(this), options,
                      /*canSetSubstitutions*/ false)
       .unify(a, b);
