@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerUnion.h"
 
 namespace sora {
@@ -21,6 +22,8 @@ class Decl;
 /// The ASTNode is a intrusive pointer union that can contain a pointer
 /// to any major AST Node: Declaration, Statements and Expressions.
 struct ASTNode : public llvm::PointerUnion<Expr *, Stmt *, Decl *> {
+  using Base = llvm::PointerUnion<Expr *, Stmt *, Decl *>;
+
   // Inherit the constructors from PointerUnion
   using llvm::PointerUnion<Expr *, Stmt *, Decl *>::PointerUnion;
 
@@ -37,3 +40,24 @@ struct ASTNode : public llvm::PointerUnion<Expr *, Stmt *, Decl *> {
   bool walk(ASTWalker &walker);
 };
 } // namespace sora
+
+namespace llvm {
+template <> struct DenseMapInfo<::sora::ASTNode> {
+  static inline ::sora::ASTNode getEmptyKey() {
+    return DenseMapInfo<::sora::Expr *>::getEmptyKey();
+  }
+
+  static inline ::sora::ASTNode getTombstoneKey() {
+    return DenseMapInfo<::sora::Expr *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const ::sora::ASTNode &Node) {
+    intptr_t key = (intptr_t)Node.getOpaqueValue();
+    return DenseMapInfo<intptr_t>::getHashValue(key);
+  }
+
+  static bool isEqual(const ::sora::ASTNode &LHS, const ::sora::ASTNode &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
