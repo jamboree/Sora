@@ -81,22 +81,30 @@ mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
   mlir::Type type = irGen.getIRType(expr->getType());
   assert(type.isa<mlir::IntegerType>() && "Not an IntegerType?!");
-  return builder.create<ir::IntegerConstantOp>(irGen.getIRLoc(expr),
-                                               expr->getValue(), type);
+
+  // TODO: Create a "BuildIntConstant" method as I'll probably need to create
+  // int constants a lot.
+  auto valueAttr = mlir::IntegerAttr::get(type, expr->getValue());
+  return builder.create<mlir::ConstantOp>(irGen.getIRLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
   mlir::Type type = irGen.getIRType(expr->getType());
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
-  return builder.create<ir::FloatConstantOp>(irGen.getIRLoc(expr),
-                                             expr->getValue(), type);
+
+  auto valueAttr = mlir::FloatAttr::get(type, expr->getValue());
+  return builder.create<mlir::ConstantOp>(irGen.getIRLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   assert(expr->getType()->isBoolType() && "Not a Bool Type?!");
-  return builder.create<ir::BoolConstantOp>(irGen.getIRLoc(expr),
-                                            expr->getValue());
+  mlir::Type type = irGen.getIRType(expr->getType());
+  assert(type.isInteger(1) && "Expected a i1!");
+  APInt value(1, expr->getValue() ? 1 : 0);
+
+  auto valueAttr = mlir::IntegerAttr::get(type, value);
+  return builder.create<mlir::ConstantOp>(irGen.getIRLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitNullLiteralExpr(NullLiteralExpr *expr) {
@@ -223,6 +231,4 @@ mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder builder) {
   return ExprIRGenerator(*this, builder).visit(expr);
 }
 
-mlir::Type IRGen::getIRType(Expr *expr) {
-  return getIRType(expr->getType());
-}
+mlir::Type IRGen::getIRType(Expr *expr) { return getIRType(expr->getType()); }

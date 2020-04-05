@@ -1,4 +1,4 @@
-//===--- Ops.td - Sora MLIR Dialect Operations Definitions ------*- C++ -*-===//
+//===--- Ops.td - Sora MLIR Dialect Operations Definitions -*- tablegen -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -51,94 +51,6 @@ def Sora_Type : DialectType<Sora_Dialect,
 //===----------------------------------------------------------------------===//
 //  Operations
 //===----------------------------------------------------------------------===//
-
-//===- Constants ----------------------------------------------------------===//
-
-class ConstantOp<string mnemonic, list<OpTrait> traits = []> :
-    Sora_Op<mnemonic, traits> {
-  let assemblyFormat = "$value attr-dict `->` type(results)";
-
-  let hasFolder = 1;
-}
-
-def IntegerConstantOp : ConstantOp<"integer_constant", [NoSideEffect]> {
-  let summary = "integer constant operation";
-  let description = [{
-    The Integer Constant operation turns an integer literal into an SSA value. 
-    The data is attached to the operation as an attribute, and the type of
-    the attribute must match the result type of the operation.
-
-    Example:
-      %0 = "sora.integer_constant"() { value = 0 : si64 } : () -> si64
-  }];
-
-  // FIXME: Constraint the return type and argument type to be the same.
-
-  let arguments = (ins APIntAttr:$value);
-
-  let results = (outs AnyInteger);
-
-  let builders = [
-    /// Shorthand builder that just takes an APInt and a Type.
-    OpBuilder<"Builder *builder, OperationState &state, APInt value, "
-              "Type type", [{
-      build(builder, state, type, IntegerAttr::get(type, value));
-    }]>,
-  ];
-
-  let verifier = [{ return ::verify(*this); }];
-}
-
-def BoolConstantOp : ConstantOp<"bool_constant", [NoSideEffect]> {
-  let summary = "boolean constant operation";
-  let description = [{
-    The Bool Constant operation turns a boolean literal into an SSA value. 
-    The data is attached to the operation as an attribute, and the return
-    type of the operation is always I1.
-
-    Example:
-      %0 = sora.integer_constant 0 : si32 -> si32
-  }];
-
-  let arguments = (ins BoolAttr:$value);
-
-  let results = (outs I1);
-
-  let builders = [
-    /// Shorthand builder that just takes a bool
-    OpBuilder<"Builder *builder, OperationState &state, bool value", [{
-      build(builder, state, builder->getI1Type(), builder->getBoolAttr(value));
-    }]>,
-  ];
-}
-
-def FloatConstantOp : ConstantOp<"float_constant", [NoSideEffect]> {
-  let summary = "float constant operation";
-  let description = [{
-    The Float Constant operation turns a float literal into an SSA value. 
-    The data is attached to the operation as an attribute, and the type of
-    the attribute must match the result type of the operation.
-
-    Example:
-      %0 = sora.float_constant 0 : F32 -> F32
-  }];
-
-  // FIXME: Constraint the return type and argument type to be the same.
-
-  let arguments = (ins APFloatAttr:$value);
-
-  let results = (outs AnyFloat);
-
-  let builders = [
-    /// Shorthand builder that just takes an APFloat and a Type.
-    OpBuilder<"Builder *builder, OperationState &state, APFloat value, "
-              "Type type", [{
-      build(builder, state, type, FloatAttr::get(type, value));
-    }]>,
-  ];
-
-  let verifier = [{ return ::verify(*this); }];
-}
 
 //===- Casting ------------------------------------------------------------===//
 

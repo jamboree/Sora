@@ -8,9 +8,11 @@
 #pragma once
 
 #include "mlir/IR/Dialect.h"
-#include "mlir/Interfaces/SideEffects.h"
 #include "mlir/IR/TypeSupport.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Interfaces/SideEffects.h"
 
 namespace mlir {
 namespace sora {

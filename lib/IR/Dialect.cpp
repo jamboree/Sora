@@ -15,6 +15,10 @@
 using namespace sora;
 using namespace sora::ir;
 
+//===----------------------------------------------------------------------===//
+// Dialect
+//===----------------------------------------------------------------------===//
+
 SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
     : mlir::Dialect("sora", mlirCtxt) {
   addOperations<
@@ -24,26 +28,6 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 
   addTypes<MaybeType>();
 }
-
-//===- Operation Verification ---------------------------------------------===//
-
-namespace {
-
-/// The IntegerConstant's attribute's type must match its return type.
-mlir::LogicalResult verify(IntegerConstantOp &op) {
-  if (op.getType() != op.valueAttr().getType())
-    return mlir::failure();
-  return mlir::success();
-}
-
-/// The FloatConstant's attribute's type must match its return type.
-mlir::LogicalResult verify(FloatConstantOp &op) {
-  if (op.getType() != op.valueAttr().getType())
-    return mlir::failure();
-  return mlir::success();
-}
-
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // TableGen'd Method Definitions
