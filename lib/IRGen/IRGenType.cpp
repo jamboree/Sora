@@ -29,9 +29,7 @@ public:
     assert(!integerWidth.isArbitraryPrecision() &&
            "arbitrary-precision integer are not supported in IRGen");
     unsigned width = integerWidth.getWidth();
-    auto signedness = (type->isSigned() ? mlir::IntegerType::Signed
-                                        : mlir::IntegerType::Unsigned);
-    return mlir::IntegerType::get(width, signedness, &mlirCtxt);
+    return mlir::IntegerType::get(width, mlir::IntegerType::Signless, &mlirCtxt);
   }
 
   mlir::Type visitFloatType(FloatType *type) {
