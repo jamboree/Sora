@@ -68,6 +68,7 @@ static bool areMLIRDialectsRegistered = false;
 void sora::registerMLIRDialects() {
   if (!areMLIRDialectsRegistered) {
     mlir::registerDialect<ir::SoraDialect>();
+    mlir::registerDialect<mlir::StandardOpsDialect>();
     areMLIRDialectsRegistered = true;
   }
 }
