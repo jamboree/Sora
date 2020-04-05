@@ -177,14 +177,14 @@ public:
   }
 
   bool visitTypeVariableType(TypeVariableType *from, Type to) {
-    // Dereference bound type variables
-    if (Type fromSubst = cs.getSubstitution(from))
-      return visit(fromSubst, to);
+    // "Dereference" bound type variables
+    if (Type fromBinding = from->getBinding())
+      return visit(fromBinding, to);
     // For Integer Type Variables, use canConvertIntegerTypeTo
-    if (cs.isIntegerTypeVariable(from) && canConvertIntegerTypeTo(to))
+    if (from->isIntegerTypeVariable() && canConvertIntegerTypeTo(to))
       return true;
     // For Float Type Variables, use canConvertFloatTypeTo
-    if (cs.isFloatTypeVariable(from) && canConvertFloatTypeTo(to))
+    if (from->isFloatTypeVariable() && canConvertFloatTypeTo(to))
       return true;
     // Else, the conversion is only possible if unification can happen.
     return cs.canUnify(from, to);

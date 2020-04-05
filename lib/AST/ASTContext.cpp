@@ -516,7 +516,3 @@ void *TypeVariableType::operator new(size_t size, ASTContext &ctxt,
                                      unsigned align) {
   return TypeBase::operator new(size, ctxt, ArenaKind::ConstraintSystem, align);
 }
-
-TypeVariableType *TypeVariableType::create(ASTContext &ctxt, unsigned id) {
-  return new (ctxt) TypeVariableType(ctxt, id);
-}

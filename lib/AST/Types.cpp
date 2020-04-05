@@ -118,7 +118,24 @@ public:
       out << '_';
       return;
     }
-    out << "$T" << type->getID();
+    char tyVarLetter;
+    switch (type->getTypeVariableKind()) {
+    case TypeVariableKind::General:
+      tyVarLetter = 'T';
+      break;
+    case TypeVariableKind::Integer:
+      tyVarLetter = 'I';
+      break;
+    case TypeVariableKind::Float:
+      tyVarLetter = 'F';
+      break;
+    }
+    out << '$' << tyVarLetter << type->getID();
+    if (Type binding = type->getBinding()) {
+      out << '(';
+      visit(binding);
+      out << ')';
+    }
   }
 };
 } // namespace
@@ -163,7 +180,7 @@ std::string DiagnosticArgumentFormatter<Type>::format(Type type) {
   return type.getString(TypePrintOptions::forDiagnostics());
 }
 
-//===- TypeBase/Types -----------------------------------------------------===//
+//===- TypeBase -----------------------------------------------------------===//
 
 void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
                              unsigned align) {
@@ -303,6 +320,8 @@ std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
   return Type(const_cast<TypeBase *>(this)).getString(printOptions);
 }
 
+//===- FloatType ----------------------------------------------------------===//
+
 FloatType *FloatType::get(ASTContext &ctxt, FloatKind kind) {
   switch (kind) {
   case FloatKind::IEEE32:
@@ -322,6 +341,8 @@ const llvm::fltSemantics &FloatType::getAPFloatSemantics() const {
   }
   llvm_unreachable("Unknown FloatKind!");
 }
+
+//===- TupleType ----------------------------------------------------------===//
 
 Optional<size_t> TupleType::lookup(Identifier ident) const {
   IntegerWidth::Status status;
@@ -348,9 +369,75 @@ void TupleType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> elements) {
     id.AddPointer(type.getPtr());
 }
 
+//===- FunctionType -------------------------------------------------------===//
+
 void FunctionType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> args,
                            Type rtr) {
   for (auto arg : args)
     id.AddPointer(arg.getPtr());
   id.AddPointer(rtr.getPtr());
+}
+
+//===- TypeVariableType ---------------------------------------------------===//
+
+void TypeVariableType::visitBindings(std::function<void(Type)> visitor) const {
+  if (!binding)
+    return;
+  visitor(binding);
+  auto *tvBinding =
+      binding->getRValue()->getDesugaredType()->getAs<TypeVariableType>();
+  if (!tvBinding)
+    return;
+  tvBinding->visitBindings(visitor);
+}
+
+void TypeVariableType::updateTypeVariableKind() {
+  assert(isBound() && "Can only use this on bound type variables!");
+  if (binding->isAnyIntegerType())
+    return setTypeVariableKind(TypeVariableKind::Integer);
+  if (binding->isAnyFloatType())
+    return setTypeVariableKind(TypeVariableKind::Float);
+  if (auto *typeVarBinding = binding->getAs<TypeVariableType>()) {
+    if (isGeneralTypeVariable()) {
+      if (!typeVarBinding->isGeneralTypeVariable())
+        setTypeVariableKind(typeVarBinding->getTypeVariableKind());
+    }
+  }
+}
+
+bool TypeVariableType::canBindTo(Type type) const {
+  if (isBound() || type->hasLValue())
+    return false;
+
+  CanType canType = type->getCanonicalType();
+  // Cannot bind a type variable to itself.
+  // FIXME: It'd be great to have a more advanced cycle detection system.
+  if (auto *tv = canType->getAs<TypeVariableType>())
+    if (this == tv)
+      return false;
+
+  switch (getTypeVariableKind()) {
+  case TypeVariableKind::General:
+    return true;
+  case TypeVariableKind::Integer:
+    if (canType->isAnyIntegerType())
+      return true;
+    if (TypeVariableType *tv = canType->getAs<TypeVariableType>())
+      return tv->isIntegerTypeVariable();
+    return false;
+  case TypeVariableKind::Float:
+    if (canType->isAnyFloatType())
+      return true;
+    if (TypeVariableType *tv = canType->getAs<TypeVariableType>())
+      return tv->isFloatTypeVariable();
+    return false;
+  }
+  llvm_unreachable("Unknown TypeVariableKind!");
+}
+
+void TypeVariableType::bindTo(Type type) {
+  assert(canBindTo(type) && "Cannot bind to this type!");
+  assert(binding.isNull() && "Overwriting binding!");
+  binding = type;
+  updateTypeVariableKind();
 }

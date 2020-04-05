@@ -23,7 +23,7 @@ protected:
     maybeType = MaybeType::get(ctxt->i32Type);
     lvalueType = LValueType::get(ctxt->i32Type);
     tupleType = TupleType::getEmpty(*ctxt);
-    tyVar = TypeVariableType::create(*ctxt, 0);
+    tyVar = TypeVariableType::createGeneralTypeVariable(*ctxt, 0);
     fnType = FunctionType::get({}, refType);
   }
 
@@ -196,24 +196,24 @@ TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
     ASSERT_TRUE(can->isCanonical());                                           \
     ASSERT_TRUE(T->isCanonical());                                             \
   }
-  CHECK_ALWAYS_CANONICAL(ctxt->f32Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->f64Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->i8Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->i16Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->i32Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->i64Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->isizeType)
-  CHECK_ALWAYS_CANONICAL(ctxt->u8Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->u16Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->u32Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->u64Type)
-  CHECK_ALWAYS_CANONICAL(ctxt->usizeType)
-  CHECK_ALWAYS_CANONICAL(ctxt->voidType)
-  CHECK_ALWAYS_CANONICAL(ctxt->boolType)
-  CHECK_ALWAYS_CANONICAL(ctxt->nullType)
-  CHECK_ALWAYS_CANONICAL(ctxt->errorType)
-  Type tyVar = TypeVariableType::create(*ctxt, 0);
-  CHECK_ALWAYS_CANONICAL(tyVar)
+  CHECK_ALWAYS_CANONICAL(ctxt->f32Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->f64Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->i8Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->i16Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->i32Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->i64Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->isizeType);
+  CHECK_ALWAYS_CANONICAL(ctxt->u8Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->u16Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->u32Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->u64Type);
+  CHECK_ALWAYS_CANONICAL(ctxt->usizeType);
+  CHECK_ALWAYS_CANONICAL(ctxt->voidType);
+  CHECK_ALWAYS_CANONICAL(ctxt->boolType);
+  CHECK_ALWAYS_CANONICAL(ctxt->nullType);
+  CHECK_ALWAYS_CANONICAL(ctxt->errorType);
+  Type tyVar = TypeVariableType::createGeneralTypeVariable(*ctxt, 0);
+  CHECK_ALWAYS_CANONICAL(tyVar);
 #undef CHECK_ALWAYS_CANONICAL
 }
 
@@ -324,4 +324,27 @@ TEST_F(TypeTest, printingTest_func) {
             "(f32, f64, isize) -> void");
   EXPECT_EQ(f2->getString(TypePrintOptions::forDiagnostics()),
             "(f32, f64, isize) -> void");
+}
+
+TEST_F(TypeTest, printingTest_typeVariables) {
+  auto *generalTyVar = TypeVariableType::createGeneralTypeVariable(*ctxt, 0);
+  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0");
+  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+  generalTyVar->bindTo(ctxt->nullType);
+  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0(null)");
+  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+
+  auto *intTyVar = TypeVariableType::createIntegerTypeVariable(*ctxt, 0);
+  EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDebug()), "$I0");
+  EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+  intTyVar->bindTo(ctxt->i32Type);
+  EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDebug()), "$I0(i32)");
+  EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+
+  auto *floatTyVar = TypeVariableType::createFloatTypeVariable(*ctxt, 0);
+  EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDebug()), "$F0");
+  EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+  floatTyVar->bindTo(ctxt->f64Type);
+  EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDebug()), "$F0(f64)");
+  EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
 }

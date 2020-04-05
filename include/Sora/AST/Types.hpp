@@ -4,7 +4,10 @@
 //
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
-// This file contains the whole "type" hierarchy
+// This file contains the Sora AST Types.
+//
+// One thing to know about this hierarchy is that every type (except the
+// TypeVariableType) is unique and immutable.
 //===----------------------------------------------------------------------===//
 
 #pragma once
@@ -139,9 +142,10 @@ protected:
     );
 
     /// TypeVariableType
-    SORA_INLINE_BITFIELD_FULL(TypeVariableType, TypeBase, 32,
+    SORA_INLINE_BITFIELD_FULL(TypeVariableType, TypeBase, 30+2,
       : NumPadBits,
-      id : 32
+      id : 30,
+      tvKind : 2;
     );
 
     /// FunctionType
@@ -633,6 +637,21 @@ public:
   }
 };
 
+/// Kinds of Type Variables
+enum class TypeVariableKind : uint8_t {
+  /// General type variables can be bound to any type.
+  /// When a general type variable is bound, its kind can be narrowed down to
+  /// another kind (e.g. if a General Type variable binds to an Int, or an
+  /// Integer TV, it becomes an Integer Type Variable).
+  General,
+  /// Integer type variables can only be bound to Integer Type Variables or
+  /// (canonical) IntegerTypes.
+  Integer,
+  /// Float type variables can only be bound to Float Type Variables or
+  /// (canonical) FloatTypes.
+  Float
+};
+
 /// Type Variable Type
 ///
 /// Represents a type variable existing within a constraint system.
@@ -642,13 +661,46 @@ public:
 /// Note that types containing TypeVariables are also allocated in the
 /// ASTContext's ConstraintSystem arena.
 ///
-/// This type is always canonical.
+/// This type is always canonical. It is also the only type that is never
+/// unique and is mutable.
 class TypeVariableType final : public TypeBase {
+  Type binding;
+
+  /// Updates this TypeVariable's kind according to its binding.
+  void updateTypeVariableKind();
+
+  void setTypeVariableKind(TypeVariableKind kind) {
+    bits.TypeVariableType.tvKind = (unsigned)kind;
+    assert(kind == getTypeVariableKind() && "Bits dropped!");
+  }
+
+  /// This calls getBinding() and calls visitor with the result, but if the
+  /// result is another type variable, this keeps going until it finds an
+  /// unbound type variable, or something that isn't a type variable. This uses
+  /// getRValue/getDesugaredType before checking if a type is a type variable.
+  void visitBindings(std::function<void(Type)> visitor) const;
+
 public:
-  TypeVariableType(ASTContext &ctxt, unsigned id)
+  TypeVariableType(ASTContext &ctxt, TypeVariableKind tvKind, unsigned id)
       : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
                  /*isCanonical*/ true) {
     bits.TypeVariableType.id = id;
+    setTypeVariableKind(tvKind);
+  }
+
+  static TypeVariableType *createGeneralTypeVariable(ASTContext &ctxt,
+                                                     unsigned id) {
+    return new (ctxt) TypeVariableType(ctxt, TypeVariableKind::General, id);
+  }
+
+  static TypeVariableType *createIntegerTypeVariable(ASTContext &ctxt,
+                                                     unsigned id) {
+    return new (ctxt) TypeVariableType(ctxt, TypeVariableKind::Integer, id);
+  }
+
+  static TypeVariableType *createFloatTypeVariable(ASTContext &ctxt,
+                                                   unsigned id) {
+    return new (ctxt) TypeVariableType(ctxt, TypeVariableKind::Float, id);
   }
 
   /// Allow placement new for TypeVariables
@@ -661,11 +713,39 @@ public:
   void *operator new(size_t size, ASTContext &ctxt,
                      unsigned align = alignof(TypeVariableType));
 
-  /// Creates a TypeVariable with id \p id using \p ctxt.
-  static TypeVariableType *create(ASTContext &ctxt, unsigned id);
-
   /// \returns the ID of this type variable
   unsigned getID() const { return bits.TypeVariableType.id; }
+
+  /// \returns whether this TypeVariable can bind to \p type.
+  bool canBindTo(Type type) const;
+
+  /// Binds this type variable to \p type.
+  /// Bindings are definitive and cannot be changed later.
+  /// This asserts that the binding is possible.
+  void bindTo(Type type);
+
+  /// \returns whether this TypeVariable is bound.
+  bool isBound() const { return (bool)binding; }
+
+  /// \returns this type variable's binding (may be null)
+  Type getBinding() const { return binding; }
+
+  /// \returns the kind of TypeVariable this is
+  TypeVariableKind getTypeVariableKind() const {
+    return TypeVariableKind(bits.TypeVariableType.tvKind);
+  }
+
+  bool isGeneralTypeVariable() const {
+    return getTypeVariableKind() == TypeVariableKind::General;
+  }
+
+  bool isIntegerTypeVariable() const {
+    return getTypeVariableKind() == TypeVariableKind::Integer;
+  }
+
+  bool isFloatTypeVariable() const {
+    return getTypeVariableKind() == TypeVariableKind::Float;
+  }
 
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::TypeVariable;

@@ -21,75 +21,13 @@ STATISTIC(numCanUnifyCalls, "# of calls to canUnify");
 STATISTIC(numTypeVariablesBound, "# of type variables bound");
 STATISTIC(numTypeVariablesCreated, "# of type variables created");
 
-//===--- TypeVariableInfo -------------------------------------------------===//
-
-/// TypeVariable information, which is a trailing object of the
-/// TypeVariableType.
-namespace {
-class alignas(alignof(TypeVariableType)) TypeVariableInfo final {
-  using Kind = TypeVariableKind;
-
-  // Disable vanilla new/delete for TypeVariableInfo
-  void *operator new(size_t) noexcept = delete;
-  void operator delete(void *)noexcept = delete;
-
-  void *operator new(size_t, void *mem) noexcept {
-    assert(mem);
-    return mem;
-  }
-
-  TypeVariableInfo(const TypeVariableInfo &) = delete;
-  TypeVariableInfo &operator=(const TypeVariableInfo &) = delete;
-
-  TypeVariableInfo(Kind kind) : kind(kind) {}
-
-  void setSubstitution(Type type) {
-    assert(!substitution && "Type Variable already has a substitution!");
-    // Check if the substitution is legal
-    assert(!type->hasLValue() && !type->hasErrorType() &&
-           "Illegal Substitution!");
-    ++numTypeVariablesBound;
-    substitution = type;
-  }
-
-  Kind kind;
-  Type substitution;
-
-  friend class ::sora::ConstraintSystem;
-  friend class TypeUnifier;
-
-public:
-  /// \returns the TypeVariableInfo object for \p type
-  static TypeVariableInfo &get(const TypeVariableType *type) {
-    assert(type && "Can't use this with a null type");
-    return *reinterpret_cast<TypeVariableInfo *>(
-        const_cast<TypeVariableType *>(type) + 1);
-  }
-
-  /// \returns the TypeVariable that this TypeVariableInfo belongs to.
-  TypeVariableType *getTypeVariable() {
-    return reinterpret_cast<TypeVariableType *>(this) - 1;
-  }
-
-  Kind getTypeVariableKind() const { return kind; }
-  void setTypeVariableKind(Kind newKind) { kind = newKind; }
-
-  bool isGeneralTypeVariable() const { return kind == Kind::General; }
-  bool isIntegerTypeVariable() const { return kind == Kind::Integer; }
-  bool isFloatTypeVariable() const { return kind == Kind::Float; }
-
-  bool hasSubstitution() const { return (bool)substitution; }
-  Type getSubstitution() const { return substitution; }
-};
-} // namespace
-
 //===--- TypeSimplifier ---------------------------------------------------===//
 
 /// The TypeVariableType simplifier, which replaces type variables with their
-/// substitutions.
+/// bindings.
 ///
-/// Note that visit methods return null when no substitutions are needed, so
-/// visit() returns null for type with no type variables.
+/// Note that visit methods return null when no change is needed, so  visit()
+/// returns null for types with no type variables.
 namespace {
 class TypeSimplifier : public TypeVisitor<TypeSimplifier, Type> {
 public:
@@ -108,9 +46,15 @@ public:
 
   const ConstraintSystem &cs;
   Type defaultInt, defaultFloat;
-  bool hadUnboundTypeVariable = false;
 
-  using Parent::visit;
+  /// Whether we found an unbound general type variable.
+  bool hadUnboundGeneralTypeVariable = false;
+
+  Type visit(Type type) {
+    if (type->hasTypeVariable())
+      return Parent::visit(type);
+    return type;
+  }
 
 private:
   Type visitBuiltinType(BuiltinType *type) { return nullptr; }
@@ -180,24 +124,16 @@ private:
   Type visitErrorType(ErrorType *type) { return nullptr; }
 
   Type visitTypeVariableType(TypeVariableType *type) {
-    TypeVariableInfo &info = TypeVariableInfo::get(type);
-    Type subst = info.getSubstitution();
-    assert(subst.getPtr() != type &&
-           "Type variable has itself as a substitution");
-    // Return a default type or ErrorType when there are no substitutions
-    if (!subst) {
-      if (info.isFloatTypeVariable())
-        return defaultFloat;
-      if (info.isIntegerTypeVariable())
-        return defaultInt;
-      hadUnboundTypeVariable = true;
-      return cs.ctxt.errorType;
-    }
-    // If the substitution is also a type variable, simplify it as well.
-    assert(subst.getPtr() != type && "Type variable is bound to itself!");
-    if (Type simplified = visit(subst))
-      return simplified;
-    return subst;
+    Type binding = type->getBinding();
+    if (binding)
+      return visit(binding);
+    if (type->isFloatTypeVariable())
+      return defaultFloat;
+    if (type->isIntegerTypeVariable())
+      return defaultInt;
+    assert(type->isGeneralTypeVariable() && "Unknown Type Variable Kind!");
+    hadUnboundGeneralTypeVariable = true;
+    return cs.ctxt.errorType;
   }
 };
 } // namespace
@@ -211,90 +147,20 @@ namespace {
 class TypeUnifier {
 
 public:
-  TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options,
-              bool canSetSubstitutions)
-      : cs(cs), options(options), canSetSubstitutions(canSetSubstitutions) {}
+  TypeUnifier(const UnificationOptions &options, bool canBindTypeVariables)
+      : options(options), canBindTypeVariables(canBindTypeVariables) {}
 
-  ConstraintSystem &cs;
   const UnificationOptions &options;
-  const bool canSetSubstitutions;
+  const bool canBindTypeVariables;
 
-  /// Updates \p info's kind according to its substitution.
-  void updateTypeVariableKind(TypeVariableInfo &info) {
-    assert(info.hasSubstitution() && "Does not have a substitution?");
-    Type subst = info.getSubstitution()->getCanonicalType()->getRValue();
-    if (subst->isAnyIntegerType())
-      return info.setTypeVariableKind(TypeVariableKind::Integer);
-    if (subst->isAnyFloatType())
-      return info.setTypeVariableKind(TypeVariableKind::Float);
-    if (auto *substTV = subst->getAs<TypeVariableType>()) {
-      TypeVariableInfo &substInfo = TypeVariableInfo::get(substTV);
-      if (info.isGeneralTypeVariable()) {
-        if (!substInfo.isGeneralTypeVariable())
-          info.setTypeVariableKind(substInfo.getTypeVariableKind());
-      }
-      else {
-        if (substInfo.isGeneralTypeVariable())
-          substInfo.setTypeVariableKind(info.getTypeVariableKind());
-      }
-    }
-  }
-
-  /// Attempts to set \p tv's substitution to \p subst.
-  bool trySetSubstitution(TypeVariableType *tv, Type subst) {
-    subst = subst->getRValue();
-    if (!isValidSubstitution(tv, subst))
+  /// Attempts to bind \p tv's to \p proposedBinding.
+  bool tryBindTypeVariable(TypeVariableType *tv, Type proposedBinding) {
+    proposedBinding = proposedBinding->getRValue();
+    if (!tv->canBindTo(proposedBinding))
       return false;
-    if (canSetSubstitutions) {
-      auto &info = TypeVariableInfo::get(tv);
-      info.setSubstitution(subst);
-      updateTypeVariableKind(info);
-    }
+    if (canBindTypeVariables)
+      tv->bindTo(proposedBinding);
     return true;
-  }
-
-  static bool isIntegerTypeVariable(CanType type) {
-    if (auto *tv = type->getAs<TypeVariableType>())
-      return TypeVariableInfo::get(tv).isIntegerTypeVariable();
-    return false;
-  }
-
-  static bool isFloatTypeVariable(CanType type) {
-    if (auto *tv = type->getAs<TypeVariableType>())
-      return TypeVariableInfo::get(tv).isFloatTypeVariable();
-    return false;
-  }
-
-  static bool isGeneralTypeVariable(CanType type) {
-    if (auto *tv = type->getAs<TypeVariableType>())
-      return TypeVariableInfo::get(tv).isGeneralTypeVariable();
-    return false;
-  }
-
-  /// Checks if \p type is a valid substitution for \p tv.
-  /// \returns true if \p TV has no substitution & \p type is an acceptable
-  /// substitution
-  bool isValidSubstitution(const TypeVariableType *tv, Type type) const {
-    auto &info = TypeVariableInfo::get(tv);
-    if (info.hasSubstitution() || type->hasErrorType() || type->hasLValue())
-      return false;
-    // Check that \p type != tv - We don't want to end up with a cycles.
-    CanType canonicalType = type->getCanonicalType();
-    assert(tv != type.getPtr() &&
-           "Attempting to set a TV's substitution to itself!");
-    // Check if the substitution is legal.
-    switch (info.getTypeVariableKind()) {
-    case TypeVariableKind::General:
-      return true;
-    case TypeVariableKind::Integer:
-      return canonicalType->isAnyIntegerType() ||
-             isIntegerTypeVariable(canonicalType);
-    case TypeVariableKind::Float:
-      return canonicalType->isAnyFloatType() ||
-             isFloatTypeVariable(canonicalType);
-    default:
-      llvm_unreachable("Unknown TypeVariableKind!");
-    }
   }
 
   bool unify(Type type, Type other) {
@@ -305,22 +171,20 @@ public:
     if (type->getCanonicalType() == other->getCanonicalType())
       return true;
 
-    auto setOrUnifySubstitution = [&](TypeVariableType *tv, Type subst) {
-      TypeVariableInfo &info = TypeVariableInfo::get(tv);
-      if (info.hasSubstitution())
-        return unify(info.getSubstitution(), subst);
-      return trySetSubstitution(tv, subst);
+    auto setBindingOrUnify = [&](TypeVariableType *tv, Type proposedBinding) {
+      if (tv->isBound())
+        return unify(tv->getBinding(), proposedBinding);
+      return tryBindTypeVariable(tv, proposedBinding);
     };
 
-    // If one is a type variable, and the other isn't, just set the
-    // substitution, or unify the current substitution with other.
+    // If one is a type variable, and the other isn't, just bind, or unify the
+    // current binding with 'other'.
     if (TypeVariableType *tv = type->getAs<TypeVariableType>()) {
-      if (!other->is<TypeVariableType>()) {
-        return setOrUnifySubstitution(tv, other);
-      }
+      if (!other->is<TypeVariableType>())
+        return setBindingOrUnify(tv, other);
     }
     else if (TypeVariableType *otherTV = other->getAs<TypeVariableType>())
-      return setOrUnifySubstitution(otherTV, type);
+      return setBindingOrUnify(otherTV, type);
 
     type = type->getDesugaredType();
     other = other->getDesugaredType();
@@ -399,32 +263,30 @@ public:
   }
 
   bool visitTypeVariableType(TypeVariableType *type, TypeVariableType *other) {
-    TypeVariableInfo &typeInfo = TypeVariableInfo::get(type);
-    TypeVariableInfo &otherInfo = TypeVariableInfo::get(other);
+    // If they're both bound, unify their respective bindings.
+    if (type->isBound() && other->isBound())
+      return unify(type->getBinding(), other->getBinding());
 
-    // if both have a substitution, unify their substitution
-    if (typeInfo.hasSubstitution() && otherInfo.hasSubstitution())
-      return unify(typeInfo.getSubstitution(), otherInfo.getSubstitution());
-
-    // if only 'type' has a substitution, set the substitution of 'other' to
-    // 'type', unless type's substitution *is* other (equivalence class).
-    if (typeInfo.hasSubstitution()) {
-      if (typeInfo.getSubstitution()->getAs<TypeVariableType>() == other)
+    // if only 'type' is bound, bind 'other' to 'type', unless 'type' is already
+    // bound to 'other'.
+    if (type->isBound()) {
+      if (type->getBinding()->getCanonicalType()->getAs<TypeVariableType>() ==
+          other)
         return true;
-      return trySetSubstitution(other, type);
+      return tryBindTypeVariable(other, type);
     }
 
-    // if only 'other' has a substitution, set the substitution of 'type' to
-    // 'other', unless other's substitution *is* type (equivalence class).
-    if (otherInfo.hasSubstitution()) {
-      if (otherInfo.getSubstitution()->getAs<TypeVariableType>() == type)
+    // if only 'other' is bound, bind 'type' to 'other', unless 'other' is
+    // already bound to 'type'.
+    if (other->isBound()) {
+      if (other->getBinding()->getAs<TypeVariableType>() == type)
         return true;
-      return trySetSubstitution(type, other);
+      return tryBindTypeVariable(type, other);
     }
 
-    // Else, if both don't have a substitution, just set the substitution of
-    // 'type' to 'other', or 'other' to 'type if the first one doesn't work.
-    return trySetSubstitution(type, other) || trySetSubstitution(other, type);
+    // Else, if they're both unbound, just bind 'type' to 'other', or 'other' to
+    // 'type if the first one doesn't work.
+    return tryBindTypeVariable(type, other) || tryBindTypeVariable(other, type);
   }
 };
 } // namespace
@@ -432,45 +294,21 @@ public:
 //===--- ConstraintSystem -------------------------------------------------===//
 
 TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
-  // Calculate the total size we need
-  size_t size = sizeof(TypeVariableType) + sizeof(TypeVariableInfo);
-  void *mem = ctxt.allocate(size, alignof(TypeVariableType),
-                            ArenaKind::ConstraintSystem);
-  // Create the TypeVariableType
-  TypeVariableType *tyVar =
-      new (mem) TypeVariableType(ctxt, typeVariables.size());
-  // Create the info
-  new (reinterpret_cast<void *>(tyVar + 1)) TypeVariableInfo(kind);
-  // Store the TypeVariable
+  auto *tyVar = new (ctxt) TypeVariableType(ctxt, kind, typeVariables.size());
   typeVariables.push_back(tyVar);
-
-  ++numTypeVariablesCreated;
-
   return tyVar;
 }
 
-TypeVariableKind
-ConstraintSystem::getTypeVariableKind(TypeVariableType *tv) const {
-  return TypeVariableInfo::get(tv).getTypeVariableKind();
-}
-
-bool ConstraintSystem::hasSubstitution(TypeVariableType *tv) const {
-  return TypeVariableInfo::get(tv).hasSubstitution();
-}
-
-Type ConstraintSystem::getSubstitution(TypeVariableType *tv) const {
-  return TypeVariableInfo::get(tv).getSubstitution();
-}
-
 Type ConstraintSystem::simplifyType(Type type,
-                                    bool *hadUnboundTypeVariable) const {
+                                    bool *hadUnboundGeneralTypeVariable) const {
   if (!type->hasTypeVariable())
     return type;
   auto typeSimplifier = TypeSimplifier(*this, intTVDefault, floatTVDefault);
   Type simplified = typeSimplifier.visit(type);
   assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
-  if (hadUnboundTypeVariable)
-    *hadUnboundTypeVariable = typeSimplifier.hadUnboundTypeVariable;
+  if (hadUnboundGeneralTypeVariable)
+    *hadUnboundGeneralTypeVariable =
+        typeSimplifier.hadUnboundGeneralTypeVariable;
   return simplified;
 }
 
@@ -478,7 +316,7 @@ bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
   assert(a && "a is null");
   assert(b && "b is null");
-  TypeUnifier unifier(*this, options, /*canSetSubstitutions*/ true);
+  TypeUnifier unifier(options, /*canBindTypeVariables*/ true);
   bool result = unifier.unify(a, b);
   result ? ++numSuccessfulUnifications : ++numFailedUnifications;
   return result;
@@ -489,9 +327,7 @@ bool ConstraintSystem::canUnify(Type a, Type b,
   assert(a && "a is null");
   assert(b && "b is null");
   ++numCanUnifyCalls;
-  return TypeUnifier(*const_cast<ConstraintSystem *>(this), options,
-                     /*canSetSubstitutions*/ false)
-      .unify(a, b);
+  return TypeUnifier(options, /*canBindTypeVariables*/ false).unify(a, b);
 }
 
 void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
@@ -499,8 +335,7 @@ void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
   // Print the TypeVariable itself
   type->print(out, printOptions);
   // Print the kind
-  auto &info = TypeVariableInfo::get(type);
-  switch (info.getTypeVariableKind()) {
+  switch (type->getTypeVariableKind()) {
   case TypeVariableKind::General:
     out << " [general type variable]";
     break;
@@ -511,13 +346,13 @@ void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
     out << " [float type variable]";
     break;
   }
-  // Print the substitution
-  if (Type type = info.getSubstitution()) {
+  // Print the binding
+  if (Type binding = type->getBinding()) {
     out << " bound to '";
-    type.print(out, printOptions);
+    binding.print(out, printOptions);
     out << "'";
     if (type->hasTypeVariable())
-      out << " AKA '" << simplifyType(type) << "'";
+      out << " AKA '" << simplifyType(binding) << "'";
   }
   else
     out << " unbound";
