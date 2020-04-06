@@ -22,6 +22,7 @@ enum class DiagID : uint32_t {
 #define DIAG(KIND, ID, TEXT, SIGNATURE) ID,
 #include "Sora/Diagnostics/DiagnosticsAll.def"
 };
+
 // Define & Initialize all diagnostic objects
 namespace diag {
 #define DIAG(KIND, ID, TEXT, SIGNATURE)                                        \
@@ -43,18 +44,13 @@ const constexpr DiagnosticData diagnosticData[] = {
 #include "Sora/Diagnostics/DiagnosticsAll.def"
 };
 
-/// \returns the raw, unformatted diagnostic string of a diagnostic
-StringRef getRawDiagnosticString(DiagID id) {
-  return StringRef(diagnosticData[(uint32_t)id].string);
-}
-
 /// \returns the default kind of a diagnostic
 DiagnosticKind getDefaultDiagnosticKind(DiagID id) {
   return diagnosticData[(uint32_t)id].kind;
 }
 } // namespace
 
-RawDiagnostic &InFlightDiagnostic::getRawDiagnostic() {
+DiagnosticEngine::DiagnosticData &InFlightDiagnostic::getDiagnosticData() {
   assert(isActive() && "Diagnostic isn't active!");
   return diagEngine->activeDiagnostic.getValue();
 }
@@ -64,7 +60,7 @@ CharSourceRange InFlightDiagnostic::toCharSourceRange(SourceRange range) const {
   return Lexer::toCharSourceRange(diagEngine->srcMgr, range);
 }
 bool InFlightDiagnostic::canAddInfo() const {
-  return isActive() && getRawDiagnostic().getLoc().isValid();
+  return isActive() && getDiagnosticData().loc.isValid();
 }
 
 InFlightDiagnostic::~InFlightDiagnostic() {
@@ -83,7 +79,7 @@ void InFlightDiagnostic::abort() {
 InFlightDiagnostic &InFlightDiagnostic::highlightChars(CharSourceRange range) {
   assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
   assert(range && "range is invalid");
-  getRawDiagnostic().addRange(range);
+  getDiagnosticData().ranges.push_back(range);
   return *this;
 }
 
@@ -110,7 +106,7 @@ InFlightDiagnostic &InFlightDiagnostic::fixitInsertAfter(SourceLoc loc,
 InFlightDiagnostic &InFlightDiagnostic::fixitReplace(CharSourceRange range,
                                                      StringRef text) {
   assert(canAddInfo() && "diagnostic is inactive or doesn't have a loc");
-  getRawDiagnostic().addFixit(FixIt(text.str(), range));
+  getDiagnosticData().fixits.push_back(FixIt(text.str(), range));
   return *this;
 }
 
@@ -206,35 +202,26 @@ void replaceArgument(std::string &str, std::size_t index,
          "no placeholder for this diagnostic argument (unused arg?)");
 }
 
-/// \returns the diagnostic string for \p id, formatted with \p providers
-std::string
-getFormattedDiagnosticString(DiagID id,
-                             ArrayRef<RawDiagnostic::ArgProviderFn> providers) {
-  std::string str = getRawDiagnosticString(id).str();
-  for (std::size_t k = 0, size = providers.size(); k < size; ++k)
-    replaceArgument(str, k, providers[k]());
-  return str;
-}
 } // namespace
 
 void DiagnosticEngine::emit() {
   assert(activeDiagnostic.hasValue() && "No active diagnostic!");
 
   // Fetch the Diagnostic Kind, if it's null, abort the diag.
-  RawDiagnostic &rawDiag = *activeDiagnostic;
-  auto optDiagKind = getDiagnosticKind(rawDiag.getDiagID());
+  DiagnosticData &diagData = *activeDiagnostic;
+  auto optDiagKind = getDiagnosticKind(diagData.id);
   if (!optDiagKind.hasValue()) {
     abort();
     return;
   }
 
   // Format the diagnsotic
-  std::string diagStr = getFormattedDiagnosticString(rawDiag.getDiagID(),
-                                                     rawDiag.getArgProviders());
+  std::string diagStr =
+      getFormattedDiagnosticString(diagData.id, diagData.argProviders);
 
   // Create the diagnostic object
-  Diagnostic diag(diagStr, optDiagKind.getValue(), rawDiag.getLoc(),
-                  rawDiag.getRanges(), rawDiag.getFixits());
+  Diagnostic diag(diagStr, optDiagKind.getValue(), diagData.loc,
+                  diagData.ranges, diagData.fixits);
 
   // Feed it to the consumer if there's one
   if (consumer)
@@ -244,3 +231,12 @@ void DiagnosticEngine::emit() {
 }
 
 void DiagnosticEngine::abort() { activeDiagnostic.reset(); }
+
+/// \returns the diagnostic string for \p id, formatted with \p providers
+std::string DiagnosticEngine::getFormattedDiagnosticString(
+    DiagID id, ArrayRef<DiagnosticEngine::ArgProviderFn> providers) {
+  std::string str = StringRef(diagnosticData[(uint32_t)id].string).str();
+  for (std::size_t k = 0, size = providers.size(); k < size; ++k)
+    replaceArgument(str, k, providers[k]());
+  return str;
+}

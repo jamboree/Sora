@@ -22,9 +22,10 @@
 #include <stdint.h>
 
 namespace sora {
-class DiagnosticEngine;
-class SourceManager;
 class BufferID;
+class DiagnosticEngine;
+class InFlightDiagnostic;
+class SourceManager;
 
 /// The unique identifier of a diagnostic
 enum class DiagID : uint32_t;
@@ -90,137 +91,6 @@ DIAGNOSTIC_ARGUMENT(char, char, { return std::string(1, value); });
 DIAGNOSTIC_ARGUMENT(StringRef, StringRef, { return value.str(); });
 DIAGNOSTIC_ARGUMENT(std::string, const std::string &, { return value; });
 #undef DIAGNOSTIC_ARGUMENT
-
-/// Represents a raw, unformatted Diagnostic. This is used to store
-/// the data of in-flight diagnostics.
-class RawDiagnostic {
-public:
-  /// An Argument-providing function.
-  /// Those are created by binding an argument's DiagnosticArgument::format
-  /// function with the argument.
-  using ArgProviderFn = std::function<std::string()>;
-
-private:
-  SmallVector<ArgProviderFn, 4> argProviders;
-  const DiagID id;
-  SmallVector<FixIt, 2> fixits;
-  const SourceLoc loc;
-  SmallVector<CharSourceRange, 2> ranges;
-
-  friend DiagnosticEngine;
-
-public:
-  RawDiagnostic(const RawDiagnostic &) = delete;
-  RawDiagnostic &operator=(const RawDiagnostic &) = delete;
-
-  /// Constructor for diagnostics with arguments
-  template <typename... Args>
-  RawDiagnostic(TypedDiag<Args...> diag, SourceLoc loc,
-                typename detail::PassArgument<Args>::type... args)
-      : id(diag.id), loc(loc) {
-    argProviders = {std::bind(DiagnosticArgument<Args>::format, args)...};
-  }
-
-  /// Constructor for diagnostics with no arguments
-  template <typename... Args>
-  RawDiagnostic(TypedDiag<> diag, SourceLoc loc) : id(diag.id), loc(loc) {}
-
-  /// Adds a FixIt object to this Diagnostic.
-  void addFixit(const FixIt &fixit) {
-    assert(loc && "Cannot add a FixIt to a diagnostic if it does not "
-                  "have a SourceLoc!");
-    fixits.push_back(fixit);
-  }
-  /// Adds a CharSourceRange object to this Diagnostic.
-  void addRange(const CharSourceRange &range) {
-    assert(loc && "Cannot add a SourceRange to a diagnostic if it does not "
-                  "have a SourceLoc!");
-    ranges.push_back(range);
-  }
-
-  /// \returns The argument providers for this Diagnostic.
-  ArrayRef<ArgProviderFn> getArgProviders() const { return argProviders; }
-  /// \returns The location of this Diagnostic.
-  SourceLoc getLoc() const { return loc; }
-  /// \returns The FixIts attached to this Diagnostic.
-  ArrayRef<FixIt> getFixits() const { return fixits; }
-  /// \returns The ID of this Diagnostic.
-  DiagID getDiagID() const { return id; }
-  /// \returns The additional ranges of this Diagnostic.
-  ArrayRef<CharSourceRange> getRanges() const { return ranges; }
-};
-
-/// Builder for in-flight diagnostics (attach Fix-Its and highlight
-/// additional ranges of text)
-///
-/// When this object is destroyed, it emits the Diagnostic.
-/// The Diagnostic can be aborted by calling "abort()".
-///
-/// NOTE: If the diagnostic doesn't have a valid SourceLoc, you can't change it.
-class InFlightDiagnostic {
-  /// The DiagnosticEngine instance
-  DiagnosticEngine *diagEngine = nullptr;
-
-  friend DiagnosticEngine;
-
-  /// Constructor for the DiagnosticEngine
-  InFlightDiagnostic(DiagnosticEngine *diagEngine) : diagEngine(diagEngine) {}
-
-  /// \returns the raw diagnostic we're building
-  RawDiagnostic &getRawDiagnostic();
-
-  const RawDiagnostic &getRawDiagnostic() const {
-    return const_cast<InFlightDiagnostic *>(this)->getRawDiagnostic();
-  }
-
-  /// Converts a SourceRange to a CharSourceRange
-  CharSourceRange toCharSourceRange(SourceRange range) const;
-
-  /// \returns true if this diagnostic is active and has a valid loc
-  bool canAddInfo() const;
-
-public:
-  InFlightDiagnostic() = default;
-
-  InFlightDiagnostic(const InFlightDiagnostic &) = delete;
-  InFlightDiagnostic &operator=(const InFlightDiagnostic &) = delete;
-
-  InFlightDiagnostic(InFlightDiagnostic &&other) { *this = std::move(other); }
-
-  InFlightDiagnostic &operator=(InFlightDiagnostic &&other) {
-    diagEngine = other.diagEngine;
-    other.diagEngine = nullptr;
-    return *this;
-  }
-
-  /// Emits the Diagnostic
-  ~InFlightDiagnostic();
-
-  /// Aborts this diagnostic (it will not be emitted)
-  void abort();
-
-  /// \returns true if this diagnostic is still active
-  bool isActive() const { return diagEngine; }
-
-  /// Highlights the range of characters covered by \p range
-  InFlightDiagnostic &highlightChars(CharSourceRange range);
-
-  /// Highlights the range of tokens \p range
-  InFlightDiagnostic &highlight(SourceRange range);
-
-  /// Adds a insertion fix-it (insert \p text at \p loc)
-  InFlightDiagnostic &fixitInsert(SourceLoc loc, StringRef text);
-
-  /// Adds a insertion fix-it (insert \p text after the token at \p loc)
-  InFlightDiagnostic &fixitInsertAfter(SourceLoc loc, StringRef text);
-
-  /// Adds a replacement fix-it (replace the character range \p range by
-  /// \p text)
-  InFlightDiagnostic &fixitReplace(CharSourceRange range, StringRef text);
-
-  /// Adds a removal fix-it (remove the tokens in \p range)
-  InFlightDiagnostic &fixitRemove(SourceRange range);
-};
 
 /// The DiagnosticEngine, the heart of the Diagnostic System.
 /// This handles most things related to diagnostics: creation, feeding
@@ -312,6 +182,11 @@ public:
 private:
   friend InFlightDiagnostic;
 
+  /// An Argument-providing function.
+  /// Those are created by binding an argument's DiagnosticArgument::format
+  /// function with the argument.
+  using ArgProviderFn = std::function<std::string()>;
+
   /// \returns the kind of diagnostic of \p id depending on the current
   /// state of this DiagnosticEngine. Returns "None" if the diagnostic
   /// should not be emitted.
@@ -332,12 +207,113 @@ private:
   /// \returns true if we have an active diagnostic.
   bool hasActiveDiagnostic() const { return activeDiagnostic.hasValue(); }
 
+  /// \returns the diagnostic string of the diagnostic \p id, formatted using \p
+  /// providers.
+  std::string getFormattedDiagnosticString(DiagID id,
+                                           ArrayRef<ArgProviderFn> providers);
+
   /// The Diagnostic Consumer
   std::unique_ptr<DiagnosticConsumer> consumer = nullptr;
 
+  /// Contains the data of a diagnostic.
+  struct DiagnosticData {
+    DiagnosticData(const DiagnosticData &) = delete;
+    DiagnosticData &operator=(const DiagnosticData &) = delete;
+
+    /// Constructor for diagnostics with arguments
+    template <typename... Args>
+    DiagnosticData(TypedDiag<Args...> diag, SourceLoc loc,
+                   typename detail::PassArgument<Args>::type... args)
+        : id(diag.id), loc(loc) {
+      argProviders = {std::bind(DiagnosticArgument<Args>::format, args)...};
+    }
+
+    /// Constructor for diagnostics with no arguments
+    template <typename... Args>
+    DiagnosticData(TypedDiag<> diag, SourceLoc loc) : id(diag.id), loc(loc) {}
+
+    SmallVector<ArgProviderFn, 4> argProviders;
+    const DiagID id;
+    SmallVector<FixIt, 2> fixits;
+    const SourceLoc loc;
+    SmallVector<CharSourceRange, 2> ranges;
+  };
+
   /// The currently active diagnostic, or "None" if there is no
   /// active diagnostic.
-  Optional<RawDiagnostic> activeDiagnostic;
+  Optional<DiagnosticData> activeDiagnostic;
+};
+
+/// Builder for in-flight diagnostics (attach Fix-Its and highlight
+/// additional ranges of text)
+///
+/// When this object is destroyed, it emits the Diagnostic.
+/// The Diagnostic can be aborted by calling "abort()".
+///
+/// NOTE: If the diagnostic doesn't have a valid SourceLoc, you can't change it.
+class InFlightDiagnostic {
+  /// The DiagnosticEngine instance
+  DiagnosticEngine *diagEngine = nullptr;
+
+  friend DiagnosticEngine;
+
+  /// Constructor for the DiagnosticEngine
+  InFlightDiagnostic(DiagnosticEngine *diagEngine) : diagEngine(diagEngine) {}
+
+  /// \returns the raw diagnostic we're building
+  DiagnosticEngine::DiagnosticData &getDiagnosticData();
+
+  const DiagnosticEngine::DiagnosticData &getDiagnosticData() const {
+    return const_cast<InFlightDiagnostic *>(this)->getDiagnosticData();
+  }
+
+  /// Converts a SourceRange to a CharSourceRange
+  CharSourceRange toCharSourceRange(SourceRange range) const;
+
+  /// \returns true if this diagnostic is active and has a valid loc
+  bool canAddInfo() const;
+
+public:
+  InFlightDiagnostic() = default;
+
+  InFlightDiagnostic(const InFlightDiagnostic &) = delete;
+  InFlightDiagnostic &operator=(const InFlightDiagnostic &) = delete;
+
+  InFlightDiagnostic(InFlightDiagnostic &&other) { *this = std::move(other); }
+
+  InFlightDiagnostic &operator=(InFlightDiagnostic &&other) {
+    diagEngine = other.diagEngine;
+    other.diagEngine = nullptr;
+    return *this;
+  }
+
+  /// Emits the Diagnostic
+  ~InFlightDiagnostic();
+
+  /// Aborts this diagnostic (it will not be emitted)
+  void abort();
+
+  /// \returns true if this diagnostic is still active
+  bool isActive() const { return diagEngine; }
+
+  /// Highlights the range of characters covered by \p range
+  InFlightDiagnostic &highlightChars(CharSourceRange range);
+
+  /// Highlights the range of tokens \p range
+  InFlightDiagnostic &highlight(SourceRange range);
+
+  /// Adds a insertion fix-it (insert \p text at \p loc)
+  InFlightDiagnostic &fixitInsert(SourceLoc loc, StringRef text);
+
+  /// Adds a insertion fix-it (insert \p text after the token at \p loc)
+  InFlightDiagnostic &fixitInsertAfter(SourceLoc loc, StringRef text);
+
+  /// Adds a replacement fix-it (replace the character range \p range by
+  /// \p text)
+  InFlightDiagnostic &fixitReplace(CharSourceRange range, StringRef text);
+
+  /// Adds a removal fix-it (remove the tokens in \p range)
+  InFlightDiagnostic &fixitRemove(SourceRange range);
 };
 
 } // namespace sora
