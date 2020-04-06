@@ -139,17 +139,8 @@ public:
   bool canUnify(Type a, Type b,
                 const UnificationOptions &options = UnificationOptions()) const;
 
-  /// Prints \p type and its TypeVariableInfo to \p out
-  void print(raw_ostream &out, const TypeVariableType *type,
-             const TypePrintOptions &printOptions = TypePrintOptions()) const;
-
   void dumpTypeVariables(
       raw_ostream &out,
       const TypePrintOptions &printOptions = TypePrintOptions()) const;
-
-  void dumpTypeVariable(const TypeVariableType *type) const {
-    print(llvm::dbgs(), type, TypePrintOptions::forDebug());
-    llvm::dbgs() << "\n";
-  }
 };
 } // namespace sora

@@ -330,42 +330,18 @@ bool ConstraintSystem::canUnify(Type a, Type b,
   return TypeUnifier(options, /*canBindTypeVariables*/ false).unify(a, b);
 }
 
-void ConstraintSystem::print(raw_ostream &out, const TypeVariableType *type,
-                             const TypePrintOptions &printOptions) const {
-  // Print the TypeVariable itself
-  type->print(out, printOptions);
-  // Print the kind
-  switch (type->getTypeVariableKind()) {
-  case TypeVariableKind::General:
-    out << " [general type variable]";
-    break;
-  case TypeVariableKind::Integer:
-    out << " [integer type variable]";
-    break;
-  case TypeVariableKind::Float:
-    out << " [float type variable]";
-    break;
-  }
-  // Print the binding
-  if (Type binding = type->getBinding()) {
-    out << " bound to '";
-    binding.print(out, printOptions);
-    out << "'";
-    if (type->hasTypeVariable())
-      out << " AKA '" << simplifyType(binding) << "'";
-  }
-  else
-    out << " unbound";
-}
-
 void ConstraintSystem::dumpTypeVariables(
     raw_ostream &out, const TypePrintOptions &printOptions) const {
   if (typeVariables.empty())
     out << "    <no type variables>\n";
   else
-    for (TypeVariableType *tv : typeVariables) {
+    for (TypeVariableType *tyVar : typeVariables) {
       out << "    ";
-      print(out, tv, printOptions);
+      tyVar->print(out, TypePrintOptions::forDebug());
+      if (tyVar->isBound())
+        if (Type simplified = simplifyType(tyVar->getBinding()))
+          if (simplified->hasErrorType())
+            out << " AKA '" << simplified << "'";
       out << "\n";
     }
 }
