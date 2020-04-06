@@ -209,7 +209,7 @@ void replaceArgument(std::string &str, std::size_t index,
 /// \returns the diagnostic string for \p id, formatted with \p providers
 std::string
 getFormattedDiagnosticString(DiagID id,
-                             ArrayRef<DiagnosticArgumentProvider> providers) {
+                             ArrayRef<RawDiagnostic::ArgProviderFn> providers) {
   std::string str = getRawDiagnosticString(id).str();
   for (std::size_t k = 0, size = providers.size(); k < size; ++k)
     replaceArgument(str, k, providers[k]());

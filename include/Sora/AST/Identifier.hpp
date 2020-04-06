@@ -50,9 +50,9 @@ public:
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &out, Identifier ident);
 
-template <typename Ty> struct DiagnosticArgumentFormatter;
+template <typename Ty> struct DiagnosticArgument;
 
-template <> struct DiagnosticArgumentFormatter<Identifier> {
+template <> struct DiagnosticArgument<Identifier> {
   static std::string format(Identifier ident) { return ident.c_str(); }
 };
 } // namespace sora

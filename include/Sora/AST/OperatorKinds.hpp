@@ -11,7 +11,7 @@
 #include <string>
 
 namespace sora {
-template <typename Ty> struct DiagnosticArgumentFormatter;
+template <typename Ty> struct DiagnosticArgument;
 
 /// Kinds of Binary Operators
 enum class BinaryOperatorKind : uint8_t {
@@ -26,7 +26,7 @@ const char *getSpelling(BinaryOperatorKind op);
 const char *to_string(BinaryOperatorKind op);
 
 // Make BinaryOperatorKind usable in Diagnostic Arguments
-template <> struct DiagnosticArgumentFormatter<BinaryOperatorKind> {
+template <> struct DiagnosticArgument<BinaryOperatorKind> {
   static std::string format(BinaryOperatorKind op) { return getSpelling(op); }
 };
 
@@ -85,7 +85,7 @@ const char *getSpelling(UnaryOperatorKind op);
 const char *to_string(UnaryOperatorKind op);
 
 // Make UnaryOperatorKind usable in Diagnostic Arguments
-template <> struct DiagnosticArgumentFormatter<UnaryOperatorKind> {
+template <> struct DiagnosticArgument<UnaryOperatorKind> {
   static std::string format(UnaryOperatorKind op) { return getSpelling(op); }
 };
 

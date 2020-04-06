@@ -67,51 +67,41 @@ template <typename Ty> struct PassArgument { using type = Ty; };
 /// of the static format method that returns a human-readable string
 /// usable in diagnostics. SORA_FWD_DECL(class Foo) will also need to be used in
 /// the files that wish to use Foo as diagnostic arguments.
-template <typename Ty> struct DiagnosticArgumentFormatter {
+template <typename Ty> struct DiagnosticArgument {
   static std::string format(Ty value) {
     // This below will always evaluate to false and trip when ::format
     // doesn't exist for that type
-    static_assert(
-        !std::is_same<Ty, Ty>::value,
-        "No specialization of DiagnosticArgumentFormatter for this type.");
+    static_assert(!std::is_same<Ty, Ty>::value,
+                  "No specialization of DiagnosticArgument for this type.");
   }
 
   // Add a specialization for size_t in case it differs from "unsigned int" on
   // some systems.
 };
 
-/// Provide some implementation for basic types.
-/// FIXME: Can this be implemented better? For now it just works, but I feel
-/// like there's a better, template-y way to do this.
-#define SIMPLE_DAF_IMPL(Ty, PassTy, Body)                                      \
-  template <> struct DiagnosticArgumentFormatter<Ty> {                         \
+/// Provide some implementation of DiagnosticArgument for common types.
+#define DIAGNOSTIC_ARGUMENT(Ty, PassTy, Body)                                  \
+  template <> struct DiagnosticArgument<Ty> {                                  \
     static std::string format(Ty value) Body                                   \
   }
-SIMPLE_DAF_IMPL(size_t, size_t, { return std::to_string(value); });
-SIMPLE_DAF_IMPL(int, int, { return std::to_string(value); });
-SIMPLE_DAF_IMPL(char, char, { return std::string(1, value); });
-SIMPLE_DAF_IMPL(StringRef, StringRef, { return value.str(); });
-SIMPLE_DAF_IMPL(std::string, const std::string &, { return value; });
-#undef SIMPLE_DAF_IMPL
-
-/// The type of a Diagnostic Argument "Provider".
-/// This is created by binding the DiagnosticArgumentFormatter::format
-/// static method to the argument value.
-///
-/// This is pretty helpful because it makes argument formatting very lazy. If a
-/// diagnostic is aborted, we won't even format its argument and the diagnostic
-/// string!
-///
-/// e.g. if the type is "Foo", then this is created by doing
-/// \verbatim
-///   std::bind(DiagnosticArgumentFormatter<Foo>::format, arg)
-/// \endverbatim
-using DiagnosticArgumentProvider = std::function<std::string()>;
+DIAGNOSTIC_ARGUMENT(size_t, size_t, { return std::to_string(value); });
+DIAGNOSTIC_ARGUMENT(int, int, { return std::to_string(value); });
+DIAGNOSTIC_ARGUMENT(char, char, { return std::string(1, value); });
+DIAGNOSTIC_ARGUMENT(StringRef, StringRef, { return value.str(); });
+DIAGNOSTIC_ARGUMENT(std::string, const std::string &, { return value; });
+#undef DIAGNOSTIC_ARGUMENT
 
 /// Represents a raw, unformatted Diagnostic. This is used to store
 /// the data of in-flight diagnostics.
 class RawDiagnostic {
-  SmallVector<DiagnosticArgumentProvider, 4> argProviders;
+public:
+  /// An Argument-providing function.
+  /// Those are created by binding an argument's DiagnosticArgument::format
+  /// function with the argument.
+  using ArgProviderFn = std::function<std::string()>;
+
+private:
+  SmallVector<ArgProviderFn, 4> argProviders;
   const DiagID id;
   SmallVector<FixIt, 2> fixits;
   const SourceLoc loc;
@@ -128,8 +118,7 @@ public:
   RawDiagnostic(TypedDiag<Args...> diag, SourceLoc loc,
                 typename detail::PassArgument<Args>::type... args)
       : id(diag.id), loc(loc) {
-    argProviders = {
-        std::bind(DiagnosticArgumentFormatter<Args>::format, args)...};
+    argProviders = {std::bind(DiagnosticArgument<Args>::format, args)...};
   }
 
   /// Constructor for diagnostics with no arguments
@@ -150,9 +139,7 @@ public:
   }
 
   /// \returns The argument providers for this Diagnostic.
-  ArrayRef<DiagnosticArgumentProvider> getArgProviders() const {
-    return argProviders;
-  }
+  ArrayRef<ArgProviderFn> getArgProviders() const { return argProviders; }
   /// \returns The location of this Diagnostic.
   SourceLoc getLoc() const { return loc; }
   /// \returns The FixIts attached to this Diagnostic.

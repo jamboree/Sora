@@ -155,15 +155,15 @@ public:
   void setType(Type type) { this->type = type; }
 };
 
-template <typename Ty> struct DiagnosticArgumentFormatter;
+template <typename Ty> struct DiagnosticArgument;
 
-template <> struct DiagnosticArgumentFormatter<Type> {
+template <> struct DiagnosticArgument<Type> {
   static std::string format(Type type);
 };
 
-template <> struct DiagnosticArgumentFormatter<CanType> {
+template <> struct DiagnosticArgument<CanType> {
   static std::string format(CanType type) {
-    return DiagnosticArgumentFormatter<Type>::format(type);
+    return DiagnosticArgument<Type>::format(type);
   }
 };
 } // namespace sora

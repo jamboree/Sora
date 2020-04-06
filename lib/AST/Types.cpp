@@ -176,7 +176,7 @@ SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
 }
 
-std::string DiagnosticArgumentFormatter<Type>::format(Type type) {
+std::string DiagnosticArgument<Type>::format(Type type) {
   return type.getString(TypePrintOptions::forDiagnostics());
 }
 
