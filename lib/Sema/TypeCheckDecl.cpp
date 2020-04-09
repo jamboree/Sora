@@ -87,7 +87,7 @@ public:
   DeclChecker(TypeChecker &tc, SourceFile &file)
       : ASTCheckerBase(tc), file(file) {}
 
-  // An RAII object that marks a declaratin as being checked on destruction.
+  // An RAII object that marks a declaration as being checked on destruction.
   class RAIIDeclChecking {
     Decl *const decl = nullptr;
 
@@ -332,17 +332,18 @@ public:
     else {
       // If this is a "let" condition, we should have an initializer. Complain
       // about it!
-      if (isCondition)
+      if (isCondition) {
         // FIXME: Should the user be also told that the init must have a 'maybe'
         // type?
         diagnose(decl->getLetLoc(),
                  diag::variable_binding_in_cond_requires_initializer)
             .fixitInsertAfter(decl->getEndLoc(), "= <expression>")
             .highlight(decl->getLetLoc());
-      // TypeCheck the pattern in solo, and don't emit inference errors about
-      // the pattern as the fix for the user is simple (just add an
-      // initializer) and we don't want to bother him too much w/ useless
-      // diagnostics.
+      }
+
+      // TypeCheck the pattern alone, and don't emit inference errors about
+      // the pattern for conditions as the fix for the user is simpler - just
+      // add an initializer as requested above!
       tc.typecheckPattern(decl->getPattern(), decl->getDeclContext(),
                           /*canEmitInferenceErrors=*/!isCondition);
     }
