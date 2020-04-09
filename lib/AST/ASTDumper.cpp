@@ -13,9 +13,11 @@
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/TypeRepr.hpp"
+#include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -314,15 +316,23 @@ public:
     dumpCommon(expr);
     out << ' ';
     dumpLoc(expr->getLoc(), "loc");
-    out << " str='" << expr->getString() << "' rawValue=" << expr->getRawValue()
-        << '\n';
+    out << " str='" << expr->getString() << "'";
+    if (expr->hasType() && expr->getType()->isAnyIntegerType())
+      out << " value=" << expr->getValue();
+    out << '\n';
   }
 
   void visitFloatLiteralExpr(FloatLiteralExpr *expr) {
     dumpCommon(expr);
     out << ' ';
     dumpLoc(expr->getLoc(), "loc");
-    out << " str='" << expr->getString() << "'\n";
+    out << " str='" << expr->getString() << "'";
+    if (expr->hasType() && expr->getType()->isAnyFloatType()) {
+      SmallVector<char, 16> buffer;
+      expr->getValue().toString(buffer);
+      out << " value=" << buffer;
+    }
+    out << '\n';
   }
 
   void visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {

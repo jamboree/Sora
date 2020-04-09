@@ -7,7 +7,7 @@ func foo() {
   _
   // CHECK-NEXT: NullLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3
   null
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3 str='0'
   0
   // CHECK-NEXT: FloatLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3 str='0.0'
   0.0

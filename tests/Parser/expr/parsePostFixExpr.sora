@@ -21,12 +21,12 @@ func suffix() {
   foo() 
   // CHECK: CallExpr type=<null_type> lParenLoc=line:[[@LINE+3]]:6 rParenLoc=line:[[@LINE+3]]:8 numArgs=1
   // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:7 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:7 str='0'
   foo(0)
   // CHECK: CallExpr type=<null_type> lParenLoc=line:[[@LINE+4]]:6 rParenLoc=line:[[@LINE+4]]:11 numArgs=2
   // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:7 str='1' rawValue=1
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:10 str='2' rawValue=2
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:7 str='1'
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:10 str='2'
   foo(1, 2)
 
   // Shouldn't be treated as a call.
@@ -38,10 +38,10 @@ func suffix() {
 
   // Shouldn't be treated as unwrap expr.
   // CHECK-NOT: ForceUnwrapExpr
-  // CHECK: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3 str='0' rawValue=0
+  // CHECK: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:3 str='0'
   0 
   // CHECK: UnaryExpr type=<null_type> ! (LNot) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   !0
 }
 

@@ -24,9 +24,9 @@ func correct() {
    // CHECK: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:13 rParenLoc=line:[[@LINE+1]]:14
    let () = ()
    // CHECK: VarDecl type=usize identifier=c0 identifierLoc=line:[[@LINE+2]]:8 immutable
-   // CHECK: IntegerLiteralExpr type=usize loc=line:[[@LINE+1]]:20 str='0' rawValue=0
+   // CHECK: IntegerLiteralExpr type=usize loc=line:[[@LINE+1]]:20 str='0' value=0
    let c0: usize = 0
    // CHECK: VarDecl type=i32 identifier=d0 identifierLoc=line:[[@LINE+2]]:8 immutable
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:13
+   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:13 str='0' value=0
    let d0 = 0
 }

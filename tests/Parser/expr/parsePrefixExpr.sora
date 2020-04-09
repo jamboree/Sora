@@ -2,31 +2,31 @@
 
 func foo() {
   // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   +0
   // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+3]]:3
   // CHECK-NEXT: UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+2]]:4
-  // CHECK-NEXT:  IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:5 str='0' rawValue=0
+  // CHECK-NEXT:  IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:5 str='0'
   ++0
   // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+4]]:3
   // CHECK-NEXT: UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+3]]:4
   // CHECK-NEXT:  UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+2]]:5
-  // CHECK-NEXT:   IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:6 str='0' rawValue=0
+  // CHECK-NEXT:   IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:6 str='0'
   +++0
   // CHECK: UnaryExpr type=<null_type> - (Minus) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   -0
   // CHECK: UnaryExpr type=<null_type> ! (LNot) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   !0
   // CHECK: UnaryExpr type=<null_type> ~ (Not) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   ~0
   // CHECK: UnaryExpr type=<null_type> * (Deref) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   *0
   // CHECK: UnaryExpr type=<null_type> & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0' rawValue=0
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:4 str='0'
   &0
 }
 

@@ -9,13 +9,13 @@ func errors() {
 
 func correct() {
   // CHECK: BinaryExpr type=<null_type> + (Add) opLoc=line:[[@LINE+3]]:4
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3' rawValue=3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:5 str='3' rawValue=3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3'
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:5 str='3'
   3+3
   
   // CHECK: BinaryExpr type=<null_type> + (Add) opLoc=line:[[@LINE+3]]:4
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3' rawValue=3
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3' rawValue=3
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3'
+  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3'
   3+
   3
 }
