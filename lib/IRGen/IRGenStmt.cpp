@@ -77,3 +77,7 @@ void IRGen::genStmt(Stmt *stmt, mlir::OpBuilder builder) {
 void IRGen::genStmt(BlockStmt *stmt, mlir::OpBuilder builder) {
   return genStmt((Stmt *)stmt, builder);
 }
+
+mlir::Location IRGen::getNodeLoc(Stmt *stmt) {
+  return mlir::OpaqueLoc::get(stmt, getFileLineColLoc(stmt->getLoc()));
+}

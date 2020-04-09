@@ -7,4 +7,12 @@
 
 #include "IRGen.hpp"
 
+#include "Sora/AST/Pattern.hpp"
+
 using namespace sora;
+
+//===- IRGen --------------------------------------------------------------===//
+
+mlir::Location IRGen::getNodeLoc(Pattern *pattern) {
+  return mlir::OpaqueLoc::get(pattern, getFileLineColLoc(pattern->getLoc()));
+}

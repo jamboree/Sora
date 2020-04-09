@@ -85,7 +85,7 @@ mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   // TODO: Create a "BuildIntConstant" method as I'll probably need to create
   // int constants a lot.
   auto valueAttr = mlir::IntegerAttr::get(type, expr->getValue());
-  return builder.create<mlir::ConstantOp>(irGen.getIRLoc(expr), valueAttr);
+  return builder.create<mlir::ConstantOp>(irGen.getNodeLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
@@ -94,7 +94,7 @@ mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
 
   auto valueAttr = mlir::FloatAttr::get(type, expr->getValue());
-  return builder.create<mlir::ConstantOp>(irGen.getIRLoc(expr), valueAttr);
+  return builder.create<mlir::ConstantOp>(irGen.getNodeLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
@@ -104,7 +104,7 @@ mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   APInt value(1, expr->getValue() ? 1 : 0);
 
   auto valueAttr = mlir::IntegerAttr::get(type, value);
-  return builder.create<mlir::ConstantOp>(irGen.getIRLoc(expr), valueAttr);
+  return builder.create<mlir::ConstantOp>(irGen.getNodeLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitNullLiteralExpr(NullLiteralExpr *expr) {
@@ -148,7 +148,7 @@ mlir::Value ExprIRGenerator::visitCastExpr(CastExpr *expr) {
 
   // Convert the result type and the loc to their MLIR equivalent.
   mlir::Type mlirType = irGen.getIRType(type);
-  mlir::Location loc = irGen.getIRLoc(expr->getLoc());
+  mlir::Location loc = irGen.getNodeLoc(expr);
 
   // Currently, all sora casts are static casts, so just emit a static_cast op.
   return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
@@ -232,3 +232,7 @@ mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder builder) {
 }
 
 mlir::Type IRGen::getIRType(Expr *expr) { return getIRType(expr->getType()); }
+
+mlir::Location IRGen::getNodeLoc(Expr *expr) {
+  return mlir::OpaqueLoc::get(expr, getFileLineColLoc(expr->getLoc()));
+}

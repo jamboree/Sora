@@ -37,16 +37,7 @@ void IRGen::genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule) {
     mlirModule.push_back(genFunctionBody(cast<FuncDecl>(decl)));
 }
 
-mlir::Location IRGen::getIRLoc(ASTNode node) {
-  return getIRLoc(node.getSourceRange());
-}
-
-mlir::Location IRGen::getIRLoc(SourceRange range) {
-  // FIXME: Represent the full range?
-  return getIRLoc(range.begin);
-}
-
-mlir::Location IRGen::getIRLoc(SourceLoc loc) {
+mlir::Location IRGen::getFileLineColLoc(SourceLoc loc) {
   if (!debugInfoEnabled)
     return mlir::UnknownLoc::get(&mlirCtxt);
 

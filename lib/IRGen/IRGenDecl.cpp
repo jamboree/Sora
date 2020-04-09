@@ -27,7 +27,7 @@ mlir::FuncOp IRGen::getFuncOp(FuncDecl *func) {
     return it->second;
 
   auto name = getIRIdentifier(func->getIdentifier());
-  mlir::Location loc = getIRLoc(func->getLoc());
+  mlir::Location loc = getNodeLoc(func);
 
   Type fnTy = func->getValueType()->getAs<FunctionType>();
   assert(fnTy->is<FunctionType>() && "Function's type is not a FunctionType?!");
@@ -52,4 +52,8 @@ mlir::FuncOp IRGen::genFunctionBody(FuncDecl *func) {
   genStmt(func->getBody(), builder);
 
   return funcOp;
+}
+
+mlir::Location IRGen::getNodeLoc(Decl *decl) {
+  return mlir::OpaqueLoc::get(decl, getFileLineColLoc(decl->getLoc()));
 }

@@ -92,17 +92,23 @@ public:
   /// \c genFunctionBody.
   mlir::FuncOp getFuncOp(FuncDecl *func);
 
-  /// \returns the MLIR Location for \p node's SourceRange, or mlir::UnknownLoc
-  /// if debug info is disabled.
-  mlir::Location getIRLoc(ASTNode node);
+  /// \returns the MLIR Location for \p expr
+  mlir::Location getNodeLoc(Expr *expr);
 
-  /// \returns the MLIR Location for \p loc, or mlir::UnknownLoc if debug info
-  /// is disabled.
-  mlir::Location getIRLoc(SourceLoc loc);
+  /// \returns the MLIR Location for \p stmt
+  mlir::Location getNodeLoc(Stmt *stmt);
 
-  /// \returns the MLIR Location for \p range, or mlir::UnknownLoc if debug info
-  /// is disabled.
-  mlir::Location getIRLoc(SourceRange range);
+  /// \returns the MLIR Location for \p decl
+  mlir::Location getNodeLoc(Decl *decl);
+
+  /// \returns the MLIR Location for \p pattern
+  mlir::Location getNodeLoc(Pattern *pattern);
+
+  /// Converts a SourceLoc \p loc to a mlir::FileLineCol loc.
+  /// Do not use this for an Op's location when generating IR for a node, use \c
+  /// getNodeLoc instead.
+  /// This returns mlir::UnknownLoc if debug info is disabled.
+  mlir::Location getFileLineColLoc(SourceLoc loc);
 
   /// \returns the MLIR Type equivalent of \p type.
   /// Note that this can NOT lower types that contain Null types.
