@@ -9,7 +9,7 @@ func int_literals() {
   3 as i32
   // CHECK: %{{.+}} = constant 4 : i64
   4 as i64
-  // CHECK: %{{.+}} = constant 5 : [[ISIZE:i64|i32]]
+  // CHECK: %{{.+}} = constant 5 : {{i64|i32}}
   5 as isize
   // CHECK: %{{.+}} = constant 6 : i8
   6 as u8
@@ -19,7 +19,7 @@ func int_literals() {
   8 as u32
   // CHECK: %{{.+}} = constant 9 : i64
   9 as u64
-  // CHECK: %{{.+}} = constant 10 : [[USIZE:i64|i32]]
+  // CHECK: %{{.+}} = constant 10 : {{i64|i32}}
   10 as usize
 }
 
