@@ -12,25 +12,29 @@
 using namespace sora;
 using namespace sora::ir;
 
-//===- Dialect ------------------------------------------------------------===//
+//===- Type Printing ------------------------------------------------------===//
 
-namespace {
-void print(MaybeType type, mlir::DialectAsmPrinter &os) {
+static void print(MaybeType type, mlir::DialectAsmPrinter &os) {
   os << "maybe<" << type.getValueType() << ">";
 }
-} // namespace
+
+static void print(ReferenceType type, mlir::DialectAsmPrinter &os) {
+  os << "reference<" << type.getPointeeType() << ">";
+}
 
 void SoraDialect::printType(mlir::Type type,
                             mlir::DialectAsmPrinter &os) const {
   switch (SoraTypeKind(type.getKind())) {
   case SoraTypeKind::Maybe:
     return print(type.cast<MaybeType>(), os);
+  case SoraTypeKind::Reference:
+    return print(type.cast<ReferenceType>(), os);
   default:
     llvm_unreachable("Unknown Sora Type!");
   }
 }
 
-//===- MaybeType ----------------------------------------------------------===//
+//===- Type Storage -------------------------------------------------------===//
 
 namespace sora {
 namespace ir {
@@ -50,9 +54,27 @@ struct MaybeTypeStorage : public mlir::TypeStorage {
 
   mlir::Type valueType;
 };
+
+struct ReferenceTypeStorage : public mlir::TypeStorage {
+  ReferenceTypeStorage(mlir::Type pointeeType) : pointeeType(pointeeType) {}
+
+  // MaybeTypes are pointer-unique.
+  using KeyTy = mlir::Type;
+  bool operator==(const KeyTy &key) const { return key == pointeeType; }
+
+  static ReferenceTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                         mlir::Type pointeeType) {
+    return new (allocator.allocate<ReferenceTypeStorage>())
+        ReferenceTypeStorage(pointeeType);
+  }
+
+  mlir::Type pointeeType;
+};
 } // namespace detail
 } // namespace ir
 } // namespace sora
+
+//===- MaybeType ----------------------------------------------------------===//
 
 MaybeType MaybeType::get(mlir::Type valueType) {
   assert(valueType && "value type cannot be null!");
@@ -61,3 +83,15 @@ MaybeType MaybeType::get(mlir::Type valueType) {
 }
 
 mlir::Type MaybeType::getValueType() const { return getImpl()->valueType; }
+
+//===- ReferenceType ------------------------------------------------------===//
+
+ReferenceType ReferenceType::get(mlir::Type pointeeType) {
+  assert(pointeeType && "pointee type cannot be null!");
+  return Base::get(pointeeType.getContext(), (unsigned)SoraTypeKind::Reference,
+                   pointeeType);
+}
+
+mlir::Type ReferenceType::getPointeeType() const {
+  return getImpl()->pointeeType;
+}

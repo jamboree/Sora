@@ -1,0 +1,63 @@
+// RUN: %sorac -emit-raw-ir %s | %filecheck %s
+
+// TODO: Use something other than functions to test this.
+
+// CHECK: func @void_t() -> none
+func void_t() {}
+
+// CHECK: func @i8_t() -> i8
+func i8_t() -> i8 {}
+// CHECK: func @i16_t() -> i16
+func i16_t() -> i16 {}
+// CHECK: func @i32_t() -> i32
+func i32_t() -> i32 {}
+// CHECK: func @i64_t() -> i64
+func i64_t() -> i64 {}
+// CHECK: func @isize_t() -> {{i64|i32}}
+func isize_t() -> isize {}
+// CHECK: func @u8_t() -> i8
+func u8_t() -> u8 {}
+// CHECK: func @u16_t() -> i16
+func u16_t() -> u16 {}
+// CHECK: func @u32_t() -> i32
+func u32_t() -> u32 {}
+// CHECK: func @u64_t() -> i64
+func u64_t() -> u64 {}
+// CHECK: func @usize_t() -> {{i64|i32}}
+func usize_t() -> usize {}
+
+// CHECK: func @f32_t() -> f32
+func f32_t() -> f32 {}
+// CHECK: func @f64_t() -> f64
+func f64_t() -> f64 {}
+
+// CHECK: func @bool_t() -> i1
+func bool_t() -> bool {}
+
+// CHECK: func @tuple_t0() -> none
+func tuple_t0() -> () {}
+// CHECK: func @tuple_t2() -> tuple<i1, i1>
+func tuple_t2() -> (bool, bool) {}
+// CHECK: func @tuple_t3() -> tuple<i1, i1, i32> 
+func tuple_t3() -> (bool, bool, i32) {}
+// CHECK: func @tuple_t4() -> tuple<i1, none, i32, i32>
+func tuple_t4() -> (bool, void, i32, i32) {}
+// CHECK: func @tuple_tfoo() -> tuple<i32, tuple<i32, tuple<i32, i32>>>
+func tuple_tfoo() -> (i32, (i32, (i32, i32))) {}
+
+// CHECK: func @maybe_t() -> !sora.maybe<i32>
+func maybe_t() -> maybe i32 {}
+// CHECK: func @maybe_tfoo() -> !sora.maybe<tuple<i32, !sora.maybe<i64>>>
+func maybe_tfoo() -> maybe (i32, maybe i64) {}
+
+// CHECK: func @ref_t_imm() -> !sora.reference<i32>
+func ref_t_imm() -> &i32 {}
+// CHECK: func @ref_t_mut() -> !sora.reference<i32>
+func ref_t_mut() -> &mut i32 {}
+// CHECK: func @ref_tfoo() -> !sora.reference<tuple<!sora.reference<i32>, !sora.reference<i64>>
+func ref_tfoo() -> &(&mut i32, &mut i64) {}
+
+// CHECK: func @fn_0(%arg0: i32) -> i64
+func fn_0(x: i32) -> i64 {}
+// CHECK: func @fn_1(%arg0: !sora.maybe<i8>) -> !sora.maybe<i16> {
+func fn_1(x: maybe u8) -> maybe u16 {}

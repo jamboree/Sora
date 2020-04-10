@@ -9,6 +9,7 @@
 
 #include "Sora/AST/TypeVisitor.hpp"
 #include "Sora/AST/Types.hpp"
+#include "Sora/IR/Types.hpp"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StandardTypes.h"
 
@@ -21,15 +22,15 @@ namespace {
 class TypeConverter : public IRGeneratorBase,
                       public TypeVisitor<TypeConverter, mlir::Type> {
 public:
-  TypeConverter(IRGen &irGen)
-      : IRGeneratorBase(irGen) {}
+  TypeConverter(IRGen &irGen) : IRGeneratorBase(irGen) {}
 
   mlir::Type visitIntegerType(IntegerType *type) {
     IntegerWidth integerWidth = type->getWidth();
     assert(!integerWidth.isArbitraryPrecision() &&
            "arbitrary-precision integer are not supported in IRGen");
     unsigned width = integerWidth.getWidth();
-    return mlir::IntegerType::get(width, mlir::IntegerType::Signless, &mlirCtxt);
+    return mlir::IntegerType::get(width, mlir::IntegerType::Signless,
+                                  &mlirCtxt);
   }
 
   mlir::Type visitFloatType(FloatType *type) {
@@ -48,7 +49,6 @@ public:
   }
 
   mlir::Type visitBoolType(BoolType *type) {
-    // FIXME: Needs a special bool type?
     return mlir::IntegerType::get(1, &mlirCtxt);
   }
 
@@ -57,11 +57,13 @@ public:
   }
 
   mlir::Type visitReferenceType(ReferenceType *type) {
-    llvm_unreachable("TODO - visitReferenceType");
+    mlir::Type pointeeType = visit(type->getPointeeType());
+    return ir::ReferenceType::get(pointeeType);
   }
 
   mlir::Type visitMaybeType(MaybeType *type) {
-    llvm_unreachable("TODO - visitMaybeType");
+    mlir::Type valueType = visit(type->getValueType());
+    return ir::MaybeType::get(valueType);
   }
 
   mlir::Type visitTupleType(TupleType *type) {
@@ -103,7 +105,7 @@ mlir::Type IRGen::getIRType(Type type) {
   auto iter = typeCache.find(type.getPtr());
   if (iter != typeCache.end())
     return iter->second;
-  mlir::Type mlirType = TypeConverter(*this).visit(type);
+  mlir::Type mlirType = TypeConverter(*this).visit(type->getCanonicalType());
   typeCache.insert({type.getPtr(), mlirType});
   return mlirType;
 }

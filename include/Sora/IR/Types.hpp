@@ -14,13 +14,16 @@ namespace sora {
 namespace ir {
 namespace detail {
 struct MaybeTypeStorage;
+struct ReferenceTypeStorage;
 } // namespace detail
 
 enum class SoraTypeKind {
   First_Type = mlir::Type::FIRST_PRIVATE_EXPERIMENTAL_0_TYPE,
 
-  /// The Sora "Maybe" Type.
+  /// The Sora "Maybe" type.
   Maybe,
+  /// The Sora reference type.
+  Reference,
 
   Last_Type = Maybe
 };
@@ -51,6 +54,24 @@ public:
   static MaybeType get(mlir::Type valueType);
 
   mlir::Type getValueType() const;
+};
+
+/// The IR Representation of references types.
+///
+/// This type is written "sora.reference<T>"
+class ReferenceType
+    : public mlir::Type::TypeBase<ReferenceType, SoraType,
+                                  detail::ReferenceTypeStorage> {
+public:
+  using Base::Base;
+
+  static bool kindof(unsigned kind) {
+    return kind == (unsigned)SoraTypeKind::Reference;
+  }
+
+  static ReferenceType get(mlir::Type pointeeType);
+
+  mlir::Type getPointeeType() const;
 };
 } // namespace ir
 } // namespace sora
