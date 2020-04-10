@@ -354,21 +354,16 @@ public:
   /// \returns the string version of the literal as written by the user
   StringRef getString() const { return strValue; }
 
-  /// \returns the raw integer value (that doesn't respect the target's type bit
-  /// width)
+  /// \returns the value as an APInt of the type's bitwidth.
+  /// getType() must not return null, and must return an IntegerType.
   ///
-  /// This is relatively expensive (parsing isn't cached), so don't abuse it
-  /// where performance matters.
-  APInt getRawValue() const;
-
-  /// \returns the value as an APInt that respects the target's type.
+  /// \param overflows whether the value had to be truncated or not.
   ///
   /// e.g. if this has a i32 type, this returns a 32 bit integer, if it has a
-  /// u64 type, this returns a unsigned 64 bits integer, etc.
+  /// u64 type, this returns a 64 bits integer, etc.
   ///
-  /// This is relatively expensive (parsing isn't cached), so don't abuse it
-  /// where performance matters.
-  APInt getValue() const;
+  /// Note that this is relatively expensive, and the result is not cached.
+  APInt getValue(bool *overflows = nullptr) const;
 
   static bool classof(const Expr *expr) {
     return expr->getKind() == ExprKind::IntegerLiteral;

@@ -92,16 +92,7 @@ DeclRefExpr::DeclRefExpr(UnresolvedDeclRefExpr *udre, ValueDecl *decl)
          "Incorrect Resolution!");
 }
 
-APInt IntegerLiteralExpr::getRawValue() const {
-  IntegerWidth::Status status;
-  APInt result = IntegerWidth::arbitrary().parse(
-      getString(), /*isNegative*/ false, 0, &status);
-  assert(status != IntegerWidth::Status::Error &&
-         "Integer Parsing Error - Ill-formed integer token?");
-  return result;
-}
-
-APInt IntegerLiteralExpr::getValue() const {
+APInt IntegerLiteralExpr::getValue(bool *overflows) const {
   Type type = getType();
   assert(type && type->is<IntegerType>());
   IntegerWidth intWidth = type->castTo<IntegerType>()->getWidth();
@@ -110,6 +101,8 @@ APInt IntegerLiteralExpr::getValue() const {
   APInt result = intWidth.parse(getString(), /*isNegative*/ false, 0, &status);
   assert(status != IntegerWidth::Status::Error &&
          "Integer Parsing Error - Ill-formed integer token?");
+  if (overflows)
+    *overflows = (status == IntegerWidth::Status::Overflow);
   return result;
 }
 
