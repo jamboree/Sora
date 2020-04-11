@@ -19,6 +19,10 @@ def emit_ir : Flag<["-"], "emit-ir">,
   HelpText<"Emits IR">;
 def emit_raw_ir : Flag<["-"], "emit-raw-ir">,
   HelpText<"Emits raw IR (as emitted by IRGen)">;
+def dgb_g : Flag<["-"], "g">,
+  HelpText<"Enable debug information">;
+def dgb_g0 : Flag<["-"], "g0">,
+  HelpText<"Disable debug information">;
 
 // Diagnostic Verification
 def verify : Flag<["-"], "verify">,

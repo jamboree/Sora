@@ -95,6 +95,9 @@ public:
     /// The desired output of the compiler.
     /// Defaults to a linked executable file.
     CompilerOutputType desiredOutput = CompilerOutputType::Executable;
+    /// Whether debug information should be generated.
+    /// Honored by doIRGen()
+    bool genDebugInfo = false;
     /// Whether verify mode is enabled.
     /// Honored by run()
     bool verifyModeEnabled = false;

@@ -26,8 +26,8 @@ using namespace llvm::opt;
 
 //===- Driver -------------------------------------------------------------===//
 
-Driver::Driver(DiagnosticEngine &diagEngine,
-               StringRef driverName, StringRef driverDesc)
+Driver::Driver(DiagnosticEngine &diagEngine, StringRef driverName,
+               StringRef driverDesc)
     : diagEngine(diagEngine), name(driverName), description(driverDesc),
       optTable(createSoraOptTable()) {
   registerMLIRDialects();
@@ -96,6 +96,10 @@ bool CompilerInstance::handleOptions(InputArgList &argList) {
   options.verifyModeEnabled = argList.hasArg(opt::OPT_verify);
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
   options.dumpAST = argList.hasArg(opt::OPT_dump_ast);
+
+  // Debug information: process g0 after g, as g0 has precedence over g.
+  options.genDebugInfo = argList.hasArg(opt::OPT_dgb_g);
+  options.genDebugInfo &= !argList.hasArg(opt::OPT_dgb_g0);
 
   // -dump-scope-maps
   if (Arg *arg = argList.getLastArg(opt::OPT_dump_scope_maps)) {
@@ -396,7 +400,7 @@ bool CompilerInstance::doSema(SourceFile &file) {
 
 bool CompilerInstance::doIRGen(mlir::MLIRContext &mlirContext,
                                mlir::ModuleOp &mlirModule, SourceFile &file) {
-  performIRGen(mlirContext, mlirModule, file);
+  performIRGen(mlirContext, mlirModule, file, options.genDebugInfo);
   return !diagEng.hadAnyError();
 }
 
