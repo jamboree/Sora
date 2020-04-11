@@ -146,6 +146,14 @@ public:
   IRGeneratorBase(IRGen &irGen)
       : irGen(irGen), astCtxt(irGen.astCtxt), mlirCtxt(irGen.mlirCtxt) {}
 
+  template <typename Ty> mlir::Location getNodeLoc(Ty &&value) {
+    return irGen.getNodeLoc(value);
+  }
+
+  template <typename Ty> mlir::Type getIRType(Ty &&value) {
+    return irGen.getIRType(value);
+  }
+
   IRGen &irGen;
   ASTContext &astCtxt;
   mlir::MLIRContext &mlirCtxt;
