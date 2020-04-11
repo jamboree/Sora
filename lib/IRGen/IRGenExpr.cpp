@@ -25,11 +25,6 @@ public:
 
   mlir::OpBuilder builder;
 
-  /// \returns true of if \p type is a bool or integer type
-  bool isIntegerOrIntegerLike(Type type) {
-    return type->isBoolType() || type->isAnyIntegerType();
-  }
-
   mlir::Value visitUnresolvedExpr(UnresolvedExpr *) {
     llvm_unreachable("UnresolvedExpr past Sema!");
   }
@@ -79,32 +74,32 @@ public:
 
 mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
-  mlir::Type type = irGen.getIRType(expr->getType());
+  mlir::Type type = getIRType(expr->getType());
   assert(type.isa<mlir::IntegerType>() && "Not an IntegerType?!");
 
   // TODO: Create a "BuildIntConstant" method as I'll probably need to create
   // int constants a lot.
   auto valueAttr = mlir::IntegerAttr::get(type, expr->getValue());
-  return builder.create<mlir::ConstantOp>(irGen.getNodeLoc(expr), valueAttr);
+  return builder.create<mlir::ConstantOp>(getNodeLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
-  mlir::Type type = irGen.getIRType(expr->getType());
+  mlir::Type type = getIRType(expr->getType());
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
 
   auto valueAttr = mlir::FloatAttr::get(type, expr->getValue());
-  return builder.create<mlir::ConstantOp>(irGen.getNodeLoc(expr), valueAttr);
+  return builder.create<mlir::ConstantOp>(getNodeLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   assert(expr->getType()->isBoolType() && "Not a Bool Type?!");
-  mlir::Type type = irGen.getIRType(expr->getType());
+  mlir::Type type = getIRType(expr->getType());
   assert(type.isInteger(1) && "Expected a i1!");
   APInt value(1, expr->getValue() ? 1 : 0);
 
   auto valueAttr = mlir::IntegerAttr::get(type, value);
-  return builder.create<mlir::ConstantOp>(irGen.getNodeLoc(expr), valueAttr);
+  return builder.create<mlir::ConstantOp>(getNodeLoc(expr), valueAttr);
 }
 
 mlir::Value ExprIRGenerator::visitNullLiteralExpr(NullLiteralExpr *expr) {
@@ -122,8 +117,8 @@ mlir::Value ExprIRGenerator::visitImplicitMaybeConversionExpr(
 
 mlir::Value
 ExprIRGenerator::visitMutToImmutReferenceExpr(MutToImmutReferenceExpr *expr) {
-  // This is a purely static cast, and, as there is no distinction between
-  // mutable and immutable references in the IR, we don't have to do anything.
+  // As there is no distinction between mutable and immutable references in the
+  // IR, we don't have to do anything.
   return visit(expr->getSubExpr());
 }
 
@@ -147,8 +142,8 @@ mlir::Value ExprIRGenerator::visitCastExpr(CastExpr *expr) {
   Type type = expr->getType();
 
   // Convert the result type and the loc to their MLIR equivalent.
-  mlir::Type mlirType = irGen.getIRType(type);
-  mlir::Location loc = irGen.getNodeLoc(expr);
+  mlir::Type mlirType = getIRType(type);
+  mlir::Location loc = getNodeLoc(expr);
 
   // Currently, all sora casts are static casts, so just emit a static_cast op.
   return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
@@ -195,15 +190,71 @@ mlir::Value ExprIRGenerator::genUnaryNot(UnaryExpr *expr) {
 }
 
 mlir::Value ExprIRGenerator::genUnaryLNot(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - genUnaryLNot");
+  mlir::Location loc = getNodeLoc(expr);
+  mlir::Value value = visit(expr->getSubExpr());
+  assert(value.getType().isInteger(1) && "Unexpected operand type for LNot!");
+
+  // If the value is an ConstantIntOp, just swap its value instead of generating
+  // a XOR.
+  if (auto constant = dyn_cast<mlir::ConstantIntOp>(value.getDefiningOp())) {
+    constant.setAttr("value", mlir::IntegerAttr::get(constant.getType(),
+                                                     !constant.getValue()));
+    return value;
+  }
+
+  mlir::IntegerType intTy = value.getType().dyn_cast<mlir::IntegerType>();
+  assert(intTy && "Not an integer type for Unary LNOT?!");
+  mlir::Value one = builder.create<mlir::ConstantIntOp>(loc, 1, intTy);
+
+  return builder.create<mlir::XOrOp>(loc, value, one);
+}
+
+static mlir::Value genIntUnaryMinus(mlir::OpBuilder &builder,
+                                    mlir::Location loc, mlir::Value value,
+                                    mlir::IntegerType intTy) {
+  // If the value is a ConstantIntOp, modify it in-place.
+  if (auto constant = dyn_cast<mlir::ConstantIntOp>(value.getDefiningOp())) {
+    constant.setAttr("value", mlir::IntegerAttr::get(constant.getType(),
+                                                     -constant.getValue()));
+    return value;
+  }
+
+  // Else generate a 0-value.
+  mlir::Value zero = builder.create<mlir::ConstantIntOp>(loc, 0, intTy);
+  return builder.create<mlir::SubIOp>(loc, zero, value);
+}
+
+static mlir::Value genFloatUnaryMinus(mlir::OpBuilder &builder,
+                                      mlir::Location loc, mlir::Value value,
+                                      mlir::FloatType fltTy) {
+  // If the value is a ConstantFloatOp, modify it in-place.
+  if (auto constant = dyn_cast<mlir::ConstantFloatOp>(value.getDefiningOp())) {
+    constant.setAttr("value", mlir::FloatAttr::get(constant.getType(),
+                                                   -constant.getValue()));
+    return value;
+  }
+
+  // Else generate a 0-value.
+  APFloat zero(fltTy.getFloatSemantics(), 0);
+  mlir::Value lhs = builder.create<mlir::ConstantFloatOp>(loc, zero, fltTy);
+  return builder.create<mlir::SubFOp>(loc, lhs, value);
 }
 
 mlir::Value ExprIRGenerator::genUnaryMinus(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - genUnaryMinus");
+  mlir::Location loc = getNodeLoc(expr);
+  mlir::Value value = visit(expr->getSubExpr());
+
+  if (auto intTy = value.getType().dyn_cast<mlir::IntegerType>())
+    return genIntUnaryMinus(builder, loc, value, intTy);
+  else if (auto fltTy = value.getType().dyn_cast<mlir::FloatType>())
+    return genFloatUnaryMinus(builder, loc, value, fltTy);
+  else
+    llvm_unreachable("Unsupported type for Unary Minus!");
 }
 
 mlir::Value ExprIRGenerator::genUnaryPlus(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - visitBinaryExpr");
+  // Unary plus is syntactic sugar - it doesn't do anything.
+  return visit(expr->getSubExpr());
 }
 
 mlir::Value ExprIRGenerator::visitUnaryExpr(UnaryExpr *expr) {

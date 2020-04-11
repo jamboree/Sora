@@ -1,0 +1,56 @@
+// RUN: %sorac -emit-raw-ir %s | %filecheck %s
+
+func unaryMinusInt() {
+  // Constant tests: the generator should just modify the constants in place.
+
+  // CHECK: {{%.*}} = constant -1
+  -1
+  // CHECK: {{%.*}} = constant -1
+  -(1)
+  // CHECK: {{%.*}} = constant 10
+  --10
+  // CHECK: {{%.*}} = constant 10
+  -(-(10))
+  // CHECK: {{%.*}} = constant -100
+  ---100
+  // CHECK: {{%.*}} = constant -100
+  -(-(-(100)))
+
+  // TODO: Test on variables
+}
+
+func unaryMinusFlt() {
+  // Constant tests: the generator should just modify the constants in place.
+
+  // CHECK: {{%.*}} = constant -1.000000e+00 
+  -1.0
+  // CHECK: {{%.*}} = constant -1.000000e+00 
+  -(1.0)
+  // CHECK: {{%.*}} = constant 1.000000e+01
+  --10.0
+  // CHECK: {{%.*}} = constant 1.000000e+01
+  -(-(10.0))
+  // CHECK: {{%.*}} = constant -1.000000e+02
+  ---100.0
+  // CHECK: {{%.*}} = constant -1.000000e+02
+  -(-(-(100.0)))
+
+
+  // TODO: Test on variables
+}
+
+func unaryLNot() {
+  // Constant tests: the generator should just modify the constants in place.
+  // CHECK: {{%.*}} = constant 0
+  !true
+  // CHECK: {{%.*}} = constant 0
+  !(true)
+  // CHECK: {{%.*}} = constant 1
+  !!true
+  // CHECK: {{%.*}} = constant 1
+  !(!(true))
+  // CHECK: {{%.*}} = constant 0
+  !!!true
+  // CHECK: {{%.*}} = constant 0
+  !(!(!(true)))
+}
