@@ -60,10 +60,9 @@ mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 ///   \param mlirModule the MLIR Module in which the contents of \p sf will be
 ///     emitted.
 ///   \param sf the target SourceFile
-///   \param enableDebugInfo Whether Debug information will be generated -
-///     defaults to true.
+///   \param enableDebugInfo Whether Debug information will be emitted.
 void performIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,
-                  SourceFile &sf, bool enableDebugInfo = true);
+                  SourceFile &sf, bool enableDebugInfo);
 
 //===----------------------------------------------------------------------===//
 
