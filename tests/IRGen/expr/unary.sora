@@ -1,19 +1,19 @@
-// RUN: %sorac -emit-raw-ir %s | %filecheck %s
+// RUN: %sorac-irgen -g %s | %filecheck %s
 
 func unaryMinusInt() {
   // Constant tests: the generator should just modify the constants in place.
 
-  // CHECK: {{%.*}} = constant -1
+  // CHECK: {{%.*}} = constant -1   {{.*}} loc({{.*}}:[[@LINE+1]]:4)
   -1
-  // CHECK: {{%.*}} = constant -1
+  // CHECK: {{%.*}} = constant -1   {{.*}} loc({{.*}}:[[@LINE+1]]:5)
   -(1)
-  // CHECK: {{%.*}} = constant 10
+  // CHECK: {{%.*}} = constant 10   {{.*}} loc({{.*}}:[[@LINE+1]]:5)
   --10
-  // CHECK: {{%.*}} = constant 10
+  // CHECK: {{%.*}} = constant 10   {{.*}} loc({{.*}}:[[@LINE+1]]:7)
   -(-(10))
-  // CHECK: {{%.*}} = constant -100
+  // CHECK: {{%.*}} = constant -100 {{.*}} loc({{.*}}:[[@LINE+1]]:6)
   ---100
-  // CHECK: {{%.*}} = constant -100
+  // CHECK: {{%.*}} = constant -100 {{.*}} loc({{.*}}:[[@LINE+1]]:9)
   -(-(-(100)))
 
   // TODO: Test on variables
@@ -22,17 +22,17 @@ func unaryMinusInt() {
 func unaryMinusFlt() {
   // Constant tests: the generator should just modify the constants in place.
 
-  // CHECK: {{%.*}} = constant -1.000000e+00 
+  // CHECK: {{%.*}} = constant -1.000000e+00  {{.*}} loc({{.*}}:[[@LINE+1]]:4)
   -1.0
-  // CHECK: {{%.*}} = constant -1.000000e+00 
+  // CHECK: {{%.*}} = constant -1.000000e+00  {{.*}} loc({{.*}}:[[@LINE+1]]:5)
   -(1.0)
-  // CHECK: {{%.*}} = constant 1.000000e+01
+  // CHECK: {{%.*}} = constant 1.000000e+01   {{.*}} loc({{.*}}:[[@LINE+1]]:5)
   --10.0
-  // CHECK: {{%.*}} = constant 1.000000e+01
+  // CHECK: {{%.*}} = constant 1.000000e+01   {{.*}} loc({{.*}}:[[@LINE+1]]:7)
   -(-(10.0))
-  // CHECK: {{%.*}} = constant -1.000000e+02
+  // CHECK: {{%.*}} = constant -1.000000e+02  {{.*}} loc({{.*}}:[[@LINE+1]]:6)
   ---100.0
-  // CHECK: {{%.*}} = constant -1.000000e+02
+  // CHECK: {{%.*}} = constant -1.000000e+02  {{.*}} loc({{.*}}:[[@LINE+1]]:9)
   -(-(-(100.0)))
 
 
@@ -41,16 +41,16 @@ func unaryMinusFlt() {
 
 func unaryLNot() {
   // Constant tests: the generator should just modify the constants in place.
-  // CHECK: {{%.*}} = constant 0
+  // CHECK: {{%.*}} = constant 0  {{.*}} loc({{.*}}:[[@LINE+1]]:4)
   !true
-  // CHECK: {{%.*}} = constant 0
+  // CHECK: {{%.*}} = constant 0  {{.*}} loc({{.*}}:[[@LINE+1]]:5)
   !(true)
-  // CHECK: {{%.*}} = constant 1
+  // CHECK: {{%.*}} = constant 1  {{.*}} loc({{.*}}:[[@LINE+1]]:5)
   !!true
-  // CHECK: {{%.*}} = constant 1
+  // CHECK: {{%.*}} = constant 1  {{.*}} loc({{.*}}:[[@LINE+1]]:7)
   !(!(true))
-  // CHECK: {{%.*}} = constant 0
+  // CHECK: {{%.*}} = constant 0  {{.*}} loc({{.*}}:[[@LINE+1]]:6)
   !!!true
-  // CHECK: {{%.*}} = constant 0
+  // CHECK: {{%.*}} = constant 0  {{.*}} loc({{.*}}:[[@LINE+1]]:9)
   !(!(!(true)))
 }
