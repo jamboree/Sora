@@ -226,7 +226,7 @@ bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
   assert(!from->hasErrorType() && "the 'from' type cannot contain error types");
 
   // FIXME: Calling canUnify here isn't ideal, especially since recursion is
-  // involved. This can have a huge performance cost for complex types.
+  // involved. Maybe this can have a huge performance cost for complex types?
   if (cs.canUnify(from, to))
     return true;
 
@@ -255,6 +255,8 @@ bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
   if (TupleType *toTuple = to->getAs<TupleType>()) {
     // "from" must also be a tuple type
     TupleType *fromTuple = from->getAs<TupleType>();
+    if (!fromTuple)
+      return false;
 
     // Both must have the same number of elts
     if (toTuple->getNumElements() != fromTuple->getNumElements())
