@@ -42,6 +42,7 @@ protected:
     implicitMaybeConvExpr = new (*ctxt) ImplicitMaybeConversionExpr(begExpr);
     destructuredTupleEltExpr =
         new (*ctxt) DestructuredTupleElementExpr({beg, end}, 0);
+    loadExpr = new (*ctxt) LoadExpr(begExpr);
     errorExpr = new (*ctxt) ErrorExpr({beg, end});
     castExpr = new (*ctxt)
         CastExpr(begExpr, mid, new (*ctxt) IdentifierTypeRepr(end, {}));
@@ -73,6 +74,7 @@ protected:
   Expr *nullLitExpr;
   Expr *implicitMaybeConvExpr;
   Expr *destructuredTupleEltExpr;
+  Expr *loadExpr;
   Expr *errorExpr;
   Expr *castExpr;
   Expr *tupleEltExpr;
@@ -121,6 +123,8 @@ TEST_F(ExprTest, rtti) {
   EXPECT_TRUE(isa<ImplicitConversionExpr>(dte));
 
   EXPECT_TRUE(isa<DestructuredTupleElementExpr>(destructuredTupleEltExpr));
+
+  EXPECT_TRUE(isa<LoadExpr>(loadExpr));
 
   EXPECT_TRUE(isa<ErrorExpr>(errorExpr));
 
@@ -248,6 +252,12 @@ TEST_F(ExprTest, getSourceRange) {
   EXPECT_EQ(beg, destructuredTupleEltExpr->getLoc());
   EXPECT_EQ(end, destructuredTupleEltExpr->getEndLoc());
   EXPECT_EQ(SourceRange(beg, end), destructuredTupleEltExpr->getSourceRange());
+
+  // LoadExpr
+  EXPECT_EQ(beg, loadExpr->getBegLoc());
+  EXPECT_EQ(beg, loadExpr->getLoc());
+  EXPECT_EQ(beg, loadExpr->getEndLoc());
+  EXPECT_EQ(SourceRange(beg, beg), loadExpr->getSourceRange());
 
   // ErrorExpr
   EXPECT_EQ(beg, errorExpr->getBegLoc());

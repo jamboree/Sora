@@ -90,8 +90,8 @@ public:
 
   bool visit(Type from, Type to) {
     // Ignore sugar & RValues on both sides.
-    from = from->getRValue()->getDesugaredType();
-    to = to->getRValue()->getDesugaredType();
+    from = from->getRValueType()->getDesugaredType();
+    to = to->getRValueType()->getDesugaredType();
 
     // If the types are canonically equal, it's valid
     if (from->getCanonicalType() == to->getCanonicalType())
@@ -230,7 +230,7 @@ bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
   if (cs.canUnify(from, to))
     return true;
 
-  to = to->getRValue()->getDesugaredType();
+  to = to->getRValueType()->getDesugaredType();
 
   // T to maybe T conversions, or null to maybe T conversion
   if (MaybeType *toMaybe = to->getAs<MaybeType>())

@@ -2,14 +2,19 @@
 
 func correct(a: &mut ((i32, i32), i16), b: (i32, i16), c: &((i32, i32), i16)) {  
     // Mutable sources
-    // CHECK: TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+2]]:11 index=0 indexLoc=line:[[@LINE+2]]:12
-    // CHECK: TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:[[@LINE+1]]:7 index=0 indexLoc=line:[[@LINE+1]]:9
+    // CHECK:     TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+4]]:11 index=0 indexLoc=line:[[@LINE+4]]:12
+    // CHECK-NEXT: ParenExpr
+    // CHECK-NEXT:  TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:[[@LINE+2]]:7 index=0 indexLoc=line:[[@LINE+2]]:9
+    // CHECK-NEXT:   DeclRefExpr
     (a->0).0
     // Immutable sources
-    // CHECK: TupleElementExpr type=i32 dot opLoc=line:[[@LINE+1]]:6 index=0 indexLoc=line:[[@LINE+1]]:7
+    // CHECK:     TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+2]]:6 index=0 indexLoc=line:[[@LINE+2]]:7
+    // CHECK-NEXT:  DeclRefExpr type=@lvalue (i32, i16) loc=line:[[@LINE+1]]:5
     b.0
-    // CHECK: TupleElementExpr type=i32 dot opLoc=line:[[@LINE+2]]:11 index=0 indexLoc=line:[[@LINE+2]]:12
-    // CHECK: TupleElementExpr type=(i32, i32) arrow opLoc=line:[[@LINE+1]]:7 index=0 indexLoc=line:[[@LINE+1]]:9
+    // CHECK:     TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+4]]:11 index=0 indexLoc=line:[[@LINE+4]]:12
+    // CHECK-NEXT: ParenExpr
+    // CHECK-NEXT:  TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:[[@LINE+2]]:7 index=0 indexLoc=line:[[@LINE+2]]:9
+    // CHECK-NEXT:   DeclRefExpr type=@lvalue &((i32, i32), i16) loc=line:[[@LINE+1]]:6
     (c->0).0
 }
 

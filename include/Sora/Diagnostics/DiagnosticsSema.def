@@ -99,14 +99,11 @@ ERROR(value_of_non_function_type_isnt_callable,
 ERROR(cannot_take_address_of_func,
   "cannot take the address of function '%0'", (Identifier))
 
-ERROR(cannot_take_address_of_a_temp_value,
-  "cannot take the address of a temporary value or of one of its members", ())
-
 ERROR(cannot_take_address_of_literal,
   "cannot take the address of a literal", ())
 
-ERROR(cannot_take_address_of_temp_tuple,
-  "cannot take the address of a temporary tuple or of one of its elements", ())
+ERROR(cannot_take_address_of_a_temporary,
+  "cannot take the address of a temporary value", ())
 
 ERROR(cannot_use_unary_oper_on_operand_of_type,
   "cannot use unary operator '%0' on operand of type '%1'", (StringRef, Type))

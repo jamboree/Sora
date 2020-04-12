@@ -8,10 +8,26 @@ func foo() {
   // CHECK: TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:8
   (0, 1)
   let mut a = 0
-  // CHECK: ParenExpr type=@lvalue i32 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:5
+  // CHECK: ParenExpr type=i32 lParenLoc=line:[[@LINE+3]]:3 rParenLoc=line:[[@LINE+3]]:5
+  // CHECK-NEXT: LoadExpr implicit type=i32
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
   (a)
-  // CHECK: TupleExpr type=@lvalue (@lvalue i32, @lvalue i32) numElements=2 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:8
+  // CHECK: TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:[[@LINE+5]]:3 rParenLoc=line:[[@LINE+5]]:8
+  // CHECK-NEXT: LoadExpr implicit type=i32
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
+  // CHECK-NEXT: LoadExpr implicit type=i32
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
   (a, a)
-  // CHECK: TupleExpr type=(@lvalue i32, i32, @lvalue i32) numElements=3 lParenLoc=line:[[@LINE+1]]:3 rParenLoc=line:[[@LINE+1]]:11
+  // CHECK: TupleExpr type=(@lvalue i32, @lvalue i32) numElements=2 lParenLoc=line:[[@LINE+4]]:3 rParenLoc=line:[[@LINE+4]]:8
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
+  // CHECK: TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:[[@LINE+1]]:12 rParenLoc=line:[[@LINE+1]]:17
+  (a, a) = (0, 0)
+  // CHECK: TupleExpr type=(i32, i32, i32) numElements=3 lParenLoc=line:[[@LINE+6]]:3 rParenLoc=line:[[@LINE+6]]:11
+  // CHECK-NEXT: LoadExpr implicit type=i32
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
+  // CHECK-NEXT: IntegerLiteralExpr type=i32
+  // CHECK-NEXT: LoadExpr implicit type=i32
+  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32
   (a, 0, a)
 }

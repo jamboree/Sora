@@ -155,7 +155,7 @@ public:
 
   /// Attempts to bind \p tv's to \p proposedBinding.
   bool tryBindTypeVariable(TypeVariableType *tv, Type proposedBinding) {
-    proposedBinding = proposedBinding->getRValue();
+    proposedBinding = proposedBinding->getRValueType();
     if (!tv->canBindTo(proposedBinding))
       return false;
     if (canBindTypeVariables)
@@ -164,8 +164,8 @@ public:
   }
 
   bool unify(Type type, Type other) {
-    type = type->getRValue();
-    other = other->getRValue();
+    type = type->getRValueType();
+    other = other->getRValueType();
 
     // If both types are equal, unification succeeds.
     if (type->getCanonicalType() == other->getCanonicalType())

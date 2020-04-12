@@ -233,7 +233,8 @@ void ASTContext::buildBuiltinTypesLookupMap() {
 }
 
 ASTContext::Impl &ASTContext::getImpl() {
-  return *reinterpret_cast<Impl *>(llvm::alignAddr(this + 1, llvm::Align(alignof(Impl))));
+  return *reinterpret_cast<Impl *>(
+      llvm::alignAddr(this + 1, llvm::Align(alignof(Impl))));
 }
 
 std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
@@ -249,14 +250,14 @@ std::unique_ptr<ASTContext> ASTContext::create(const SourceManager &srcMgr,
 
   // The ASTContext's memory begins at the first correctly aligned address
   // of the memory.
-  void *astContextMemory =
-      reinterpret_cast<void *>(llvm::alignAddr(memory, llvm::Align(alignof(ASTContext))));
+  void *astContextMemory = reinterpret_cast<void *>(
+      llvm::alignAddr(memory, llvm::Align(alignof(ASTContext))));
 
   // The Impl's memory begins at the first correctly aligned address after
   // the ASTContext's memory.
   void *implMemory = (char *)astContextMemory + sizeof(ASTContext);
-  implMemory =
-      reinterpret_cast<void *>(llvm::alignAddr(implMemory, llvm::Align(alignof(Impl))));
+  implMemory = reinterpret_cast<void *>(
+      llvm::alignAddr(implMemory, llvm::Align(alignof(Impl))));
 
   // Do some checking because I'm kinda paranoïd.
   //  Check that we aren't going out of bounds and going to segfault later.
@@ -390,7 +391,6 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
 
 ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
   assert(pointee && "pointee type can't be null!");
-  assert(!pointee->isLValue() && "pointee type can't be an LValue!");
   ASTContext &ctxt = pointee->getASTContext();
 
   size_t typeID = llvm::hash_combine(pointee.getPtr(), isMut);
@@ -406,7 +406,6 @@ ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
 
 MaybeType *MaybeType::get(Type valueType) {
   assert(valueType && "value type is null");
-  assert(!valueType->isLValue() && "value type can't be an LValue!");
   ASTContext &ctxt = valueType->getASTContext();
 
   auto props = valueType->getTypeProperties();
@@ -467,10 +466,9 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
 
 LValueType *LValueType::get(Type objectType) {
   assert(objectType && "object type is null");
-  assert(!objectType->isLValue() && "LValues can't be nested!");
   ASTContext &ctxt = objectType->getASTContext();
 
-  auto props = objectType->getTypeProperties();
+  auto props = objectType->getTypeProperties() | TypeProperties::hasLValue;
   auto arena = getArena(props);
 
   LValueType *&type =
@@ -482,14 +480,12 @@ LValueType *LValueType::get(Type objectType) {
 
 FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   assert(rtr && "return type is null");
-  assert(!rtr->isLValue() && "return type can't be an LValue");
   ASTContext &ctxt = rtr->getASTContext();
 
   TypeProperties props = rtr->getTypeProperties();
   bool isCanonical = rtr->isCanonical();
   for (Type arg : args) {
     assert(arg && "arg type is null");
-    assert(!arg->isLValue() && "arg type can't be an LValue!");
     isCanonical &= arg->isCanonical();
     props |= arg->getTypeProperties();
   }

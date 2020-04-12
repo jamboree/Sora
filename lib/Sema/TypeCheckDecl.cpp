@@ -323,7 +323,7 @@ public:
       // because even if it works, it's equivalent to "true".
       if (isCondition && !complained) {
         Expr *rawInit = init->ignoreImplicitConversions();
-        Type rawInitTy = rawInit->getType()->getRValue();
+        Type rawInitTy = rawInit->getType()->getRValueType();
         if (!rawInitTy->getDesugaredType()->is<MaybeType>())
           diagnoseInitShouldHaveMaybeType(rawInitTy);
       }

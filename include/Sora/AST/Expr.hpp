@@ -521,6 +521,18 @@ public:
   }
 };
 
+/// Represents an LValue to RValue conversion, in other words, a load of a value
+/// located at some address in memory.
+class LoadExpr final : public ImplicitConversionExpr {
+public:
+  LoadExpr(Expr *expr, Type type = {})
+      : ImplicitConversionExpr(ExprKind::Load, expr, type) {}
+
+  static bool classof(const Expr *expr) {
+    return expr->getKind() == ExprKind::Load;
+  }
+};
+
 /// Represents an element of a destructured tuple. See \c DestructuredTupleExpr
 /// This expression is always implicit
 class DestructuredTupleElementExpr final : public Expr {

@@ -100,7 +100,7 @@ public:
   /// This only looks through LValues, nothing else.
   bool isIntegerTypeOrTypeVariable(Type type) const {
     assert(type);
-    if (auto *tv = type->getRValue()->getAs<TypeVariableType>())
+    if (auto *tv = type->getRValueType()->getAs<TypeVariableType>())
       if (tv->isIntegerTypeVariable())
         return true;
     return type->isAnyIntegerType();
@@ -110,7 +110,7 @@ public:
   /// This only looks through LValues, nothing else.
   bool isFloatTypeOrTypeVariable(Type type) const {
     assert(type);
-    if (auto *tv = type->getRValue()->getAs<TypeVariableType>())
+    if (auto *tv = type->getRValueType()->getAs<TypeVariableType>())
       if (tv->isFloatTypeVariable())
         return true;
     return type->isAnyFloatType();

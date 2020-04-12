@@ -47,7 +47,8 @@ struct TypeProperties {
   enum Property : value_t {
     hasErrorType = 0x01,
     hasTypeVariable = 0x02,
-    hasNullType = 0x04
+    hasNullType = 0x04,
+    hasLValue = 0x08,
   };
 
   value_t value;
@@ -228,12 +229,12 @@ public:
   Type getDesugaredType() const { return const_cast<TypeBase *>(this); }
 
   /// \returns this type as an rvalue.
-  /// If this type is an LValue, returns getObjectType()->getRValue(), else just
-  /// returns this.
-  Type getRValue() const;
+  /// If this type is an LValueType, returns getObjectType(), else
+  /// just returns this.
+  Type getRValueType() const;
 
   /// \returns whether this type is an LValue
-  bool isLValue() const;
+  bool isLValueType() const;
 
   /// \returns whether this type is the "null" type (or a sugared version
   /// thereof)
@@ -264,8 +265,10 @@ public:
   /// returns false.
   Type getMaybeTypeValueType() const;
 
-  /// \returns true if this type has an LValueType (if it's an LValue)
-  bool hasLValue() const;
+  /// \returns true if this type has an LValueType somewhere.
+  bool hasLValue() const {
+    return getTypeProperties() & TypeProperties::hasLValue;
+  }
 
   /// \returns the TypeProperties of this type
   TypeProperties getTypeProperties() const {
@@ -425,13 +428,16 @@ public:
 /// Non-nullable pointer type, spelled '&T' or '&mut T'.
 ///
 /// This type is canonical only if T is.
+/// This type cannot contain an LValue.
 class ReferenceType final : public TypeBase {
   llvm::PointerIntPair<TypeBase *, 1> pointeeAndIsMut;
 
   ReferenceType(TypeProperties props, ASTContext &ctxt, Type pointee,
                 bool isMut)
       : TypeBase(TypeKind::Reference, props, ctxt, pointee->isCanonical()),
-        pointeeAndIsMut(pointee.getPtr(), isMut) {}
+        pointeeAndIsMut(pointee.getPtr(), isMut) {
+    assert(!hasLValue() && "ReferenceType cannot contain LValues!");
+  }
 
 public:
   static ReferenceType *get(Type pointee, bool isMut);
@@ -456,12 +462,15 @@ public:
 /// A type representing an optional value, spelled 'maybe T'
 ///
 /// This type is canonical only if T is.
+/// This type cannot contain an LValue.
 class MaybeType final : public TypeBase {
   Type valueType;
 
   MaybeType(TypeProperties prop, ASTContext &ctxt, Type valueType)
       : TypeBase(TypeKind::Maybe, prop, ctxt, valueType->isCanonical()),
-        valueType(valueType) {}
+        valueType(valueType) {
+    assert(!hasLValue() && "MaybeType cannot contain LValues!");
+  }
 
 public:
   static MaybeType *get(Type valueType);
@@ -540,6 +549,7 @@ public:
 /// relying on something like TupleType because it facilitates canonicalization;
 ///
 /// This type is canonical only if the arguments and return type are.
+/// This type cannot contain an LValue.
 class FunctionType final : public TypeBase,
                            private llvm::TrailingObjects<FunctionType, Type>,
                            public llvm::FoldingSetNode {
@@ -558,6 +568,7 @@ class FunctionType final : public TypeBase,
       shouldBeCanonical &= arg->isCanonical();
     assert(shouldBeCanonical == canonical && "Type canonicality is incorrect");
 #endif
+    assert(!hasLValue() && "Function Types cannot contain LValues!");
   }
 
   Type rtr;
@@ -586,26 +597,22 @@ public:
 ///
 /// The LValue or "left-value" (as in something that can appear to the left
 /// of an assignement) represents an handle to a physical object (something that
-/// can be written to).
+/// could be written to - but may not be (due to mutability, of course!)).
 ///
-/// LValues aren't really first-class types. They only exist when you access a
-/// mutable member through a mutable reference, or when you refer to a mutable
-/// variable. Example:
+/// Written (in debug mode): @lvalue T, or just T in diagnostics (it's
+/// invisible).
 ///
-/// \verbatim
-///   let x = 0
-///   let mut y = 0
-///   x // has type i32
-///   y // has type LValue(i32)
-/// \endverbatim
-///
-/// This type is canonical only if T is.
+/// This type is canonical only if T is. 
+/// This type cannot be nested (T cannot be an lvalue as well).
 class LValueType final : public TypeBase {
   Type objectType;
 
   LValueType(TypeProperties prop, ASTContext &ctxt, Type objectType)
       : TypeBase(TypeKind::LValue, prop, ctxt, objectType->isCanonical()),
-        objectType(objectType) {}
+        objectType(objectType) {
+    assert(!objectType->getCanonicalType()->isLValueType() &&
+           "Nested LValues!");
+  }
 
 public:
   static LValueType *get(Type objectType);
@@ -616,8 +623,6 @@ public:
     return type->getKind() == TypeKind::LValue;
   }
 };
-
-inline bool TypeBase::hasLValue() const { return is<LValueType>(); }
 
 /// Error Type
 ///
@@ -677,7 +682,8 @@ class TypeVariableType final : public TypeBase {
   /// This calls getBinding() and calls visitor with the result, but if the
   /// result is another type variable, this keeps going until it finds an
   /// unbound type variable, or something that isn't a type variable. This uses
-  /// getRValue/getDesugaredType before checking if a type is a type variable.
+  /// getRValueType/getDesugaredType before checking if a type is a type
+  /// variable.
   void visitBindings(std::function<void(Type)> visitor) const;
 
 public:

@@ -33,23 +33,70 @@ static void rebuildTupleExprType(ASTContext &ctxt, TupleExpr *expr) {
   // Create a TupleType of the element's types
   assert(expr->getNumElements() > 1 && "Single Element Tuple Shouldn't Exist!");
   SmallVector<Type, 8> eltsTypes;
-  // A tuple's type is an LValue only if every element is also an LValue.
-  bool isLValue = true;
-  for (Expr *elt : expr->getElements()) {
-    Type eltType = elt->getType();
-    eltsTypes.push_back(eltType);
-    isLValue &= eltType->isLValue();
-  }
-  Type type = TupleType::get(ctxt, eltsTypes);
-  if (isLValue)
-    type = LValueType::get(type);
-  expr->setType(type);
+  eltsTypes.reserve(expr->getNumElements());
+  for (Expr *elt : expr->getElements())
+    eltsTypes.push_back(elt->getType());
+  expr->setType(TupleType::get(ctxt, eltsTypes));
 }
 
 /// (re-)builds the type of a ParenExpr
 static void rebuildParenExprType(ParenExpr *expr) {
   expr->setType(expr->getSubExpr()->getType());
 }
+
+/// Coerces \p expr to an RValue by inserting a LoadExpr if needed.
+// \returns the expr that should replace \p expr.
+static Expr *coerceToRValue(ASTContext &ctxt, Expr *expr) {
+  Type type = expr->getType();
+  if (!type->isLValueType())
+    return expr;
+  return new (ctxt) LoadExpr(expr, type->getRValueType());
+}
+
+namespace {
+/// Represents a context in which LValues are allowed to appear in an
+/// expressions and don't have to be loaded in order to be used.
+///
+/// LValueContexts exists within a stack. They are activated before walking in
+/// their root expr, and destroyed when leaving it.
+class LValueContext {
+public:
+  enum class Kind : uint8_t {
+    /// The LHS of an assignement
+    AssignementLHS,
+    /// The base expression of a member access.
+    MemberAccessBase,
+    /// The operand of an "address of" operator.
+    AddressOfExpr,
+  };
+
+private:
+  Kind kind;
+  bool active;
+  Expr *rootExpr;
+
+public:
+  LValueContext(Kind kind, Expr *rootExpr)
+      : kind(kind), active(false), rootExpr(rootExpr) {}
+
+  ~LValueContext() {
+    assert(active && "LValue Context died inactive! We never walked into its "
+                     "root expression?!");
+  }
+
+  Expr *getRootExpr() const { return rootExpr; }
+
+  bool isActive() const { return active; }
+  void activate() {
+    assert(!isActive() && "Activating twice!");
+    active = true;
+  }
+
+  Kind getKind() const { return kind; }
+
+  bool isAssignementLHS() const { return kind == Kind::AssignementLHS; }
+};
+} // namespace
 
 //===- ExprChecker --------------------------------------------------------===//
 
@@ -65,8 +112,6 @@ static void rebuildParenExprType(ParenExpr *expr) {
 /// TODO-list of things that can be improved:
 ///     - This is a large class, it'd be a good idea to split it between
 ///     multiple files.
-///     - Handling of DiscardExprs isn't ideal, perhaps they should be checked
-///     by another class?
 namespace {
 class ExprChecker : public ASTCheckerBase,
                     public ASTWalker,
@@ -76,8 +121,8 @@ public:
   ConstraintSystem &cs;
   /// The DeclContext in which this expression appears
   DeclContext *dc;
-  /// The set of DiscardExpr that are valid
-  llvm::SmallPtrSet<DiscardExpr *, 4> validDiscardExprs;
+  /// The stack of LValue Contexts.
+  SmallVector<LValueContext, 4> lvalueContexts;
 
   ExprChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
       : ASTCheckerBase(tc), cs(cs), dc(dc) {}
@@ -89,11 +134,77 @@ public:
     return *sf;
   }
 
-  /// Called when the type-checker is sure that \p udre references \p resolved.
-  /// This will check that \p resolved can be referenced from inside this
-  /// DeclContext (if it can't, returns nullptr) and, on success, build a
-  /// DeclRefExpr.
-  /// \returns nullptr on failure, a new DeclRefExpr on success.
+  /// \returns the latest active LValue context, or nullptr is none is active.
+  LValueContext *getActiveLValueContext() {
+    for (auto it = lvalueContexts.rbegin(); it != lvalueContexts.rend(); ++it)
+      if (it->isActive())
+        return &*it;
+    return nullptr;
+  }
+
+  const LValueContext *getActiveLValueContext() const {
+    return const_cast<ExprChecker *>(this)->getActiveLValueContext();
+  }
+
+  bool areDiscardExprsAllowed() const {
+    if (const LValueContext *activeLValueCtxt = getActiveLValueContext())
+      return activeLValueCtxt->isAssignementLHS();
+    return false;
+  }
+
+  /// \returns true if \p expr is a mutable reference, false otherwise.
+  /// Asserts that \p expr's type is an Reference type.
+  bool isMutableReference(Expr *expr) const {
+    CanType subExprType = expr->getType()->getRValueType()->getCanonicalType();
+    assert(subExprType->is<ReferenceType>() && "Not a reference type?!");
+    return subExprType->castTo<ReferenceType>()->isMut();
+  }
+
+  /// \returns true if \p expr is a mutable LValue, false otherwise.
+  /// Asserts that \p expr's type is an LValue type.
+  bool isMutableLValue(Expr *expr) const {
+    assert(expr->getType()->isLValueType() && "Not an LValue!");
+    expr = expr->ignoreParens();
+    // DeclRefs = mutable if the DeclRef is.
+    if (auto declRef = dyn_cast<DeclRefExpr>(expr)) {
+      ValueDecl *decl = declRef->getValueDecl();
+      if (auto *var = dyn_cast<VarDecl>(decl))
+        return var->isMutable();
+      return false;
+    }
+    // TupleElement = mutable if the base is.
+    if (auto tupleElt = dyn_cast<TupleElementExpr>(expr)) {
+      Expr *base =
+          tupleElt->getBase()->ignoreParens()->ignoreImplicitConversions();
+      // When looking into a tuple directly, check the tuple element directly,
+      // not the base.
+      if (auto tuple = dyn_cast<TupleExpr>(base))
+        return isMutableLValue(tuple->getElement(tupleElt->getIndex()));
+      // Else we're probably looking into something else.
+      if (tupleElt->isArrow())
+        return isMutableReference(tupleElt->getBase());
+      return isMutableLValue(tupleElt->getBase());
+    }
+    // Dereference = mutable if the reference is mutable.
+    if (auto unary = dyn_cast<UnaryExpr>(expr)) {
+      if (unary->getOpKind() == UnaryOperatorKind::Deref)
+        return isMutableReference(unary->getSubExpr());
+    }
+    return false;
+  }
+
+  /// Pops the last LValueContext in the stack if its root expression is \p
+  /// expr.
+  void popLValueContext(Expr *expr) {
+    if (!lvalueContexts.empty() && lvalueContexts.back().getRootExpr() == expr)
+      lvalueContexts.pop_back();
+  }
+
+  /// Called when the type-checker is sure that \p udre references \p
+  /// resolved. This will check that \p resolved can be referenced from
+  /// inside this DeclContext (if it can't, returns nullptr) and, on
+  /// success, build a DeclRefExpr. \returns nullptr on failure, a new
+  /// DeclRefExpr on success.
   DeclRefExpr *resolveDeclRefExpr(UnresolvedDeclRefExpr *udre,
                                   ValueDecl *resolved) {
     // Check the DeclContext of \p resolved for particular restrictions.
@@ -114,28 +225,23 @@ public:
           //      func)
           diagnose(udre->getLoc(),
                    diag::cannot_capture_dynamic_env_in_local_func);
-          // Add additional note? Ask on discord!
           return nullptr;
         }
       }
     }
+    assert(resolved->getValueType() && "ValueDecl type is null?");
+
     DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
-    Type type = resolved->getValueType();
-    assert(!type.isNull() && "VarDecl type is null!");
-    // Everything is immutable by default, except 'mut' VarDecls.
-    if (VarDecl *var = dyn_cast<VarDecl>(resolved))
-      if (var->isMutable())
-        type = LValueType::get(type);
-    expr->setType(type);
+    expr->setType(LValueType::get(resolved->getValueType()));
     return expr;
   }
 
   TupleElementExpr *resolveTupleElementExpr(UnresolvedMemberRefExpr *umre,
                                             TupleType *tuple, size_t idx,
-                                            bool isMutable) {
+                                            bool isLValue) {
     TupleElementExpr *expr = new (ctxt) TupleElementExpr(umre, idx);
     Type type = tuple->getElement(idx);
-    if (isMutable)
+    if (isLValue)
       type = LValueType::get(type);
     expr->setType(type);
     return expr;
@@ -146,27 +252,51 @@ public:
     return cast;
   }
 
-  /// If \p expr is a DiscardExpr, adds it to \c validDiscardExprs.
-  /// Else, if \p expr is a ParenExpr or TupleExpr, recurses with the
-  /// subexpression(s).
-  void findValidDiscardExprs(Expr *expr);
-
   std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
-    // For assignements, we must whitelist DiscardExprs in the LHS.
-    if (BinaryExpr *binary = dyn_cast<BinaryExpr>(expr))
-      if (binary->isAssignementOp())
-        findValidDiscardExprs(binary->getLHS());
+    // Check if we're entering an LValue context.
+    if (!lvalueContexts.empty()) {
+      LValueContext &lvalueCtxt = lvalueContexts.back();
+      if (lvalueCtxt.getRootExpr() == expr)
+        lvalueCtxt.activate();
+    }
+
+    // For some expressions, we have to create new LValueContexts for their
+    // children.
+    switch (expr->getKind()) {
+    default:
+      break;
+    case ExprKind::Unary: {
+      UnaryExpr *unaryExpr = cast<UnaryExpr>(expr);
+      if (unaryExpr->getOpKind() == UnaryOperatorKind::AddressOf)
+        lvalueContexts.emplace_back(LValueContext::Kind::AddressOfExpr,
+                                    unaryExpr->getSubExpr());
+      break;
+    }
+    case ExprKind::Binary: {
+      BinaryExpr *binExpr = cast<BinaryExpr>(expr);
+      if (binExpr->isAssignementOp())
+        lvalueContexts.emplace_back(LValueContext::Kind::AssignementLHS,
+                                    binExpr->getLHS());
+      break;
+    }
+    case ExprKind::UnresolvedMemberRef:
+      lvalueContexts.emplace_back(
+          LValueContext::Kind::MemberAccessBase,
+          cast<UnresolvedMemberRefExpr>(expr)->getBase());
+      break;
+    }
+
     return {Action::Continue, expr};
   }
 
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
     assert(expr && "expr is null");
     Expr *result = visit(expr);
+
     /// If the visit() method returned something, it must have a type.
     if (result) {
       assert(!isa<UnresolvedExpr>(result) && "Returned an UnresolvedExpr");
       assert(result->hasType() && "Returned an untyped expression");
-      expr = result;
     }
     // Else, if it returned nullptr, it's because the expr isn't valid, so give
     // it an ErrorType.
@@ -174,12 +304,21 @@ public:
       // If it's an UnresolvedExpr that couldn't be resolved, replace it with an
       // ErrorExpr first. This is needed because UnresolvedExpr are freed after
       // Semantic Analysis completes.
-      if (UnresolvedExpr *ue = dyn_cast<UnresolvedExpr>(expr))
-        expr = new (ctxt) ErrorExpr(ue);
-      expr->setType(ctxt.errorType);
+      result = expr;
+      if (UnresolvedExpr *ue = dyn_cast<UnresolvedExpr>(result))
+        result = new (ctxt) ErrorExpr(ue);
+      result->setType(ctxt.errorType);
     }
-    assert(expr && expr->hasType());
-    return {true, expr};
+    assert(result && result->hasType());
+
+    // If we don't have an active LValue Context, coerce the Expr to an RValue.
+    if (getActiveLValueContext() == nullptr)
+      result = coerceToRValue(ctxt, result);
+
+    // Pop the current LValueContext if needed.
+    popLValueContext(expr);
+
+    return {true, result};
   }
 
   Expr *tryCoerceExpr(Expr *expr, Type toType) {
@@ -207,12 +346,9 @@ public:
     TypedDiag<> diag;
     if (isa<AnyLiteralExpr>(subExpr))
       diag = diag::cannot_take_address_of_literal;
-    else if (isa<TupleExpr>(subExpr))
-      diag = diag::cannot_take_address_of_temp_tuple;
-    // FIXME: Pretty much all other expressions are guaranteed to be
-    // temporaries, right?
+    // FIXME: Make this diagnostic a bit more precise.
     else
-      diag = diag::cannot_take_address_of_a_temp_value;
+      diag = diag::cannot_take_address_of_a_temporary;
     diagnose(subExpr->getLoc(), diag).highlight(expr->getOpLoc());
   }
 
@@ -231,10 +367,6 @@ public:
              calledFn->getNumArgs(), expr->getNumArgs());
   }
 
-  /// \returns true if we can take the address of \p subExpr.
-  /// If we can't, this function will emit the appropriate diagnostics.
-  bool checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr);
-
   /// Checks a + or - unary operation
   Expr *checkUnaryPlusOrMinus(UnaryExpr *expr);
   /// Checks a * unary operation
@@ -252,9 +384,11 @@ public:
   Expr *checkCompoundAssignement(BinaryExpr *expr);
   /// Checks a basic assignement (=)
   Expr *checkBasicAssignement(BinaryExpr *expr);
-  /// Checks if \p expr can be assigned to. If it can't, diagnoses it.
+  /// Checks if \p expr can be assigned to. If it can't, diagnoses it (unless \p
+  /// suppressDiagnostics is true)
   /// \returns true if \p expr can be assigned to, false otherwise.
-  bool checkExprIsAssignable(Expr *expr, SourceLoc eqLoc);
+  bool checkExprIsAssignable(Expr *expr, SourceLoc eqLoc,
+                             bool suppressDiagnostics = false);
   /// Finishes type-checking of an assignement, giving it a type.
   Expr *finalizeAssignBinaryExpr(BinaryExpr *expr);
 
@@ -311,41 +445,6 @@ public:
 };
 } // namespace
 
-void ExprChecker::findValidDiscardExprs(Expr *expr) {
-  // allow _ =
-  if (DiscardExpr *discard = dyn_cast<DiscardExpr>(expr))
-    validDiscardExprs.insert(discard);
-  // allow (_) = ...
-  if (ParenExpr *paren = dyn_cast<ParenExpr>(expr))
-    findValidDiscardExprs(paren->getSubExpr());
-  // allow (_, _) = ..., ((_, _), (_, _)) = ..., etc.
-  if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
-    for (Expr *elem : tuple->getElements())
-      findValidDiscardExprs(elem);
-}
-
-bool ExprChecker::checkCanTakeAddressOf(UnaryExpr *expr, Expr *subExpr) {
-  subExpr = subExpr->ignoreParens();
-
-  // We can only take the address of:
-  //    - Variables/Parameters (DeclRefExprs)
-  //    - TupleElementExprs if we can also take the address of their base
-  if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(subExpr)) {
-    ValueDecl *valueDecl = dre->getValueDecl();
-    if (FuncDecl *fn = dyn_cast<FuncDecl>(valueDecl)) {
-      diagnoseCannotTakeAddressOfFunc(expr, dre, fn);
-      return false;
-    }
-    assert((isa<ParamDecl>(valueDecl) || isa<VarDecl>(valueDecl)) &&
-           "Unknown ValueDecl kind");
-    return true;
-  }
-  if (TupleElementExpr *tee = dyn_cast<TupleElementExpr>(subExpr))
-    return checkCanTakeAddressOf(expr, tee->getBase()->ignoreParens());
-  diagnoseCannotTakeAddressOfExpr(expr, subExpr);
-  return false;
-}
-
 // NOTE:
 //    None of the "checkUnary" methods simplify the subexpression's type before
 //    checking it. For now it's harmless because there are no situations where a
@@ -359,14 +458,14 @@ Expr *ExprChecker::checkUnaryPlusOrMinus(UnaryExpr *expr) {
   // numeric type variable.
   Type subExprTy = expr->getSubExpr()->getType();
   if (!isNumericTypeOrTypeVariable(
-          subExprTy->getRValue()->getCanonicalType())) {
+          subExprTy->getRValueType()->getCanonicalType())) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
   }
   // The type of the expr is the type of its subexpression, minus LValues.
   // Note: We need to keep the type variables intact so things like "let x: i8 =
   // -10" can work (= 10 correctly inferred to i8)
-  expr->setType(subExprTy->getRValue());
+  expr->setType(subExprTy->getRValueType());
   return expr;
 }
 
@@ -374,39 +473,38 @@ Expr *ExprChecker::checkUnaryDereference(UnaryExpr *expr) {
   // Dereferencing requires that the subexpression's type is a reference.
   Type subExprTy = expr->getSubExpr()->getType();
   ReferenceType *referenceType =
-      subExprTy->getRValue()->getDesugaredType()->getAs<ReferenceType>();
+      subExprTy->getRValueType()->getDesugaredType()->getAs<ReferenceType>();
   if (!referenceType) {
     diagnose(expr->getOpLoc(), diag::cannot_deref_value_of_type, subExprTy)
         .highlight(expr->getSubExpr()->getSourceRange());
     diagnose(expr->getLoc(), diag::value_must_have_reference_type);
     return nullptr;
   }
-  // The type of the expr is the pointee type of the reference type, plus an
-  // lvalue for mutable references.
-  Type type = referenceType->getPointeeType();
-  if (referenceType->isMut())
-    type = LValueType::get(type);
+  // The type of the expr is a LValue of the pointee's type.
+  Type type = LValueType::get(referenceType->getPointeeType());
   expr->setType(type);
   return expr;
 }
 
 Expr *ExprChecker::checkUnaryAddressOf(UnaryExpr *expr) {
+  Expr *subExpr = expr->getSubExpr();
   // Check if we can take the address of the value
-  if (!checkCanTakeAddressOf(expr, expr->getSubExpr()))
+  if (!subExpr->getType()->isLValueType()) {
+    diagnoseCannotTakeAddressOfExpr(expr, subExpr->ignoreParens());
     return nullptr;
+  }
 
-  // The type of this expr is a reference type, with 'mut' if the subExpr is an
-  // LValue.
+  // The type of this expr is a reference type, mutable if the base is.
   Type subExprType = expr->getSubExpr()->getType();
-  bool isMut = subExprType->isLValue();
-  expr->setType(ReferenceType::get(subExprType->getRValue(), isMut));
+  expr->setType(ReferenceType::get(subExprType->getRValueType(),
+                                   isMutableLValue(subExpr)));
   return expr;
 }
 
 Expr *ExprChecker::checkUnaryLNot(UnaryExpr *expr) {
   // Unary ! requires that the subexpression's type is a boolean type.
   Type subExprTy = expr->getSubExpr()->getType();
-  if (!subExprTy->getRValue()->getCanonicalType()->is<BoolType>()) {
+  if (!subExprTy->getRValueType()->getCanonicalType()->is<BoolType>()) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
   }
@@ -421,14 +519,14 @@ Expr *ExprChecker::checkUnaryNot(UnaryExpr *expr) {
   // integer type variable.
   Type subExprTy = expr->getSubExpr()->getType();
   if (!cs.isIntegerTypeOrTypeVariable(
-          subExprTy->getRValue()->getCanonicalType())) {
+          subExprTy->getRValueType()->getCanonicalType())) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
   }
   // The type of the expr is the type of its subexpression, minus LValues.
   // Note: We need to keep the type variables intact so things like "let x: i8 =
   // ~10" can work (= 10 correctly inferred to i8)
-  expr->setType(subExprTy->getRValue());
+  expr->setType(subExprTy->getRValueType());
   return expr;
 }
 
@@ -470,8 +568,8 @@ Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
     else {
 #ifndef NDEBUG
       Type valueType = lhs->getType()->getMaybeTypeValueType();
-      assert(valueType->getRValue()->getCanonicalType() ==
-             opType->getRValue()->getCanonicalType());
+      assert(valueType->getRValueType()->getCanonicalType() ==
+             opType->getRValueType()->getCanonicalType());
 #endif
     }
   }
@@ -511,17 +609,30 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
   return finalizeAssignBinaryExpr(expr);
 }
 
-bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc) {
-  /// It must have an LValue type.
-  Type type = expr->getType();
-  if (type->isLValue())
-    return true;
-
-  // Emit a diagnostic if needed
-  if (type->hasErrorType())
-    return false;
-
+bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc,
+                                        bool suppressDiagnostics) {
   expr = expr->ignoreParens();
+
+  // If the expr has an LValue type, it's assignable only if it's mutable.
+  Type type = expr->getType();
+  if (type->isLValueType() && isMutableLValue(expr))
+    return true;
+  else if (auto *tuple = dyn_cast<TupleExpr>(expr)) {
+    // If it's a tuple, dive into it and check if all of its elements are
+    // assignable.
+    if (tuple->getNumElements() != 0) {
+      bool assignable = true;
+      for (Expr *elt : tuple->getElements())
+        assignable &=
+            checkExprIsAssignable(elt, eqLoc, /*suppressDiagnostics*/ true);
+      if (assignable)
+        return true;
+    }
+  }
+
+  // Expr is not assignable - emit a diagnostic if needed.
+  if (suppressDiagnostics || type->hasErrorType())
+    return false;
 
   SourceLoc loc = expr->getLoc();
   InFlightDiagnostic diag;
@@ -539,7 +650,7 @@ bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc) {
 
 Expr *ExprChecker::finalizeAssignBinaryExpr(BinaryExpr *expr) {
   // The assignement's type is its LHS'
-  expr->setType(expr->getLHS()->getType()->getRValue());
+  expr->setType(expr->getLHS()->getType()->getRValueType());
   return expr;
 }
 
@@ -573,7 +684,7 @@ Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
 static bool isEqualityComparable(Type type) {
   // == and != support integer, floats, boolean, references and tuples thereof.
   // FIXME: Should they support "maybe" types as well?
-  type = type->getRValue()->getCanonicalType();
+  type = type->getRValueType()->getCanonicalType();
   switch (type->getKind()) {
   default:
     return false;
@@ -597,8 +708,8 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
                                                  Expr *&rhs) {
   // Fetch the type of the LHS and RHS and strip LValues, as they're irrelevant
   // here.
-  Type lhsType = lhs->getType()->getRValue();
-  Type rhsType = rhs->getType()->getRValue();
+  Type lhsType = lhs->getType()->getRValueType();
+  Type rhsType = rhs->getType()->getRValueType();
   assert(!lhsType->hasErrorType() && !rhsType->hasErrorType());
   using Op = BinaryOperatorKind;
   // NullCoalesce is a special case
@@ -686,7 +797,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
 
 Type ExprChecker::checkNullCoalesceApplication(Expr *lhs, Expr *&rhs) {
   // LHS must be "maybe T" and RHS must be "T".
-  Type lhsType = lhs->getType()->getRValue()->getDesugaredType();
+  Type lhsType = lhs->getType()->getRValueType()->getDesugaredType();
   MaybeType *maybeType = lhsType->getAs<MaybeType>();
   if (!maybeType)
     return nullptr;
@@ -728,24 +839,28 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   Type baseTy = expr->getBase()->getType();
   Identifier memberID = expr->getMemberIdentifier();
   SourceLoc memberIDLoc = expr->getMemberIdentifierLoc();
+  bool isLValue = false;
 
   // #0
-  //    - Compute the lookup type: it's the canonical type of the base,
-  //    simplified.
-  Type lookupTy = cs.simplifyType(baseTy->getCanonicalType());
+  //    - Compute the lookup type
+  CanType lookupTy = cs.simplifyType(baseTy)->getCanonicalType();
 
   // If the type that we want to look into contains an ErrorType, stop here.
   if (lookupTy->hasErrorType())
     return nullptr;
 
+  if (lookupTy->isLValueType()) {
+    isLValue = true;
+    lookupTy = CanType(lookupTy->getRValueType());
+  }
+
   // #1
   //  - Check that the operator used was the correct one
   //  - Find the type in which lookup will be performed
   //  - Find if the source is mutable or not
-  bool isMutable = false;
   {
     // If the '->' operator was used, the base must be a reference type
-    ReferenceType *ref = lookupTy->getRValue()->getAs<ReferenceType>();
+    ReferenceType *ref = lookupTy->getRValueType()->getAs<ReferenceType>();
     if (expr->isArrow()) {
       if (!ref) {
         // It's not a reference type, emit a diagnostic: we want to point at
@@ -756,25 +871,19 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
       }
       // It's indeed a reference type, and we'll look into the pointee type,
       // and the mutability depends on the mutability of the ref.
-      lookupTy = ref->getPointeeType();
-      isMutable = ref->isMut();
+      lookupTy = CanType(ref->getPointeeType());
+
+      // We're always going to generate LValues when accessing a memory
+      // location, of course.
+      isLValue = true;
     }
-    // If the '.' operator was used, the base must be a value type.
-    else {
-      if (ref) {
-        // It's a reference type, emit a diagnostic: we want to point at the
-        // operator & highlight the base expression fully.
-        diagnose(expr->getOpLoc(), diag::base_operand_of_dot_isnt_value_ty)
-            .highlight(expr->getBase()->getSourceRange());
-        return nullptr;
-      }
-      // It's a value type, we'll look into the type (minus LValue if present)
-      // and the mutability depends on whether the type carries an LValue or
-      // not.
-      if (lookupTy->isLValue()) {
-        lookupTy = lookupTy->getRValue();
-        isMutable = true;
-      }
+    // Else, if the '.' operator was used, the base must be a value type.
+    else if (ref) {
+      // It's a reference type, emit a diagnostic: we want to point at the
+      // operator & highlight the base expression fully.
+      diagnose(expr->getOpLoc(), diag::base_operand_of_dot_isnt_value_ty)
+          .highlight(expr->getBase()->getSourceRange());
+      return nullptr;
     }
   }
 
@@ -799,7 +908,7 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
     Optional<size_t> lookupResult = tuple->lookup(memberID);
     if (lookupResult == None)
       return memberNotFound();
-    return resolveTupleElementExpr(expr, tuple, *lookupResult, isMutable);
+    return resolveTupleElementExpr(expr, tuple, *lookupResult, isLValue);
   }
   // (that's it, there are only tuples in sora for now)
 
@@ -807,12 +916,11 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 }
 
 Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
-  /// If this DiscardExpr is not valid, diagnose it.
-  if (validDiscardExprs.count(expr) == 0) {
+  if (!areDiscardExprsAllowed()) {
     diagnose(expr->getLoc(), diag::illegal_discard_expr);
     return nullptr;
   }
-  /// This DiscardExpr is valid, give it a TypeVariableType with an LValue.
+
   TypeVariableType *tv = cs.createGeneralTypeVariable();
   expr->setType(LValueType::get(tv));
   return expr;
@@ -902,7 +1010,7 @@ Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
 
 Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
   // First, check if the callee is a FunctionType
-  Type calleeType = expr->getFn()->getType()->getRValue();
+  Type calleeType = expr->getFn()->getType()->getRValueType();
 
   // Don't bother checking if we have an ErrorType
   if (calleeType->hasErrorType())
@@ -961,7 +1069,7 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
   bool isValid = true;
   {
     Type condTy = expr->getCond()->getType();
-    condTy = condTy->getRValue();
+    condTy = condTy->getRValueType();
     if (!condTy->getDesugaredType()->is<BoolType>()) {
       diagnose(expr->getCond()->getLoc(), diag::value_cannot_be_used_as_cond,
                cs.simplifyType(condTy), ctxt.boolType)
@@ -1006,7 +1114,7 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   if (subExprType->hasErrorType())
     return nullptr;
 
-  subExprType = subExprType->getRValue()->getDesugaredType();
+  subExprType = subExprType->getRValueType()->getDesugaredType();
 
   // Check that it's a maybe type
   MaybeType *maybe = subExprType->getAs<MaybeType>();
@@ -1102,7 +1210,7 @@ public:
     // Some exprs require a bit of post processing
     if (CastExpr *cast = dyn_cast<CastExpr>(expr)) {
       // Check whether this cast is useful or not
-      Type fromType = cast->getSubExpr()->getType()->getRValue();
+      Type fromType = cast->getSubExpr()->getType()->getRValueType();
       if (fromType->getCanonicalType() == cast->getType()->getCanonicalType())
         cast->setIsUseless();
     }
@@ -1130,13 +1238,16 @@ class ImplicitConversionBuilder
   friend Inherited;
 
   /// Destructures a tuple value \p expr, creating a DestructuredTupleExpr in
-  /// which implicit conversions can be inserted.
-  DestructuredTupleExpr *destructureTupleValue(Expr *expr) {
-    assert(!isa<TupleExpr>(expr) && !isa<ParenExpr>(expr) &&
-           !isa<ImplicitConversionExpr>(expr));
+  /// which implicit conversions can be inserted, and visits the
+  /// DestructuredTupleExpr's result expression.
+  DestructuredTupleExpr *destructureAndVisitTupleValue(Expr *expr,
+                                                       Type destType) {
+    assert(!isa<TupleExpr>(expr) && !isa<ParenExpr>(expr));
     // Fetch the TupleType
-    TupleType *tt =
-        expr->getType()->getRValue()->getDesugaredType()->getAs<TupleType>();
+    TupleType *tt = expr->getType()
+                        ->getRValueType()
+                        ->getDesugaredType()
+                        ->getAs<TupleType>();
     assert(tt && "Not a value of type TupleType!");
 
     // Create the DTE
@@ -1155,8 +1266,10 @@ class ImplicitConversionBuilder
     }
 
     // Create the result expression : an implicit TupleExpr
-    TupleExpr *result = TupleExpr::createImplicit(ctxt, destructuredElts);
-    rebuildTupleExprType(ctxt, result);
+    TupleExpr *tuple = TupleExpr::createImplicit(ctxt, destructuredElts);
+    rebuildTupleExprType(ctxt, tuple);
+
+    Expr *result = visit(tuple, destType);
 
     dte->setResultExpr(result);
     dte->setType(result->getType());
@@ -1180,25 +1293,9 @@ public:
     if (!tc.canImplicitlyCast(cs, expr->getType(), destType))
       return expr;
 
-    // Check if we're trying to convert from a tuple type to another tuple
-    // type
-    if (destType->isTupleType() && expr->getType()->isTupleType()) {
-      bool needsDestructuring = false;
-      // If the expr isn't a TupleExpr, we may need to destructure the tuple in
-      // order to apply implicit conversions.
-      if (!isa<TupleExpr>(expr->ignoreParens())) {
-        // Only destructure if the expr isn't a ParenExpr - we want to
-        // destructure the expr inside ParenExprs, not the ParenExpr itself.
-        needsDestructuring =
-            !isa<ParenExpr>(expr) && !isa<ImplicitConversionExpr>(expr);
-      }
-      // Destructure the tuple if needed
-      if (needsDestructuring)
-        expr = destructureTupleValue(expr);
-    }
-
     // Visit the Expr using the desugared destination type.
-    expr = Inherited::visit(expr, destType->getRValue()->getDesugaredType());
+    expr =
+        Inherited::visit(expr, destType->getRValueType()->getDesugaredType());
     assert(expr && "visit returned nullptr?");
     return expr;
   }
@@ -1253,6 +1350,14 @@ private:
   // For everything else, just try to insert an implicit conversion to type \p
   // destType.
   Expr *visitExpr(Expr *expr, Type destType) {
+    // Check if we're trying to convert from a tuple type to another tuple
+    // type - if we are, destructure the tuple and visit the result expression.
+    if (destType->isTupleType() && expr->getType()->isTupleType()) {
+      // If the expr isn't a TupleExpr, destructure it.
+      if (!isa<TupleExpr>(expr))
+        return destructureAndVisitTupleValue(expr, destType);
+    }
+
     // If we want to convert to a "maybe" type, try to insert a
     // ImplicitMaybeConversionExpr
     if (MaybeType *toMaybe = destType->getAs<MaybeType>()) {
@@ -1279,7 +1384,7 @@ private:
       Type exprTy = expr->getType();
       // Check if the Expression's type is also a ReferenceType
       ReferenceType *exprRefTy =
-          exprTy->getRValue()->getDesugaredType()->getAs<ReferenceType>();
+          exprTy->getRValueType()->getDesugaredType()->getAs<ReferenceType>();
       if (!exprRefTy)
         return expr;
 
@@ -1304,8 +1409,8 @@ private:
 
 //===- TypeChecker --------------------------------------------------------===//
 
-Expr *TypeChecker::tryCoerceExpr(ConstraintSystem &cs,
-                                                Expr *expr, Type toType) {
+Expr *TypeChecker::tryCoerceExpr(ConstraintSystem &cs, Expr *expr,
+                                 Type toType) {
   return ImplicitConversionBuilder(*this, cs).doIt(toType, expr);
 }
 
