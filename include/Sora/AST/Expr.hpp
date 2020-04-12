@@ -454,7 +454,7 @@ public:
 /// be used to convert 'null' types into a maybe T.
 ///
 /// This can be perceived as "constructing a maybe type from the subexpression".
-class ImplicitMaybeConversionExpr : public ImplicitConversionExpr {
+class ImplicitMaybeConversionExpr final : public ImplicitConversionExpr {
 public:
   ImplicitMaybeConversionExpr(Expr *expr, Type type = Type())
       : ImplicitConversionExpr(ExprKind::ImplicitMaybeConversion, expr, type) {}
@@ -466,7 +466,7 @@ public:
 
 /// Represents an implicit conversion of '&mut T' into '&T' (removing 'mut' from
 /// the reference)
-class MutToImmutReferenceExpr : public ImplicitConversionExpr {
+class MutToImmutReferenceExpr final : public ImplicitConversionExpr {
 public:
   MutToImmutReferenceExpr(Expr *expr, Type type = Type())
       : ImplicitConversionExpr(ExprKind::MutToImmutReference, expr, type) {}
@@ -505,7 +505,7 @@ public:
 ///           DestructuredTupleElementExpr '0' // i32
 ///         DestructuredTupleElementExpr '1' // i32
 /// \endverbatim
-class DestructuredTupleExpr : public ImplicitConversionExpr {
+class DestructuredTupleExpr final : public ImplicitConversionExpr {
   Expr *result;
 
 public:
@@ -523,7 +523,7 @@ public:
 
 /// Represents an element of a destructured tuple. See \c DestructuredTupleExpr
 /// This expression is always implicit
-class DestructuredTupleElementExpr : public Expr {
+class DestructuredTupleElementExpr final : public Expr {
   SourceRange range;
 
 public:
