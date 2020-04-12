@@ -183,8 +183,8 @@ public:
     return {true, expr};
   }
 
-  Expr *tryInsertImplicitConversions(Expr *expr, Type toType) {
-    return tc.tryInsertImplicitConversions(cs, expr, toType);
+  Expr *tryCoerceExpr(Expr *expr, Type toType) {
+    return tc.tryCoerceExpr(cs, expr, toType);
   }
 
   /// \returns true if \p type is an Integer Type, a Float Type, or a Float/Int
@@ -495,7 +495,7 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
     return nullptr;
 
   // 2. Insert implicit conversions in the RHS to the LHS's type
-  rhs = tryInsertImplicitConversions(rhs, lhs->getType());
+  rhs = tryCoerceExpr(rhs, lhs->getType());
   expr->setRHS(rhs);
 
   // 3. Check if LHS and RHS unify.
@@ -690,7 +690,7 @@ Type ExprChecker::checkNullCoalesceApplication(Expr *lhs, Expr *&rhs) {
   MaybeType *maybeType = lhsType->getAs<MaybeType>();
   if (!maybeType)
     return nullptr;
-  rhs = tryInsertImplicitConversions(rhs, maybeType->getValueType());
+  rhs = tryCoerceExpr(rhs, maybeType->getValueType());
   if (!cs.unify(maybeType->getValueType(), rhs->getType()))
     return nullptr;
   return maybeType->getValueType();
@@ -859,7 +859,7 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
     return expr;
 
   // Insert potential implicit conversions
-  expr->setSubExpr(tryInsertImplicitConversions(expr->getSubExpr(), toType));
+  expr->setSubExpr(tryCoerceExpr(expr->getSubExpr(), toType));
 
   // Then check if the conversion can happen
   Type subExprType = expr->getSubExpr()->getType();
@@ -940,7 +940,7 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
       continue;
 
     // Try to apply implicit conversions
-    arg = tryInsertImplicitConversions(arg, expectedType);
+    arg = tryCoerceExpr(arg, expectedType);
     expr->setArg(k, arg);
 
     // Unify
@@ -1302,7 +1302,7 @@ private:
 
 //===- TypeChecker --------------------------------------------------------===//
 
-Expr *TypeChecker::tryInsertImplicitConversions(ConstraintSystem &cs,
+Expr *TypeChecker::tryCoerceExpr(ConstraintSystem &cs,
                                                 Expr *expr, Type toType) {
   return ImplicitConversionBuilder(*this, cs).doIt(toType, expr);
 }
@@ -1332,7 +1332,7 @@ Expr *TypeChecker::typecheckExpr(
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
     if (!expr->getType()->hasErrorType() && !ofType->hasErrorType())
-      expr = tryInsertImplicitConversions(cs, expr, ofType);
+      expr = tryCoerceExpr(cs, expr, ofType);
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
       if (onUnificationFailure)
