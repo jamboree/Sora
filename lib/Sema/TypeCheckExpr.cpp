@@ -21,12 +21,10 @@
 
 using namespace sora;
 
-namespace {
-
 //===- Utils --------------------------------------------------------------===//
 
 /// (re-)builds the type of a TupleExpr
-void rebuildTupleExprType(ASTContext &ctxt, TupleExpr *expr) {
+static void rebuildTupleExprType(ASTContext &ctxt, TupleExpr *expr) {
   // If the tuple is empty, just give it a () type.
   if (expr->isEmpty()) {
     expr->setType(TupleType::getEmpty(ctxt));
@@ -49,7 +47,7 @@ void rebuildTupleExprType(ASTContext &ctxt, TupleExpr *expr) {
 }
 
 /// (re-)builds the type of a ParenExpr
-void rebuildParenExprType(ParenExpr *expr) {
+static void rebuildParenExprType(ParenExpr *expr) {
   expr->setType(expr->getSubExpr()->getType());
 }
 
@@ -69,6 +67,7 @@ void rebuildParenExprType(ParenExpr *expr) {
 ///     multiple files.
 ///     - Handling of DiscardExprs isn't ideal, perhaps they should be checked
 ///     by another class?
+namespace {
 class ExprChecker : public ASTCheckerBase,
                     public ASTWalker,
                     public ExprVisitor<ExprChecker, Expr *> {
@@ -310,6 +309,7 @@ public:
     llvm_unreachable("Expr visited twice!");
   }
 };
+} // namespace
 
 void ExprChecker::findValidDiscardExprs(Expr *expr) {
   // allow _ =
@@ -1058,6 +1058,7 @@ Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) {
 
 //===- ExprCheckerEpilogue ------------------------------------------------===//
 
+namespace {
 class ExprCheckerEpilogue : public ASTCheckerBase, public ASTWalker {
 public:
   ConstraintSystem &cs;
@@ -1115,11 +1116,13 @@ public:
     return {true, expr};
   }
 };
+} // namespace
 
 //===- ImplicitConversionBuilder ------------------------------------------===//
 
 /// The ImplicitConversionBuilder attempts to insert implicit conversions
 /// inside an expression in order to change its type to a desired type.
+namespace {
 class ImplicitConversionBuilder
     : private ExprVisitor<ImplicitConversionBuilder, Expr *, Type> {
 
@@ -1297,7 +1300,6 @@ private:
     return expr;
   }
 };
-
 } // namespace
 
 //===- TypeChecker --------------------------------------------------------===//
