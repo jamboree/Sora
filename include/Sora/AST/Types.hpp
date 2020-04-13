@@ -223,6 +223,19 @@ public:
   /// \returns the canonical version of this type
   CanType getCanonicalType() const;
 
+  /// "Rebuilds" this type using \p rebuilder.
+  /// \param rebuilder a function that takes a type as input, and returns
+  /// null if the type must not be changed, or returns the type that should
+  /// replace that type in the tree.
+  ///
+  /// The rebuilder is called in post-order: the leaves of the type tree are
+  /// visited first.
+  ///
+  /// Also, note that this will not change this type - it'll create a new one.
+  ///
+  /// \returns the rebuilt type, or this type if nothing was rebuilt.
+  Type rebuildType(std::function<Type(Type)> rebuilder) const;
+
   /// \returns the desugared version of this type
   /// NOTE: This currently does nothing as sugared types haven't been
   /// implemented yet.
@@ -602,7 +615,7 @@ public:
 /// Written (in debug mode): @lvalue T, or just T in diagnostics (it's
 /// invisible).
 ///
-/// This type is canonical only if T is. 
+/// This type is canonical only if T is.
 /// This type cannot be nested (T cannot be an lvalue as well).
 class LValueType final : public TypeBase {
   Type objectType;

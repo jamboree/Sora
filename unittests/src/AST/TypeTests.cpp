@@ -348,3 +348,37 @@ TEST_F(TypeTest, printingTest_typeVariables) {
   EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDebug()), "$F0(f64)");
   EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
 }
+
+TEST_F(TypeTest, rebuildType) {
+  // Create a fairly complex type, and swap all i8 in it for u8s and make all
+  // references immutable.
+  SmallVector<Type, 4> args;
+  args.push_back(ctxt->i8Type);
+  args.push_back(ReferenceType::get(args.back(), true));
+  args.push_back(ReferenceType::get(args.back(), true));
+  args.push_back(ReferenceType::get(args.back(), true));
+  args.push_back(ctxt->voidType);
+
+  SmallVector<Type, 4> tupleElt;
+  tupleElt.push_back(ctxt->i8Type);
+  tupleElt.push_back(ReferenceType::get(tupleElt.back(), true));
+  tupleElt.push_back(ctxt->voidType);
+
+  FunctionType *fn = FunctionType::get(args, TupleType::get(*ctxt, tupleElt));
+  Type finalType = LValueType::get(fn);
+
+  ASSERT_EQ(finalType->getString(TypePrintOptions::forDebug()),
+            "@lvalue (i8, &mut i8, &mut &mut i8, &mut &mut &mut i8, void) -> "
+            "(i8, &mut i8, void)");
+
+  Type rebuilt = finalType->rebuildType([&](Type type) -> Type {
+    if (type->getCanonicalType() == ctxt->i8Type)
+      return ctxt->u8Type;
+    if (auto *ref = type->getAs<ReferenceType>())
+      return ReferenceType::get(ref->getPointeeType(), false);
+    return nullptr;
+  });
+
+  ASSERT_EQ(rebuilt->getString(TypePrintOptions::forDebug()),
+            "@lvalue (u8, &u8, &&u8, &&&u8, void) -> (u8, &u8, void)");
+}

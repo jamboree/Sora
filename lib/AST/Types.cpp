@@ -140,6 +140,107 @@ public:
 };
 } // namespace
 
+//===- TypeRebuilder ------------------------------------------------------===//
+
+namespace {
+class TypeRebuilder : public TypeVisitor<TypeRebuilder, Type> {
+  using Parent = TypeVisitor<TypeRebuilder, Type>;
+
+public:
+  ASTContext &ctxt;
+  const std::function<Type(Type)> rebuilder;
+
+  TypeRebuilder(ASTContext &ctxt, std::function<Type(Type)> rebuilder)
+      : ctxt(ctxt), rebuilder(rebuilder) {}
+
+  /// Calls visit on \p type to visit its children, then rebuilds \p type if
+  /// needed, or returns nullptr if it did not change.
+  Type doIt(Type type) {
+    if (Type visited = visit(type)) {
+      // The visit changed, use the rebuilt version of the result if it's
+      // non-null, else just return the result of the visit.
+      if (Type rebuilt = rebuilder(visited))
+        return rebuilt;
+      return visited;
+    }
+    // If the visit didn't change the type, maybe the rebuilder will.
+    return rebuilder(type);
+  }
+
+  // The visit functions call doIt on the element types and rebuild the type if
+  // needed. They should not call "rebuilder" or "visit" themselves.
+  // "Leaf" types should just return nullptr.
+
+  Type visitBuiltinType(BuiltinType *type) { return nullptr; }
+
+  Type visitReferenceType(ReferenceType *type) {
+    if (Type rebuilt = doIt(type->getPointeeType()))
+      return ReferenceType::get(rebuilt, type->isMut());
+    return nullptr;
+  }
+
+  Type visitMaybeType(MaybeType *type) {
+    if (Type rebuilt = doIt(type->getValueType()))
+      return MaybeType::get(rebuilt);
+    return nullptr;
+  }
+
+  Type visitTupleType(TupleType *type) {
+    bool needsRebuilding = false;
+
+    SmallVector<Type, 4> elems;
+    elems.reserve(type->getNumElements());
+    for (Type elem : type->getElements()) {
+      if (Type rebuilt = doIt(elem)) {
+        needsRebuilding = true;
+        elems.push_back(rebuilt);
+      }
+      else
+        elems.push_back(elem);
+    }
+
+    if (!needsRebuilding)
+      return nullptr;
+    return TupleType::get(ctxt, elems);
+  }
+
+  Type visitFunctionType(FunctionType *type) {
+    bool needsRebuilding = false;
+
+    Type rtr = type->getReturnType();
+    if (Type rebuilt = doIt(rtr)) {
+      needsRebuilding = true;
+      rtr = rebuilt;
+    }
+
+    SmallVector<Type, 4> args;
+    args.reserve(type->getNumArgs());
+    for (Type arg : type->getArgs()) {
+      if (Type rebuilt = doIt(arg)) {
+        needsRebuilding = true;
+        args.push_back(rebuilt);
+      }
+      else
+        args.push_back(arg);
+    }
+
+    if (!needsRebuilding)
+      return nullptr;
+    return FunctionType::get(args, rtr);
+  }
+
+  Type visitLValueType(LValueType *type) {
+    if (Type rebuilt = doIt(type->getObjectType()))
+      return LValueType::get(rebuilt);
+    return nullptr;
+  }
+
+  Type visitErrorType(ErrorType *type) { return nullptr; }
+
+  Type visitTypeVariableType(TypeVariableType *type) { return nullptr; }
+};
+} // namespace
+
 //===- Type/CanType/TypeLoc -----------------------------------------------===//
 
 void Type::print(raw_ostream &out, const TypePrintOptions &printOptions) const {
@@ -187,9 +288,16 @@ void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
   return ctxt.allocate(size, align, allocator);
 }
 
+Type TypeBase::rebuildType(std::function<Type(Type)> rebuilder) const {
+  // FIXME: This isn't ideal, but all types are immutable, so it should be ok.
+  TypeBase *thisType = const_cast<TypeBase *>(this);
+  if (Type rebuilt = TypeRebuilder(getASTContext(), rebuilder).doIt(thisType))
+    return rebuilt;
+  return thisType;
+}
+
 CanType TypeBase::getCanonicalType() const {
-  /// FIXME: This isn't ideal, but nothing here will mutate the type, so it
-  /// should be OK.
+  // FIXME: This isn't ideal, but all types are immutable, so it should be ok.
   TypeBase *thisType = const_cast<TypeBase *>(this);
 
   // This type is already canonical:
@@ -308,7 +416,10 @@ bool TypeBase::isMaybeType() const {
 Type TypeBase::getMaybeTypeValueType() const {
   if (!isMaybeType())
     return nullptr;
-  return getDesugaredType()->getRValueType()->castTo<MaybeType>()->getValueType();
+  return getDesugaredType()
+      ->getRValueType()
+      ->castTo<MaybeType>()
+      ->getValueType();
 }
 
 void TypeBase::print(raw_ostream &out,
