@@ -1,0 +1,13 @@
+// RUN: %sorac-typecheck -verify %s
+
+func discardExprs(x: i32) {
+  _ = 0
+  (_, _) = (0, 0)
+  ((_, _)) = (0, 0)
+  (((_, _)), ((_, _))) = ((0, 0), (0, 0))
+  
+  discardExprs(_)   // expect-error:   '_' can only appear in a pattern or on the left side of an assignement
+  (_ + _) = (0, 0)  // expect-2-error: '_' can only appear in a pattern or on the left side of an assignement
+  _                 // expect-error:   '_' can only appear in a pattern or on the left side of an assignement
+  _ = _             // expect-error:   '_' can only appear in a pattern or on the left side of an assignement
+}
