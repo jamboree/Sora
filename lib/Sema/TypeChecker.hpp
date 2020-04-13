@@ -106,8 +106,7 @@ public:
   /// \param toType the destination type (on the left of the equality)
   /// \param expr the expression
   /// \returns the expr that should take \p expr's place in the AST.
-  Expr *tryCoerceExpr(ConstraintSystem &cs, Expr *expr,
-                                     Type toType);
+  Expr *tryCoerceExpr(ConstraintSystem &cs, Expr *expr, Type toType);
 
   /// Resolves a TypeLoc's type from its TypeRepr.
   /// \param tyLoc the TypeLoc to resolve (must have a TypeRepr* but no Type)
@@ -134,6 +133,11 @@ public:
   /// \param from must not contain an error type.
   /// NOTE: This does NOT unify the types
   bool canImplicitlyCast(const ConstraintSystem &cs, Type from, Type to);
+
+  /// \returns the immutable variant of \p type. Currently this just removes
+  /// "mut" from references. For instance, this converts (&mut i32, &mut i32)
+  /// into (&i32, &i32).
+  Type removeMutabilityFromType(Type type);
 
   /// \returns whether we can emit a diagnostic involving \p type
   static bool canDiagnose(Type type);

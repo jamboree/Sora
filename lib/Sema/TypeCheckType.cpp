@@ -277,6 +277,15 @@ bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
   return false;
 }
 
+Type TypeChecker::removeMutabilityFromType(Type type) {
+  return type->rebuildType([&](Type type) -> Type {
+    ReferenceType *reference = type->getAs<ReferenceType>();
+    if (!reference || !reference->isMut())
+      return nullptr;
+    return ReferenceType::get(reference->getPointeeType(), /*isMut*/ false);
+  });
+}
+
 bool TypeChecker::canDiagnose(Type type) {
   return type && !type->hasErrorType();
 }

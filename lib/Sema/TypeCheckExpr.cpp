@@ -172,19 +172,9 @@ public:
         return var->isMutable();
       return false;
     }
-    // TupleElement = mutable if the base is.
-    if (auto tupleElt = dyn_cast<TupleElementExpr>(expr)) {
-      Expr *base =
-          tupleElt->getBase()->ignoreParens()->ignoreImplicitConversions();
-      // When looking into a tuple directly, check the tuple element directly,
-      // not the base.
-      if (auto tuple = dyn_cast<TupleExpr>(base))
-        return isMutableLValue(tuple->getElement(tupleElt->getIndex()));
-      // Else we're probably looking into something else.
-      if (tupleElt->isArrow())
-        return isMutableReference(tupleElt->getBase());
-      return isMutableLValue(tupleElt->getBase());
-    }
+    // TupleElement = use the flag
+    if (auto tupleElt = dyn_cast<TupleElementExpr>(expr))
+      return tupleElt->isMutableLValue();
     // Dereference = mutable if the reference is mutable.
     if (auto unary = dyn_cast<UnaryExpr>(expr)) {
       if (unary->getOpKind() == UnaryOperatorKind::Deref)
@@ -238,12 +228,24 @@ public:
 
   TupleElementExpr *resolveTupleElementExpr(UnresolvedMemberRefExpr *umre,
                                             TupleType *tuple, size_t idx,
-                                            bool isLValue) {
+                                            bool isMutableSource,
+                                            bool createLValue) {
     TupleElementExpr *expr = new (ctxt) TupleElementExpr(umre, idx);
     Type type = tuple->getElement(idx);
-    if (isLValue)
+
+    if (!isMutableSource)
+      type = tc.removeMutabilityFromType(type);
+
+    if (createLValue)
       type = LValueType::get(type);
+
     expr->setType(type);
+
+    if (isMutableSource) {
+      assert(createLValue && "Mutable source is only allowed for LValues!");
+      expr->setIsMutableLValue(true);
+    }
+
     return expr;
   }
 
@@ -836,10 +838,11 @@ Expr *ExprChecker::visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr) {
 }
 
 Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
-  Type baseTy = expr->getBase()->getType();
+  Expr *base = expr->getBase();
+  Type baseTy = base->getType();
   Identifier memberID = expr->getMemberIdentifier();
   SourceLoc memberIDLoc = expr->getMemberIdentifierLoc();
-  bool isLValue = false;
+  bool createLValue = false, isMutableSource = false;
 
   // #0
   //    - Compute the lookup type
@@ -850,7 +853,8 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
     return nullptr;
 
   if (lookupTy->isLValueType()) {
-    isLValue = true;
+    createLValue = true;
+    isMutableSource = isMutableLValue(base);
     lookupTy = CanType(lookupTy->getRValueType());
   }
 
@@ -875,7 +879,8 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 
       // We're always going to generate LValues when accessing a memory
       // location, of course.
-      isLValue = true;
+      createLValue = true;
+      isMutableSource = ref->isMut();
     }
     // Else, if the '.' operator was used, the base must be a value type.
     else if (ref) {
@@ -886,12 +891,15 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
       return nullptr;
     }
   }
+  assert(isMutableSource ? createLValue
+                         : true && "If the result is mutable, the result must "
+                                   "be an lvalue!");
 
   // #3
   //  - Perform the actual lookup
 
-  // Helper that emits a diagnostic (lookupTy doesn't have member) and returns
-  // nullptr.
+  // Helper that emits a diagnostic (lookupTy doesn't have member) and
+  // returns nullptr.
   auto memberNotFound = [&]() -> Expr * {
     // Emit a diagnostic: We want to highlight the value and member name
     // fully.
@@ -908,7 +916,8 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
     Optional<size_t> lookupResult = tuple->lookup(memberID);
     if (lookupResult == None)
       return memberNotFound();
-    return resolveTupleElementExpr(expr, tuple, *lookupResult, isLValue);
+    return resolveTupleElementExpr(expr, tuple, *lookupResult, isMutableSource,
+                                   createLValue);
   }
   // (that's it, there are only tuples in sora for now)
 
