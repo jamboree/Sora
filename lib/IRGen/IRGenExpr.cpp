@@ -14,13 +14,44 @@
 
 using namespace sora;
 
-//===- ExprIRGenerator ----------------------------------------------------===//
+//===- LValueIRGenerator --------------------------------------------------===//
+namespace {
+class RValueIRGenerator;
+
+/// The LValue IR Generator generates IR for expressions with an LValue Type.
+class LValueIRGenerator : public IRGeneratorBase,
+                          public ExprVisitor<LValueIRGenerator, mlir::Value> {
+public:
+  LValueIRGenerator(IRGen &irGen, mlir::OpBuilder builder)
+      : IRGeneratorBase(irGen), builder(builder) {}
+
+  mlir::OpBuilder builder;
+
+  mlir::Value visitUnresolvedExpr(UnresolvedExpr *) {
+    llvm_unreachable("UnresolvedExpr past Sema!");
+  }
+
+  mlir::Value visitErrorExpr(ErrorExpr *) {
+    llvm_unreachable("ErrorExpr past Sema!");
+  }
+
+  mlir::Value visitDeclRefExpr(DeclRefExpr *expr) {
+    llvm_unreachable("Unimplemented - visitDeclRefExpr");
+  }
+
+  mlir::Value visitDiscardExpr(DiscardExpr *expr) {
+    llvm_unreachable("Unimplemented - visitDiscardExpr");
+  }
+};
+} // namespace
+//===- RValueIRGenerator--------------------------------------------------===//
 
 namespace {
-class ExprIRGenerator : public IRGeneratorBase,
-                        public ExprVisitor<ExprIRGenerator, mlir::Value> {
+/// The RValue IR Generator generates IR for expressions with an RValue Type.
+class RValueIRGenerator : public IRGeneratorBase,
+                          public ExprVisitor<RValueIRGenerator, mlir::Value> {
 public:
-  ExprIRGenerator(IRGen &irGen, mlir::OpBuilder builder)
+  RValueIRGenerator(IRGen &irGen, mlir::OpBuilder builder)
       : IRGeneratorBase(irGen), builder(builder) {}
 
   mlir::OpBuilder builder;
@@ -60,6 +91,7 @@ public:
   mlir::Value visitDestructuredTupleExpr(DestructuredTupleExpr *expr);
   mlir::Value
   visitDestructuredTupleElementExpr(DestructuredTupleElementExpr *expr);
+  mlir::Value visitLoadExpr(LoadExpr *expr);
   mlir::Value visitCastExpr(CastExpr *expr);
   mlir::Value visitTupleElementExpr(TupleElementExpr *expr);
   mlir::Value visitTupleExpr(TupleExpr *expr);
@@ -72,7 +104,8 @@ public:
 };
 } // namespace
 
-mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
+mlir::Value
+RValueIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
   mlir::Type type = getIRType(expr->getType());
   assert(type.isa<mlir::IntegerType>() && "Not an IntegerType?!");
@@ -83,7 +116,7 @@ mlir::Value ExprIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   return builder.create<mlir::ConstantOp>(getNodeLoc(expr), valueAttr);
 }
 
-mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
+mlir::Value RValueIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
   mlir::Type type = getIRType(expr->getType());
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
@@ -92,7 +125,8 @@ mlir::Value ExprIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   return builder.create<mlir::ConstantOp>(getNodeLoc(expr), valueAttr);
 }
 
-mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
+mlir::Value
+RValueIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   assert(expr->getType()->isBoolType() && "Not a Bool Type?!");
   mlir::Type type = getIRType(expr->getType());
   assert(type.isInteger(1) && "Expected a i1!");
@@ -102,36 +136,40 @@ mlir::Value ExprIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   return builder.create<mlir::ConstantOp>(getNodeLoc(expr), valueAttr);
 }
 
-mlir::Value ExprIRGenerator::visitNullLiteralExpr(NullLiteralExpr *expr) {
+mlir::Value RValueIRGenerator::visitNullLiteralExpr(NullLiteralExpr *expr) {
   // "null" is a contextual thing. It's only emitted through its parent,
   // usually a MaybeConversionExpr.
   llvm_unreachable(
       "NullLiteralExprs should only be emitted through their parents!");
 }
 
-mlir::Value ExprIRGenerator::visitImplicitMaybeConversionExpr(
+mlir::Value RValueIRGenerator::visitImplicitMaybeConversionExpr(
     ImplicitMaybeConversionExpr *expr) {
   // TODO: Handle "NullLiteralExpr" as child expr as a special case.
   llvm_unreachable("Unimplemented - visitImplicitMaybeConversionExpr");
 }
 
 mlir::Value
-ExprIRGenerator::visitMutToImmutReferenceExpr(MutToImmutReferenceExpr *expr) {
+RValueIRGenerator::visitMutToImmutReferenceExpr(MutToImmutReferenceExpr *expr) {
   // As there is no distinction between mutable and immutable references in the
   // IR, we don't have to do anything.
   return visit(expr->getSubExpr());
 }
 
 mlir::Value
-ExprIRGenerator::visitDestructuredTupleExpr(DestructuredTupleExpr *expr) {
+RValueIRGenerator::visitDestructuredTupleExpr(DestructuredTupleExpr *expr) {
   llvm_unreachable("Unimplemented - visitDestructuredTupleExpr");
 }
-mlir::Value ExprIRGenerator::visitDestructuredTupleElementExpr(
+mlir::Value RValueIRGenerator::visitDestructuredTupleElementExpr(
     DestructuredTupleElementExpr *expr) {
   llvm_unreachable("Unimplemented - visitDestructuredTupleElementExpr");
 }
 
-mlir::Value ExprIRGenerator::visitCastExpr(CastExpr *expr) {
+mlir::Value RValueIRGenerator::visitLoadExpr(LoadExpr *expr) {
+  llvm_unreachable("Unimplemented - visitLoadExpr");
+}
+
+mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
   Expr *subExpr = expr->getSubExpr();
 
   // Generate IR for the subexpression, and if the cast is "useless", stop here.
@@ -149,47 +187,47 @@ mlir::Value ExprIRGenerator::visitCastExpr(CastExpr *expr) {
   return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
 }
 
-mlir::Value ExprIRGenerator::visitTupleElementExpr(TupleElementExpr *expr) {
+mlir::Value RValueIRGenerator::visitTupleElementExpr(TupleElementExpr *expr) {
   llvm_unreachable("Unimplemented - visitTupleElementExpr");
 }
 
-mlir::Value ExprIRGenerator::visitTupleExpr(TupleExpr *expr) {
+mlir::Value RValueIRGenerator::visitTupleExpr(TupleExpr *expr) {
   llvm_unreachable("Unimplemented - visitTupleExpr");
 }
 
-mlir::Value ExprIRGenerator::visitParenExpr(ParenExpr *expr) {
+mlir::Value RValueIRGenerator::visitParenExpr(ParenExpr *expr) {
   return visit(expr->getSubExpr());
 }
 
-mlir::Value ExprIRGenerator::visitCallExpr(CallExpr *expr) {
+mlir::Value RValueIRGenerator::visitCallExpr(CallExpr *expr) {
   llvm_unreachable("Unimplemented - visitCallExpr");
 }
 
-mlir::Value ExprIRGenerator::visitConditionalExpr(ConditionalExpr *expr) {
+mlir::Value RValueIRGenerator::visitConditionalExpr(ConditionalExpr *expr) {
   llvm_unreachable("Unimplemented - visitConditionalExpr");
 }
 
-mlir::Value ExprIRGenerator::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
+mlir::Value RValueIRGenerator::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   llvm_unreachable("Unimplemented - visitForceUnwrapExpr");
 }
 
-mlir::Value ExprIRGenerator::visitBinaryExpr(BinaryExpr *expr) {
+mlir::Value RValueIRGenerator::visitBinaryExpr(BinaryExpr *expr) {
   llvm_unreachable("Unimplemented - visitBinaryExpr");
 }
 
-mlir::Value ExprIRGenerator::genUnaryAddressOf(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::genUnaryAddressOf(UnaryExpr *expr) {
   llvm_unreachable("Unimplemented - genUnaryAddressOf");
 }
 
-mlir::Value ExprIRGenerator::genUnaryDeref(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::genUnaryDeref(UnaryExpr *expr) {
   llvm_unreachable("Unimplemented - genUnaryDeref");
 }
 
-mlir::Value ExprIRGenerator::genUnaryNot(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::genUnaryNot(UnaryExpr *expr) {
   llvm_unreachable("Unimplemented - genUnaryNot");
 }
 
-mlir::Value ExprIRGenerator::genUnaryLNot(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::genUnaryLNot(UnaryExpr *expr) {
   mlir::Location loc = getNodeLoc(expr);
   mlir::Value value = visit(expr->getSubExpr());
   assert(value.getType().isInteger(1) && "Unexpected operand type for LNot!");
@@ -240,7 +278,7 @@ static mlir::Value genFloatUnaryMinus(mlir::OpBuilder &builder,
   return builder.create<mlir::SubFOp>(loc, lhs, value);
 }
 
-mlir::Value ExprIRGenerator::genUnaryMinus(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::genUnaryMinus(UnaryExpr *expr) {
   mlir::Location loc = getNodeLoc(expr);
   mlir::Value value = visit(expr->getSubExpr());
 
@@ -252,12 +290,12 @@ mlir::Value ExprIRGenerator::genUnaryMinus(UnaryExpr *expr) {
     llvm_unreachable("Unsupported type for Unary Minus!");
 }
 
-mlir::Value ExprIRGenerator::genUnaryPlus(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::genUnaryPlus(UnaryExpr *expr) {
   // Unary plus is syntactic sugar - it doesn't do anything.
   return visit(expr->getSubExpr());
 }
 
-mlir::Value ExprIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
+mlir::Value RValueIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
   switch (expr->getOpKind()) {
   case UnaryOperatorKind::AddressOf:
     return genUnaryAddressOf(expr);
@@ -279,7 +317,7 @@ mlir::Value ExprIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
 //===- IRGen --------------------------------------------------------------===//
 
 mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder builder) {
-  return ExprIRGenerator(*this, builder).visit(expr);
+  return RValueIRGenerator(*this, builder).visit(expr);
 }
 
 mlir::Type IRGen::getIRType(Expr *expr) { return getIRType(expr->getType()); }
