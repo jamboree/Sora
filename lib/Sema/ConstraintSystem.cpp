@@ -21,123 +21,6 @@ STATISTIC(numCanUnifyCalls, "# of calls to canUnify");
 STATISTIC(numTypeVariablesBound, "# of type variables bound");
 STATISTIC(numTypeVariablesCreated, "# of type variables created");
 
-//===--- TypeSimplifier ---------------------------------------------------===//
-
-/// The TypeVariableType simplifier, which replaces type variables with their
-/// bindings.
-///
-/// Note that visit methods return null when no change is needed, so  visit()
-/// returns null for types with no type variables.
-namespace {
-class TypeSimplifier : public TypeVisitor<TypeSimplifier, Type> {
-public:
-  using Parent = TypeVisitor<TypeSimplifier, Type>;
-  friend Parent;
-
-  TypeSimplifier(const ConstraintSystem &cs, Type defaultInt, Type defaultFloat)
-      : cs(cs), defaultInt(defaultInt), defaultFloat(defaultFloat) {
-    assert(defaultInt && "No Default Integer Type!");
-    assert(!defaultInt->hasErrorType() ||
-           !defaultInt->hasTypeVariable() && "Invalid Default Integer Type!");
-    assert(defaultFloat && "No Default Integer Type!");
-    assert(!defaultFloat->hasErrorType() ||
-           !defaultFloat->hasTypeVariable() && "Invalid Default Float Type!");
-  }
-
-  const ConstraintSystem &cs;
-  Type defaultInt, defaultFloat;
-
-  /// Whether we found an unbound general type variable.
-  bool hadUnboundGeneralTypeVariable = false;
-
-  Type visit(Type type) {
-    if (type->hasTypeVariable())
-      return Parent::visit(type);
-    return type;
-  }
-
-private:
-  Type visitBuiltinType(BuiltinType *type) { return nullptr; }
-
-  Type visitReferenceType(ReferenceType *type) {
-    if (Type simplified = visit(type->getPointeeType()))
-      return ReferenceType::get(simplified, type->isMut());
-    return nullptr;
-  }
-
-  Type visitMaybeType(MaybeType *type) {
-    if (Type simplified = visit(type->getValueType()))
-      return MaybeType::get(simplified);
-    return nullptr;
-  }
-
-  Type visitTupleType(TupleType *type) {
-    bool needsRebuilding = false;
-
-    SmallVector<Type, 4> elems;
-    elems.reserve(type->getNumElements());
-    for (Type elem : type->getElements()) {
-      if (Type simplified = visit(elem)) {
-        needsRebuilding = true;
-        elems.push_back(simplified);
-      }
-      else
-        elems.push_back(elem);
-    }
-
-    if (!needsRebuilding)
-      return nullptr;
-    return TupleType::get(cs.ctxt, elems);
-  }
-
-  Type visitFunctionType(FunctionType *type) {
-    bool needsRebuilding = false;
-
-    Type rtr = type->getReturnType();
-    if (Type simplified = visit(rtr)) {
-      needsRebuilding = true;
-      rtr = simplified;
-    }
-
-    SmallVector<Type, 4> args;
-    args.reserve(type->getNumArgs());
-    for (Type arg : type->getArgs()) {
-      if (Type simplified = visit(arg)) {
-        needsRebuilding = true;
-        args.push_back(simplified);
-      }
-      else
-        args.push_back(arg);
-    }
-
-    if (!needsRebuilding)
-      return nullptr;
-    return FunctionType::get(args, rtr);
-  }
-
-  Type visitLValueType(LValueType *type) {
-    if (Type simplified = visit(type->getObjectType()))
-      return LValueType::get(simplified);
-    return nullptr;
-  }
-
-  Type visitErrorType(ErrorType *type) { return nullptr; }
-
-  Type visitTypeVariableType(TypeVariableType *type) {
-    Type binding = type->getBinding();
-    if (binding)
-      return visit(binding);
-    if (type->isFloatTypeVariable())
-      return defaultFloat;
-    if (type->isIntegerTypeVariable())
-      return defaultInt;
-    assert(type->isGeneralTypeVariable() && "Unknown Type Variable Kind!");
-    hadUnboundGeneralTypeVariable = true;
-    return cs.ctxt.errorType;
-  }
-};
-} // namespace
-
 //===--- TypeUnifier ------------------------------------------------------===//
 
 /// Implements ConstraintSystem::unify()
@@ -303,12 +186,34 @@ Type ConstraintSystem::simplifyType(Type type,
                                     bool *hadUnboundGeneralTypeVariable) const {
   if (!type->hasTypeVariable())
     return type;
-  auto typeSimplifier = TypeSimplifier(*this, intTVDefault, floatTVDefault);
-  Type simplified = typeSimplifier.visit(type);
-  assert(simplified && !simplified->hasTypeVariable() && "Not simplified!");
-  if (hadUnboundGeneralTypeVariable)
-    *hadUnboundGeneralTypeVariable =
-        typeSimplifier.hadUnboundGeneralTypeVariable;
+
+  Type simplified = type->rebuildType([&](Type type) -> Type {
+    // We're only interested in type variables
+    TypeVariableType *tyVar = type->getAs<TypeVariableType>();
+    if (!tyVar)
+      return nullptr;
+
+    // Replace the TV by its binding if it's bound.
+    Type binding = tyVar->getBinding();
+    if (binding)
+      return binding->hasTypeVariable()
+                 ? simplifyType(binding, hadUnboundGeneralTypeVariable)
+                 : binding;
+    // For unbound float/int type variables, use their default types.
+    if (tyVar->isFloatTypeVariable())
+      return floatTVDefault;
+    if (tyVar->isIntegerTypeVariable())
+      return intTVDefault;
+
+    assert(tyVar->isGeneralTypeVariable() && "Unknown Type Variable Kind!");
+
+    // Everything else is an error.
+    if (hadUnboundGeneralTypeVariable)
+      *hadUnboundGeneralTypeVariable = true;
+    return ctxt.errorType;
+  });
+
+  assert(!simplified->hasTypeVariable() && "Type not fully simplified!");
   return simplified;
 }
 
