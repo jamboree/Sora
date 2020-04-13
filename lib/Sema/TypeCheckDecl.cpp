@@ -166,6 +166,7 @@ public:
       diagnose(decl->getLoc(), diag::cannot_create_var_of_type, type);
       decl->setValueType(ctxt.errorType);
     }
+    assert(!type->hasLValue() && "A variable's type cannot contain LValues!");
   }
 
   // Called by visitFuncDecl
@@ -179,6 +180,8 @@ public:
     // parameter list are handled by visitFuncDecl.
     tc.resolveTypeLoc(decl->getTypeLoc(), file);
     assert(!decl->getValueType()->hasNullType() && "NullType in ParamDecl?");
+    assert(!decl->getValueType()->hasLValue() &&
+           "A param's type cannot contain LValues!");
   }
 
   void visitFuncDecl(FuncDecl *decl) {
@@ -233,6 +236,9 @@ public:
 
     // Compute the function type and assign it to the function
     decl->setValueType(FunctionType::get(paramTypes, returnType));
+
+    assert(!decl->getValueType()->hasLValue() &&
+           "A function's type cannot contain LValues!");
 
     // Check the body directly for local functions, else delay it.
     if (decl->isLocal())
