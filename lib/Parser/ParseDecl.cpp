@@ -219,14 +219,14 @@ ParserResult<FuncDecl> Parser::parseFuncDecl() {
       FuncDecl(declContext, fnLoc, identifierLoc, identifier, paramList, retTL);
 
   if (tok.isNot(TokenKind::LCurly)) {
-    // Try to find the LCurly on the same line or at the start of the next line.
+    if (!hadParseError)
+      diagnoseExpected(diag::expected_lcurly_fn_body);
+    // Try to find the LCurly on the same line or at the start of the next
+    // line.
     skipUntilTokOrNewline(TokenKind::LCurly);
     // Check if we found our LCurly
-    if (tok.isNot(TokenKind::LCurly)) {
-      if (!hadParseError)
-        diagnoseExpected(diag::expected_lcurly_fn_body);
+    if (tok.isNot(TokenKind::LCurly))
       return nullptr;
-    }
   }
 
   // block-statement

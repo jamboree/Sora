@@ -27,3 +27,5 @@ func foo(x: i32, x  // expect-error: parameter requires an explicit type
 
 func foo(,x: i32) {}  // expect-error: unexpected ',' separator
 func foo(,,x: i32,,x: i64) {} // expect-3-error: unexpected ',' separator
+
+func foo() : i32    // expect-error: expected '{' in body of function declaration
