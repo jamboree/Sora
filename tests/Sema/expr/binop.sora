@@ -298,17 +298,19 @@ func assign(p1: i32) {
     m1 = 0
     m2 = 0
     m2 = m1 
+    (m1, m2) = (0, 0)
 
     let mut ref: &i32
     ref = &a
     ref = &b
     ref = &m1           // expect-error: cannot assign value of type '&mut maybe i32' to type '&i32'
 
+    // Type be the type of the RHS, sugar should prove it.
     let mut emptyTuple = ()
     let mut voidVal: void 
-    // CHECK: BinaryExpr type=void = (Assign) opLoc=line:[[@LINE+1]]:13
+    // CHECK: BinaryExpr type=() = (Assign) opLoc=line:[[@LINE+1]]:13
     voidVal = emptyTuple
-    // CHECK: BinaryExpr type=() = (Assign) opLoc=line:[[@LINE+1]]:16
+    // CHECK: BinaryExpr type=void = (Assign) opLoc=line:[[@LINE+1]]:16
     emptyTuple = voidVal
 
     let maybeVI32: maybe i32
@@ -326,7 +328,6 @@ func assign(p1: i32) {
     maybeVI32 ?? true          // expect-error: cannot use binary operator '??' on operands of type 'maybe i32' and 'bool'
     maybeMaybeVI8 ?? 0 as i32  // expect-error: cannot use binary operator '??' on operands of type 'maybe maybe i8' and 'i32'
 }
-
 
 func compoundAssign() {
   let mut vBool = true

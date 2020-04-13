@@ -78,20 +78,23 @@ func addressOf(x: i32) {
   let mut y = 0
   let tuple = (0, 1)
   let mut mutTuple = (0, 1)
-  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+1]]:3
+  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: DeclRefExpr type=@lvalue i32
   &x
   // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NOT: LoadExpr
+  // CHECK-NEXT: DeclRefExpr type=@lvalue i32
   &y
-  // CHECK: UnaryExpr type=&(i32, i32) & (AddressOf) opLoc=line:[[@LINE+1]]:3
+  // CHECK: UnaryExpr type=&(i32, i32) & (AddressOf) opLoc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: DeclRefExpr type=@lvalue (i32, i32)
   &tuple
   // CHECK: UnaryExpr type=&mut (i32, i32) & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NOT: LoadExpr
+// CHECK-NEXT: DeclRefExpr type=@lvalue (i32, i32)
   &mutTuple
-  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+1]]:3
+  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
+  // CHECK-NEXT: TupleElementExpr type=@lvalue i32
   &tuple.0
   // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NOT: LoadExpr
+  // CHECK-NEXT: TupleElementExpr type=@lvalue i32
   &mutTuple.0
 
   &0              // expect-error: cannot take the address of a literal

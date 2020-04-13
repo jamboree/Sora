@@ -48,55 +48,45 @@ static void rebuildParenExprType(ParenExpr *expr) {
 // \returns the expr that should replace \p expr.
 static Expr *coerceToRValue(ASTContext &ctxt, Expr *expr) {
   Type type = expr->getType();
-  if (!type->isLValueType())
+
+  if (!type->hasLValue())
     return expr;
-  return new (ctxt) LoadExpr(expr, type->getRValueType());
+
+  // Special-case TupleExpr/ParenExpr - we want to insert the load for their
+  // elements, not for the Tuple/Paren.
+  if (auto *tuple = dyn_cast<TupleExpr>(expr)) {
+    bool changed = false;
+    for (size_t k = 0; k < tuple->getNumElements(); ++k) {
+      Expr *elt = tuple->getElement(k);
+      Expr *result = coerceToRValue(ctxt, elt);
+
+      if (elt->getType().getPtr() != result->getType().getPtr()) {
+        changed = true;
+        tuple->setElement(k, result);
+      }
+    }
+
+    if (changed)
+      rebuildTupleExprType(ctxt, tuple);
+    return tuple;
+  }
+
+  if (auto *paren = dyn_cast<ParenExpr>(expr)) {
+    paren->setSubExpr(coerceToRValue(ctxt, paren->getSubExpr()));
+    rebuildParenExprType(paren);
+    return paren;
+  }
+
+  // Else, if the expression is just an lvalue, insert a LoadExpr.
+  if (type->isLValueType())
+    return new (ctxt) LoadExpr(expr, type->getRValueType());
+
+  llvm::dbgs() << "Unhandled expr that has an LValue type (type="
+               << type->getString(TypePrintOptions::forDebug())
+               << ") in coerceToRValue:\n";
+  expr->dump(llvm::dbgs(), ctxt.srcMgr);
+  llvm_unreachable("Unhandled expression");
 }
-
-namespace {
-/// Represents a context in which LValues are allowed to appear in an
-/// expressions and don't have to be loaded in order to be used.
-///
-/// LValueContexts exists within a stack. They are activated before walking in
-/// their root expr, and destroyed when leaving it.
-class LValueContext {
-public:
-  enum class Kind : uint8_t {
-    /// The LHS of an assignement
-    AssignementLHS,
-    /// The base expression of a member access.
-    MemberAccessBase,
-    /// The operand of an "address of" operator.
-    AddressOfExpr,
-  };
-
-private:
-  Kind kind;
-  bool active;
-  Expr *rootExpr;
-
-public:
-  LValueContext(Kind kind, Expr *rootExpr)
-      : kind(kind), active(false), rootExpr(rootExpr) {}
-
-  ~LValueContext() {
-    assert(active && "LValue Context died inactive! We never walked into its "
-                     "root expression?!");
-  }
-
-  Expr *getRootExpr() const { return rootExpr; }
-
-  bool isActive() const { return active; }
-  void activate() {
-    assert(!isActive() && "Activating twice!");
-    active = true;
-  }
-
-  Kind getKind() const { return kind; }
-
-  bool isAssignementLHS() const { return kind == Kind::AssignementLHS; }
-};
-} // namespace
 
 //===- ExprChecker --------------------------------------------------------===//
 
@@ -121,8 +111,8 @@ public:
   ConstraintSystem &cs;
   /// The DeclContext in which this expression appears
   DeclContext *dc;
-  /// The stack of LValue Contexts.
-  SmallVector<LValueContext, 4> lvalueContexts;
+  /// The set of DiscardExpr that are valid/legal.
+  llvm::SmallPtrSet<DiscardExpr *, 4> validDiscardExprs;
 
   ExprChecker(TypeChecker &tc, ConstraintSystem &cs, DeclContext *dc)
       : ASTCheckerBase(tc), cs(cs), dc(dc) {}
@@ -134,28 +124,12 @@ public:
     return *sf;
   }
 
-  /// \returns the latest active LValue context, or nullptr is none is active.
-  LValueContext *getActiveLValueContext() {
-    for (auto it = lvalueContexts.rbegin(); it != lvalueContexts.rend(); ++it)
-      if (it->isActive())
-        return &*it;
-    return nullptr;
-  }
-
-  const LValueContext *getActiveLValueContext() const {
-    return const_cast<ExprChecker *>(this)->getActiveLValueContext();
-  }
-
-  bool areDiscardExprsAllowed() const {
-    if (const LValueContext *activeLValueCtxt = getActiveLValueContext())
-      return activeLValueCtxt->isAssignementLHS();
-    return false;
-  }
+  Expr *coerceToRValue(Expr *expr) { return ::coerceToRValue(ctxt, expr); }
 
   /// \returns true if \p expr is a mutable reference, false otherwise.
   /// Asserts that \p expr's type is an Reference type.
   bool isMutableReference(Expr *expr) const {
-    CanType subExprType = expr->getType()->getRValueType()->getCanonicalType();
+    CanType subExprType = expr->getType()->getCanonicalType();
     assert(subExprType->is<ReferenceType>() && "Not a reference type?!");
     return subExprType->castTo<ReferenceType>()->isMut();
   }
@@ -172,6 +146,9 @@ public:
         return var->isMutable();
       return false;
     }
+    // DiscardExprs - always mutable.
+    if (isa<DiscardExpr>(expr))
+      return true;
     // TupleElement = use the flag
     if (auto tupleElt = dyn_cast<TupleElementExpr>(expr))
       return tupleElt->isMutableLValue();
@@ -181,13 +158,6 @@ public:
         return isMutableReference(unary->getSubExpr());
     }
     return false;
-  }
-
-  /// Pops the last LValueContext in the stack if its root expression is \p
-  /// expr.
-  void popLValueContext(Expr *expr) {
-    if (!lvalueContexts.empty() && lvalueContexts.back().getRootExpr() == expr)
-      lvalueContexts.pop_back();
   }
 
   /// Called when the type-checker is sure that \p udre references \p
@@ -254,39 +224,15 @@ public:
     return cast;
   }
 
-  std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
-    // Check if we're entering an LValue context.
-    if (!lvalueContexts.empty()) {
-      LValueContext &lvalueCtxt = lvalueContexts.back();
-      if (lvalueCtxt.getRootExpr() == expr)
-        lvalueCtxt.activate();
-    }
+  /// If \p expr is a DiscardExpr, adds it to \c validDiscardExprs.
+  /// Else, if \p expr is a ParenExpr or TupleExpr, recurses with the
+  /// subexpression(s).
+  void findValidDiscardExprs(Expr *expr);
 
-    // For some expressions, we have to create new LValueContexts for their
-    // children.
-    switch (expr->getKind()) {
-    default:
-      break;
-    case ExprKind::Unary: {
-      UnaryExpr *unaryExpr = cast<UnaryExpr>(expr);
-      if (unaryExpr->getOpKind() == UnaryOperatorKind::AddressOf)
-        lvalueContexts.emplace_back(LValueContext::Kind::AddressOfExpr,
-                                    unaryExpr->getSubExpr());
-      break;
-    }
-    case ExprKind::Binary: {
-      BinaryExpr *binExpr = cast<BinaryExpr>(expr);
-      if (binExpr->isAssignementOp())
-        lvalueContexts.emplace_back(LValueContext::Kind::AssignementLHS,
-                                    binExpr->getLHS());
-      break;
-    }
-    case ExprKind::UnresolvedMemberRef:
-      lvalueContexts.emplace_back(
-          LValueContext::Kind::MemberAccessBase,
-          cast<UnresolvedMemberRefExpr>(expr)->getBase());
-      break;
-    }
+  std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
+    if (BinaryExpr *binary = dyn_cast<BinaryExpr>(expr))
+      if (binary->isAssignementOp())
+        findValidDiscardExprs(binary->getLHS());
 
     return {Action::Continue, expr};
   }
@@ -312,13 +258,6 @@ public:
       result->setType(ctxt.errorType);
     }
     assert(result && result->hasType());
-
-    // If we don't have an active LValue Context, coerce the Expr to an RValue.
-    if (getActiveLValueContext() == nullptr)
-      result = coerceToRValue(ctxt, result);
-
-    // Pop the current LValueContext if needed.
-    popLValueContext(expr);
 
     return {true, result};
   }
@@ -447,6 +386,19 @@ public:
 };
 } // namespace
 
+void ExprChecker::findValidDiscardExprs(Expr *expr) {
+  // allow _ =
+  if (DiscardExpr *discard = dyn_cast<DiscardExpr>(expr))
+    validDiscardExprs.insert(discard);
+  // allow (_) = ...
+  if (ParenExpr *paren = dyn_cast<ParenExpr>(expr))
+    findValidDiscardExprs(paren->getSubExpr());
+  // allow (_, _) = ..., ((_, _), (_, _)) = ..., etc.
+  if (TupleExpr *tuple = dyn_cast<TupleExpr>(expr))
+    for (Expr *elem : tuple->getElements())
+      findValidDiscardExprs(elem);
+}
+
 // NOTE:
 //    None of the "checkUnary" methods simplify the subexpression's type before
 //    checking it. For now it's harmless because there are no situations where a
@@ -459,15 +411,14 @@ Expr *ExprChecker::checkUnaryPlusOrMinus(UnaryExpr *expr) {
   // Unary + and - require that the subexpression's type is a numeric type or
   // numeric type variable.
   Type subExprTy = expr->getSubExpr()->getType();
-  if (!isNumericTypeOrTypeVariable(
-          subExprTy->getRValueType()->getCanonicalType())) {
+  if (!isNumericTypeOrTypeVariable(subExprTy->getCanonicalType())) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
   }
   // The type of the expr is the type of its subexpression, minus LValues.
   // Note: We need to keep the type variables intact so things like "let x: i8 =
   // -10" can work (= 10 correctly inferred to i8)
-  expr->setType(subExprTy->getRValueType());
+  expr->setType(subExprTy);
   return expr;
 }
 
@@ -475,7 +426,7 @@ Expr *ExprChecker::checkUnaryDereference(UnaryExpr *expr) {
   // Dereferencing requires that the subexpression's type is a reference.
   Type subExprTy = expr->getSubExpr()->getType();
   ReferenceType *referenceType =
-      subExprTy->getRValueType()->getDesugaredType()->getAs<ReferenceType>();
+      subExprTy->getDesugaredType()->getAs<ReferenceType>();
   if (!referenceType) {
     diagnose(expr->getOpLoc(), diag::cannot_deref_value_of_type, subExprTy)
         .highlight(expr->getSubExpr()->getSourceRange());
@@ -497,16 +448,16 @@ Expr *ExprChecker::checkUnaryAddressOf(UnaryExpr *expr) {
   }
 
   // The type of this expr is a reference type, mutable if the base is.
-  Type subExprType = expr->getSubExpr()->getType();
-  expr->setType(ReferenceType::get(subExprType->getRValueType(),
-                                   isMutableLValue(subExpr)));
+  // Ignore LValues as well since we require that the operand is an LValue.
+  Type subExprType = expr->getSubExpr()->getType()->getRValueType();
+  expr->setType(ReferenceType::get(subExprType, isMutableLValue(subExpr)));
   return expr;
 }
 
 Expr *ExprChecker::checkUnaryLNot(UnaryExpr *expr) {
   // Unary ! requires that the subexpression's type is a boolean type.
   Type subExprTy = expr->getSubExpr()->getType();
-  if (!subExprTy->getRValueType()->getCanonicalType()->is<BoolType>()) {
+  if (!subExprTy->getCanonicalType()->is<BoolType>()) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
   }
@@ -520,15 +471,14 @@ Expr *ExprChecker::checkUnaryNot(UnaryExpr *expr) {
   // Unary ~ requires that the subexpression's type is an integer type or
   // integer type variable.
   Type subExprTy = expr->getSubExpr()->getType();
-  if (!cs.isIntegerTypeOrTypeVariable(
-          subExprTy->getRValueType()->getCanonicalType())) {
+  if (!cs.isIntegerTypeOrTypeVariable(subExprTy->getCanonicalType())) {
     diagnoseBadUnaryExpr(expr);
     return nullptr;
   }
   // The type of the expr is the type of its subexpression, minus LValues.
   // Note: We need to keep the type variables intact so things like "let x: i8 =
   // ~10" can work (= 10 correctly inferred to i8)
-  expr->setType(subExprTy->getRValueType());
+  expr->setType(subExprTy);
   return expr;
 }
 
@@ -594,8 +544,10 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
   if (!checkExprIsAssignable(lhs, expr->getOpLoc()))
     return nullptr;
 
-  // 2. Insert implicit conversions in the RHS to the LHS's type
-  rhs = tryCoerceExpr(rhs, lhs->getType());
+  // 2. Insert implicit conversions in the RHS to the LHS's type.
+  //    We ignore the LValue here because we know the LHS has to be an lvalue of
+  //    some sort.
+  rhs = tryCoerceExpr(rhs, lhs->getType()->getRValueType());
   expr->setRHS(rhs);
 
   // 3. Check if LHS and RHS unify.
@@ -643,16 +595,21 @@ bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc,
   else if (DeclRefExpr *dre = dyn_cast<DeclRefExpr>(expr))
     diag = diagnose(loc, diag::cannot_assign_to_immutable_named_value,
                     dre->getValueDecl()->getIdentifier());
-  else
+  else {
+    Type simplified = cs.simplifyType(type);
+    if (simplified->hasErrorType())
+      return false;
+
     diag = diagnose(loc, diag::cannot_assign_to_immutable_expr_of_type,
                     cs.simplifyType(type));
+  }
   diag.highlight(eqLoc).highlight(expr->getSourceRange());
   return false;
 }
 
 Expr *ExprChecker::finalizeAssignBinaryExpr(BinaryExpr *expr) {
-  // The assignement's type is its LHS'
-  expr->setType(expr->getLHS()->getType()->getRValueType());
+  // The assignement's type is its RHS'
+  expr->setType(expr->getRHS()->getType());
   return expr;
 }
 
@@ -925,7 +882,8 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 }
 
 Expr *ExprChecker::visitDiscardExpr(DiscardExpr *expr) {
-  if (!areDiscardExprsAllowed()) {
+  /// If this DiscardExpr is not valid, diagnose it.
+  if (validDiscardExprs.count(expr) == 0) {
     diagnose(expr->getLoc(), diag::illegal_discard_expr);
     return nullptr;
   }
@@ -962,6 +920,9 @@ Expr *ExprChecker::visitNullLiteralExpr(NullLiteralExpr *expr) {
 }
 
 Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
+  // Coerce the subexpression to an RValue.
+  expr->setSubExpr(coerceToRValue(expr->getSubExpr()));
+
   // Resolve the type after the 'as'.
   tc.resolveTypeLoc(expr->getTypeLoc(), getSourceFile());
   Type toType = expr->getTypeLoc().getType();
@@ -972,7 +933,8 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
 
   // Don't bother checking if the cast is legit if there's an ErrorType
   // somewhere.
-  if (expr->getSubExpr()->getType()->hasErrorType() || toType->hasErrorType())
+  Type subExprTy = expr->getSubExpr()->getType();
+  if (subExprTy->hasErrorType() || toType->hasErrorType())
     return expr;
 
   // Insert potential implicit conversions
@@ -1018,16 +980,20 @@ Expr *ExprChecker::visitParenExpr(ParenExpr *expr) {
 }
 
 Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
+  // Coerce the callee and all of its arguments to RValues
+  expr->setFn(coerceToRValue(expr->getFn()));
+  for (Expr *&arg : expr->getArgs())
+    arg = coerceToRValue(arg);
+
   // First, check if the callee is a FunctionType
-  Type calleeType = expr->getFn()->getType()->getRValueType();
+  Type calleeType = expr->getFn()->getType();
 
   // Don't bother checking if we have an ErrorType
   if (calleeType->hasErrorType())
     return nullptr;
 
-  FunctionType *calledFn =
-      calleeType->getDesugaredType()->getAs<FunctionType>();
-  if (!calledFn) {
+  auto *fnTy = calleeType->getDesugaredType()->getAs<FunctionType>();
+  if (!fnTy) {
     // Use cs.simplifyType so things like 0() are correctly diagnosed as i32 and
     // not diagnosed as '_'
     diagnose(expr->getFn()->getLoc(),
@@ -1039,17 +1005,17 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
 
   // The type of the CallExpr is the return type of the function, even on error.
   // (= after this point, return expr on error and not nullptr!);
-  expr->setType(calledFn->getReturnType());
+  expr->setType(fnTy->getReturnType());
 
   // Now, check if we're passing the right amount of parameters to the function
-  if (expr->getNumArgs() != calledFn->getNumArgs()) {
-    diagnoseCallWithIncorrectNumberOfArguments(expr, calledFn);
+  if (expr->getNumArgs() != fnTy->getNumArgs()) {
+    diagnoseCallWithIncorrectNumberOfArguments(expr, fnTy);
     return expr;
   }
 
   // Finally, check if the call is correct
   for (size_t k = 0; k < expr->getNumArgs(); ++k) {
-    Type expectedType = calledFn->getArg(k);
+    Type expectedType = fnTy->getArg(k);
     Expr *arg = expr->getArg(k);
 
     // Don't bother checking an ill-formed arg.
@@ -1074,11 +1040,15 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
 }
 
 Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
+  // Coerce all operands to an RValue.
+  expr->setCond(coerceToRValue(expr->getCond()));
+  expr->setThen(coerceToRValue(expr->getThen()));
+  expr->setElse(coerceToRValue(expr->getElse()));
+
   // Check that the condition has a boolean type
   bool isValid = true;
   {
     Type condTy = expr->getCond()->getType();
-    condTy = condTy->getRValueType();
     if (!condTy->getDesugaredType()->is<BoolType>()) {
       diagnose(expr->getCond()->getLoc(), diag::value_cannot_be_used_as_cond,
                cs.simplifyType(condTy), ctxt.boolType)
@@ -1116,6 +1086,9 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
 }
 
 Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
+  // Coerce the subexpression to an RValue.
+  expr->setSubExpr(coerceToRValue(expr->getSubExpr()));
+
   // Fetch the type of the subexpression and simplify it.
   Type subExprType = cs.simplifyType(expr->getSubExpr()->getType());
 
@@ -1123,7 +1096,7 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   if (subExprType->hasErrorType())
     return nullptr;
 
-  subExprType = subExprType->getRValueType()->getDesugaredType();
+  subExprType = subExprType->getDesugaredType();
 
   // Check that it's a maybe type
   MaybeType *maybe = subExprType->getAs<MaybeType>();
@@ -1146,6 +1119,12 @@ Expr *ExprChecker::visitBinaryExpr(BinaryExpr *expr) {
       expr->getRHS()->getType()->hasErrorType())
     return nullptr;
 
+  // Except for assignements, coerce the RHS to an RValue.
+  if (!expr->isAssignementOp())
+    expr->setLHS(coerceToRValue(expr->getLHS()));
+  // Coerce the RHS to an RValue.
+  expr->setRHS(coerceToRValue(expr->getRHS()));
+
   if (expr->isAssignementOp())
     return checkAssignement(expr);
   return checkBinaryOp(expr);
@@ -1156,6 +1135,10 @@ Expr *ExprChecker::visitUnaryExpr(UnaryExpr *expr) {
   // Don't bother checking if the subexpression has an error type
   if (expr->getSubExpr()->getType()->hasErrorType())
     return nullptr;
+
+  // Unless this is an AdressOf, we require the subexpression to be an RValue.
+  if (expr->getOpKind() != UOp::AddressOf)
+    expr->setSubExpr(coerceToRValue(expr->getSubExpr()));
 
   switch (expr->getOpKind()) {
   case UOp::Plus:
@@ -1239,6 +1222,10 @@ public:
 
 /// The ImplicitConversionBuilder attempts to insert implicit conversions
 /// inside an expression in order to change its type to a desired type.
+///
+/// Please note that this does not insert LoadExprs. In fact, this completely
+/// ignores LValues in the destination type. Why? This is often called to
+/// implicitly convert an expression to another expr's type.
 namespace {
 class ImplicitConversionBuilder
     : private ExprVisitor<ImplicitConversionBuilder, Expr *, Type> {
@@ -1303,20 +1290,22 @@ public:
       return expr;
 
     // Visit the Expr using the desugared destination type.
-    expr =
-        Inherited::visit(expr, destType->getRValueType()->getDesugaredType());
+    expr = Inherited::visit(expr, destType->getDesugaredType());
     assert(expr && "visit returned nullptr?");
     return expr;
   }
 
 private:
-#ifndef NDEBUG
   Expr *visit(Expr *expr, Type destType) {
+    // FIXME: This is an ugly fix, ideally !destType->isLValueType() should be
+    // added to the assert below.
+    destType = destType->getRValueType();
+    assert(!expr->getType()->isLValueType() &&
+           "ImplicitConversionBuilder shouldn't have to deal with LValues!");
     Expr *result = Inherited::visit(expr, destType);
     assert(result && "visit() returned null!");
     return result;
   }
-#endif
 
   Expr *visitParenExpr(ParenExpr *expr, Type destType) {
     expr->setSubExpr(visit(expr->getSubExpr(), destType));
@@ -1360,7 +1349,8 @@ private:
   // destType.
   Expr *visitExpr(Expr *expr, Type destType) {
     // Check if we're trying to convert from a tuple type to another tuple
-    // type - if we are, destructure the tuple and visit the result expression.
+    // type - if we are, destructure the tuple and visit the result
+    // expression.
     if (destType->isTupleType() && expr->getType()->isTupleType()) {
       // If the expr isn't a TupleExpr, destructure it.
       if (!isa<TupleExpr>(expr))
@@ -1392,8 +1382,7 @@ private:
     if (ReferenceType *toRef = destType->getAs<ReferenceType>()) {
       Type exprTy = expr->getType();
       // Check if the Expression's type is also a ReferenceType
-      ReferenceType *exprRefTy =
-          exprTy->getRValueType()->getDesugaredType()->getAs<ReferenceType>();
+      auto *exprRefTy = exprTy->getDesugaredType()->getAs<ReferenceType>();
       if (!exprRefTy)
         return expr;
 
@@ -1436,6 +1425,7 @@ Expr *TypeChecker::typecheckBooleanCondition(Expr *expr, DeclContext *dc) {
       });
 }
 
+/// Main Entry Point for Expression Type-Checking.
 Expr *TypeChecker::typecheckExpr(
     ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType,
     llvm::function_ref<void(Type, Type)> onUnificationFailure) {
@@ -1444,6 +1434,9 @@ Expr *TypeChecker::typecheckExpr(
   assert(dc && "DeclContext* is null");
   expr = expr->walk(ExprChecker(*this, cs, dc)).second;
   assert(expr && "ExprChecker returns a null Expr*?");
+
+  // Insert a LoadExpr if needed.
+  expr = coerceToRValue(ctxt, expr);
 
   // If the expression is expected to be of a certain type, try to make it work.
   if (ofType) {
