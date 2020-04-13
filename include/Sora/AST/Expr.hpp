@@ -83,10 +83,11 @@ protected:
     );
 
     /// TupleElementExpr bits
-    SORA_INLINE_BITFIELD_FULL(TupleElementExpr, Expr, 32+1,
+    SORA_INLINE_BITFIELD_FULL(TupleElementExpr, Expr, 32+1+1,
       : NumPadBits,
       index : 32,
-      isArrow : 1
+      isArrow : 1,
+      isMutableLValue : 1
     );
 
     /// TupleExpr
@@ -650,6 +651,7 @@ public:
     bits.TupleElementExpr.index = index;
     assert(getIndex() == index && "Bits dropped?");
     bits.TupleElementExpr.isArrow = isArrow;
+    bits.TupleElementExpr.isMutableLValue = false;
   }
 
   /// Creates a TupleElementExpr from a UnresolvedMemberRefExpr
@@ -670,6 +672,13 @@ public:
   bool isArrow() const { return bits.TupleElementExpr.isArrow; }
   /// \returns true if the operator used was '.', false if it was '->'
   bool isDot() const { return !isArrow(); }
+
+  /// \returns true if this expression's result is a mutable LValue.
+  bool isMutableLValue() const;
+
+  /// Sets whether the LValue created by this element access is mutable.
+  /// This can only be set if the type of this expression is an LValue type!
+  void setIsMutableLValue(bool value);
 
   SourceLoc getBegLoc() const {
     assert(base && "no base expr");

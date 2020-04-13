@@ -112,6 +112,20 @@ APFloat FloatLiteralExpr::getValue() const {
   return APFloat(type->castTo<FloatType>()->getAPFloatSemantics(), getString());
 }
 
+bool TupleElementExpr::isMutableLValue() const {
+  assert(bits.TupleElementExpr.isMutableLValue
+             ? getType()->isLValueType()
+             : true && "Expression considered to be a mutable LValue when its "
+                       "type is not an LValue?!");
+  return bits.TupleElementExpr.isMutableLValue;
+}
+
+void TupleElementExpr::setIsMutableLValue(bool value) {
+  assert(getType()->isLValueType() &&
+         "Can only set this for Tuple Accesses that return LValues!");
+  bits.TupleElementExpr.isMutableLValue = value;
+}
+
 TupleExpr *TupleExpr::create(ASTContext &ctxt, SourceLoc lParenLoc,
                              ArrayRef<Expr *> exprs, SourceLoc rParenLoc) {
   // Need manual memory allocation here because of trailing objects.
