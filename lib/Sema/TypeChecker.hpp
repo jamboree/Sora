@@ -134,11 +134,6 @@ public:
   /// NOTE: This does NOT unify the types
   bool canImplicitlyCast(const ConstraintSystem &cs, Type from, Type to);
 
-  /// \returns the immutable variant of \p type. Currently this just removes
-  /// "mut" from references. For instance, this converts (&mut i32, &mut i32)
-  /// into (&i32, &i32).
-  Type removeMutabilityFromType(Type type);
-
   /// \returns whether we can emit a diagnostic involving \p type
   static bool canDiagnose(Type type);
 

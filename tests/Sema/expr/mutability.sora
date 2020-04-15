@@ -3,24 +3,19 @@
 func value(ref: &mut i32) {
   let immutTuple : (i32, &i32, &mut i32)
 
-  // Check that mutability has been "stripped" on all levels 
-  // of the type: &mut i32 should be seen as &i32.
-
   // CHECK: TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+1]]:13
   immutTuple.0
   // CHECK: TupleElementExpr type=@lvalue &i32 dot opLoc=line:[[@LINE+1]]:13
   immutTuple.1
-  // CHECK: TupleElementExpr type=@lvalue &i32 dot opLoc=line:[[@LINE+1]]:13
+  // CHECK: TupleElementExpr type=@lvalue &mut i32 dot opLoc=line:[[@LINE+1]]:13
   immutTuple.2
 
   // Should be illegal
   immutTuple.0 = 0    // expect-error: cannot assign to immutable expression of type 'i32'
   immutTuple.1 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
-  immutTuple.2 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
+  immutTuple.2 = ref  // expect-error: cannot assign to immutable expression of type '&mut i32'
 
   let mut mutTuple : (i32, &i32, &mut i32)
-
-  // Check that we see everything as expected.
 
   // CHECK: TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+1]]:11
   mutTuple.0
@@ -29,7 +24,6 @@ func value(ref: &mut i32) {
   // CHECK: TupleElementExpr type=@lvalue &mut i32 dot opLoc=line:[[@LINE+1]]:11
   mutTuple.2
 
-  // Should be allowed
   mutTuple.0 = 0
   mutTuple.1 = ref
   mutTuple.2 = ref
@@ -39,24 +33,18 @@ func value(ref: &mut i32) {
 func ref(ref: &mut i32) {
   let immutTupleRef : &(i32, &i32, &mut i32)
 
-  // Check that mutability has been "stripped" on all levels 
-  // of the type: &mut i32 should be seen as &i32.
-
   // CHECK: TupleElementExpr type=@lvalue i32 arrow opLoc=line:[[@LINE+1]]:16
   immutTupleRef->0
   // CHECK: TupleElementExpr type=@lvalue &i32 arrow opLoc=line:[[@LINE+1]]:16
   immutTupleRef->1
-  // CHECK: TupleElementExpr type=@lvalue &i32 arrow opLoc=line:[[@LINE+1]]:16
+  // CHECK: TupleElementExpr type=@lvalue &mut i32 arrow opLoc=line:[[@LINE+1]]:16
   immutTupleRef->2
 
-  // Should be illegal
   immutTupleRef->0 = 0    // expect-error: cannot assign to immutable expression of type 'i32'
   immutTupleRef->1 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
-  immutTupleRef->2 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
+  immutTupleRef->2 = ref  // expect-error: cannot assign to immutable expression of type '&mut i32'
 
   let mut mutTupleRef : &mut (i32, &i32, &mut i32)
-
-  // Check that we see everything as expected.
 
   // CHECK: TupleElementExpr type=@lvalue i32 arrow opLoc=line:[[@LINE+1]]:14
   mutTupleRef->0
@@ -65,7 +53,6 @@ func ref(ref: &mut i32) {
   // CHECK: TupleElementExpr type=@lvalue &mut i32 arrow opLoc=line:[[@LINE+1]]:14
   mutTupleRef->2
 
-  // Should be allowed
   mutTupleRef->0 = 0
   mutTupleRef->1 = ref
   mutTupleRef->2 = ref

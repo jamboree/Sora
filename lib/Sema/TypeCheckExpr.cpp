@@ -203,9 +203,6 @@ public:
     TupleElementExpr *expr = new (ctxt) TupleElementExpr(umre, idx);
     Type type = tuple->getElement(idx);
 
-    if (!isMutableSource)
-      type = tc.removeMutabilityFromType(type);
-
     if (createLValue)
       type = LValueType::get(type);
 
