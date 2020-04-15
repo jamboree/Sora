@@ -391,10 +391,25 @@ bool CompilerInstance::doParsing(SourceFile &file) {
 
 bool CompilerInstance::doSema(SourceFile &file) {
   performSema(file);
+
+  size_t memUsageBefore = 0;
+  if (options.printMemUsage) {
+    printASTContextMemoryUsage(Step::Sema);
+    memUsageBefore = astContext->getTotalMemoryUsed();
+  }
+
+  astContext->freeUnresolvedExprs();
+
+  if (options.printMemUsage) {
+    size_t diff = memUsageBefore - astContext->getTotalMemoryUsed();
+    dump_os << "  ";
+    llvm::write_integer(dump_os, diff, 0, llvm::IntegerStyle::Number);
+    dump_os << " bytes of memory recovered by freeing Unresolved expressions\n";
+  }
+
   if (options.dumpAST)
     file.dump(dump_os);
-  if (options.printMemUsage)
-    printASTContextMemoryUsage(Step::Sema);
+
   return !diagEng.hadAnyError();
 }
 
