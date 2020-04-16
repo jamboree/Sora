@@ -296,6 +296,14 @@ Type TypeBase::rebuildType(std::function<Type(Type)> rebuilder) const {
   return thisType;
 }
 
+Type TypeBase::rebuildTypeWithoutLValues() const {
+  return rebuildType([&](Type type) -> Type {
+    if (LValueType *lvalue = type->getAs<LValueType>())
+      return lvalue->getObjectType();
+    return nullptr;
+  });
+}
+
 CanType TypeBase::getCanonicalType() const {
   // FIXME: This isn't ideal, but all types are immutable, so it should be ok.
   TypeBase *thisType = const_cast<TypeBase *>(this);

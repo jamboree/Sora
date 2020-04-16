@@ -236,6 +236,9 @@ public:
   /// \returns the rebuilt type, or this type if nothing was rebuilt.
   Type rebuildType(std::function<Type(Type)> rebuilder) const;
 
+  /// Rebuilds this type without LValues.
+  Type rebuildTypeWithoutLValues() const;
+
   /// \returns the desugared version of this type
   /// NOTE: This currently does nothing as sugared types haven't been
   /// implemented yet.
