@@ -297,6 +297,8 @@ Type TypeBase::rebuildType(std::function<Type(Type)> rebuilder) const {
 }
 
 Type TypeBase::rebuildTypeWithoutLValues() const {
+  if (!hasLValue())
+    return const_cast<TypeBase *>(this);
   return rebuildType([&](Type type) -> Type {
     if (LValueType *lvalue = type->getAs<LValueType>())
       return lvalue->getObjectType();
