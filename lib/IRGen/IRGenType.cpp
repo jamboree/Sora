@@ -84,8 +84,7 @@ public:
   }
 
   mlir::Type visitLValueType(LValueType *type) {
-    // FIXME: Do LValues need a IR representation?
-    return visit(type->getObjectType());
+    llvm_unreachable("Unimplemented - visitLValueType!");
   }
 
   mlir::Type visitErrorType(ErrorType *) {
