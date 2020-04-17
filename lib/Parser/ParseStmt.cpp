@@ -69,7 +69,7 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
   SourceLoc lCurly = consumeToken();
 
   // block-statement-item*
-  SmallVector<ASTNode, 16> elements;
+  SmallVector<BlockStmtElement, 16> elements;
 
   while (!isEOF() && tok.isNot(TokenKind::RCurly)) {
     // Always skip 'unknown' tokens
@@ -117,6 +117,7 @@ ParserResult<BlockStmt> Parser::parseBlockStmt() {
       return nullptr;
     rCurly = prevTokPastTheEnd;
   }
+
   return makeParserResult(BlockStmt::create(ctxt, lCurly, elements, rCurly));
 }
 

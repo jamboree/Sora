@@ -154,10 +154,10 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
   ASTScope *curParent = scope;
   SourceLoc blockEnd = block->getEndLoc();
 
-  for (ASTNode node : block->getElements()) {
+  for (BlockStmtElement elt : block->getElements()) {
     // We want to create scopes for everything interesting inside
     // the body:
-    if (Stmt *stmt = node.dyn_cast<Stmt *>()) {
+    if (Stmt *stmt = elt.dyn_cast<Stmt *>()) {
       // If, Block and Whiles are interesting.
       ASTScope *result = nullptr;
       if (IfStmt *ifStmt = dyn_cast<IfStmt>(stmt))
@@ -170,7 +170,7 @@ void expandBlockStmtScope(BlockStmtScope *scope) {
         continue;
       curParent->addChild(result);
     }
-    else if (Decl *decl = node.dyn_cast<Decl *>()) {
+    else if (Decl *decl = elt.dyn_cast<Decl *>()) {
       // FuncDecls and LetDecls are interesting. Especially LetDecls.
       if (FuncDecl *func = dyn_cast<FuncDecl>(decl)) {
         // For FuncDecls, just create a FuncDeclScope.

@@ -13,7 +13,6 @@
 
 #pragma once
 
-#include "Sora/AST/ASTNode.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
@@ -59,17 +58,6 @@ public:
   /// Generates IR for a function's body.
   /// This does nothing if the function's body has already been generated.
   mlir::FuncOp genFunctionBody(FuncDecl *func);
-
-  /// Generates IR for an ASTNode.
-  void genNode(ASTNode node, mlir::OpBuilder builder) {
-    if (Expr *expr = node.dyn_cast<Expr *>())
-      return (void)genExpr(expr, builder);
-    if (Stmt *stmt = node.dyn_cast<Stmt *>())
-      return genStmt(stmt, builder);
-    if (Decl *decl = node.dyn_cast<Decl *>())
-      return genDecl(decl, builder);
-    llvm_unreachable("Unknown ASTNode kind");
-  }
 
   /// Generates IR for an Expression.
   mlir::Value genExpr(Expr *expr, mlir::OpBuilder builder);

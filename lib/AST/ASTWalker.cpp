@@ -217,7 +217,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   }
 
   void visitBlockStmt(BlockStmt *stmt) {
-    for (ASTNode &node : stmt->getElements())
+    for (BlockStmtElement &node : stmt->getElements())
       doIt(node);
   }
 
@@ -245,19 +245,19 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
   // Note: doIt method should accept nullptr arguments (just return directly)
   //===--------------------------------------------------------------------===//
 
-  void doIt(ASTNode &node) {
+  void doIt(BlockStmtElement &elt) {
     if (stopped)
       return;
-    if (auto expr = node.dyn_cast<Expr *>()) {
+    if (auto expr = elt.dyn_cast<Expr *>()) {
       if (Expr *replacement = doIt(expr))
-        node = replacement;
+        elt = replacement;
     }
-    else if (auto stmt = node.dyn_cast<Stmt *>())
+    else if (auto stmt = elt.dyn_cast<Stmt *>())
       doIt(stmt);
-    else if (auto decl = node.dyn_cast<Decl *>())
+    else if (auto decl = elt.dyn_cast<Decl *>())
       doIt(decl);
     else
-      llvm_unreachable("unhandled ASTNode kind!");
+      llvm_unreachable("unhandled BlockStmtElement kind!");
   }
 
   void doIt(Decl *decl) {
@@ -420,7 +420,9 @@ void ASTWalker::anchor() {}
 
 //===- walk() implementations ---------------------------------------------===//
 
-bool ASTNode::walk(ASTWalker &walker) { return Traversal(walker).walk(*this); }
+bool BlockStmtElement::walk(ASTWalker &walker) {
+  return Traversal(walker).walk(*this);
+}
 
 bool Decl::walk(ASTWalker &walker) { return Traversal(walker).walk(this); }
 

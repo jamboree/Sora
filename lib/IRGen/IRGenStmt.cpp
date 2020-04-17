@@ -27,10 +27,13 @@ public:
 
   using Visitor::visit;
 
-  void visit(ASTNode node) {
+  void visit(BlockStmtElement node) {
     if (Stmt *stmt = node.dyn_cast<Stmt *>())
       return visit(stmt);
-    return irGen.genNode(node, builder);
+    if (Expr *expr = node.dyn_cast<Expr *>())
+      return (void)irGen.genExpr(expr, builder);
+    if (Decl *decl = node.dyn_cast<Decl *>())
+      return irGen.genDecl(decl, builder);
   }
 
   void visitContinueStmt(ContinueStmt *stmt) {
@@ -59,7 +62,7 @@ public:
 
 void StmtIRGenerator::visitBlockStmt(BlockStmt *stmt) {
   // FIXME: Shouldn't this have a dedicated region or something?
-  for (ASTNode elem : stmt->getElements())
+  for (BlockStmtElement elem : stmt->getElements())
     visit(elem);
   // TODO: Emit destructor for variables that have to be destroyed.
   // Currently Sora has no destructors but it's probably a good idea

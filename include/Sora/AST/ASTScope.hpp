@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
-#include "Sora/AST/ASTNode.hpp"
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"

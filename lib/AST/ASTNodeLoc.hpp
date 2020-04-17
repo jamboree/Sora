@@ -1,14 +1,12 @@
-//===--- ASTNodeLoc.hpp - AST Node Source Loc Information Utils -*- C++ -*-===//
+//===--- ASTNodeLoc.hpp - AST Source Loc Information Utils ------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
-// Decl, Stmt and Expr all share some logic regarding the implementation of
-// getBegLoc/getEndLoc and getSourceRange. We put that logic here to minimize
-// code repetition.
-//
-// FIXME: "ASTNodeLoc" is kind of a weird name isn't it?
+// Most AST Nodes share some logic regarding the implementation of
+// getBegLoc/getEndLoc and getSourceRange. That logic is partially implemented
+// here to minimize code duplication.
 //===----------------------------------------------------------------------===//
 
 #pragma once

@@ -72,19 +72,19 @@ public:
     }
   }
 
-  void checkNode(ASTNode &node) {
-    if (node.is<Stmt *>())
-      visit(node.get<Stmt *>());
-    else if (node.is<Expr *>())
-      node = tc.typecheckExpr(node.get<Expr *>(), dc);
-    else if (node.is<Decl *>())
-      tc.typecheckDecl(node.get<Decl *>());
+  void checkBlockStmtElement(BlockStmtElement &elt) {
+    if (elt.is<Stmt *>())
+      visit(elt.get<Stmt *>());
+    else if (elt.is<Expr *>())
+      elt = tc.typecheckExpr(elt.get<Expr *>(), dc);
+    else if (elt.is<Decl *>())
+      tc.typecheckDecl(elt.get<Decl *>());
     else
-      llvm_unreachable("unknown ASTNode kind");
+      llvm_unreachable("unknown BlockStmtElement kind");
   }
 
-  FuncDecl *getAsFuncDecl(ASTNode node) {
-    if (Decl *decl = node.dyn_cast<Decl *>())
+  FuncDecl *getAsFuncDecl(BlockStmtElement elt) {
+    if (Decl *decl = elt.dyn_cast<Decl *>())
       if (FuncDecl *fn = dyn_cast<FuncDecl>(decl))
         return fn;
     return nullptr;
@@ -106,16 +106,16 @@ public:
   void visitBlockStmt(BlockStmt *stmt) {
     // Do a first pass where we typecheck FuncDecls only.
     // Their body will be checked right away.
-    for (ASTNode node : stmt->getElements()) {
-      if (FuncDecl *fn = getAsFuncDecl(node)) {
+    for (BlockStmtElement elt : stmt->getElements()) {
+      if (FuncDecl *fn = getAsFuncDecl(elt)) {
         assert(fn->isLocal() && "Function should be local!");
         tc.typecheckDecl(fn);
       }
     }
     // And do another one where we typecheck the rest
-    for (ASTNode &node : stmt->getElements()) {
-      if (!getAsFuncDecl(node))
-        checkNode(node);
+    for (BlockStmtElement &elt : stmt->getElements()) {
+      if (!getAsFuncDecl(elt))
+        checkBlockStmtElement(elt);
     }
   }
 

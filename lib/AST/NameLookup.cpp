@@ -119,8 +119,8 @@ struct ASTScopeLookup {
     // Perhaps it'd be a good idea to add a "hasFuncDecl" flag to BlockStmt
     // (which would be extended to "hasFuncOrTypeDecl") later.
     SmallVector<ValueDecl *, 4> decls;
-    for (ASTNode node : scope->getBlockStmt()->getElements()) {
-      Decl *decl = node.dyn_cast<Decl *>();
+    for (BlockStmtElement elt : scope->getBlockStmt()->getElements()) {
+      Decl *decl = elt.dyn_cast<Decl *>();
       if (!decl)
         continue;
       FuncDecl *func = dyn_cast<FuncDecl>(decl);

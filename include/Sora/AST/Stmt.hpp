@@ -8,11 +8,11 @@
 #pragma once
 
 #include "Sora/AST/ASTAlignement.hpp"
-#include "Sora/AST/ASTNode.hpp"
 #include "Sora/Common/InlineBitfields.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceLoc.hpp"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
@@ -178,8 +178,24 @@ public:
   }
 };
 
-/// Represents a "Block" statement, which is a group of statements (ast nodes)
-/// enclosed in curly brackets.
+/// An element of a block statement.
+struct BlockStmtElement : public llvm::PointerUnion<Expr *, Stmt *, Decl *> {
+  using Base = llvm::PointerUnion<Expr *, Stmt *, Decl *>;
+
+  using llvm::PointerUnion<Expr *, Stmt *, Decl *>::PointerUnion;
+
+  SourceRange getSourceRange() const;
+  SourceLoc getBegLoc() const;
+  SourceLoc getEndLoc() const;
+
+  /// Traverse this element using \p walker.
+  /// \returns true if the walk completed successfully, false if it ended
+  /// prematurely.
+  bool walk(ASTWalker &walker);
+};
+
+/// Represents a "Block" statement, which is a group of declaration, expression
+/// and/or statements enclosed in curly brackets.
 ///
 /// \verbatim
 /// {
@@ -187,20 +203,21 @@ public:
 ///   x += 2
 /// }
 /// \endverbatim
-class BlockStmt final : public Stmt,
-                        private llvm::TrailingObjects<BlockStmt, ASTNode> {
-  friend llvm::TrailingObjects<BlockStmt, ASTNode>;
+class BlockStmt final
+    : public Stmt,
+      private llvm::TrailingObjects<BlockStmt, BlockStmtElement> {
+  friend llvm::TrailingObjects<BlockStmt, BlockStmtElement>;
 
   SourceLoc lCurlyLoc, rCurlyLoc;
 
-  BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes, SourceLoc rCurlyLoc);
+  BlockStmt(SourceLoc lCurlyLoc, ArrayRef<BlockStmtElement> nodes,
+            SourceLoc rCurlyLoc);
 
 public:
-  /// Creates a Block Stmt
   static BlockStmt *create(ASTContext &ctxt, SourceLoc lCurlyLoc,
-                           ArrayRef<ASTNode> nodes, SourceLoc rCurlyLoc);
+                           ArrayRef<BlockStmtElement> elts,
+                           SourceLoc rCurlyLoc);
 
-  /// Creates an empty Block Stmt
   static BlockStmt *createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,
                                 SourceLoc rCurlyLoc);
 
@@ -208,14 +225,17 @@ public:
   SourceLoc getRightCurlyLoc() const { return rCurlyLoc; }
 
   size_t getNumElements() const { return (size_t)bits.BlockStmt.numElements; }
-  ArrayRef<ASTNode> getElements() const {
-    return {getTrailingObjects<ASTNode>(), getNumElements()};
+
+  ArrayRef<BlockStmtElement> getElements() const {
+    return {getTrailingObjects<BlockStmtElement>(), getNumElements()};
   }
-  MutableArrayRef<ASTNode> getElements() {
-    return {getTrailingObjects<ASTNode>(), getNumElements()};
+
+  MutableArrayRef<BlockStmtElement> getElements() {
+    return {getTrailingObjects<BlockStmtElement>(), getNumElements()};
   }
-  ASTNode getElement(size_t n) const { return getElements()[n]; }
-  void setElement(size_t n, ASTNode node) { getElements()[n] = node; }
+
+  BlockStmtElement getElement(size_t n) const { return getElements()[n]; }
+  void setElement(size_t n, BlockStmtElement elt) { getElements()[n] = elt; }
 
   /// \returns the SourceLoc of the first token of the statement
   SourceLoc getBegLoc() const { return lCurlyLoc; }

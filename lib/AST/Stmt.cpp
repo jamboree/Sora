@@ -72,20 +72,51 @@ SourceLoc ReturnStmt::getEndLoc() const {
   return result ? result->getEndLoc() : returnLoc;
 }
 
-BlockStmt::BlockStmt(SourceLoc lCurlyLoc, ArrayRef<ASTNode> nodes,
+SourceRange BlockStmtElement::getSourceRange() const {
+  if (is<Expr *>())
+    return get<Expr *>()->getSourceRange();
+  if (is<Decl *>())
+    return get<Decl *>()->getSourceRange();
+  if (is<Stmt *>())
+    return get<Stmt *>()->getSourceRange();
+  llvm_unreachable("unknown node");
+}
+
+SourceLoc BlockStmtElement::getBegLoc() const {
+  if (is<Expr *>())
+    return get<Expr *>()->getBegLoc();
+  if (is<Decl *>())
+    return get<Decl *>()->getBegLoc();
+  if (is<Stmt *>())
+    return get<Stmt *>()->getBegLoc();
+  llvm_unreachable("unknown node");
+}
+
+SourceLoc BlockStmtElement::getEndLoc() const {
+  if (is<Expr *>())
+    return get<Expr *>()->getEndLoc();
+  if (is<Decl *>())
+    return get<Decl *>()->getEndLoc();
+  if (is<Stmt *>())
+    return get<Stmt *>()->getEndLoc();
+  llvm_unreachable("unknown node");
+}
+
+BlockStmt::BlockStmt(SourceLoc lCurlyLoc, ArrayRef<BlockStmtElement> elts,
                      SourceLoc rCurlyLoc)
     : Stmt(StmtKind::Block), lCurlyLoc(lCurlyLoc), rCurlyLoc(rCurlyLoc) {
-  bits.BlockStmt.numElements = nodes.size();
-  assert(getNumElements() == nodes.size() && "Bits dropped");
-  std::uninitialized_copy(nodes.begin(), nodes.end(),
-                          getTrailingObjects<ASTNode>());
+  bits.BlockStmt.numElements = elts.size();
+  assert(getNumElements() == elts.size() && "Bits dropped");
+  std::uninitialized_copy(elts.begin(), elts.end(),
+                          getTrailingObjects<BlockStmtElement>());
 }
 
 BlockStmt *BlockStmt::create(ASTContext &ctxt, SourceLoc lCurlyLoc,
-                             ArrayRef<ASTNode> nodes, SourceLoc rCurlyLoc) {
-  auto size = totalSizeToAlloc<ASTNode>(nodes.size());
+                             ArrayRef<BlockStmtElement> elts,
+                             SourceLoc rCurlyLoc) {
+  auto size = totalSizeToAlloc<BlockStmtElement>(elts.size());
   void *mem = ctxt.allocate(size, alignof(BlockStmt));
-  return new (mem) BlockStmt(lCurlyLoc, nodes, rCurlyLoc);
+  return new (mem) BlockStmt(lCurlyLoc, elts, rCurlyLoc);
 }
 
 BlockStmt *BlockStmt::createEmpty(ASTContext &ctxt, SourceLoc lCurlyLoc,

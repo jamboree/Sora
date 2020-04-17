@@ -1,4 +1,4 @@
-//===--- ASTVisitor.hpp - AST Nodes Visitor ---------------------*- C++ -*-===//
+//===--- ASTVisitor.hpp -----------------------------------------*- C++ -*-===//
 // Part of the Sora project, licensed under the MIT license.
 // See LICENSE.txt in the project root for license information.
 //
@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "Sora/AST/ASTNode.hpp"
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/Expr.hpp"
 #include "Sora/AST/Pattern.hpp"
@@ -25,16 +24,16 @@ class ASTVisitor {
 public:
   using this_type = ASTVisitor;
 
-  void visit(ASTNode node, Args... args) {
-    assert(node && "node cannot be null!");
-    if (node.is<Decl *>())
-      visit(node.get<Decl *>(), ::std::forward<Args>(args)...);
-    else if (node.is<Expr *>())
-      visit(node.get<Expr *>(), ::std::forward<Args>(args)...);
-    else if (node.is<Stmt *>())
-      visit(node.get<Stmt *>(), ::std::forward<Args>(args)...);
+  void visit(BlockStmtElement elt, Args... args) {
+    assert(elt && "element cannot be null!");
+    if (elt.is<Decl *>())
+      visit(elt.get<Decl *>(), ::std::forward<Args>(args)...);
+    else if (elt.is<Expr *>())
+      visit(elt.get<Expr *>(), ::std::forward<Args>(args)...);
+    else if (elt.is<Stmt *>())
+      visit(elt.get<Stmt *>(), ::std::forward<Args>(args)...);
     else
-      llvm_unreachable("Unsupported ASTNode variant");
+      llvm_unreachable("unknown BlockStmtElement kind");
   }
 
   ExprRtrTy visit(Expr *expr, Args... args) {
