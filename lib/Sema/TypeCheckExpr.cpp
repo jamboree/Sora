@@ -502,12 +502,10 @@ Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
   if (opType) {
     // Unify the op's type with the LHS. With Sora's type system, this step
     // should always succeed since the type of binary operations is mostly
-    // decided by the LHS (note: except for relational operators where the
-    // opType is always bool, but there's no "relational compound assignement"
-    // obviously since it wouldn't make sense, so it doesn't apply here.)
+    // decided by the LHS.
     //
     // NOTE: This step is ignored for NullCoalesceAssign since it's already
-    // performed by checkNullCoalesceApplication. For that operator, just check
+    // performed by checkNullCoalesceApplication. For that operator, just assert
     // that the types are right.
 
     if (expr->getOpKind() != BinaryOperatorKind::NullCoalesceAssign) {
@@ -517,8 +515,11 @@ Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
     else {
 #ifndef NDEBUG
       Type valueType = lhs->getType()->getMaybeTypeValueType();
-      assert(valueType->getRValueType()->getCanonicalType() ==
-             opType->getRValueType()->getCanonicalType());
+      assert(valueType &&
+             "LHS is not a MaybeType for a valid NullCoalesceAssign?!");
+      assert(valueType->rebuildTypeWithoutLValues()->getCanonicalType() ==
+                 opType->getCanonicalType() &&
+             "Types are not right for NullCoalesceAssign!");
 #endif
     }
   }
@@ -541,10 +542,10 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
   if (!checkExprIsAssignable(lhs, expr->getOpLoc()))
     return nullptr;
 
-  // 2. Insert implicit conversions in the RHS to the LHS's type.
-  //    We ignore the LValue here because we know the LHS has to be an lvalue of
-  //    some sort.
-  rhs = tryCoerceExpr(rhs, lhs->getType()->getRValueType());
+  // 2. Insert implicit conversions in the RHS to the LHS's type, minus its
+  //    LValues. We use rebuildTypeWithoutLValues instead of getRValue as we
+  //    want to eliminated _all_ lvalues from the type.
+  rhs = tryCoerceExpr(rhs, lhs->getType()->rebuildTypeWithoutLValues());
   expr->setRHS(rhs);
 
   // 3. Check if LHS and RHS unify.
@@ -662,10 +663,10 @@ static bool isEqualityComparable(Type type) {
 Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
                                                  BinaryOperatorKind op,
                                                  Expr *&rhs) {
-  // Fetch the type of the LHS and RHS and strip LValues, as they're irrelevant
-  // here.
+  // Fetch the type of the LHS and RHS. Ignore LValues for the LHS as this may
+  // be used to check a compound assignement.
   Type lhsType = lhs->getType()->getRValueType();
-  Type rhsType = rhs->getType()->getRValueType();
+  Type rhsType = rhs->getType();
   assert(!lhsType->hasErrorType() && !rhsType->hasErrorType());
   using Op = BinaryOperatorKind;
   // NullCoalesce is a special case
@@ -685,10 +686,10 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
   switch (op) {
   case Op::Eq:
   case Op::NEq: {
-    // == and != requires that the LHS and RHS are exactly equal, but we allow
-    // differences in reference mutability (e.g. compare &T with &mut T)
-    // FIXME: Wouldn't it be more correct to insert a MutToImmut conversion
-    // here? It's not an easy task but would result in a more complete AST.
+    // == and != requires that the LHS and RHS are exactly equal, except for
+    // references, we allow &mut T == &T and &T == &mut T. Ideally though, we
+    // should be inserting implicit conversions in this case, but it's not easy
+    // to do - so we skip it for now.
     UnificationOptions options;
     options.ignoreReferenceMutability = true;
     if (!cs.unify(lhsType, rhsType, options))
@@ -742,7 +743,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
   case Op::LOr:
     // The type of those operators is '(bool, bool) -> bool'.
     // FIXME: Normally, there should be no general type variable as LHS/RHS of
-    // this, so checking using ->isBoolType is fine.
+    // this, so checking using ->isBoolType should be fine.
     if (lhsType->isBoolType() && rhsType->isBoolType())
       return ctxt.boolType;
     return nullptr;
@@ -753,6 +754,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
 
 Type ExprChecker::checkNullCoalesceApplication(Expr *lhs, Expr *&rhs) {
   // LHS must be "maybe T" and RHS must be "T".
+  // Ignore LValues when checking the LHS we may be doing this for &&=.
   Type lhsType = lhs->getType()->getRValueType()->getDesugaredType();
   MaybeType *maybeType = lhsType->getAs<MaybeType>();
   if (!maybeType)
@@ -1279,6 +1281,8 @@ public:
   ASTContext &ctxt;
 
   Expr *doIt(Type destType, Expr *expr) {
+    assert(!destType->hasLValue() &&
+           "LValues are not allowed in the destination type!");
     // If both types already unify, we don't have anything to do
     if (cs.unify(destType, expr->getType()))
       return expr;
@@ -1294,11 +1298,9 @@ public:
 
 private:
   Expr *visit(Expr *expr, Type destType) {
-    // FIXME: This is an ugly fix, ideally !destType->isLValueType() should be
-    // added to the assert below.
-    destType = destType->getRValueType();
-    assert(!expr->getType()->isLValueType() &&
-           "ImplicitConversionBuilder shouldn't have to deal with LValues!");
+    assert(
+        !expr->getType()->isLValueType() &&
+        "ImplicitConversionBuilder shouldn't have to deal with raw LValues!");
     Expr *result = Inherited::visit(expr, destType);
     assert(result && "visit() returned null!");
     return result;

@@ -38,7 +38,7 @@ public:
 
   /// Attempts to bind \p tv's to \p proposedBinding.
   bool tryBindTypeVariable(TypeVariableType *tv, Type proposedBinding) {
-    proposedBinding = proposedBinding->getRValueType();
+    proposedBinding = proposedBinding->rebuildTypeWithoutLValues();
     if (!tv->canBindTo(proposedBinding))
       return false;
     if (canBindTypeVariables)

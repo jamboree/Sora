@@ -100,11 +100,12 @@ public:
   /// \param dc th DeclContext in which this Stmt lives. Cannot be null.
   void typecheckStmt(Stmt *stmt, DeclContext *dc);
 
-  /// Attemps to make cs.unify(toType, expr->getType()) work by adding implicit
-  /// conversions around \p expr when possible.
+  /// Attempts to make cs.unify(toType, expr->getType()) work by adding implicit
+  /// conversions around or in \p expr.
   /// \param ctxt the ASTContext
-  /// \param toType the destination type (on the left of the equality)
-  /// \param expr the expression
+  /// \param toType the destination type - it can not contain LValues.
+  /// \param expr the expression - it must not have LValues outside of
+  ///        LoadExprs! 
   /// \returns the expr that should take \p expr's place in the AST.
   Expr *tryCoerceExpr(ConstraintSystem &cs, Expr *expr, Type toType);
 
