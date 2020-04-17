@@ -17,7 +17,7 @@ using namespace sora;
 
 //===- IRGen --------------------------------------------------------------===//
 
-void IRGen::genDecl(Decl *decl, mlir::OpBuilder builder) {
+void IRGen::genDecl(Decl *decl, mlir::OpBuilder &builder) {
   llvm_unreachable("Unimplemented - Decl IRGen");
 }
 

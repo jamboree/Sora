@@ -20,10 +20,10 @@ class StmtIRGenerator : public IRGeneratorBase,
   using Visitor = StmtVisitor<StmtIRGenerator>;
 
 public:
-  StmtIRGenerator(IRGen &irGen, mlir::OpBuilder builder)
+  StmtIRGenerator(IRGen &irGen, mlir::OpBuilder &builder)
       : IRGeneratorBase(irGen), builder(builder) {}
 
-  mlir::OpBuilder builder;
+  mlir::OpBuilder &builder;
 
   using Visitor::visit;
 
@@ -72,12 +72,12 @@ void StmtIRGenerator::visitBlockStmt(BlockStmt *stmt) {
 
 //===- IRGen --------------------------------------------------------------===//
 
-void IRGen::genStmt(Stmt *stmt, mlir::OpBuilder builder) {
+void IRGen::genStmt(Stmt *stmt, mlir::OpBuilder &builder) {
   builder.createBlock(builder.getBlock()->getParent());
   StmtIRGenerator(*this, builder).visit(stmt);
 }
 
-void IRGen::genStmt(BlockStmt *stmt, mlir::OpBuilder builder) {
+void IRGen::genStmt(BlockStmt *stmt, mlir::OpBuilder &builder) {
   return genStmt((Stmt *)stmt, builder);
 }
 

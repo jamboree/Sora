@@ -22,10 +22,10 @@ class RValueIRGenerator;
 class LValueIRGenerator : public IRGeneratorBase,
                           public ExprVisitor<LValueIRGenerator, mlir::Value> {
 public:
-  LValueIRGenerator(IRGen &irGen, mlir::OpBuilder builder)
+  LValueIRGenerator(IRGen &irGen, mlir::OpBuilder &builder)
       : IRGeneratorBase(irGen), builder(builder) {}
 
-  mlir::OpBuilder builder;
+  mlir::OpBuilder &builder;
 
   mlir::Value visitUnresolvedExpr(UnresolvedExpr *) {
     llvm_unreachable("UnresolvedExpr past Sema!");
@@ -51,10 +51,10 @@ namespace {
 class RValueIRGenerator : public IRGeneratorBase,
                           public ExprVisitor<RValueIRGenerator, mlir::Value> {
 public:
-  RValueIRGenerator(IRGen &irGen, mlir::OpBuilder builder)
+  RValueIRGenerator(IRGen &irGen, mlir::OpBuilder &builder)
       : IRGeneratorBase(irGen), builder(builder) {}
 
-  mlir::OpBuilder builder;
+  mlir::OpBuilder &builder;
 
   mlir::Value visitUnresolvedExpr(UnresolvedExpr *) {
     llvm_unreachable("UnresolvedExpr past Sema!");
@@ -316,7 +316,7 @@ mlir::Value RValueIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
 
 //===- IRGen --------------------------------------------------------------===//
 
-mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder builder) {
+mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder &builder) {
   return RValueIRGenerator(*this, builder).visit(expr);
 }
 

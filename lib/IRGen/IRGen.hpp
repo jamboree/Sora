@@ -60,18 +60,18 @@ public:
   mlir::FuncOp genFunctionBody(FuncDecl *func);
 
   /// Generates IR for an Expression.
-  mlir::Value genExpr(Expr *expr, mlir::OpBuilder builder);
+  mlir::Value genExpr(Expr *expr, mlir::OpBuilder &builder);
 
   /// Generates IR for a Statement.
-  void genStmt(Stmt *stmt, mlir::OpBuilder builder);
+  void genStmt(Stmt *stmt, mlir::OpBuilder &builder);
 
   /// Generates IR for a Block Statement.
   /// This is simply an extra entry point so files don't have to include
   /// Stmt.hpp just to implicitly convert BlockStmt into Stmts.
-  void genStmt(BlockStmt *stmt, mlir::OpBuilder builder);
+  void genStmt(BlockStmt *stmt, mlir::OpBuilder &builder);
 
   /// Generates IR for a Declaration.
-  void genDecl(Decl *decl, mlir::OpBuilder builder);
+  void genDecl(Decl *decl, mlir::OpBuilder &builder);
 
   //===- Helpers/Conversion Functions -------------------------------------===//
 
