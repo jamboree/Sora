@@ -114,14 +114,14 @@ APFloat FloatLiteralExpr::getValue() const {
 
 bool TupleElementExpr::isMutableLValue() const {
   assert(bits.TupleElementExpr.isMutableLValue
-             ? getType()->isLValueType()
+             ? getType()->is<LValueType>()
              : true && "Expression considered to be a mutable LValue when its "
                        "type is not an LValue?!");
   return bits.TupleElementExpr.isMutableLValue;
 }
 
 void TupleElementExpr::setIsMutableLValue(bool value) {
-  assert(getType()->isLValueType() &&
+  assert(getType()->is<LValueType>() &&
          "Can only set this for Tuple Accesses that return LValues!");
   bits.TupleElementExpr.isMutableLValue = value;
 }

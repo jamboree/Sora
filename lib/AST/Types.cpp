@@ -288,17 +288,15 @@ void *TypeBase::operator new(size_t size, ASTContext &ctxt, ArenaKind allocator,
   return ctxt.allocate(size, align, allocator);
 }
 
-Type TypeBase::rebuildType(std::function<Type(Type)> rebuilder) const {
-  // FIXME: This isn't ideal, but all types are immutable, so it should be ok.
-  TypeBase *thisType = const_cast<TypeBase *>(this);
-  if (Type rebuilt = TypeRebuilder(getASTContext(), rebuilder).doIt(thisType))
+Type TypeBase::rebuildType(std::function<Type(Type)> rebuilder) {
+  if (Type rebuilt = TypeRebuilder(getASTContext(), rebuilder).doIt(this))
     return rebuilt;
-  return thisType;
+  return this;
 }
 
-Type TypeBase::rebuildTypeWithoutLValues() const {
+Type TypeBase::rebuildTypeWithoutLValues() {
   if (!hasLValue())
-    return const_cast<TypeBase *>(this);
+    return this;
   return rebuildType([&](Type type) -> Type {
     if (LValueType *lvalue = type->getAs<LValueType>())
       return lvalue->getObjectType();
@@ -306,14 +304,11 @@ Type TypeBase::rebuildTypeWithoutLValues() const {
   });
 }
 
-CanType TypeBase::getCanonicalType() const {
-  // FIXME: This isn't ideal, but all types are immutable, so it should be ok.
-  TypeBase *thisType = const_cast<TypeBase *>(this);
-
+CanType TypeBase::getCanonicalType() {
   // This type is already canonical:
   if (isCanonical())
     /// FIXME: Ideally, there should be no const_cast here.
-    return CanType(thisType);
+    return CanType(this);
   // This type has already computed its canonical version
   if (TypeBase *canType = ctxtOrCanType.dyn_cast<TypeBase *>())
     return CanType(canType);
@@ -333,18 +328,18 @@ CanType TypeBase::getCanonicalType() const {
   case TypeKind::TypeVariable:
     llvm_unreachable("Type is always canonical!");
   case TypeKind::Reference: {
-    ReferenceType *type = cast<ReferenceType>(thisType);
+    ReferenceType *type = castTo<ReferenceType>();
     result = ReferenceType::get(type->getPointeeType()->getCanonicalType(),
                                 type->isMut());
     break;
   }
   case TypeKind::Maybe: {
-    MaybeType *type = cast<MaybeType>(thisType);
+    MaybeType *type = castTo<MaybeType>();
     result = MaybeType::get(type->getValueType()->getCanonicalType());
     break;
   }
   case TypeKind::Tuple: {
-    TupleType *type = cast<TupleType>(thisType);
+    TupleType *type = castTo<TupleType>();
     // The canonical version of '()' is 'void'.
     if (type->isEmpty()) {
       result = ctxt.voidType;
@@ -362,7 +357,7 @@ CanType TypeBase::getCanonicalType() const {
     break;
   }
   case TypeKind::Function: {
-    FunctionType *type = cast<FunctionType>(thisType);
+    FunctionType *type = castTo<FunctionType>();
     // Canonicalize arguments
     SmallVector<Type, 4> args;
     args.reserve(type->getNumArgs());
@@ -375,7 +370,7 @@ CanType TypeBase::getCanonicalType() const {
     break;
   }
   case TypeKind::LValue: {
-    LValueType *type = cast<LValueType>(thisType);
+    LValueType *type = castTo<LValueType>();
     result = LValueType::get(type->getObjectType()->getCanonicalType());
     break;
   }
@@ -387,37 +382,35 @@ CanType TypeBase::getCanonicalType() const {
   return CanType(result);
 }
 
-Type TypeBase::getRValueType() const {
-  if (LValueType *lvalue = dyn_cast<LValueType>(const_cast<TypeBase *>(this)))
+Type TypeBase::getRValueType() {
+  if (LValueType *lvalue = getAs<LValueType>())
     return lvalue->getObjectType()->getRValueType();
-  return const_cast<TypeBase *>(this);
+  return this;
 }
 
-bool TypeBase::isLValueType() const { return isa<LValueType>(this); }
+bool TypeBase::isBoolType() { return getCanonicalType()->is<BoolType>(); }
 
-bool TypeBase::isBoolType() const { return getCanonicalType()->is<BoolType>(); }
+bool TypeBase::isVoidType() { return getCanonicalType()->is<VoidType>(); }
 
-bool TypeBase::isVoidType() const { return getCanonicalType()->is<VoidType>(); }
+bool TypeBase::isNullType() { return getCanonicalType()->is<NullType>(); }
 
-bool TypeBase::isNullType() const { return getCanonicalType()->is<NullType>(); }
-
-bool TypeBase::isAnyIntegerType() const {
+bool TypeBase::isAnyIntegerType() {
   return getCanonicalType()->is<IntegerType>();
 }
 
-bool TypeBase::isAnyFloatType() const {
+bool TypeBase::isAnyFloatType() {
   return getCanonicalType()->is<FloatType>();
 }
 
-bool TypeBase::isTupleType() const {
+bool TypeBase::isTupleType() {
   return getDesugaredType()->is<TupleType>();
 }
 
-bool TypeBase::isMaybeType() const {
+bool TypeBase::isMaybeType() {
   return getCanonicalType()->is<MaybeType>();
 }
 
-Type TypeBase::getMaybeTypeValueType() const {
+Type TypeBase::getMaybeTypeValueType() {
   if (!isMaybeType())
     return nullptr;
   return getDesugaredType()->castTo<MaybeType>()->getValueType();

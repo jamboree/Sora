@@ -78,7 +78,7 @@ static Expr *coerceToRValue(ASTContext &ctxt, Expr *expr) {
   }
 
   // Else, if the expression is just an lvalue, insert a LoadExpr.
-  if (type->isLValueType())
+  if (type->is<LValueType>())
     return new (ctxt) LoadExpr(expr, type->getRValueType());
 
   llvm::dbgs() << "Unhandled expr that has an LValue type (type="
@@ -137,7 +137,7 @@ public:
   /// \returns true if \p expr is a mutable LValue, false otherwise.
   /// Asserts that \p expr's type is an LValue type.
   bool isMutableLValue(Expr *expr) const {
-    assert(expr->getType()->isLValueType() && "Not an LValue!");
+    assert(expr->getType()->is<LValueType>() && "Not an LValue!");
     expr = expr->ignoreParens();
     // DeclRefs = mutable if the DeclRef is.
     if (auto declRef = dyn_cast<DeclRefExpr>(expr)) {
@@ -439,7 +439,7 @@ Expr *ExprChecker::checkUnaryDereference(UnaryExpr *expr) {
 Expr *ExprChecker::checkUnaryAddressOf(UnaryExpr *expr) {
   Expr *subExpr = expr->getSubExpr();
   // Check if we can take the address of the value
-  if (!subExpr->getType()->isLValueType()) {
+  if (!subExpr->getType()->is<LValueType>()) {
     diagnoseCannotTakeAddressOfExpr(expr, subExpr->ignoreParens());
     return nullptr;
   }
@@ -567,7 +567,7 @@ bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc,
 
   // If the expr has an LValue type, it's assignable only if it's mutable.
   Type type = expr->getType();
-  if (type->isLValueType() && isMutableLValue(expr))
+  if (type->is<LValueType>() && isMutableLValue(expr))
     return true;
   else if (auto *tuple = dyn_cast<TupleExpr>(expr)) {
     // If it's a tuple, dive into it and check if all of its elements are
@@ -808,7 +808,7 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
   if (lookupTy->hasErrorType())
     return nullptr;
 
-  if (lookupTy->isLValueType()) {
+  if (lookupTy->is<LValueType>()) {
     createLValue = true;
     isMutableSource = isMutableLValue(base);
     lookupTy = CanType(lookupTy->getRValueType());
@@ -1299,7 +1299,7 @@ public:
 private:
   Expr *visit(Expr *expr, Type destType) {
     assert(
-        !expr->getType()->isLValueType() &&
+        !expr->getType()->is<LValueType>() &&
         "ImplicitConversionBuilder shouldn't have to deal with raw LValues!");
     Expr *result = Inherited::visit(expr, destType);
     assert(result && "visit() returned null!");

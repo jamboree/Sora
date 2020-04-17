@@ -8,6 +8,11 @@
 //
 // One thing to know about this hierarchy is that every type (except the
 // TypeVariableType) is unique and immutable.
+// Note that, even though most types are immutable, they are never passed around
+// as const, and most of their methods aren't even const - this is because a lot
+// of methods may return "this" in some cases, and if they were const, we'd have
+// to const_cast and there'd be no point to the "const".
+//
 //===----------------------------------------------------------------------===//
 
 #pragma once
@@ -221,7 +226,7 @@ public:
   }
 
   /// \returns the canonical version of this type
-  CanType getCanonicalType() const;
+  CanType getCanonicalType();
 
   /// "Rebuilds" this type using \p rebuilder.
   /// \param rebuilder a function that takes a type as input, and returns
@@ -234,52 +239,45 @@ public:
   /// Also, note that this will not change this type - it'll create a new one.
   ///
   /// \returns the rebuilt type, or this type if nothing was rebuilt.
-  Type rebuildType(std::function<Type(Type)> rebuilder) const;
+  Type rebuildType(std::function<Type(Type)> rebuilder);
 
   /// Rebuilds this type without LValues.
-  Type rebuildTypeWithoutLValues() const;
+  Type rebuildTypeWithoutLValues();
 
   /// \returns the desugared version of this type
   /// NOTE: This currently does nothing as sugared types haven't been
   /// implemented yet.
-  Type getDesugaredType() const { return const_cast<TypeBase *>(this); }
+  Type getDesugaredType() { return const_cast<TypeBase *>(this); }
 
   /// \returns this type as an rvalue.
   /// If this type is an LValueType, returns getObjectType(), else
   /// just returns this.
-  Type getRValueType() const;
+  Type getRValueType();
 
-  /// \returns whether this type is an LValue
-  bool isLValueType() const;
+  /// \returns whether this type is (canonically) the "null" type
+  bool isNullType();
 
-  /// \returns whether this type is the "null" type (or a sugared version
-  /// thereof)
-  bool isNullType() const;
+  /// \returns whether this type is (canonically) the "bool" type
+  bool isBoolType();
 
-  /// \returns whether this type is the "bool" type (or a sugared version
-  /// thereof)
-  bool isBoolType() const;
+  /// \returns whether this type is (canonically) the "void" type
+  bool isVoidType();
 
-  /// \returns whether this type is the "void" type (or a sugared version
-  /// thereof)
-  bool isVoidType() const;
+  /// \returns whether this type is (canonically) an IntegerType
+  bool isAnyIntegerType();
 
-  /// \returns whether this type is an IntegerType (or a sugared version
-  /// thereof)
-  bool isAnyIntegerType() const;
+  /// \returns whether this type is (canonically) a FloatType
+  bool isAnyFloatType();
 
-  /// \returns whether this type is a FloatType (or a sugared version thereof)
-  bool isAnyFloatType() const;
+  /// \returns whether this type is (canonically) a TupleType
+  bool isTupleType();
 
-  /// \returns whether this type is a TupleType (or a sugared version thereof)
-  bool isTupleType() const;
-
-  /// \returns whether this type is a MaybeType (or a sugared version thereof)
-  bool isMaybeType() const;
+  /// \returns whether this type is (canonically) a MaybeType
+  bool isMaybeType();
 
   /// \returns the value type of this MaybeType, or null if isMaybeType()
   /// returns false.
-  Type getMaybeTypeValueType() const;
+  Type getMaybeTypeValueType();
 
   /// \returns true if this type has an LValueType somewhere.
   bool hasLValue() const {
@@ -626,7 +624,7 @@ class LValueType final : public TypeBase {
   LValueType(TypeProperties prop, ASTContext &ctxt, Type objectType)
       : TypeBase(TypeKind::LValue, prop, ctxt, objectType->isCanonical()),
         objectType(objectType) {
-    assert(!objectType->getCanonicalType()->isLValueType() &&
+    assert(!objectType->getCanonicalType()->is<LValueType>() &&
            "Nested LValues!");
   }
 
