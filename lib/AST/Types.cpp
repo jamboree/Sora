@@ -395,41 +395,32 @@ Type TypeBase::getRValueType() const {
 
 bool TypeBase::isLValueType() const { return isa<LValueType>(this); }
 
-bool TypeBase::isBoolType() const {
-  return getCanonicalType()->getRValueType()->is<BoolType>();
-}
+bool TypeBase::isBoolType() const { return getCanonicalType()->is<BoolType>(); }
 
-bool TypeBase::isVoidType() const {
-  return getCanonicalType()->getRValueType()->is<VoidType>();
-}
+bool TypeBase::isVoidType() const { return getCanonicalType()->is<VoidType>(); }
 
-bool TypeBase::isNullType() const {
-  return getCanonicalType()->getRValueType()->is<NullType>();
-}
+bool TypeBase::isNullType() const { return getCanonicalType()->is<NullType>(); }
 
 bool TypeBase::isAnyIntegerType() const {
-  return getCanonicalType()->getRValueType()->is<IntegerType>();
+  return getCanonicalType()->is<IntegerType>();
 }
 
 bool TypeBase::isAnyFloatType() const {
-  return getCanonicalType()->getRValueType()->is<FloatType>();
+  return getCanonicalType()->is<FloatType>();
 }
 
 bool TypeBase::isTupleType() const {
-  return getDesugaredType()->getRValueType()->is<TupleType>();
+  return getDesugaredType()->is<TupleType>();
 }
 
 bool TypeBase::isMaybeType() const {
-  return getCanonicalType()->getRValueType()->is<MaybeType>();
+  return getCanonicalType()->is<MaybeType>();
 }
 
 Type TypeBase::getMaybeTypeValueType() const {
   if (!isMaybeType())
     return nullptr;
-  return getDesugaredType()
-      ->getRValueType()
-      ->castTo<MaybeType>()
-      ->getValueType();
+  return getDesugaredType()->castTo<MaybeType>()->getValueType();
 }
 
 void TypeBase::print(raw_ostream &out,
@@ -505,8 +496,7 @@ void TypeVariableType::visitBindings(std::function<void(Type)> visitor) const {
   if (!binding)
     return;
   visitor(binding);
-  auto *tvBinding =
-      binding->getRValueType()->getDesugaredType()->getAs<TypeVariableType>();
+  auto *tvBinding = binding->getDesugaredType()->getAs<TypeVariableType>();
   if (!tvBinding)
     return;
   tvBinding->visitBindings(visitor);
