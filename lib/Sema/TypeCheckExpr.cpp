@@ -514,11 +514,11 @@ Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
     }
     else {
 #ifndef NDEBUG
-      Type valueType = lhs->getType()->getMaybeTypeValueType();
+      Type valueType =
+          lhs->getType()->rebuildTypeWithoutLValues()->getMaybeTypeValueType();
       assert(valueType &&
              "LHS is not a MaybeType for a valid NullCoalesceAssign?!");
-      assert(valueType->rebuildTypeWithoutLValues()->getCanonicalType() ==
-                 opType->getCanonicalType() &&
+      assert(valueType->getCanonicalType() == opType->getCanonicalType() &&
              "Types are not right for NullCoalesceAssign!");
 #endif
     }
