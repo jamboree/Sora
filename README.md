@@ -35,9 +35,9 @@ Note: For the actual language features roadmap see [doc/roadmap](doc/Roadmap.md)
 - :white_check_mark: Lexer
 - :white_check_mark: AST
 - :white_check_mark: Parser
-- :hourglass: Semantic Analysis (Sema)
-- :x: IR
-- :x: IR Generation (IRGen)
+- :white_check_mark: Semantic Analysis (Sema)
+- :hourglass: IR
+- :hourglass: IR Generation (IRGen)
 - :x: IR Optimization & Analysis (advanced & flow-sensitive semantic analysis) (IROpt)
 - :x: IR Lowering to LLVM IR (LLVMGen)
 
