@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify %s
+// RUN: sorac -sema-only -verify %s
 
 func foo( // expect-note: previous definition of 'foo' is here
   a: i32, // expect-note: identifier 'a' is bound for the first time here

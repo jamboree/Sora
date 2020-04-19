@@ -1,2 +1,2 @@
-// RUN: %sorac blargh.sora 2>&1 | %filecheck %s
+// RUN: sorac blargh.sora 2>&1 | FileCheck %s
 // CHECK: error: could not load input file 'blargh.sora'

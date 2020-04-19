@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify %s
+// RUN: sorac -sema-only -verify %s
 
 func cond() {
   let x = 0

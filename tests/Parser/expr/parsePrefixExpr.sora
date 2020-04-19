@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 func foo() {
   // CHECK: UnaryExpr type=<null_type> + (Plus) opLoc=line:[[@LINE+2]]:3

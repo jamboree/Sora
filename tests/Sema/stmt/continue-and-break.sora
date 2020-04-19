@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify %s
+// RUN: sorac -sema-only -verify %s
 
 func test() {
   continue  // expect-error: 'continue' is only allowed inside a loop

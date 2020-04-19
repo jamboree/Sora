@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
 
 func defaultTypes() {
   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:3

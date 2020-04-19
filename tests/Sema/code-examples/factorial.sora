@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck %s
+// RUN: sorac -sema-only %s
 
 func factorial(n: isize) -> isize {
     if n >= 1 {

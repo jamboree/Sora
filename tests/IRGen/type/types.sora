@@ -1,4 +1,4 @@
-// RUN: %sorac -emit-raw-ir %s | %filecheck %s
+// RUN: sorac -emit-raw-ir %s | FileCheck %s
 
 // TODO: Use something other than functions to test this.
 

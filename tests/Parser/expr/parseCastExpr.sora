@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 func correctCast() {
   // CHECK: CastExpr type=<null_type> asLoc=line:[[@LINE+3]]:5

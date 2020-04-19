@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -dump-ast %s | %filecheck %s
+// RUN: sorac -sema-only -dump-ast %s | FileCheck %s
 
 func correct() {
    // CHECK: VarDecl type=i32 identifier=a0 identifierLoc=line:[[@LINE+10]]:10 immutable

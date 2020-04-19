@@ -1,4 +1,4 @@
-// RUN: %sorac-irgen -g %s | %filecheck %s
+// RUN: sorac -emit-raw-ir -g %s | FileCheck %s
 
 func unaryMinusInt() {
   // Constant tests: the generator should just modify the constants in place.

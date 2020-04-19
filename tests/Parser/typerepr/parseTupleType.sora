@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 // CHECK: TupleTypeRepr numElements=0 lParenLoc=line:[[@LINE+1]]:13 rParenLoc=line:[[@LINE+1]]:14
 func a() -> () {}

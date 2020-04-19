@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 func cond() {
   // CHECK: ConditionalExpr type=<null_type> questionLoc=line:[[@LINE+4]]:5 colonLoc=line:[[@LINE+4]]:9

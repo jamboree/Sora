@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 func suffix() {
   // CHECK: UnresolvedMemberRefExpr type=<null_type> dot memberIdent=0 memberIdentLoc=line:[[@LINE+2]]:7

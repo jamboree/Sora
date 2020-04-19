@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify %s
+// RUN: sorac -sema-only -verify %s
 
 func foo() {
   let _ // expect-error: type of '_' is ambiguous without more context

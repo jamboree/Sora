@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 func assign() {
   // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:5

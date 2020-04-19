@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify -dump-parse %s | %filecheck %s
+// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
 
 func foo() {
   // CHECK: UnresolvedDeclRefExpr type=<null_type> identifier=foo loc=line:[[@LINE+1]]:3

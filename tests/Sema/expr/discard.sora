@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify %s
+// RUN: sorac -sema-only -verify %s
 
 func discardExprs(x: i32) {
   _ = 0

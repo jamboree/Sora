@@ -1,7 +1,7 @@
-// RUN: %sorac -emit-raw-ir -g %s     | %filecheck %s --check-prefix DBG
-// RUN: %sorac -emit-raw-ir -g0 %s    | %filecheck %s --check-prefix NODBG
-// RUN: %sorac -emit-raw-ir -g -g0 %s | %filecheck %s --check-prefix NODBG
-// RUN: %sorac -emit-raw-ir -g0 -g %s | %filecheck %s --check-prefix NODBG
+// RUN: sorac -emit-raw-ir -g %s     | FileCheck %s --check-prefix DBG
+// RUN: sorac -emit-raw-ir -g0 %s    | FileCheck %s --check-prefix NODBG
+// RUN: sorac -emit-raw-ir -g -g0 %s | FileCheck %s --check-prefix NODBG
+// RUN: sorac -emit-raw-ir -g0 -g %s | FileCheck %s --check-prefix NODBG
 
 // FIXME: Make this test more complete, test at least a dozen different instrs.
 func foo() {

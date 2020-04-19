@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
 
 func foo() {
     // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:15 decl='foo'@line:[[@LINE-1]]:6

@@ -100,9 +100,11 @@ target_link_libraries(libsora ${libsora_llvm_libs})
 add_subdirectory(tools/sorac)
 
 # Add a check-sora target
-set(LLVM_LIT_PATH "lit" CACHE STRING "Path to llvm-lit")
+set(LLVM_LIT_CMD "lit" CACHE STRING "Command to run llvm-lit")
 
 add_custom_target(check-sorac
-        COMMAND ${LLVM_LIT_PATH} ${CMAKE_SOURCE_DIR}/tests -v -D sora_bin_dir=${CMAKE_BINARY_DIR}/bin
+        COMMAND ${LLVM_LIT_CMD} ${CMAKE_SOURCE_DIR}/tests -v
+          --path ${CMAKE_BINARY_DIR}/bin
+          --path ${LLVM_BINARY_DIR}/bin
         DEPENDS sorac
 )

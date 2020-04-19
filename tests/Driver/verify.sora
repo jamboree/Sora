@@ -1,4 +1,4 @@
-// RUN: %sorac -verify %s 2>&1 | %filecheck %s
+// RUN: sorac -verify %s 2>&1 | FileCheck %s
 
 // CHECK: :[[@LINE+1]]:12: error: expected '-'
 // expect-1

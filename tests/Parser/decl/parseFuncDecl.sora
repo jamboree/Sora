@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify %s
+// RUN: sorac -parse-only -verify %s
 
 func foo() {}
 func foo() -> i32 {}

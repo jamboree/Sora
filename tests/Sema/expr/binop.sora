@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
 
 func coalesce(x: maybe i32, y: maybe &i32, z: maybe &mut i32) {
   let mut a = 0

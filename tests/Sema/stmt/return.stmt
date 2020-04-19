@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -dump-ast -verify %s | %filecheck %s
+// RUN: sorac -sema-only -dump-ast -verify %s | FileCheck %s
 
 func voidFn() {
   return 

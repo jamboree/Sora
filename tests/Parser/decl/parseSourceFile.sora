@@ -1,4 +1,4 @@
-// RUN: %sorac-parse -verify %s
+// RUN: sorac -parse-only -verify %s
 foo // expect-error: expected a function declaration
 func foo() {}
 let // expect-error:    'let' declarations are not allowed at the global level

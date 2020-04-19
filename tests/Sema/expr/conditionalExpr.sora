@@ -1,4 +1,4 @@
-// RUN: %sorac-typecheck -verify -dump-ast %s | %filecheck %s
+// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
 
 func foo(cond: bool) {
   // CHECK: ConditionalExpr type=i8 questionLoc=line:[[@LINE+4]]:20 colonLoc=line:[[@LINE+4]]:24
