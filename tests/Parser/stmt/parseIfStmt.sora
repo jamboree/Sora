@@ -1,40 +1,10 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s
 
 func ifStmt() {
-  // CHECK: IfStmt ifLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: BooleanLiteralExpr
-  // CHECK-NEXT: BlockStmt
   if false {}
-  // CHECK: IfStmt ifLoc=line:[[@LINE+4]]:3 elseLoc=line:[[@LINE+4]]:14
-  // CHECK-NEXT: BooleanLiteralExpr
-  // CHECK-NEXT: BlockStmt
-  // CHECK-NEXT: BlockStmt
   if true {} else {}
-  // CHECK: IfStmt ifLoc=line:[[@LINE+6]]:3 elseLoc=line:[[@LINE+6]]:14
-  // CHECK-NEXT: BooleanLiteralExpr
-  // CHECK-NEXT: BlockStmt
-  // CHECK-NEXT: IfStmt ifLoc=line:[[@LINE+3]]:19
-  // CHECK-NEXT:  BooleanLiteralExpr
-  // CHECK-NEXT:  BlockStmt
   if true {} else if false {}
-  // CHECK: IfStmt ifLoc=line:[[@LINE+7]]:3 elseLoc=line:[[@LINE+7]]:14
-  // CHECK-NEXT: BooleanLiteralExpr
-  // CHECK-NEXT: BlockStmt
-  // CHECK-NEXT: IfStmt ifLoc=line:[[@LINE+4]]:19 elseLoc=line:[[@LINE+4]]:31
-  // CHECK-NEXT:    BooleanLiteralExpr
-  // CHECK-NEXT:    BlockStmt
-  // CHECK-NEXT:    BlockStmt
   if true {} else if false {} else {}
-  // CHECK: IfStmt ifLoc=line:[[@LINE+4]]:3
-  // CHECK-NEXT: ParenExpr
-  // CHECK-NEXT:  ParenExpr
-  // CHECK-NEXT:   BooleanLiteralExpr
-  if ((true)) {}
-  // CHECK: IfStmt ifLoc=line:[[@LINE+5]]:3
-  // CHECK-NEXT: LetDecl
-  // CHECK-NEXT:  VarPattern
-  // CHECK-NEXT:    VarDecl
-  // CHECK-NEXT:  IntegerLiteralExpr
   if let x = 0 {}
 }
 

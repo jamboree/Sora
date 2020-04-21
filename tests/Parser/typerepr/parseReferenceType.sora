@@ -1,11 +1,11 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s 
 
-// CHECK: ReferenceTypeRepr immutable ampLoc=line:[[@LINE+2]]:15
-// CHECK-NEXT: IdentifierTypeRepr loc=line:[[@LINE+1]]:16
 func foo() -> &i32 {}
-// CHECK: ReferenceTypeRepr mutable ampLoc=line:[[@LINE+2]]:15 mutLoc=line:[[@LINE+2]]:16
-// CHECK-NEXT: IdentifierTypeRepr loc=line:[[@LINE+1]]:20
 func foo() -> &mut i32 {}
+func foo() -> &mut (i32, i32) {}
+func foo() -> & & &mut i64 {}
+func foo() -> &mut & &mut i64 {}
+func foo() -> &mut &mut &mut i64 {}
 
 func foo() -> &     // expect-error: expected a type
 func foo() -> &mut  // expect-error: expected a type

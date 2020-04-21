@@ -1,27 +1,9 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s 
 
 func assign() {
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:5
-  // CHECK-NEXT: DiscardExpr type=<null_type> loc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+1]]:7
   _ = a
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+1]]:7
   a = b
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+5]]:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+4]]:3
-  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+2]]:7
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:[[@LINE+1]]:11
   a = b = c
-  // CHECK: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+7]]:5
-  // CHECK-NEXT: UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+6]]:3
-  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+5]]:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+4]]:7
-  // CHECK-NEXT:  BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+3]]:13
-  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=c loc=line:[[@LINE+2]]:11
-  // CHECK-NEXT:   UnresolvedDeclRefExpr type=<null_type> identifier=d loc=line:[[@LINE+1]]:15
   a = b = c = d
 }
 

@@ -1,4 +1,4 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s 
 
 func errors() {
   3
@@ -8,14 +8,7 @@ func errors() {
 }
 
 func correct() {
-  // CHECK: BinaryExpr type=<null_type> + (Add) opLoc=line:[[@LINE+3]]:4
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3'
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:5 str='3'
   3+3
-  
-  // CHECK: BinaryExpr type=<null_type> + (Add) opLoc=line:[[@LINE+3]]:4
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3'
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:3 str='3'
   3+
   3
 }

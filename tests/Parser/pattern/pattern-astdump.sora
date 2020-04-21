@@ -1,0 +1,15 @@
+// RUN: sorac -parse-only -verify %s
+
+// FIXME: This test is pretty much a mix of decl/pattern ast dumps
+// It should be better structured.
+
+func foo() {
+  let a
+  let mut a
+  let (a, mut (b, c), (z))
+  let mut (a, b, c, d)
+  let _
+  let ((_, _), (_, _))
+
+  if let x = 0 {}
+}

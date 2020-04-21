@@ -1,20 +1,8 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s
 
 func whileStmt() {
-  // CHECK: WhileStmt whileLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: BooleanLiteralExpr
-  // CHECK-NEXT: BlockStmt
   while true {}
-  // CHECK: WhileStmt whileLoc=line:[[@LINE+4]]:3
-  // CHECK-NEXT: ParenExpr
-  // CHECK-NEXT:  ParenExpr
-  // CHECK-NEXT:   BooleanLiteralExpr
   while ((true)) {}
-  // CHECK: WhileStmt whileLoc=line:[[@LINE+5]]:3
-  // CHECK-NEXT: LetDecl
-  // CHECK-NEXT:  VarPattern
-  // CHECK-NEXT:    VarDecl
-  // CHECK-NEXT:  IntegerLiteralExpr
   while let x = 0 {}
 }
 

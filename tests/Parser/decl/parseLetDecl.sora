@@ -1,40 +1,12 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s
 
 func foo() {
-  // CHECK: LetDecl letLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: VarPattern type=<null_type> loc=line:[[@LINE+2]]:7 identifier=a
-  // CHECK-NEXT:  VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+1]]:7 immutable
   let a
-  // CHECK: LetDecl letLoc=line:[[@LINE+4]]:3
-  // CHECK-NEXT: MutPattern type=<null_type> mutLoc=line:[[@LINE+3]]:7
-  // CHECK-NEXT:  VarPattern type=<null_type> loc=line:[[@LINE+2]]:11 identifier=a
-  // CHECK-NEXT:    VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+1]]:11 mutable
   let mut a
-  // CHECK: LetDecl letLoc=line:[[@LINE+9]]:3
-  // CHECK-NEXT: TuplePattern type=<null_type> numElements=3 lParenLoc=line:[[@LINE+8]]:7 rParenLoc=line:[[@LINE+8]]:19
-  // CHECK-NEXT:  VarPattern type=<null_type> loc=line:[[@LINE+7]]:8 identifier=a
-  // CHECK-NEXT:    VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+6]]:8 immutable
-  // CHECK-NEXT:  MutPattern type=<null_type> mutLoc=line:[[@LINE+5]]:11
-  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:[[@LINE+4]]:15 identifier=b
-  // CHECK-NEXT:      VarDecl type=<null_type> identifier=b identifierLoc=line:[[@LINE+3]]:15 mutable
-  // CHECK-NEXT: VarPattern type=<null_type> loc=line:[[@LINE+2]]:18 identifier=c
-  // CHECK-NEXT:    VarDecl type=<null_type> identifier=c identifierLoc=line:[[@LINE+1]]:18 immutable
   let (a, mut b, c)
-  // CHECK: LetDecl letLoc=line:[[@LINE+11]]:3
-  // CHECK-NEXT: MutPattern type=<null_type> mutLoc=line:[[@LINE+10]]:7
-  // CHECK-NEXT:  TuplePattern type=<null_type> numElements=4 lParenLoc=line:[[@LINE+9]]:11 rParenLoc=line:[[@LINE+9]]:22
-  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:[[@LINE+8]]:12 identifier=a
-  // CHECK-NEXT:      VarDecl type=<null_type> identifier=a identifierLoc=line:[[@LINE+7]]:12 mutable
-  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:[[@LINE+6]]:15 identifier=b
-  // CHECK-NEXT:      VarDecl type=<null_type> identifier=b identifierLoc=line:[[@LINE+5]]:15 mutable
-  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:[[@LINE+4]]:18 identifier=c
-  // CHECK-NEXT:      VarDecl type=<null_type> identifier=c identifierLoc=line:[[@LINE+3]]:18 mutable
-  // CHECK-NEXT:    VarPattern type=<null_type> loc=line:[[@LINE+2]]:21 identifier=d
-  // CHECK-NEXT:      VarDecl type=<null_type> identifier=d identifierLoc=line:[[@LINE+1]]:21 mutable
   let mut (a, b, c, d)
-}
-
-func bar() {
   let       // expect-error: expected a pattern after 'let'
   let x =   // expect-error: expected initial value after '='
+  let mut   // expect-error: expected a pattern after 'mut'
+  let x:    // expect-error: expected a type
 }

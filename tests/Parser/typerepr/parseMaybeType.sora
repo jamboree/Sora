@@ -1,7 +1,7 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s
 
-// CHECK: MaybeTypeRepr maybeLoc=line:[[@LINE+2]]:15
-// CHECK-NEXT: IdentifierTypeRepr loc=line:[[@LINE+1]]:21
 func foo() -> maybe i32 {}
+func foo() -> maybe (i32, i32) {}
+func foo() -> maybe maybe (i32, i32) {}
 
 func foo() -> maybe // expect-error: expected a type

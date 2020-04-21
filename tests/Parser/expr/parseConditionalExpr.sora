@@ -1,16 +1,6 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s
 
 func cond() {
-  // CHECK: ConditionalExpr type=<null_type> questionLoc=line:[[@LINE+4]]:5 colonLoc=line:[[@LINE+4]]:9
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+3]]:3 str='0'
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+2]]:7 str='0'
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:11 str='0'
   0 ? 0 : 0
-  // CHECK: ConditionalExpr type=<null_type> questionLoc=line:[[@LINE+6]]:5 colonLoc=line:[[@LINE+6]]:13
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+5]]:3 str='0'
-  // CHECK-NEXT: BinaryExpr type=<null_type> = (Assign) opLoc=line:[[@LINE+4]]:9
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=a loc=line:[[@LINE+3]]:7
-  // CHECK-NEXT:  UnresolvedDeclRefExpr type=<null_type> identifier=b loc=line:[[@LINE+2]]:11
-  // CHECK-NEXT: IntegerLiteralExpr type=<null_type> loc=line:[[@LINE+1]]:15 str='0'
   0 ? a = b : 0
 }

@@ -1,23 +1,10 @@
-// RUN: sorac -parse-only -verify -dump-parse %s | FileCheck %s
+// RUN: sorac -parse-only -verify %s
 
 func correct() {
-  // CHECK: ReturnStmt loc=line:[[@LINE+1]]:3
   return
-  // CHECK: ReturnStmt loc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: TupleExpr type=<null_type> numElements=0 lParenLoc=line:[[@LINE+1]]:10 rParenLoc=line:[[@LINE+1]]:11
   return ()
-  // CHECK: ReturnStmt loc=line:[[@LINE+4]]:3
-  // CHECK-NEXT: BinaryExpr
-  // CHECK-NEXT:   IntegerLiteralExpr
-  // CHECK-NEXT:   IntegerLiteralExpr
   return 3+3
-  // CHECK: ReturnStmt loc=line:[[@LINE+1]]:3
   return 
-  // CHECK: BreakStmt loc=line:[[@LINE+1]]:3
-  break
-  // CHECK: ContinueStmt loc=line:[[@LINE+1]]:3
-  continue
-  // CHECK: ReturnStmt loc=line:[[@LINE+1]]:3
   return
 }
 

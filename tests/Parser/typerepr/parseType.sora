@@ -1,0 +1,4 @@
+// RUN: sorac -parse-only -verify %s
+
+func foo() -> *T {}     // expect-error: expected function return type
+func foo() -> *mut T {} // expect-error: expected function return type
