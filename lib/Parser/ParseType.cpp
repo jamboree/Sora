@@ -28,7 +28,6 @@ ParserResult<TypeRepr> Parser::parseType(llvm::function_ref<void()> onNoType) {
   }
   case TokenKind::LParen:
     return parseTupleType();
-  case TokenKind::Star:
   case TokenKind::Amp:
     return parseReferenceType();
   case TokenKind::MaybeKw:
