@@ -92,15 +92,19 @@ void PatternChecker::visitTuplePattern(TuplePattern *pattern) {
 }
 
 void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
-  // The type of this pattern is always the type of the type annotation.
+  Type subPatType = pattern->getSubPattern()->getType();
+
   Type type = tc.resolveTypeRepr(pattern->getTypeRepr(), getSourceFile());
   pattern->setType(type);
-  // If the type couldn't be resolved successfully, don't bother checking if the
-  // type annotation is valid.
-  if (type->hasErrorType())
+
+  // If the type couldn't be resolved successfully, bind every type variable to
+  // the error type and stop.
+  if (type->hasErrorType()) {
+    cs.bindAllToErrorType(subPatType);
     return;
-  // Else, check if the annotation is valid.
-  Type subPatType = pattern->getSubPattern()->getType();
+  }
+
+  // Else, unify. If unification succeeds, we're done.
   if (cs.unify(subPatType, type))
     return;
 
@@ -109,6 +113,9 @@ void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
            subPatType, type)
       .highlight(pattern->getTypeRepr()->getSourceRange())
       .highlight(pattern->getSubPattern()->getSourceRange());
+
+  // Bind everything to the error type so we don't complain about this again.
+  cs.bindAllToErrorType(subPatType);
 }
 
 void PatternChecker::visitMaybeValuePattern(MaybeValuePattern *pattern) {
@@ -134,37 +141,35 @@ public:
     if (!type->hasTypeVariable())
       return;
 
-    bool isAmbiguous = false;
     bool wasDiagnosable = canDiagnose(type);
+    bool isAmbiguous = false;
     type = cs.simplifyType(type, &isAmbiguous);
     pattern->setType(type);
 
-    if (isAmbiguous && wasDiagnosable && canEmitInferenceErrors) {
-      // We only complain about inference errors on VarPattern &
-      // DiscardPatterns.
-      // If we don't do that, diagnostics would be emitted for every pattern,
-      // e.g. in '((x))' we'd complain thrice (once for the x and once per
-      // ParenPattern)!
-      if ((isa<VarPattern>(pattern) || isa<DiscardPattern>(pattern))) {
-        StringRef patternName;
-        if (isa<DiscardPattern>(pattern))
-          patternName = "_";
-        else
-          patternName = cast<VarPattern>(pattern)->getIdentifier().c_str();
+    // Return if there was no error, if we can't diagnose this.
+    if (!isAmbiguous || !(wasDiagnosable && canEmitInferenceErrors))
+      return;
 
-        diagnose(pattern->getLoc(),
-                 diag::type_of_pattern_is_ambiguous_without_more_ctxt,
-                 patternName);
-        diagnose(pattern->getLoc(), diag::add_type_annot_to_give_pattern_a_type,
-                 patternName)
-            .fixitInsertAfter(pattern->getEndLoc(), ": <type>");
-      }
-    }
+    // We only complain about inference errors on VarPattern & DiscardPatterns.
+    if (!isa<VarPattern>(pattern) && !isa<DiscardPattern>(pattern))
+      return;
+
+    StringRef patternName;
+    if (isa<DiscardPattern>(pattern))
+      patternName = "_";
+    else
+      patternName = cast<VarPattern>(pattern)->getIdentifier().c_str();
+
+    diagnose(pattern->getLoc(),
+             diag::type_of_pattern_is_ambiguous_without_more_ctxt, patternName);
+    diagnose(pattern->getLoc(), diag::add_type_annot_to_give_pattern_a_type,
+             patternName)
+        .fixitInsertAfter(pattern->getEndLoc(), ": <type>");
   }
 
   bool walkToPatternPost(Pattern *pattern) override {
     simplifyTypeOfPattern(pattern);
-    // Some patterns require a bit of post processing
+
     if (VarPattern *varPat = dyn_cast<VarPattern>(pattern)) {
       VarDecl *varDecl = varPat->getVarDecl();
       // Set the type of the VarDecls inside VarPatterns.
@@ -172,6 +177,7 @@ public:
       // Check the VarDecl
       tc.typecheckDecl(varDecl);
     }
+
     return true;
   }
 };

@@ -139,6 +139,19 @@ public:
   bool canUnify(Type a, Type b,
                 const UnificationOptions &options = UnificationOptions()) const;
 
+  /// Binds every type variable in \p type to the error type.
+  void bindAllToErrorType(Type type) {
+    if (!type->hasTypeVariable())
+      return;
+    // FIXME: it'd be great if there was a "walk" method.
+    type->rebuildType([&](Type type) -> Type {
+      if (TypeVariableType *tyVar = type->getAs<TypeVariableType>())
+        if (!tyVar->isBound())
+          tyVar->bindTo(ctxt.errorType);
+      return {};
+    });
+  }
+
   void dumpTypeVariables(
       raw_ostream &out,
       const TypePrintOptions &printOptions = TypePrintOptions()) const;
