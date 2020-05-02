@@ -1,81 +1,32 @@
-// RUN: sorac -sema-only -dump-ast %s | FileCheck %s
+// RUN: sorac -sema-only %s
 
 func foo() {
-  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:22
   let _: maybe i32 = 0
-  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe maybe i32
-  // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:10:28
   let _: maybe maybe i32 = 0
-  // CHECK:      ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:[[@LINE+8]]:74
-  // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   IntegerLiteralExpr type=i32 loc=line:[[@LINE+6]]:77
-  // CHECK-NEXT: TupleExpr type=(maybe i32, maybe i32) numElements=2 lParenLoc=line:[[@LINE+5]]:80 rParenLoc=line:[[@LINE+5]]:85
-  // CHECK-NEXT:   ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:[[@LINE+3]]:81
-  // CHECK-NEXT:   ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:     IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:84
   let (_, _, (_, _)) : (maybe i32, maybe i32, (maybe i32, maybe i32)) = (0, 0, (0, 0))
-  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe void
-  // CHECK-NEXT: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:23 rParenLoc=line:[[@LINE+1]]:24
   let _: maybe void = ()
-  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT: NullLiteralExpr type=null loc=line:[[@LINE+1]]:22
   let _: maybe i32 = null
-  // CHECK: ImplicitMaybeConversionExpr implicit type=maybe maybe i32
-  // CHECK-NEXT: ImplicitMaybeConversionExpr implicit type=maybe i32
-  // CHECK-NEXT:   NullLiteralExpr type=null loc=line:[[@LINE+1]]:28
   let _: maybe maybe i32 = null
 }
 
 func refs(a: &mut i8) {
-  // CHECK:     MutToImmutReferenceExpr implicit type=&i8
-  // CHECK-NEXT: LoadExpr implicit type=&mut i8
-  // CHECK-NEXT:  DeclRefExpr type=@lvalue &mut i8 loc=line:[[@LINE+1]]:16
   let _: &i8 = a
-  // CHECK:     ImplicitMaybeConversionExpr implicit type=maybe &i8
-  // CHECK-NEXT: MutToImmutReferenceExpr implicit type=&i8
-  // CHECK-NEXT:  LoadExpr implicit type=&mut i8
-  // CHECK-NEXT:   DeclRefExpr type=@lvalue &mut i8 loc=line:[[@LINE+1]]:22
   let _: maybe &i8 = a
 }
 
 func destructure(a: i8) {
-    let a = (a, a)
-    // CHECK:     DestructuredTupleExpr implicit type=(maybe i8, maybe i8)
-    // CHECK-NEXT:  LoadExpr implicit type=(i8, i8)
-    // CHECK-NEXT:   DeclRefExpr type=@lvalue (i8, i8) loc=line:[[@LINE+6]]:36
-    // CHECK-NEXT:  TupleExpr implicit type=(maybe i8, maybe i8) numElements=2 range=[line:[[@LINE+5]]:36, line:[[@LINE+5]]:36]
-    // CHECK-NEXT:    ImplicitMaybeConversionExpr implicit type=maybe i8
-    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=i8 index=0
-    // CHECK-NEXT:    ImplicitMaybeConversionExpr implicit type=maybe i8
-    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=i8 index=1
-    let _ : (maybe i8, maybe i8) = a
+  let a = (a, a)
+  let _ : (maybe i8, maybe i8) = a
 
-    let mut foo = 0
-    let b : (&mut i32, &mut i32) = (&foo, &foo)
-    // CHECK:    DestructuredTupleExpr implicit type=(&i32, &i32)
-    // CHECK-NEXT: LoadExpr implicit type=(&mut i32, &mut i32)
-    // CHECK-NEXT:  DeclRefExpr type=@lvalue (&mut i32, &mut i32) loc=line:[[@LINE+6]]:28
-    // CHECK-NEXT: TupleExpr implicit type=(&i32, &i32) numElements=2 range=[line:[[@LINE+5]]:28, line:[[@LINE+5]]:28]
-    // CHECK-NEXT:    MutToImmutReferenceExpr implicit type=&i32
-    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=&mut i32 index=0
-    // CHECK-NEXT:    MutToImmutReferenceExpr implicit type=&i32
-    // CHECK-NEXT:      DestructuredTupleElementExpr implicit type=&mut i32 index=1
-    let _ : (&i32, &i32) = b
+  let mut foo = 0
+  let b : (&mut i32, &mut i32) = (&foo, &foo)
+  let _ : (&i32, &i32) = b
 }
 
 
 func load() {
   let mut a: i32 = 0
   let b: i32 = 0
-
-  // CHECK: LoadExpr implicit type=i32
-  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32 loc=line:[[@LINE+1]]:3
   a
-  // CHECK: LoadExpr implicit type=i32
-  // CHECK-NEXT:  DeclRefExpr type=@lvalue i32 loc=line:[[@LINE+1]]:3
   b
 }

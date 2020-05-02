@@ -1,32 +1,16 @@
-// RUN: sorac -sema-only -dump-ast %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func correct() {
-   // CHECK: VarDecl type=i32 identifier=a0 identifierLoc=line:[[@LINE+10]]:10 immutable
-   // CHECK: VarDecl type=i32 identifier=a1 identifierLoc=line:[[@LINE+9]]:14 immutable
-   // CHECK: VarDecl type=i32 identifier=a2 identifierLoc=line:[[@LINE+8]]:19 immutable
-   // CHECK: VarDecl type=i32 identifier=a3 identifierLoc=line:[[@LINE+7]]:24 immutable
-   // CHECK: VarDecl type=i32 identifier=a4 identifierLoc=line:[[@LINE+6]]:28 immutable
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+5]]:37
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+4]]:40
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+3]]:44
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+2]]:48
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:51
    let ((a0, a1), a2, (a3, a4)) = ((0, 1), 2, (3, 4))
-   // CHECK: VarDecl type=i64 identifier=b0 identifierLoc=line:[[@LINE+4]]:9 immutable
-   // CHECK: VarDecl type=i32 identifier=b1 identifierLoc=line:[[@LINE+3]]:18 immutable
-   // CHECK: IntegerLiteralExpr type=i64 loc=line:[[@LINE+2]]:25
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:28
    let (b0: i64, b1) = (0, 1)
-   // CHECK: DiscardPattern type=i32 loc=line:[[@LINE+2]]:8
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:12
    let _ = 0 
-   // CHECK: TuplePattern type=() numElements=0 lParenLoc=line:[[@LINE+2]]:8 rParenLoc=line:[[@LINE+2]]:9
-   // CHECK: TupleExpr type=() numElements=0 lParenLoc=line:[[@LINE+1]]:13 rParenLoc=line:[[@LINE+1]]:14
    let () = ()
-   // CHECK: VarDecl type=usize identifier=c0 identifierLoc=line:[[@LINE+2]]:8 immutable
-   // CHECK: IntegerLiteralExpr type=usize loc=line:[[@LINE+1]]:20 str='0' value=0
    let c0: usize = 0
-   // CHECK: VarDecl type=i32 identifier=d0 identifierLoc=line:[[@LINE+2]]:8 immutable
-   // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:13 str='0' value=0
    let d0 = 0
+
+   let a: u8 = false  // expect-error: cannot convert value of type 'bool' to 'u8'
+   let b: f32 = 0     // expect-error: cannot convert value of type 'i32' to 'f32'
+   let () = null      // expect-error: cannot convert value of type 'null' to '()'
+   let () = (0, 1)    // expect-error: cannot convert value of type '(i32, i32)' to '()'
+   let (z, y) = 0     // expect-error: cannot convert value of type 'i32' to '(_, _)'
 }

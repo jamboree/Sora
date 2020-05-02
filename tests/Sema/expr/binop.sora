@@ -1,4 +1,4 @@
-// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func coalesce(x: maybe i32, y: maybe &i32, z: maybe &mut i32) {
   let mut a = 0
@@ -12,27 +12,6 @@ func coalesce(x: maybe i32, y: maybe &i32, z: maybe &mut i32) {
   x ?? 0
   0 ?? 0  // expect-error: cannot use binary operator '??' on operands of type 'i32' and 'i32'
   x ?? () // expect-error: cannot use binary operator '??' on operands of type 'maybe i32' and '()'
-}
-
-func infer() {
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+4]]:15
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+3]]:19
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:23
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:27
-  let _: i8 = 0 + 0 + 0 % 0
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+4]]:5
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+3]]:9
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:14
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:19
-  ((0 + 0) * 0) + 0 as i8
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+4]]:5
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+3]]:15
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:20
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:25
-  ((0 as i8 + 0) * 0) + 0 
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+2]]:15
-  // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:20
-  let _ :i8 = 1 << 8
 }
 
 func eq(x: &i32, y: &mut i32) {
@@ -305,12 +284,9 @@ func assign(p1: i32) {
     ref = &b
     ref = &m1           // expect-error: cannot assign value of type '&mut maybe i32' to type '&i32'
 
-    // Type be the type of the RHS, sugar should prove it.
     let mut emptyTuple = ()
     let mut voidVal: void 
-    // CHECK: BinaryExpr type=() = (Assign) opLoc=line:[[@LINE+1]]:13
     voidVal = emptyTuple
-    // CHECK: BinaryExpr type=void = (Assign) opLoc=line:[[@LINE+1]]:16
     emptyTuple = voidVal
 
     let maybeVI32: maybe i32
@@ -320,9 +296,7 @@ func assign(p1: i32) {
 
     maybeVI32 ?? 0
     maybeMaybeVI32 ?? 0
-    // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:17
     maybeVI8 ?? 0
-    // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:22
     maybeMaybeVI8 ?? 0
 
     maybeVI32 ?? true          // expect-error: cannot use binary operator '??' on operands of type 'maybe i32' and 'bool'
@@ -516,9 +490,7 @@ func compoundAssign() {
 
   maybeVI32 ??= 0
   maybeMaybeVI32 ??= 0
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:16
   maybeVI8 ??= 0
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:21
   maybeMaybeVI8 ??= 0
 
   maybeVI32 ??= true          // expect-error: cannot use binary operator '??=' on operands of type 'maybe i32' and 'bool'

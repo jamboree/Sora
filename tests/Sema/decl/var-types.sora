@@ -1,0 +1,6 @@
+// RUN: sorac -sema-only -verify -dump-ast %s
+
+func foo() {
+  let a = null                         // expect-error:   cannot create a variable of type 'null'
+  let (x, y, z) = (null, null, null)   // expect-3-error: cannot create a variable of type 'null'
+}

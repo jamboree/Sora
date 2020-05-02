@@ -1,50 +1,25 @@
-// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func plusAndMinus(x: i8) {
   let mut y: u8 = 0
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +0
-  // CHECK: UnaryExpr type=i32 - (Minus) opLoc=line:[[@LINE+1]]:3
   -0
-  // CHECK: UnaryExpr type=f32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +1.1
-  // CHECK: UnaryExpr type=f32 - (Minus) opLoc=line:[[@LINE+1]]:3
   -1.2
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +x
-  // CHECK: UnaryExpr type=i8 - (Minus) opLoc=line:[[@LINE+1]]:3
   -x
-  // CHECK:     UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: LoadExpr
   +y
-  // CHECK:     UnaryExpr type=u8 - (Minus) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: LoadExpr
   -y
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(0)
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +((0))
-  // CHECK: UnaryExpr type=i32 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(((0)))
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(x)
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +((x))
-  // CHECK: UnaryExpr type=i8 + (Plus) opLoc=line:[[@LINE+1]]:3
   +(((x)))
-  // CHECK:     UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: ParenExpr
-  // CHECK-NEXT:  LoadExpr
   +(y)
-  // CHECK: UnaryExpr type=u8 + (Plus) opLoc=line:[[@LINE+4]]:3
-  // CHECK-NEXT: ParenExpr
-  // CHECK-NEXT:  ParenExpr
-  // CHECK-NEXT:   LoadExpr
   +((y))
 
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:16
   let _: i8 = -0
-  // CHECK: IntegerLiteralExpr type=usize loc=line:[[@LINE+1]]:24
   let _: usize = -(+(-(0)))
 }
 
@@ -53,22 +28,9 @@ func dereference() {
   let mut b: &i32
   let c: &mut i32
   let mut d: &mut i32
-
-  // CHECK:     UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: LoadExpr implicit type=&i32
-  // CHECK-NEXT:   DeclRefExpr type=@lvalue &i32 loc=line:[[@LINE+1]]:4
   *a
-  // CHECK: UnaryExpr type=@lvalue  i32 * (Deref) opLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: LoadExpr implicit type=&i32
-  // CHECK-NEXT:   DeclRefExpr type=@lvalue &i32 loc=line:[[@LINE+1]]:4
   *b 
-  // CHECK: UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: LoadExpr implicit type=&mut i32
-  // CHECK-NEXT:   DeclRefExpr type=@lvalue &mut i32 loc=line:[[@LINE+1]]:4
   *c
-  // CHECK: UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:[[@LINE+3]]:3
-  // CHECK-NEXT: LoadExpr implicit type=&mut i32
-  // CHECK-NEXT:   DeclRefExpr type=@lvalue &mut i32 loc=line:[[@LINE+1]]:4
   *d
 }
 
@@ -78,23 +40,13 @@ func addressOf(x: i32) {
   let mut y = 0
   let tuple = (0, 1)
   let mut mutTuple = (0, 1)
-  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: DeclRefExpr type=@lvalue i32
+
   &x
-  // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: DeclRefExpr type=@lvalue i32
   &y
-  // CHECK: UnaryExpr type=&(i32, i32) & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: DeclRefExpr type=@lvalue (i32, i32)
+
   &tuple
-  // CHECK: UnaryExpr type=&mut (i32, i32) & (AddressOf) opLoc=line:[[@LINE+2]]:3
-// CHECK-NEXT: DeclRefExpr type=@lvalue (i32, i32)
   &mutTuple
-  // CHECK: UnaryExpr type=&i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: TupleElementExpr type=@lvalue i32
   &tuple.0
-  // CHECK: UnaryExpr type=&mut i32 & (AddressOf) opLoc=line:[[@LINE+2]]:3
-  // CHECK-NEXT: TupleElementExpr type=@lvalue i32
   &mutTuple.0
 
   &0              // expect-error: cannot take the address of a literal
@@ -110,11 +62,8 @@ func addressOf(x: i32) {
 }
 
 func lNot(x: bool) {
-  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:[[@LINE+1]]:3
   !x
-  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:[[@LINE+1]]:3
   !false
-  // CHECK: UnaryExpr type=bool ! (LNot) opLoc=line:[[@LINE+1]]:3
   !true
 
   !0              // expect-error: cannot use unary operator '!' on operand of type 'i32'
@@ -127,14 +76,10 @@ func not() {
   let a = 0
   let mut b = 0
 
-  // CHECK: UnaryExpr type=i32 ~ (Not) opLoc=line:[[@LINE+1]]:3
   ~a
-  // CHECK: UnaryExpr type=i32 ~ (Not) opLoc=line:[[@LINE+1]]:3
   ~b
 
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:16
   let _: i8 = ~0
-  // CHECK: IntegerLiteralExpr type=u8 loc=line:[[@LINE+1]]:18
   let _: u8 = ~(~0)
 
   ~0.0       // expect-error: cannot use unary operator '~' on operand of type 'f32'

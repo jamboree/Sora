@@ -1,26 +1,20 @@
-// RUN: sorac -sema-only -dump-ast -verify %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func test() {
     let x: maybe i32 = 0
     if let x = x {
-      // CHECK: DeclRefExpr type=@lvalue i32 loc=line:[[@LINE+1]]:7 decl='x'@line:[[@LINE-1]]:12
       x // has type i32
     }
-    // CHECK: IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:16
     if let x = 0 { // expect-error: initializer for conditional binding must have a maybe type, not 'i32'
-      // CHECK: DeclRefExpr type=@lvalue i32 loc=line:[[@LINE+1]]:7 decl='x'@line:[[@LINE-1]]:12
       x
     }
-    // CHECK: IntegerLiteralExpr type=i64 loc=line:[[@LINE+1]]:21
     if let x: i64 = 0 { // expect-error: initializer for conditional binding must have a maybe type, not 'i64'
-      // CHECK: DeclRefExpr type=@lvalue i64 loc=line:[[@LINE+1]]:7 decl='x'@line:[[@LINE-1]]:12
       x
     }
     let y: maybe maybe void = ()
     if let y = y {
       if let y = y {
-        // CHECK: DeclRefExpr type=@lvalue void loc=line:[[@LINE+1]]:9 decl='y'@line:[[@LINE-1]]:14
-        y
+        let () = y
       }
     }
     let z: maybe i32 = 0

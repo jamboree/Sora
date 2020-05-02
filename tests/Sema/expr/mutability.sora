@@ -1,28 +1,13 @@
-// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func value(ref: &mut i32) {
-  let immutTuple : (i32, &i32, &mut i32)
+  let immutTuple : (i32, &i32, &mut i32) = (0, ref, ref)
 
-  // CHECK: TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+1]]:13
-  immutTuple.0
-  // CHECK: TupleElementExpr type=@lvalue &i32 dot opLoc=line:[[@LINE+1]]:13
-  immutTuple.1
-  // CHECK: TupleElementExpr type=@lvalue &mut i32 dot opLoc=line:[[@LINE+1]]:13
-  immutTuple.2
-
-  // Should be illegal
   immutTuple.0 = 0    // expect-error: cannot assign to immutable expression of type 'i32'
   immutTuple.1 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
   immutTuple.2 = ref  // expect-error: cannot assign to immutable expression of type '&mut i32'
 
-  let mut mutTuple : (i32, &i32, &mut i32)
-
-  // CHECK: TupleElementExpr type=@lvalue i32 dot opLoc=line:[[@LINE+1]]:11
-  mutTuple.0
-  // CHECK: TupleElementExpr type=@lvalue &i32 dot opLoc=line:[[@LINE+1]]:11
-  mutTuple.1
-  // CHECK: TupleElementExpr type=@lvalue &mut i32 dot opLoc=line:[[@LINE+1]]:11
-  mutTuple.2
+  let mut mutTuple : (i32, &i32, &mut i32) = (0, ref, ref)
 
   mutTuple.0 = 0
   mutTuple.1 = ref
@@ -30,30 +15,12 @@ func value(ref: &mut i32) {
 }
 
 
-func ref(ref: &mut i32) {
-  let immutTupleRef : &(i32, &i32, &mut i32)
+func ref(ref: &(i32, &i32, &mut i32), mutRef: &mut (i32, &i32, &mut i32)) {
+  ref->0 = 0    // expect-error: cannot assign to immutable expression of type 'i32'
+  ref->1 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
+  ref->2 = ref  // expect-error: cannot assign to immutable expression of type '&mut i32'
 
-  // CHECK: TupleElementExpr type=@lvalue i32 arrow opLoc=line:[[@LINE+1]]:16
-  immutTupleRef->0
-  // CHECK: TupleElementExpr type=@lvalue &i32 arrow opLoc=line:[[@LINE+1]]:16
-  immutTupleRef->1
-  // CHECK: TupleElementExpr type=@lvalue &mut i32 arrow opLoc=line:[[@LINE+1]]:16
-  immutTupleRef->2
-
-  immutTupleRef->0 = 0    // expect-error: cannot assign to immutable expression of type 'i32'
-  immutTupleRef->1 = ref  // expect-error: cannot assign to immutable expression of type '&i32'
-  immutTupleRef->2 = ref  // expect-error: cannot assign to immutable expression of type '&mut i32'
-
-  let mut mutTupleRef : &mut (i32, &i32, &mut i32)
-
-  // CHECK: TupleElementExpr type=@lvalue i32 arrow opLoc=line:[[@LINE+1]]:14
-  mutTupleRef->0
-  // CHECK: TupleElementExpr type=@lvalue &i32 arrow opLoc=line:[[@LINE+1]]:14
-  mutTupleRef->1
-  // CHECK: TupleElementExpr type=@lvalue &mut i32 arrow opLoc=line:[[@LINE+1]]:14
-  mutTupleRef->2
-
-  mutTupleRef->0 = 0
-  mutTupleRef->1 = ref
-  mutTupleRef->2 = ref
+  mutRef->0 = 0
+  mutRef->1 = ref->1
+  mutRef->2 = ref->2
 }

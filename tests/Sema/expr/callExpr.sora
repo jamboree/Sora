@@ -1,4 +1,4 @@
-// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func a() -> i32 {}
 func b(x: i32) {}
@@ -15,22 +15,13 @@ func test() {
     foo()    // expect-error: value of non-function type 'i32' is not callable
     ()()     // expect-error: value of non-function type '()' is not callable
 
-    // CHECK: CallExpr type=i32 lParenLoc=line:[[@LINE+1]]:6
     a()
-    // CHECK: CallExpr type=void lParenLoc=line:[[@LINE+1]]:6
     b()       // expect-error: function of type '(i32) -> void' takes '1' parameter but '0' were supplied
-    // CHECK: CallExpr type=void lParenLoc=line:[[@LINE+1]]:6
     b(1, 2)   // expect-error: function of type '(i32) -> void' takes '1' parameter but '2' were supplied
-    // CHECK: CallExpr type=void lParenLoc=line:[[@LINE+1]]:6
     b(1)
-    // CHECK: CallExpr type=void lParenLoc=line:[[@LINE+1]]:6
     b(true)   // expect-error: cannot convert value of type 'bool' to expected argument type 'i32'
-    // CHECK: CallExpr type=void lParenLoc=line:[[@LINE+1]]:6
     b(null)   // expect-error: cannot convert value of type 'null' to expected argument type 'i32'
-    // CHECK: CallExpr type=void lParenLoc=line:[[@LINE+1]]:6
     b(&foo)   // expect-error: cannot convert value of type '&mut i32' to expected argument type 'i32'
-    // CHECK: CallExpr type=maybe (i32, i32) lParenLoc=line:[[@LINE+1]]:6
     c(&foo)
-    // CHECK: CallExpr type=bool lParenLoc=line:[[@LINE+1]]:6
     d(1, 2, 3, 4, 5, 6, 7)
 }

@@ -1,4 +1,4 @@
-// RUN: sorac -sema-only -dump-ast -verify %s | FileCheck %s
+// RUN: sorac -sema-only -verify %s
 
 func voidFn() {
   return 
@@ -17,66 +17,41 @@ func simple() -> i32 {
 
 func simple() -> i8 {
   return      // expect-error: non-void function should return a value
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:10
   return 0
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:11
   return -1
 }
 
 func simpleTuple() -> (i8, u8) {
   return      // expect-error: non-void function should return a value
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:11
-  // CHECK: IntegerLiteralExpr type=u8 loc=line:[[@LINE+1]]:14
   return (0, 1)
-  // CHECK: IntegerLiteralExpr type=i8 loc=line:[[@LINE+1]]:12
-  // CHECK: IntegerLiteralExpr type=u8 loc=line:[[@LINE+1]]:15
   return (-1, 1)
 }
 
 func implConv() -> maybe i32 {
     return      // expect-error: non-void function should return a value
-    // CHECK: ReturnStmt loc=line:[[@LINE+1]]:5
-    // CHECK-NEXT: ImplicitMaybeConversionExpr
-    // CHECK-NEXT:    IntegerLiteralExpr type=i32 loc=line:[[@LINE+1]]:12
     return 0
 }
 
 func implConv() -> maybe u8 {
     return      // expect-error: non-void function should return a value
-    // CHECK: ReturnStmt loc=line:[[@LINE+1]]:5
-    // CHECK-NEXT: ImplicitMaybeConversionExpr
-    // CHECK-NEXT:    IntegerLiteralExpr type=u8 loc=line:[[@LINE+1]]:12
     return 0
 }
 
 func implConv() -> maybe maybe u8 {
     return      // expect-error: non-void function should return a value
-    // CHECK: ReturnStmt loc=line:[[@LINE+1]]:5
-    // CHECK-NEXT: ImplicitMaybeConversionExpr
-    // CHECK-NEXT:  ImplicitMaybeConversionExpr
-    // CHECK-NEXT:    IntegerLiteralExpr type=u8 loc=line:[[@LINE+1]]:12
     return 0
 }
 
 func implConv_1() -> maybe &i8 {
     let mut y: i8
     return      // expect-error: non-void function should return a value
-    // CHECK: ReturnStmt loc=line:[[@LINE+1]]:5
-    // CHECK-NEXT: ImplicitMaybeConversionExpr
-    // CHECK-NEXT:  MutToImmutReferenceExpr
-    // CHECK-NEXT:    UnaryExpr
     return &y
-    // CHECK: ReturnStmt loc=line:[[@LINE+1]]:5
-    // CHECK-NEXT: ImplicitMaybeConversionExpr
     return null
 }
 
 func implConv_2() -> &i8 {
     let mut y: i8
     return      // expect-error: non-void function should return a value
-    // CHECK: ReturnStmt loc=line:[[@LINE+1]]:5
-    // CHECK-NEXT:  MutToImmutReferenceExpr
-    // CHECK-NEXT:    UnaryExpr
     return &y
     return null // expect-error: cannot convert return expression of type 'null' to return type '&i8'
 }
@@ -88,5 +63,5 @@ func incorrect_1() -> i32 {
 
 func incorrect_2() -> &i32 {
   return null     // expect-error: cannot convert return expression of type 'null' to return type '&i32'
-  return 0   // expect-error: cannot convert return expression of type 'i32' to return type '&i32'
+  return 0        // expect-error: cannot convert return expression of type 'i32' to return type '&i32'
 }

@@ -1,0 +1,19 @@
+// RUN: sorac -sema-only -verify %s
+
+func foo() {
+  let _: T    // expect-error: cannot find type 'T' in this scope
+  let _: i8
+  let _: i16
+  let _: i32
+  let _: i64
+  let _: isize
+  let _: u8
+  let _: u16
+  let _: u32
+  let _: u64
+  let _: usize
+  let _: f32
+  let _: f64
+  let _: bool
+  let _: void
+}

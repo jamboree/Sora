@@ -1,49 +1,10 @@
-// RUN: sorac -sema-only -verify -dump-ast %s | FileCheck %s
-
-func foo() {
-    // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:15 decl='foo'@line:[[@LINE-1]]:6
-    let foo = foo 
-    // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:5 decl='foo'@line:[[@LINE-1]]:9
-    foo
-    {
-        // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:19 decl='foo'@line:[[@LINE-4]]:9
-        let foo = foo 
-        // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:9 decl='foo'@line:[[@LINE-1]]:13
-        foo
-        {
-            // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:23 decl='foo'@line:[[@LINE-4]]:13
-            let foo = foo
-            // CHECK: DeclRefExpr type={{.*}} loc=line:[[@LINE+1]]:13 decl='foo'@line:[[@LINE-1]]:17
-            foo
-        }
-    }
-}
-
-func lvalues(a: i32) {
-  let (mut b: u16, c: i16)
-  // CHECK: DeclRefExpr type=@lvalue i32 loc=line:[[@LINE+1]]:3 decl='a'@line:[[@LINE-2]]:14
-  a
-  // CHECK: DeclRefExpr type=@lvalue u16 loc=line:[[@LINE+1]]:3 decl='b'@line:[[@LINE-3]]:12
-  b
-  // CHECK: DeclRefExpr type=@lvalue i16 loc=line:[[@LINE+1]]:3 decl='c'@line:[[@LINE-5]]:20
-  c
-}
-
-func bar(bar: i32) {
-    // CHECK: DeclRefExpr type=@lvalue i32 loc=line:[[@LINE+1]]:5 decl='bar'@line:[[@LINE-1]]:10
-    bar
-    bux // expect-error: cannot find value 'bux' in this scope
-}
+// RUN: sorac -sema-only -verify %s
 
 func nested(foo: i32, bar: i32) {
   func nested2(foo: i32) {
     let localvar: i32
-    foo
     bar // expect-error: cannot capture dynamic environment inside a local function
     func nested3() {
-      nested
-      nested2
-      nested3
       localvar  // expect-error: cannot capture dynamic environment inside a local function
       foo       // expect-error: cannot capture dynamic environment inside a local function
       bar       // expect-error: cannot capture dynamic environment inside a local function
@@ -51,8 +12,5 @@ func nested(foo: i32, bar: i32) {
   }
   localvar  // expect-error: cannot find value 'localvar' in this scope
   nested3   // expect-error: cannot find value 'nested3' in this scope
-  foo
-  bar
-  nested
-  nested2
+  bux       // expect-error: cannot find value 'bux' in this scope
 }
