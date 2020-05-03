@@ -22,13 +22,20 @@ static void print(ReferenceType type, mlir::DialectAsmPrinter &os) {
   os << "reference<" << type.getPointeeType() << ">";
 }
 
+static void print(LValueType type, mlir::DialectAsmPrinter &os) {
+  os << "lvalue<" << type.getObjectType() << ">";
+}
+
 void SoraDialect::printType(mlir::Type type,
                             mlir::DialectAsmPrinter &os) const {
   switch (SoraTypeKind(type.getKind())) {
-  case SoraTypeKind::Maybe:
-    return print(type.cast<MaybeType>(), os);
-  case SoraTypeKind::Reference:
-    return print(type.cast<ReferenceType>(), os);
+#define HANDLE(T)                                                              \
+  case SoraTypeKind::T:                                                        \
+    return print(type.cast<T##Type>(), os)
+    HANDLE(Maybe);
+    HANDLE(Reference);
+    HANDLE(LValue);
+#undef HANDLE
   default:
     llvm_unreachable("Unknown Sora Type!");
   }
@@ -39,36 +46,20 @@ void SoraDialect::printType(mlir::Type type,
 namespace sora {
 namespace ir {
 namespace detail {
-struct MaybeTypeStorage : public mlir::TypeStorage {
-  MaybeTypeStorage(mlir::Type valueType) : valueType(valueType) {}
+/// Common storage class for types that only contain another type.
+struct SingleTypeStorage : public mlir::TypeStorage {
+  SingleTypeStorage(mlir::Type type) : type(type) {}
 
-  // MaybeTypes are pointer-unique.
   using KeyTy = mlir::Type;
-  bool operator==(const KeyTy &key) const { return key == valueType; }
+  bool operator==(const KeyTy &key) const { return key == type; }
 
-  static MaybeTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                     mlir::Type valueType) {
-    return new (allocator.allocate<MaybeTypeStorage>())
-        MaybeTypeStorage(valueType);
+  static SingleTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                      mlir::Type type) {
+    return new (allocator.allocate<SingleTypeStorage>())
+        SingleTypeStorage(type);
   }
 
-  mlir::Type valueType;
-};
-
-struct ReferenceTypeStorage : public mlir::TypeStorage {
-  ReferenceTypeStorage(mlir::Type pointeeType) : pointeeType(pointeeType) {}
-
-  // MaybeTypes are pointer-unique.
-  using KeyTy = mlir::Type;
-  bool operator==(const KeyTy &key) const { return key == pointeeType; }
-
-  static ReferenceTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
-                                         mlir::Type pointeeType) {
-    return new (allocator.allocate<ReferenceTypeStorage>())
-        ReferenceTypeStorage(pointeeType);
-  }
-
-  mlir::Type pointeeType;
+  mlir::Type type;
 };
 } // namespace detail
 } // namespace ir
@@ -82,7 +73,7 @@ MaybeType MaybeType::get(mlir::Type valueType) {
                    valueType);
 }
 
-mlir::Type MaybeType::getValueType() const { return getImpl()->valueType; }
+mlir::Type MaybeType::getValueType() const { return getImpl()->type; }
 
 //===- ReferenceType ------------------------------------------------------===//
 
@@ -92,6 +83,14 @@ ReferenceType ReferenceType::get(mlir::Type pointeeType) {
                    pointeeType);
 }
 
-mlir::Type ReferenceType::getPointeeType() const {
-  return getImpl()->pointeeType;
+mlir::Type ReferenceType::getPointeeType() const { return getImpl()->type; }
+
+//===- LValueType ---------------------------------------------------------===//
+
+LValueType LValueType::get(mlir::Type objectType) {
+  assert(objectType && "object type cannot be null!");
+  return Base::get(objectType.getContext(), (unsigned)SoraTypeKind::LValue,
+                   objectType);
 }
+
+mlir::Type LValueType::getObjectType() const { return getImpl()->type; }

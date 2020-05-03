@@ -84,7 +84,8 @@ public:
   }
 
   mlir::Type visitLValueType(LValueType *type) {
-    llvm_unreachable("Unimplemented - visitLValueType!");
+    mlir::Type objectType = visit(type->getObjectType());
+    return ir::LValueType::get(objectType);
   }
 
   mlir::Type visitErrorType(ErrorType *) {
