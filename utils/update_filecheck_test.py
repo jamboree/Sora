@@ -18,6 +18,14 @@ import os
 import argparse
 import re
 
+"""
+    Improvements ideas for the test script:
+        - Instead of just dumping the check lines at the end of the file, they should be printed in better places,
+          e.g. before the actual lines, or at the beginning/end of functions. This isn't easy to do as the script
+          will have to be aware of line numbers (so it can update the line numbers) and of
+          the structure of the file (so it knows where to insert).
+"""
+
 
 def get_comment(x: str):
     return "// " + x
