@@ -498,6 +498,15 @@ func compoundAssign() {
 }
 
 
+func shiftAssign() {
+  let mut x: i8 = 0
+  let mut y: i32 = 0
+  y <<= x
+  y >>= x
+  x <<= y
+  y >>= x
+}
+
 func nullOps() {
   null + null  // expect-error: cannot use binary operator '+' on operands of type 'null' and 'null'
   null + 0     // expect-error: cannot use binary operator '+' on operands of type 'null' and 'i32'
