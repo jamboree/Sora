@@ -160,13 +160,15 @@ mlir::Value
 RValueIRGenerator::visitDestructuredTupleExpr(DestructuredTupleExpr *expr) {
   llvm_unreachable("Unimplemented - visitDestructuredTupleExpr");
 }
+
 mlir::Value RValueIRGenerator::visitDestructuredTupleElementExpr(
     DestructuredTupleElementExpr *expr) {
   llvm_unreachable("Unimplemented - visitDestructuredTupleElementExpr");
 }
 
 mlir::Value RValueIRGenerator::visitLoadExpr(LoadExpr *expr) {
-  llvm_unreachable("Unimplemented - visitLoadExpr");
+  return builder.create<ir::LoadLValueOp>(getNodeLoc(expr),
+                                          visit(expr->getSubExpr()));
 }
 
 mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
