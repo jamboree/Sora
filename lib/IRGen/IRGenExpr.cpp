@@ -181,9 +181,13 @@ mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
 
   // Convert the result type and the loc to their MLIR equivalent.
   mlir::Type mlirType = getIRType(type);
+  assert(mlirType != subExprValue.getType() && "Cast is useless!");
+
   mlir::Location loc = getNodeLoc(expr);
 
   // Currently, all sora casts are static casts, so just emit a static_cast op.
+  // We do not need to handle things like creating maybe types - implicit casts
+  // handle those.
   return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
 }
 

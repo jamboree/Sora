@@ -10,6 +10,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
 
 using namespace sora;
@@ -29,6 +30,25 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
   addTypes<MaybeType>();
   addTypes<ReferenceType>();
   addTypes<LValueType>();
+}
+
+//===----------------------------------------------------------------------===//
+// LoadLValueOp
+//===----------------------------------------------------------------------===//
+
+static void build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                  mlir::Value &value) {
+  LValueType lvalue = value.getType().dyn_cast<LValueType>();
+  assert(lvalue && "Value is not an LValue type!");
+  result.addTypes(lvalue.getObjectType());
+  result.addOperands(value);
+}
+
+static mlir::LogicalResult verify(LoadLValueOp op) {
+  mlir::Type resultType = op.getType();
+  LValueType operandType = op.getOperand().getType().cast<LValueType>();
+  return (resultType == operandType.getObjectType()) ? mlir::success()
+                                                     : mlir::failure();
 }
 
 //===----------------------------------------------------------------------===//

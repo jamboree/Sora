@@ -17,7 +17,7 @@ include "mlir/Interfaces/SideEffects.td"
 
 // Provide a definition of the 'sora' dialect in the ODS framework so that we
 // can define our operations.
-def Sora_Dialect : Dialect {
+def SoraDialect : Dialect {
   // The namespace of our dialect
   let name = "sora";
 
@@ -26,15 +26,15 @@ def Sora_Dialect : Dialect {
 }
 
 // Base class for Sora Dialect Operations 
-class Sora_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<Sora_Dialect, mnemonic, traits>;
+class SoraOp<string mnemonic, list<OpTrait> traits = []> :
+    Op<SoraDialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 //  Attributes
 //===----------------------------------------------------------------------===//
 
 def APFloatAttr : Attr<CPred<"$_self.isa<FloatAttr>()">,
-                     "arbitrary float attribute"> {
+                       "arbitrary float attribute"> {
   let storageType = [{ FloatAttr }];
   let returnType = [{ APFloat }];
 }
@@ -43,26 +43,28 @@ def APFloatAttr : Attr<CPred<"$_self.isa<FloatAttr>()">,
 //  Types
 //===----------------------------------------------------------------------===//
 
-// Sora IR Type
-def Sora_Type : DialectType<Sora_Dialect,
-                            CPred<"$_self.isa<::mlir::sora::SoraType>()">,
+def SoraType : DialectType<SoraDialect,
+                            CPred<"$_self.isa<::sora::ir::SoraType>()">,
                             "Sora dialect type">;
+
+def LValueType : DialectType<SoraDialect,
+                              CPred<"$_self.isa<::sora::ir::LValueType>()">,
+                              "Sora LValue type">;
 
 //===----------------------------------------------------------------------===//
 //  Operations
 //===----------------------------------------------------------------------===//
 
-//===- Casting ------------------------------------------------------------===//
+//===- Static Cast --------------------------------------------------------===//
 
-// A static cast operation.
-def StaticCastOp : Sora_Op<"static_cast", [NoSideEffect]> {
+def StaticCastOp : SoraOp<"static_cast", [NoSideEffect]> {
   let summary = "static casting operation";
   let description = [{
     The Static Cast Operation converts an SSA value of some type into
     another type.
 
     Example:
-      %1 = sora.static_cast(%1 : i1) to si32
+      %1 = sora.static_cast(%1 : i1) to i32
   }];
 
   let assemblyFormat = "$value attr-dict `->` type(results)";
@@ -70,6 +72,36 @@ def StaticCastOp : Sora_Op<"static_cast", [NoSideEffect]> {
   let arguments = (ins AnyType:$value);
 
   let results = (outs AnyType);
+
+  let assemblyFormat = 
+    "`(` $value `:` type($value) `)` attr-dict `to` type(results)";
+}
+
+//===- Load LValue --------------------------------------------------------===//
+
+def LoadLValueOp : SoraOp<"load_lvalue", [NoSideEffect]> {
+  let summary = "lvalue loading operation";
+  let description = [{
+    The Load LValue operation loads an LValue, converting @lvalue T into T.
+
+    Example:
+      %1 = sora.load_lvalue(%1 : !sora.lvalue<i32>) to i32
+  }];
+
+  let assemblyFormat = "$value attr-dict `->` type(results)";
+
+  let arguments = (ins LValueType:$value);
+
+  let results = (outs AnyType);
+
+  let verifier = [{
+    return ::verify(*this);
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value lvalue", [{
+      return ::build(builder, result, lvalue);
+  }]>];
 
   let assemblyFormat = 
     "`(` $value `:` type($value) `)` attr-dict `to` type(results)";
