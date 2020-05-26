@@ -54,9 +54,9 @@ struct ASTContext::Impl {
     }
 
     /// Signed Integer Types
-    llvm::DenseMap<IntegerWidth, IntegerType *> signedIntegerTypes;
+    llvm::DenseMap<IntegerWidth::opaque_t, IntegerType *> signedIntegerTypes;
     /// Unsigned Integer Types
-    llvm::DenseMap<IntegerWidth, IntegerType *> unsignedIntegerTypes;
+    llvm::DenseMap<IntegerWidth::opaque_t, IntegerType *> unsignedIntegerTypes;
     /// Reference types
     llvm::DenseMap<size_t, ReferenceType *> referenceTypes;
     /// Maybe types
@@ -372,7 +372,7 @@ static ArenaKind getArena(TypeProperties properties) {
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
                          .getTypeArena(ArenaKind::Permanent)
-                         .signedIntegerTypes[width];
+                         .signedIntegerTypes[width.getOpaqueValue()];
   if (ty)
     return ty;
   return ty = (new (ctxt, ArenaKind::Permanent)
@@ -382,7 +382,7 @@ IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
 IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
                          .getTypeArena(ArenaKind::Permanent)
-                         .unsignedIntegerTypes[width];
+                         .unsignedIntegerTypes[width.getOpaqueValue()];
   if (ty)
     return ty;
   return ty = (new (ctxt, ArenaKind::Permanent)

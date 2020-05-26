@@ -26,7 +26,6 @@ IntegerWidth IntegerWidth::pointer(const llvm::Triple &triple) {
 
 APInt IntegerWidth::parse(StringRef str, int isNegative, unsigned radix,
                           Status *status) const {
-  assert(!isDenseMapSpecial() && "cant be used on DenseMap special value");
   APInt result;
 
   auto finish = [&](Status s) {

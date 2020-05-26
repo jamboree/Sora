@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Sora/Common/LLVM.hpp"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -21,6 +20,10 @@ namespace sora {
 /// 32) or an arbitrary/target-dependent value (pointer-sized).
 ///
 /// This class also offers a "parse" methods to parse an integer of that width.
+///
+/// This class can also be stored inside DenseMaps by using its opaque value,
+/// which is a 32 bits number (half of it is the width of the integer, the
+/// second is a flag indicating which kind of integer width it is)
 class IntegerWidth final {
 public:
   /// The type of the integer width stored inside this IntegerWidth object.
@@ -32,16 +35,9 @@ public:
 
 private:
   enum class Kind : uint8_t {
-    /// DenseMap Tombstone Key
-    DMTombstone,
-    /// DenseMap Empty Key
-    DMEmpty,
-    /// Fixed width (e.g. 16)
-    Fixed,
-    /// Arbitrary precision
-    Arbitrary,
-    /// Pointer-sized (usize, 32 or 64 bits usually)
-    Pointer
+    Fixed,     ///< Fixed width (e.g. 16)
+    Arbitrary, ///< Arbitrary precision
+    Pointer,   ///< Pointer-sized (usize, 32 or 64 bits usually)
   };
 
   struct Data {
@@ -60,12 +56,6 @@ private:
 
   IntegerWidth(Kind kind, width_t width) : data(kind, width) {}
   IntegerWidth(uint32_t opaque) : opaque(opaque) {}
-
-  friend struct llvm::DenseMapInfo<sora::IntegerWidth>;
-
-  bool isDenseMapSpecial() const {
-    return data.kind == Kind::DMEmpty || data.kind == Kind::DMTombstone;
-  }
 
 public:
   /// Creates an IntegerWidth from a raw value
@@ -104,12 +94,9 @@ public:
 
   /// Integer Parsing Status
   enum class Status {
-    /// Integer was parsed successfully
-    Ok,
-    /// An error occured while parsing the integer
-    Error,
-    /// The integer overflowed (can't happen on arbitrary-precision integers)
-    Overflow
+    Ok,      ///< Integer was parsed successfully
+    Error,   ///< An error occured while parsing the integer
+    Overflow ///< The integer overflowed (for fixed-width integers)
   };
 
   /// Parses an integer of this width. This works with any integer width:
@@ -127,23 +114,3 @@ public:
   }
 };
 } // namespace sora
-
-namespace llvm { // DenseMapInfo for IntegerWidth
-template <> struct DenseMapInfo<sora::IntegerWidth> {
-  using IntegerWidth = sora::IntegerWidth;
-
-  static IntegerWidth getEmptyKey() {
-    return IntegerWidth(IntegerWidth::Kind::DMEmpty, 0);
-  }
-
-  static IntegerWidth getTombstoneKey() {
-    return IntegerWidth(IntegerWidth::Kind::DMTombstone, 0);
-  }
-
-  static unsigned getHashValue(IntegerWidth value) {
-    return DenseMapInfo<unsigned>::getHashValue(value.getOpaqueValue());
-  }
-
-  static bool isEqual(IntegerWidth lhs, IntegerWidth rhs) { return lhs == rhs; }
-};
-} // namespace llvm
