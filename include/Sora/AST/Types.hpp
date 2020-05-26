@@ -296,6 +296,11 @@ public:
   void print(raw_ostream &out,
              const TypePrintOptions &printOptions = TypePrintOptions()) const;
 
+  /// Dumps this type to \p out
+  void dump(raw_ostream &out) const;
+  /// Dumps this type to llvm::dbgs
+  void dump() const;
+
   /// Prints this type to a string
   std::string
   getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;

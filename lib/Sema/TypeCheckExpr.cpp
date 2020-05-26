@@ -84,7 +84,7 @@ static Expr *coerceToRValue(ASTContext &ctxt, Expr *expr) {
   llvm::dbgs() << "Unhandled expr that has an LValue type (type="
                << type->getString(TypePrintOptions::forDebug())
                << ") in coerceToRValue:\n";
-  expr->dump(llvm::dbgs(), ctxt.srcMgr);
+  expr->dump(llvm::dbgs(), &ctxt.srcMgr);
   llvm_unreachable("Unhandled expression");
 }
 

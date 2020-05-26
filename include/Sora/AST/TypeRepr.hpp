@@ -98,8 +98,10 @@ public:
   bool walk(ASTWalker &&walker) { return walk(walker); }
 
   /// Dumps this TypeRepr to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr,
+  void dump(raw_ostream &out, const SourceManager *srcMgr = nullptr,
             unsigned indent = 2) const;
+  /// Dumps this TypeRepr to llvm::dbgs(), using default options.
+  void dump() const;
 
   /// \returns the SourceLoc of the first token of the TypeRepr
   SourceLoc getBegLoc() const;

@@ -94,9 +94,11 @@ public:
   bool walk(ASTWalker &walker);
   bool walk(ASTWalker &&walker) { return walk(walker); }
 
-  /// Dumps this statement to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr,
+  /// Dumps this pattern to \p out
+  void dump(raw_ostream &out, const SourceManager *srcMgr = nullptr,
             unsigned indent = 2) const;
+  /// Dumps this pattern to llvm::dbgs(), using default options.
+  void dump() const;
 
   /// \return the kind of patterns this is
   PatternKind getKind() const { return PatternKind(bits.Pattern.kind); }

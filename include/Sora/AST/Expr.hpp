@@ -163,8 +163,10 @@ public:
   std::pair<bool, Expr *> walk(ASTWalker &&walker) { return walk(walker); }
 
   /// Dumps this expression to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr,
+  void dump(raw_ostream &out, const SourceManager *srcMgr = nullptr,
             unsigned indent = 2) const;
+  /// Dumps this expression to llvm::dbgs(), using default options.
+  void dump() const;
 
   /// \return the kind of expression this is
   ExprKind getKind() const { return ExprKind(bits.Expr.kind); }

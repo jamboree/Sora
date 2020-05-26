@@ -61,6 +61,8 @@ public:
 
   /// Dumps this source file to \p out
   void dump(raw_ostream &out, unsigned indent = 2) const;
+  /// Dumps this source file to llvm::dbgs(), using default options.
+  void dump() const;
 
   /// \returns whether this SourceFile has a ASTScope describing it.
   bool hasScopeMap() const { return fileScope != nullptr; }

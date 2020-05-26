@@ -284,6 +284,8 @@ static const char *getKindStr(ASTScopeKind kind) {
   llvm_unreachable("unknown ASTScope kind");
 }
 
+void ASTScope::dump() const { dump(llvm::dbgs()); }
+
 void ASTScope::dumpImpl(raw_ostream &out, unsigned indent,
                         unsigned curIndent) const {
   out.indent(curIndent);

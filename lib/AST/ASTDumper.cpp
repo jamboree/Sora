@@ -16,12 +16,14 @@
 #include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace sora;
+
+//===- ASTDumper Impl. ----------------------------------------------------===//
 
 namespace {
 const char *getKindStr(DeclKind kind) {
@@ -83,10 +85,16 @@ using Colors = llvm::raw_ostream::Colors;
 
 constexpr Colors nodeKindColor = Colors::WHITE;
 constexpr Colors locColor = Colors::SAVEDCOLOR;
+constexpr char unknownStr[] = "<unknown>";
 
 class Dumper : public SimpleASTVisitor<Dumper> {
+  /// The output stream
   raw_ostream &out;
-  const SourceManager &srcMgr;
+  /// The SourceManager instance.
+  /// If no SourceManager was provided in the constructor, we'll try to find it
+  /// using some node and store it there, else we won't print SourceLoc.
+  const SourceManager *srcMgr = nullptr;
+
   unsigned curIndent;
   const unsigned indentSize;
   bool enableColors = false;
@@ -114,6 +122,9 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   /// Dumps basic information about a Decl.
   /// For ValueDecls, this dumps their type, identifier and identifier location.
   void dumpCommon(Decl *decl) {
+    if (!srcMgr)
+      srcMgr = &decl->getASTContext().srcMgr;
+
     out.indent(curIndent);
     withColor(nodeKindColor) << getKindStr(decl->getKind());
 
@@ -133,6 +144,9 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   }
 
   void dumpCommon(Expr *expr) {
+    if (!srcMgr && expr->hasType())
+      srcMgr = &expr->getType()->getASTContext().srcMgr;
+
     out.indent(curIndent);
     withColor(nodeKindColor) << getKindStr(expr->getKind());
     if (expr->isImplicit())
@@ -142,6 +156,9 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   }
 
   void dumpCommon(Pattern *pattern) {
+    if (!srcMgr && pattern->hasType())
+      srcMgr = &pattern->getType()->getASTContext().srcMgr;
+
     out.indent(curIndent);
     withColor(nodeKindColor) << getKindStr(pattern->getKind());
     if (pattern->isImplicit())
@@ -169,13 +186,19 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   void dumpLoc(SourceLoc loc, StringRef name) {
     auto out = withColor(locColor);
     out << name << '=';
-    loc.print(out, srcMgr, false);
+    if (srcMgr)
+      loc.print(out, *srcMgr, false);
+    else
+      out << unknownStr;
   }
 
   void dumpRange(SourceRange range, StringRef name) {
     auto out = withColor(locColor);
     out << name << '=';
-    range.print(out, srcMgr, false);
+    if (srcMgr)
+      range.print(out, *srcMgr, false);
+    else
+      out << unknownStr;
   }
 
   void dumpIdent(Identifier ident, StringRef name) {
@@ -187,7 +210,7 @@ class Dumper : public SimpleASTVisitor<Dumper> {
   }
 
 public:
-  Dumper(raw_ostream &out, const SourceManager &srcMgr, unsigned indentSize)
+  Dumper(raw_ostream &out, const SourceManager *srcMgr, unsigned indentSize)
       : out(out), srcMgr(srcMgr), curIndent(0), indentSize(indentSize) {
     enableColors = out.has_colors();
   }
@@ -301,7 +324,10 @@ public:
     // should print "Bar.doBar.foo"
     bool printFileName =
         !decl->getSourceFile().contains(expr->getIdentifierLoc());
-    decl->getLoc().print(out, srcMgr, printFileName);
+    if (srcMgr)
+      decl->getLoc().print(out, *srcMgr, printFileName);
+    else
+      out << unknownStr;
     out << '\n';
   }
 
@@ -720,30 +746,44 @@ public:
 };
 } // namespace
 
+//===- Entry Points -------------------------------------------------------===//
+
 void Decl::dump(raw_ostream &out, unsigned indent) const {
-  Dumper(out, getASTContext().srcMgr, indent).visit(const_cast<Decl *>(this));
+  Dumper(out, &getASTContext().srcMgr, indent).visit(const_cast<Decl *>(this));
 }
 
-void Expr::dump(raw_ostream &out, const SourceManager &srcMgr,
+void Decl::dump() const { dump(llvm::dbgs()); }
+
+void Expr::dump(raw_ostream &out, const SourceManager *srcMgr,
                 unsigned indent) const {
   Dumper(out, srcMgr, indent).visit(const_cast<Expr *>(this));
 }
 
-void Pattern::dump(raw_ostream &out, const SourceManager &srcMgr,
+void Expr::dump() const { dump(llvm::dbgs()); }
+
+void Pattern::dump(raw_ostream &out, const SourceManager *srcMgr,
                    unsigned indent) const {
   Dumper(out, srcMgr, indent).visit(const_cast<Pattern *>(this));
 }
 
-void TypeRepr::dump(raw_ostream &out, const SourceManager &srcMgr,
+void Pattern::dump() const { dump(llvm::dbgs()); }
+
+void TypeRepr::dump(raw_ostream &out, const SourceManager *srcMgr,
                     unsigned indent) const {
   Dumper(out, srcMgr, indent).visit(const_cast<TypeRepr *>(this));
 }
 
+void TypeRepr::dump() const { dump(llvm::dbgs()); }
+
 void SourceFile::dump(raw_ostream &out, unsigned indent) const {
-  Dumper(out, astContext.srcMgr, indent).visitSourceFile(*this);
+  Dumper(out, &astContext.srcMgr, indent).visitSourceFile(*this);
 }
 
-void Stmt::dump(raw_ostream &out, const SourceManager &srcMgr,
+void SourceFile::dump() const { dump(llvm::dbgs()); }
+
+void Stmt::dump(raw_ostream &out, const SourceManager *srcMgr,
                 unsigned indent) const {
   Dumper(out, srcMgr, indent).visit(const_cast<Stmt *>(this));
 }
+
+void Stmt::dump() const { dump(llvm::dbgs()); }

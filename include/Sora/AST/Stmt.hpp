@@ -85,8 +85,10 @@ public:
   bool walk(ASTWalker &&walker) { return walk(walker); }
 
   /// Dumps this statement to \p out
-  void dump(raw_ostream &out, const SourceManager &srcMgr,
+  void dump(raw_ostream &out, const SourceManager *srcMgr = nullptr,
             unsigned indent = 2) const;
+  /// Dumps this statement to llvm::dbgs(), using default options.
+  void dump() const;
 
   /// \return the kind of statement this is
   StmtKind getKind() const { return StmtKind(bits.Stmt.kind); }

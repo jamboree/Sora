@@ -178,6 +178,9 @@ public:
     dumpImpl(out, indent, 0);
   }
 
+  /// Dumps this ASTScope to llvm::dbgs()
+  void dump() const;
+
 private:
   void dumpImpl(raw_ostream &out, unsigned indent, unsigned curIndent) const;
 };

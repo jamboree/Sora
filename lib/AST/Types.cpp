@@ -398,17 +398,11 @@ bool TypeBase::isAnyIntegerType() {
   return getCanonicalType()->is<IntegerType>();
 }
 
-bool TypeBase::isAnyFloatType() {
-  return getCanonicalType()->is<FloatType>();
-}
+bool TypeBase::isAnyFloatType() { return getCanonicalType()->is<FloatType>(); }
 
-bool TypeBase::isTupleType() {
-  return getDesugaredType()->is<TupleType>();
-}
+bool TypeBase::isTupleType() { return getDesugaredType()->is<TupleType>(); }
 
-bool TypeBase::isMaybeType() {
-  return getCanonicalType()->is<MaybeType>();
-}
+bool TypeBase::isMaybeType() { return getCanonicalType()->is<MaybeType>(); }
 
 Type TypeBase::getMaybeTypeValueType() {
   if (!isMaybeType())
@@ -420,6 +414,12 @@ void TypeBase::print(raw_ostream &out,
                      const TypePrintOptions &printOptions) const {
   Type(const_cast<TypeBase *>(this)).print(out, printOptions);
 }
+
+void TypeBase::dump(raw_ostream &out) const {
+  print(out, TypePrintOptions::forDebug());
+}
+
+void TypeBase::dump() const { dump(llvm::dbgs()); }
 
 std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
   return Type(const_cast<TypeBase *>(this)).getString(printOptions);
