@@ -96,9 +96,9 @@ public:
     llvm_unreachable("Unknown node");
   };
 
-  // Add default implementations that chain back to their base class, so we
-  // require full coverage of the AST by visitors but we also allow them to
-  // visit only a common base (like ValueDecl) and handle all derived classes.
+    // Add default implementations that chain back to their base class, so we
+    // require full coverage of the AST by visitors but we also allow them to
+    // visit only a common base (like ValueDecl) and handle all derived classes.
 #define VISIT_METHOD(RTR, NODE, PARENT)                                        \
   RTR visit##NODE(NODE *node, Args... args) {                                  \
     return static_cast<Derived *>(this)->visit##PARENT(                        \
@@ -115,6 +115,8 @@ public:
 #define ABSTRACT_EXPR(ID, PARENT) VISIT_METHOD(ExprRtrTy, ID##Expr, PARENT)
 #include "Sora/AST/ExprNodes.def"
 #define PATTERN(ID, PARENT) VISIT_METHOD(PatternRtrTy, ID##Pattern, PARENT)
+#define ABSTRACT_PATTERN(ID, PARENT)                                           \
+  VISIT_METHOD(PatternRtrTy, ID##Pattern, PARENT)
 #include "Sora/AST/PatternNodes.def"
 #define TYPEREPR(ID, PARENT) VISIT_METHOD(TypeReprRtrTy, ID##TypeRepr, PARENT)
 #include "Sora/AST/TypeReprNodes.def"
