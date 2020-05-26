@@ -12,6 +12,7 @@
 #include "Sora/Driver/Driver.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 
@@ -20,8 +21,11 @@ using namespace llvm::opt;
 
 int main(int argc, char **argv) {
   PROGRAM_START(argc, argv);
-  // FIXME: It'd be great if the DiagEngine worked without a SourceManager, so
-  // we don't have to create one for nothing.
+  llvm::setBugReportMsg("Please file an issue and include the crash backtrace: "
+                        "https://github.com/Pierre-vh/Sora\n");
+
+  // FIXME: It'd be great if the DiagEngine worked without a SourceManager,
+  // so we don't have to create one for nothing.
   SourceManager driverDiagsSrcMgr;
   DiagnosticEngine driverDiagEngine(driverDiagsSrcMgr);
   driverDiagEngine.createConsumer<PrintingDiagnosticConsumer>(llvm::errs());

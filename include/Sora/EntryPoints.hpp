@@ -26,6 +26,15 @@ class ModuleOp;
 namespace sora {
 class SourceFile;
 
+//===- AST - Abstract Syntax Tree Library ---------------------------------===//
+
+/// In debug mode, verifies the source file \p sf and exits if the AST is not
+/// well-formed.
+///
+/// \param sf the SourceFile to check.
+/// \param isChecked whether the AST is type-checked.
+void verify(SourceFile &sf, bool isChecked);
+
 //===- Parser - Parsing Library -------------------------------------------===//
 
 /// Parses the content of \p sf

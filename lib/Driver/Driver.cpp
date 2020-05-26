@@ -386,7 +386,11 @@ bool CompilerInstance::doParsing(SourceFile &file) {
     file.dump(dump_os);
   if (options.printMemUsage)
     printASTContextMemoryUsage(Step::Parsing);
-  return !diagEng.hadAnyError();
+
+  bool success = !diagEng.hadAnyError();
+  if (success)
+    verify(file, /*isChecked*/ false);
+  return success;
 }
 
 bool CompilerInstance::doSema(SourceFile &file) {
@@ -410,7 +414,10 @@ bool CompilerInstance::doSema(SourceFile &file) {
   if (options.dumpAST)
     file.dump(dump_os);
 
-  return !diagEng.hadAnyError();
+  bool success = !diagEng.hadAnyError();
+  if (success)
+    verify(file, /*isChecked*/ true);
+  return success;
 }
 
 bool CompilerInstance::doIRGen(mlir::MLIRContext &mlirContext,

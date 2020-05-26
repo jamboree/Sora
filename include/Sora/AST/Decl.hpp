@@ -207,13 +207,8 @@ public:
     bits.NamedDecl.isIllegalRedeclaration = value;
   }
 
-  /// \returns the identifier (name) of this decl
   Identifier getIdentifier() const { return identifier; }
-
-  /// \returns the SourceLoc of the identifier
   SourceLoc getIdentifierLoc() const { return identifierLoc; }
-
-  /// \returns the preffered SourceLoc for diagnostics.
   SourceLoc getLoc() const { return identifierLoc; }
 
   static bool classof(const Decl *decl) {
@@ -239,7 +234,6 @@ protected:
       : NamedDecl(kind, declContext, identifierLoc, identifier) {}
 
 public:
-  /// \returns the type of this value
   Type getValueType() const;
 
   static bool classof(const Decl *decl) {
@@ -263,9 +257,7 @@ public:
     bits.VarDecl.isMutable = false;
   }
 
-  /// Sets the type of this value (the type of the variable)
   void setValueType(Type type) { this->type = type; }
-  /// \returns the type of this value (the type of the variable)
   Type getValueType() const { return type; }
 
   bool isMutable() const { return bits.VarDecl.isMutable; }
@@ -298,7 +290,6 @@ public:
   /// The type should be valid after semantic analysis.
   TypeLoc getTypeLoc() const { return tyLoc; }
 
-  /// \returns the type of this value (the type of the parameter)
   Type getValueType() const { return tyLoc.getType(); }
 
   SourceLoc getBegLoc() const;
@@ -419,17 +410,12 @@ public:
   /// \returns true if the user wrote a return type for this function
   bool hasReturnType() const { return returnTypeLoc.hasTypeRepr(); }
 
-  /// Sets the type of this value (the type of this function)
   void setValueType(Type type) { this->type = type; }
-  /// \returns the type of this value (the type of the function)
   Type getValueType() const { return type; }
 
-  /// \returns the SourceLoc of the "func" keyword
   SourceLoc getFuncLoc() const { return funcLoc; }
 
-  /// \returns the SourceLoc of the first token of the declaration
   SourceLoc getBegLoc() const;
-  /// \returns the SourceLoc of the last token of the declaration
   SourceLoc getEndLoc() const;
 
   static bool classof(const Decl *decl) {
@@ -471,16 +457,11 @@ public:
   /// Call \p fn on each VarDecl in this PatternBindingDecl.
   void forEachVarDecl(llvm::function_ref<void(VarDecl *)> fn) const;
 
-  /// \returns the initializer of this PBD, if it has one.
   Expr *getInitializer() const { return init; }
-  /// Replaces the initializer of this PBD.
   void setInitializer(Expr *expr) { init = expr; }
-  /// \returns whether this PBD has an initializer.
   bool hasInitializer() const { return init; }
 
-  /// \returns the Pattern of this PBD
   Pattern *getPattern() const { return pattern; }
-  /// Replaces the pattern of this PBD
   void setPattern(Pattern *pattern) { this->pattern = pattern; }
 
   /// \returns the SourceLoc of the '=' if there's an initializer.

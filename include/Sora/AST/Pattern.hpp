@@ -345,6 +345,9 @@ public:
 ///
 /// Currently, this pattern is always implicit and can't be explicitly written
 /// in source. It is generated for "if let" conditions.
+///
+/// This pattern can only be present at the top-level of a pattern, it can not
+/// be the children of another pattern.
 class MaybeValuePattern : public RefutablePattern {
   Pattern *subPattern;
 

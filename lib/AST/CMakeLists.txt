@@ -2,6 +2,7 @@ add_source(ast_src
   "ASTContext.cpp"
   "ASTDumper.cpp"
   "ASTScope.cpp"
+  "ASTVerifier.cpp"
   "ASTWalker.cpp"
   "Decl.cpp"
   "Expr.cpp"

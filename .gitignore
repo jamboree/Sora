@@ -4,3 +4,4 @@ build
 .DS_STORE
 .vscode
 .idea
+/CMakeSettings.json
