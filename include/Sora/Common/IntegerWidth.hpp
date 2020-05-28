@@ -34,24 +34,33 @@ public:
   using opaque_t = uint32_t;
 
 private:
-  enum class Kind : uint8_t {
+  /// Keep kind the same size as width_t, so when we store kind + width in Data,
+  /// we don't have any padding.
+  enum class Kind : width_t {
     Fixed,     ///< Fixed width (e.g. 16)
     Arbitrary, ///< Arbitrary precision
     Pointer,   ///< Pointer-sized (usize, 32 or 64 bits usually)
   };
 
+  LLVM_PACKED_START
   struct Data {
     Data(Kind kind, width_t width) : kind(kind), width(width) {}
 
     Kind kind;
     width_t width;
   };
+  LLVM_PACKED_END
+
+  static_assert(sizeof(Kind) == sizeof(width_t),
+                "Kind and width_ must be the same size!");
+  static_assert(sizeof(Kind) + sizeof(width_t) == sizeof(Data),
+                "Data must not be padded!");
+  static_assert(sizeof(Data) == sizeof(opaque_t),
+                "Data must be the same size as opaque_t");
 
   union {
     opaque_t opaque;
     Data data;
-    static_assert(sizeof(Data) == sizeof(opaque_t),
-                  "Data is too large to fit in opaque_t");
   };
 
   IntegerWidth(Kind kind, width_t width) : data(kind, width) {}
