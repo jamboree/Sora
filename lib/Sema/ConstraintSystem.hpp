@@ -154,6 +154,6 @@ public:
 
   void dumpTypeVariables(
       raw_ostream &out,
-      const TypePrintOptions &printOptions = TypePrintOptions()) const;
+      TypePrintOptions printOptions = TypePrintOptions::forDebug()) const;
 };
 } // namespace sora

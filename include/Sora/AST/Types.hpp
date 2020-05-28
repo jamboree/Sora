@@ -293,8 +293,9 @@ public:
   bool isCanonical() const { return bits.TypeBase.isCanonical; }
 
   /// Prints this type
-  void print(raw_ostream &out,
-             const TypePrintOptions &printOptions = TypePrintOptions()) const;
+  void
+  print(raw_ostream &out,
+        TypePrintOptions printOptions = TypePrintOptions::forDebug()) const;
 
   /// Dumps this type to \p out
   void dump(raw_ostream &out) const;
@@ -303,7 +304,7 @@ public:
 
   /// Prints this type to a string
   std::string
-  getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;
+  getString(TypePrintOptions printOptions = TypePrintOptions::forDebug()) const;
 
   /// \returns the kind of type this is
   TypeKind getKind() const { return TypeKind(bits.TypeBase.kind); }
@@ -312,6 +313,11 @@ public:
   template <typename Ty> bool is() const { return isa<Ty>(this); }
   template <typename Ty> Ty *castTo() { return cast<Ty>(this); }
 };
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &out, TypeBase &type) {
+  type.print(out);
+  return out;
+}
 
 /// TypeBase should only be 2 pointers in size
 static_assert(sizeof(TypeBase) <= 16, "TypeBase is too large!");

@@ -235,14 +235,13 @@ bool ConstraintSystem::canUnify(Type a, Type b,
   return TypeUnifier(options, /*canBindTypeVariables*/ false).unify(a, b);
 }
 
-void ConstraintSystem::dumpTypeVariables(
-    raw_ostream &out, const TypePrintOptions &printOptions) const {
+void ConstraintSystem::dumpTypeVariables(raw_ostream &out,
+                                         TypePrintOptions printOptions) const {
   if (typeVariables.empty())
     out << "    <no type variables>\n";
   else
     for (TypeVariableType *tyVar : typeVariables) {
-      out << "    ";
-      tyVar->print(out, TypePrintOptions::forDebug());
+      out << "    " << *tyVar;
       if (tyVar->isBound())
         if (Type simplified = simplifyType(tyVar->getBinding()))
           if (simplified->hasErrorType())

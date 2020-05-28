@@ -205,9 +205,7 @@ class Dumper : public SimpleASTVisitor<Dumper> {
     out << name << "=" << (ident ? ident.str() : "<null identifier>");
   }
 
-  void dumpType(Type type, StringRef name) {
-    out << name << "=" << type.getString(TypePrintOptions::forDebug());
-  }
+  void dumpType(Type type, StringRef name) { out << name << "=" << type; }
 
 public:
   Dumper(raw_ostream &out, const SourceManager *srcMgr, unsigned indentSize)

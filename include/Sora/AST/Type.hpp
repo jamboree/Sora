@@ -22,18 +22,25 @@ class TypeRepr;
 class SourceLoc;
 class SourceRange;
 
-/// Type Printing Options
-struct TypePrintOptions {
+/// Lightweight class that represents type printing options.
+///
+/// By default, this is configured to print types with as much information as
+/// possible: lvalues are printed, null types are allowed, etc.
+class TypePrintOptions {
+  // Private - use the static constructors instead.
+  TypePrintOptions() {}
+
+public:
   /// If true, null types are printed as <null_type>, if false, traps on null
   /// type.
-  bool allowNullTypes = true;
-  /// If true, type variables are printed as '_' instead of '$Tx'
-  bool printTypeVariablesAsUnderscore = false;
+  bool allowNullTypes : 1;
+  /// If true, type variables are printed as '_' instead of '$Tx'.
+  bool printTypeVariablesAsUnderscore : 1;
   /// If true, lvalues are printed as @lvalue T instead of being "transparent"
-  bool printLValues = false;
+  bool printLValues : 1;
   /// If true, null types are printed as <error_type>, if false, traps on error
   /// type.
-  bool allowErrorTypes = true;
+  bool allowErrorTypes : 1;
 
   /// Creates a TypeOption for use in diagnostics
   static TypePrintOptions forDiagnostics() {
@@ -41,17 +48,22 @@ struct TypePrintOptions {
     opts.printTypeVariablesAsUnderscore = true;
     opts.allowErrorTypes = false;
     opts.allowNullTypes = false;
+    opts.printLValues = false;
     return opts;
   }
 
-  /// Creates a TypeOption for use in debugging. This allows null types and
-  /// error types.
+  /// Creates a TypeOption for use in debug messages.
   static TypePrintOptions forDebug() {
     TypePrintOptions opts;
+    opts.printTypeVariablesAsUnderscore = false;
+    opts.allowErrorTypes = true;
+    opts.allowNullTypes = true;
     opts.printLValues = true;
     return opts;
   }
 };
+
+static_assert(sizeof(TypePrintOptions) == 1, "TypePrintOptions is too large!");
 
 /// Wrapper around a TypeBase* used to disable direct pointer comparison, as it
 /// can cause bugs when canonical types are involved.
@@ -82,12 +94,13 @@ public:
   explicit operator bool() const { return ptr != nullptr; }
 
   /// Prints this type
-  void print(raw_ostream &out,
-             const TypePrintOptions &printOptions = TypePrintOptions()) const;
+  void
+  print(raw_ostream &out,
+        TypePrintOptions printOptions = TypePrintOptions::forDebug()) const;
 
   /// Prints this type to a string
   std::string
-  getString(const TypePrintOptions &printOptions = TypePrintOptions()) const;
+  getString(TypePrintOptions printOptions = TypePrintOptions::forDebug()) const;
 
   bool operator<(const Type &other) const { return ptr < other.ptr; }
   // Can't compare types unless they're known canonical
@@ -95,7 +108,7 @@ public:
   bool operator!=(const Type &) const = delete;
 };
 
-inline llvm::raw_ostream& operator<<(llvm::raw_ostream& out, Type type) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &out, Type type) {
   type.print(out);
   return out;
 }
@@ -118,7 +131,7 @@ public:
   }
 };
 
-inline llvm::raw_ostream& operator<<(llvm::raw_ostream& out, CanType type) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &out, CanType type) {
   type.print(out);
   return out;
 }

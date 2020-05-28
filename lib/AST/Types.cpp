@@ -243,11 +243,11 @@ public:
 
 //===- Type/CanType/TypeLoc -----------------------------------------------===//
 
-void Type::print(raw_ostream &out, const TypePrintOptions &printOptions) const {
+void Type::print(raw_ostream &out, TypePrintOptions printOptions) const {
   TypePrinter(out, printOptions).visit(*this);
 }
 
-std::string Type::getString(const TypePrintOptions &printOptions) const {
+std::string Type::getString(TypePrintOptions printOptions) const {
   std::string rtr;
   llvm::raw_string_ostream out(rtr);
   print(out, printOptions);
@@ -277,8 +277,10 @@ SourceLoc TypeLoc::getEndLoc() const {
   return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
 }
 
+static TypePrintOptions typePrintOptions = TypePrintOptions::forDiagnostics();
+
 std::string DiagnosticArgument<Type>::format(Type type) {
-  return type.getString(TypePrintOptions::forDiagnostics());
+  return type.getString(typePrintOptions);
 }
 
 //===- TypeBase -----------------------------------------------------------===//
@@ -410,18 +412,15 @@ Type TypeBase::getMaybeTypeValueType() {
   return getDesugaredType()->castTo<MaybeType>()->getValueType();
 }
 
-void TypeBase::print(raw_ostream &out,
-                     const TypePrintOptions &printOptions) const {
+void TypeBase::print(raw_ostream &out, TypePrintOptions printOptions) const {
   Type(const_cast<TypeBase *>(this)).print(out, printOptions);
 }
 
-void TypeBase::dump(raw_ostream &out) const {
-  print(out, TypePrintOptions::forDebug());
-}
+void TypeBase::dump(raw_ostream &out) const { print(out); }
 
 void TypeBase::dump() const { dump(llvm::dbgs()); }
 
-std::string TypeBase::getString(const TypePrintOptions &printOptions) const {
+std::string TypeBase::getString(TypePrintOptions printOptions) const {
   return Type(const_cast<TypeBase *>(this)).getString(printOptions);
 }
 
