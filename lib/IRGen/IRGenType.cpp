@@ -100,7 +100,7 @@ public:
 
 //===- IRGen --------------------------------------------------------------===//
 
-mlir::Type IRGen::getIRType(Type type) {
+mlir::Type IRGen::getType(Type type) {
   assert(!type->hasNullType() && "Cannot lower Null Types");
   auto iter = typeCache.find(type.getPtr());
   if (iter != typeCache.end())

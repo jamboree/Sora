@@ -22,6 +22,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Error.h"
 
 namespace mlir {
@@ -38,6 +39,7 @@ class FuncDecl;
 class SourceFile;
 class SourceManager;
 class Type;
+class VarDecl;
 
 class IRGen {
   bool debugInfoEnabled;
@@ -46,11 +48,32 @@ class IRGen {
   llvm::DenseMap<TypeBase *, mlir::Type> typeCache;
   /// A Cache fo Function -> mlir Function Operation
   llvm::DenseMap<FuncDecl *, mlir::FuncOp> funcCache;
+  /// Maps VarDecls to their current value.
+  llvm::ScopedHashTable<VarDecl *, mlir::Value> vars;
 
 public:
+  //===- Helper Classes ---------------------------------------------------===//
+
+  /// Represents a BlockStmt's scope. This doubles as a ScopedHashTableScope for
+  /// the var values.
+  class BlockScope : llvm::ScopedHashTableScope<VarDecl *, mlir::Value> {
+  public:
+    BlockScope(IRGen &irGen) : ScopedHashTableScope(irGen.vars) {}
+  };
+
+  //===- Constructor ------------------------------------------------------===//
+
   IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt, bool enableDebugInfo);
 
   //===- Generation Entry Points ------------------------------------------===//
+
+  /// Generates a variable declaration \p decl, optionally using \p value as its
+  /// initial value.
+  ///
+  /// If \p value is null, then a sora.create_default_value is used as the value
+  /// of the variable.
+  void genVarDecl(mlir::OpBuilder &builder, VarDecl *decl,
+                  mlir::Value value = {});
 
   /// Generates IR for \p sf, returning the MLIR Module.
   void genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule);
@@ -60,20 +83,31 @@ public:
   mlir::FuncOp genFunctionBody(FuncDecl *func);
 
   /// Generates IR for an Expression.
-  mlir::Value genExpr(Expr *expr, mlir::OpBuilder &builder);
+  mlir::Value genExpr(mlir::OpBuilder &builder, Expr *expr);
+
+  /// Generates IR for a Pattern \p pattern. \p value is an optional argument to
+  /// assign a value to the pattern.
+  void genPattern(mlir::OpBuilder &builder, Pattern *pattern,
+                  mlir::Value value = {});
 
   /// Generates IR for a Statement.
-  void genStmt(Stmt *stmt, mlir::OpBuilder &builder);
+  void genStmt(mlir::OpBuilder &builder, Stmt *stmt);
 
   /// Generates IR for a Block Statement.
   /// This is simply an extra entry point so files don't have to include
   /// Stmt.hpp just to implicitly convert BlockStmt into Stmts.
-  void genStmt(BlockStmt *stmt, mlir::OpBuilder &builder);
+  void genStmt(mlir::OpBuilder &builder, BlockStmt *stmt);
 
   /// Generates IR for a Declaration.
-  void genDecl(Decl *decl, mlir::OpBuilder &builder);
+  void genDecl(mlir::OpBuilder &builder, Decl *decl);
 
   //===- Helpers/Conversion Functions -------------------------------------===//
+
+  /// Sets the value of \p decl to \p value.
+  void setVarValue(VarDecl *decl, mlir::Value value);
+
+  /// \returns the current value of \p decl
+  mlir::Value getVarValue(VarDecl *decl);
 
   /// \returns the MLIR FuncOp for \p func, creating it if needed.
   /// Note that this does not generate the body of the function. For that, see
@@ -100,11 +134,11 @@ public:
 
   /// \returns the MLIR Type equivalent of \p type.
   /// Note that this can NOT lower types that contain Null types.
-  mlir::Type getIRType(Type type);
+  mlir::Type getType(Type type);
 
   /// \returns the MLIR Type equivalent of \p expr's type.
   /// Note that this can NOT lower types that contain Null types.
-  mlir::Type getIRType(Expr *expr);
+  mlir::Type getType(Expr *expr);
 
   /// \returns the MLIR Identifier for \p str
   mlir::Identifier getIRIdentifier(StringRef str);
@@ -138,8 +172,8 @@ public:
     return irGen.getNodeLoc(value);
   }
 
-  template <typename Ty> mlir::Type getIRType(Ty &&value) {
-    return irGen.getIRType(value);
+  template <typename Ty> mlir::Type getType(Ty &&value) {
+    return irGen.getType(value);
   }
 
   IRGen &irGen;

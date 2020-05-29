@@ -174,6 +174,7 @@ public:
 
   //===- Visit Methods ----------------------------------------------------===//
 
+  void visitLoadExpr(LoadExpr *expr);
   void visitExpr(Expr *) {}
 
   void visitDecl(Decl *) {}
@@ -349,6 +350,26 @@ void BasicVerifierImpl::visitMaybeValuePattern(MaybeValuePattern *pattern) {}
 
 //===- CheckedVerifierImpl ------------------------------------------------===//
 
+void CheckedVerifierImpl::visitLoadExpr(LoadExpr *expr) {
+  Type type = expr->getType();
+  Type subExprType = expr->getSubExpr()->getType();
+
+  if (!subExprType)
+    return;
+
+  if (!subExprType->is<LValueType>())
+    CREATE_FAILURE(expr)
+        << "LoadExpr's subexpression does not have an LValue Type";
+
+  if (type.getPtr() != subExprType->getRValueType().getPtr())
+    CREATE_FAILURE(expr) << "LoadExpr type must me the exact same type as its "
+                            "subexpression without the LValue!\n "
+                         << "Expression type: '" << type
+                         << "', Subexpression type: '" << subExprType
+                         << "', Expected Type: '"
+                         << subExprType->getRValueType() << "'";
+}
+
 void CheckedVerifierImpl::visitMaybeValuePattern(MaybeValuePattern *pattern) {
   if (Pattern *topLevelPattern = getTopLevelNode<Pattern>())
     CREATE_FAILURE(topLevelPattern)
@@ -358,8 +379,6 @@ void CheckedVerifierImpl::visitMaybeValuePattern(MaybeValuePattern *pattern) {
   Type type = pattern->getType();
   Type subPatTy = pattern->getSubPattern()->getType();
 
-  // If the subpattern is untyped, abandon and let the verifier emit a
-  // failure when it reaches that node.
   if (!subPatTy)
     return;
 

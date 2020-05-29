@@ -6,6 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/IR/Dialect.hpp"
+
+#include "Sora/Common/LLVM.hpp"
 #include "Sora/IR/Types.hpp"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
@@ -36,19 +38,95 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 // LoadLValueOp
 //===----------------------------------------------------------------------===//
 
-static void build(mlir::OpBuilder &builder, mlir::OperationState &result,
-                  mlir::Value &value) {
+static void buildLoadLValueOp(mlir::OpBuilder &builder,
+                              mlir::OperationState &result,
+                              mlir::Value &value) {
   LValueType lvalue = value.getType().dyn_cast<LValueType>();
   assert(lvalue && "Value is not an LValue type!");
   result.addTypes(lvalue.getObjectType());
   result.addOperands(value);
 }
 
-static mlir::LogicalResult verify(LoadLValueOp op) {
+static mlir::LogicalResult verifyLoadLValueOp(LoadLValueOp op) {
   mlir::Type resultType = op.getType();
   LValueType operandType = op.getOperand().getType().cast<LValueType>();
   return (resultType == operandType.getObjectType()) ? mlir::success()
                                                      : mlir::failure();
+}
+
+//===----------------------------------------------------------------------===//
+// CreateTupleOp
+//===----------------------------------------------------------------------===//
+
+static void buildCreateTupleOp(mlir::OpBuilder &builder,
+                               mlir::OperationState &result,
+                               ArrayRef<mlir::Value> elts) {
+  assert(elts.size() > 0 && "Cannot create empty tuples!");
+  assert(elts.size() > 1 && "Cannot create single-element tuples");
+
+  SmallVector<mlir::Type, 8> types;
+  types.reserve(elts.size());
+
+  for (const mlir::Value &elt : elts)
+    types.push_back(elt.getType());
+
+  mlir::TupleType tupleType = mlir::TupleType::get(types, builder.getContext());
+
+  result.addOperands(elts);
+  result.addTypes(tupleType);
+}
+
+static mlir::LogicalResult verifyCreateTupleOp(CreateTupleOp op) {
+  if (op.getNumOperands() <= 1)
+    return mlir::failure();
+
+  SmallVector<mlir::Type, 8> types;
+  types.reserve(op.getNumOperands());
+
+  for (const mlir::Value &elt : op.getOperands())
+    types.push_back(elt.getType());
+
+  if (op.getType() != mlir::TupleType::get(types, op.getContext()))
+    return mlir::failure();
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// DestructureTupleOp
+//===----------------------------------------------------------------------===//
+
+static void buildDestructureTupleOp(mlir::OpBuilder &builder,
+                                    mlir::OperationState &result,
+                                    mlir::Value tuple) {
+  mlir::TupleType tupleType = tuple.getType().dyn_cast<mlir::TupleType>();
+  assert(tupleType && "The value must have a TupleType!");
+  assert(tupleType.getTypes().size() > 1 && "Illegal tuple!");
+
+  result.addOperands(tuple);
+  result.addTypes(tupleType.getTypes());
+}
+
+static mlir::LogicalResult verifyDestructureTupleOp(DestructureTupleOp op) {
+  mlir::TupleType tupleType =
+      op.getOperand().getType().dyn_cast<mlir::TupleType>();
+  if (!tupleType)
+    return mlir::failure();
+
+  ArrayRef<mlir::Type> results = op.getResultTypes();
+  ArrayRef<mlir::Type> tupleElts = tupleType.getTypes();
+
+  if (results.size() != tupleElts.size())
+    return mlir::failure();
+
+  if (results.size() <= 1)
+    return mlir::failure();
+
+  for (size_t k = 0; k < results.size(); ++k)
+    if (results[k] != tupleElts[k])
+      return mlir::failure();
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

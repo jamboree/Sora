@@ -72,6 +72,11 @@ public:
     llvm_unreachable("Unimplemented - visitDiscardExpr");
   }
 
+  /// Generates an LValue, returning a Value with an LValue type.
+  mlir::Value genLValue(Expr *expr) {
+    llvm_unreachable("Unimplemented - genLValue");
+  }
+
   // UnaryExpr Helpers
   mlir::Value genUnaryAddressOf(UnaryExpr *expr);
   mlir::Value genUnaryDeref(UnaryExpr *expr);
@@ -107,7 +112,7 @@ public:
 mlir::Value
 RValueIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
   assert(expr->getType()->isAnyIntegerType() && "Not an Integer Type?!");
-  mlir::Type type = getIRType(expr->getType());
+  mlir::Type type = getType(expr->getType());
   assert(type.isa<mlir::IntegerType>() && "Not an IntegerType?!");
 
   // TODO: Create a "BuildIntConstant" method as I'll probably need to create
@@ -118,7 +123,7 @@ RValueIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
 
 mlir::Value RValueIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
   assert(expr->getType()->isAnyFloatType() && "Not a Float Type?!");
-  mlir::Type type = getIRType(expr->getType());
+  mlir::Type type = getType(expr->getType());
   assert(type.isa<mlir::FloatType>() && "Not a FloatType?!");
 
   auto valueAttr = mlir::FloatAttr::get(type, expr->getValue());
@@ -128,7 +133,7 @@ mlir::Value RValueIRGenerator::visitFloatLiteralExpr(FloatLiteralExpr *expr) {
 mlir::Value
 RValueIRGenerator::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
   assert(expr->getType()->isBoolType() && "Not a Bool Type?!");
-  mlir::Type type = getIRType(expr->getType());
+  mlir::Type type = getType(expr->getType());
   assert(type.isInteger(1) && "Expected a i1!");
   APInt value(1, expr->getValue() ? 1 : 0);
 
@@ -168,7 +173,7 @@ mlir::Value RValueIRGenerator::visitDestructuredTupleElementExpr(
 
 mlir::Value RValueIRGenerator::visitLoadExpr(LoadExpr *expr) {
   return builder.create<ir::LoadLValueOp>(getNodeLoc(expr),
-                                          visit(expr->getSubExpr()));
+                                          genLValue(expr->getSubExpr()));
 }
 
 mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
@@ -182,7 +187,7 @@ mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
   Type type = expr->getType();
 
   // Convert the result type and the loc to their MLIR equivalent.
-  mlir::Type mlirType = getIRType(type);
+  mlir::Type mlirType = getType(type);
   assert(mlirType != subExprValue.getType() && "Cast is useless!");
 
   mlir::Location loc = getNodeLoc(expr);
@@ -198,7 +203,20 @@ mlir::Value RValueIRGenerator::visitTupleElementExpr(TupleElementExpr *expr) {
 }
 
 mlir::Value RValueIRGenerator::visitTupleExpr(TupleExpr *expr) {
-  llvm_unreachable("Unimplemented - visitTupleExpr");
+  mlir::Location loc = getNodeLoc(expr);
+
+  // Empty tuples are just 'void' literals.
+  if (expr->isEmpty())
+    return builder.create<ir::CreateDefaultValueOp>(loc,
+                                                    getType(expr->getType()));
+
+  SmallVector<mlir::Value, 8> tupleElts;
+  tupleElts.reserve(expr->getNumElements());
+
+  for (Expr *tupleElt : expr->getElements())
+    tupleElts.push_back(visit(tupleElt));
+
+  return builder.create<ir::CreateTupleOp>(loc, tupleElts);
 }
 
 mlir::Value RValueIRGenerator::visitParenExpr(ParenExpr *expr) {
@@ -322,11 +340,11 @@ mlir::Value RValueIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
 
 //===- IRGen --------------------------------------------------------------===//
 
-mlir::Value IRGen::genExpr(Expr *expr, mlir::OpBuilder &builder) {
+mlir::Value IRGen::genExpr(mlir::OpBuilder &builder, Expr *expr) {
   return RValueIRGenerator(*this, builder).visit(expr);
 }
 
-mlir::Type IRGen::getIRType(Expr *expr) { return getIRType(expr->getType()); }
+mlir::Type IRGen::getType(Expr *expr) { return getType(expr->getType()); }
 
 mlir::Location IRGen::getNodeLoc(Expr *expr) {
   return mlir::OpaqueLoc::get(expr, getFileLineColLoc(expr->getLoc()));

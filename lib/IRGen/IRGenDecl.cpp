@@ -17,8 +17,44 @@ using namespace sora;
 
 //===- IRGen --------------------------------------------------------------===//
 
-void IRGen::genDecl(Decl *decl, mlir::OpBuilder &builder) {
+void IRGen::genVarDecl(mlir::OpBuilder &builder, VarDecl *decl,
+                       mlir::Value value) {
+  assert(vars.count(decl) == 0 && "Variable has already been declared");
+
+  // If we don't have an initial value, generate a default one.
+  if (!value)
+    value = builder.create<ir::CreateDefaultValueOp>(
+        getNodeLoc(decl), getType(decl->getValueType()));
+
+  vars.insert(decl, value);
+}
+
+void IRGen::genDecl(mlir::OpBuilder &builder, Decl *decl) {
+  assert(!isa<VarDecl>(decl) &&
+         "VarDecls can only be generated through genVarDecl!");
+
+  // This is temporary code for testing purposes.
+  if (LetDecl *let = dyn_cast<LetDecl>(decl)) {
+    mlir::Value initialValue;
+    if (Expr *init = let->getInitializer())
+      initialValue = genExpr(builder, init);
+    genPattern(builder, let->getPattern(), initialValue);
+    return;
+  }
+
   llvm_unreachable("Unimplemented - Decl IRGen");
+}
+
+void IRGen::setVarValue(VarDecl *decl, mlir::Value value) {
+  assert(vars.count(decl) != 0 &&
+         "Variable has not been declared yet, use genVarDecl first.");
+  assert(value && "value cannot be null!");
+  vars.insert(decl, value);
+}
+
+mlir::Value sora::IRGen::getVarValue(VarDecl *decl) {
+  assert(vars.count(decl) != 0 && "Variable has not been declared yet!");
+  return vars.lookup(decl);
 }
 
 mlir::FuncOp IRGen::getFuncOp(FuncDecl *func) {
@@ -31,7 +67,7 @@ mlir::FuncOp IRGen::getFuncOp(FuncDecl *func) {
 
   Type fnTy = func->getValueType()->getAs<FunctionType>();
   assert(fnTy->is<FunctionType>() && "Function's type is not a FunctionType?!");
-  auto mlirFuncTy = getIRType(fnTy).cast<mlir::FunctionType>();
+  auto mlirFuncTy = getType(fnTy).cast<mlir::FunctionType>();
 
   auto funcOp = mlir::FuncOp::create(loc, name, mlirFuncTy);
   funcCache.insert({func, funcOp});
@@ -49,7 +85,10 @@ mlir::FuncOp IRGen::genFunctionBody(FuncDecl *func) {
   mlir::OpBuilder builder(&mlirCtxt);
   builder.setInsertionPointToStart(entryBlock);
 
-  genStmt(func->getBody(), builder);
+  {
+    BlockScope blockScope(*this);
+    genStmt(builder, func->getBody());
+  }
 
   return funcOp;
 }
