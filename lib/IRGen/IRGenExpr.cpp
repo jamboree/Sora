@@ -14,7 +14,20 @@
 
 using namespace sora;
 
-//===- LValueIRGenerator --------------------------------------------------===//
+//===- Common Helpers -----------------------------------------------------===//
+
+/// This is a separate function, as both the LValue and RValue can generate
+/// those, but they always generate in the same way.
+static mlir::Value genTupleElementExpr(TupleElementExpr *expr,
+                                       mlir::OpBuilder &builder, IRGen &gen) {
+  // I think this will be the same for lvalue/non-lvalues.
+  // Just have one op, e.g. "get_tuple_element" that can do both, and is lowered
+  // to a gep/extractvalue depending on the types.
+  llvm_unreachable("Unimplemented - genTupleElementExpr");
+}
+
+//===- LValueIRGenerator Decl ---------------------------------------------===//
+
 namespace {
 class RValueIRGenerator;
 
@@ -22,10 +35,25 @@ class RValueIRGenerator;
 class LValueIRGenerator : public IRGeneratorBase,
                           public ExprVisitor<LValueIRGenerator, mlir::Value> {
 public:
-  LValueIRGenerator(IRGen &irGen, mlir::OpBuilder &builder)
-      : IRGeneratorBase(irGen), builder(builder) {}
+  using Base = ExprVisitor<LValueIRGenerator, mlir::Value>;
+
+  LValueIRGenerator(RValueIRGenerator &rvalueGenerator);
 
   mlir::OpBuilder &builder;
+  RValueIRGenerator &rvalueGenerator;
+
+  mlir::Value visit(Expr *expr) {
+    assert(expr->getType()->is<LValueType>() &&
+           "Use genRValue to emit RValue!");
+    return Base::visit(expr);
+  }
+
+  mlir::Value genRValue(Expr *expr);
+
+  mlir::Value visitExpr(Expr *expr) {
+    expr->dump();
+    llvm_unreachable("Unhandled LValue expression kind!");
+  }
 
   mlir::Value visitUnresolvedExpr(UnresolvedExpr *) {
     llvm_unreachable("UnresolvedExpr past Sema!");
@@ -35,26 +63,32 @@ public:
     llvm_unreachable("ErrorExpr past Sema!");
   }
 
-  mlir::Value visitDeclRefExpr(DeclRefExpr *expr) {
-    llvm_unreachable("Unimplemented - visitDeclRefExpr");
+  mlir::Value visitDeclRefExpr(DeclRefExpr *expr);
+  mlir::Value visitDiscardExpr(DiscardExpr *expr);
+  mlir::Value visitTupleElementExpr(TupleElementExpr *expr) {
+    return genTupleElementExpr(expr, builder, irGen);
   }
-
-  mlir::Value visitDiscardExpr(DiscardExpr *expr) {
-    llvm_unreachable("Unimplemented - visitDiscardExpr");
-  }
+  mlir::Value visitUnaryExpr(UnaryExpr *expr);
 };
 } // namespace
-//===- RValueIRGenerator--------------------------------------------------===//
+
+//===- RValueIRGenerator Decl ---------------------------------------------===//
 
 namespace {
-/// The RValue IR Generator generates IR for expressions with an RValue Type.
+/// Class responsible for generating IR for expression with an RValue type.
+///
+/// This is where most of the logic is. This class owns the LValueGenerator as
+/// well, which is used to generate LValues inside expressions.
 class RValueIRGenerator : public IRGeneratorBase,
                           public ExprVisitor<RValueIRGenerator, mlir::Value> {
 public:
+  using Base = ExprVisitor<RValueIRGenerator, mlir::Value>;
+
   RValueIRGenerator(IRGen &irGen, mlir::OpBuilder &builder)
-      : IRGeneratorBase(irGen), builder(builder) {}
+      : IRGeneratorBase(irGen), builder(builder), lvalueGenerator(*this) {}
 
   mlir::OpBuilder &builder;
+  LValueIRGenerator lvalueGenerator;
 
   mlir::Value visitUnresolvedExpr(UnresolvedExpr *) {
     llvm_unreachable("UnresolvedExpr past Sema!");
@@ -65,21 +99,24 @@ public:
   }
 
   mlir::Value visitDeclRefExpr(DeclRefExpr *expr) {
-    llvm_unreachable("Unimplemented - visitDeclRefExpr");
+    llvm_unreachable("DeclRefExpr is handled by the LValueIRGenerator!");
   }
 
   mlir::Value visitDiscardExpr(DiscardExpr *expr) {
-    llvm_unreachable("Unimplemented - visitDiscardExpr");
+    llvm_unreachable("DiscardExpr is handled by the LValueIRGenerator!");
+  }
+
+  mlir::Value visit(Expr *expr) {
+    assert(!expr->getType()->is<LValueType>() &&
+           "Use genLValue to emit LValues!");
+    return Base::visit(expr);
   }
 
   /// Generates an LValue, returning a Value with an LValue type.
-  mlir::Value genLValue(Expr *expr) {
-    llvm_unreachable("Unimplemented - genLValue");
-  }
+  mlir::Value genLValue(Expr *expr) { return lvalueGenerator.visit(expr); }
 
   // UnaryExpr Helpers
   mlir::Value genUnaryAddressOf(UnaryExpr *expr);
-  mlir::Value genUnaryDeref(UnaryExpr *expr);
   mlir::Value genUnaryNot(UnaryExpr *expr);
   mlir::Value genUnaryLNot(UnaryExpr *expr);
   mlir::Value genUnaryMinus(UnaryExpr *expr);
@@ -98,7 +135,9 @@ public:
   visitDestructuredTupleElementExpr(DestructuredTupleElementExpr *expr);
   mlir::Value visitLoadExpr(LoadExpr *expr);
   mlir::Value visitCastExpr(CastExpr *expr);
-  mlir::Value visitTupleElementExpr(TupleElementExpr *expr);
+  mlir::Value visitTupleElementExpr(TupleElementExpr *expr) {
+    return genTupleElementExpr(expr, builder, irGen);
+  }
   mlir::Value visitTupleExpr(TupleExpr *expr);
   mlir::Value visitParenExpr(ParenExpr *expr);
   mlir::Value visitCallExpr(CallExpr *expr);
@@ -108,6 +147,36 @@ public:
   mlir::Value visitUnaryExpr(UnaryExpr *expr);
 };
 } // namespace
+
+//===- LValueIRGenerator Impl ---------------------------------------------===//
+
+LValueIRGenerator::LValueIRGenerator(RValueIRGenerator &rvalueGenerator)
+    : IRGeneratorBase(rvalueGenerator.irGen), builder(rvalueGenerator.builder),
+      rvalueGenerator(rvalueGenerator) {}
+
+mlir::Value LValueIRGenerator::genRValue(Expr *expr) {
+  return rvalueGenerator.visit(expr);
+}
+
+mlir::Value LValueIRGenerator::visitDeclRefExpr(DeclRefExpr *expr) {
+  // This is awaiting a fix in the - currently broken - variable handling logic.
+  llvm_unreachable("Unimplemented - visitDeclRefExpr");
+}
+
+mlir::Value LValueIRGenerator::visitDiscardExpr(DiscardExpr *expr) {
+  // This will be added later as I currently don't have any idea of the best way
+  // to approach this.
+  llvm_unreachable("Unimplemented - visitDiscardExpr");
+}
+
+mlir::Value LValueIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
+  assert(expr->getOpKind() == UnaryOperatorKind::Deref &&
+         "Only deref can be an LValue!");
+  // This should only work with dereference.
+  llvm_unreachable("Unimplemented - visitUnaryExpr");
+}
+
+//===- RValueIRGenerator Impl ---------------------------------------------===//
 
 mlir::Value
 RValueIRGenerator::visitIntegerLiteralExpr(IntegerLiteralExpr *expr) {
@@ -198,10 +267,6 @@ mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
   return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
 }
 
-mlir::Value RValueIRGenerator::visitTupleElementExpr(TupleElementExpr *expr) {
-  llvm_unreachable("Unimplemented - visitTupleElementExpr");
-}
-
 mlir::Value RValueIRGenerator::visitTupleExpr(TupleExpr *expr) {
   mlir::Location loc = getNodeLoc(expr);
 
@@ -241,10 +306,6 @@ mlir::Value RValueIRGenerator::visitBinaryExpr(BinaryExpr *expr) {
 
 mlir::Value RValueIRGenerator::genUnaryAddressOf(UnaryExpr *expr) {
   llvm_unreachable("Unimplemented - genUnaryAddressOf");
-}
-
-mlir::Value RValueIRGenerator::genUnaryDeref(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - genUnaryDeref");
 }
 
 mlir::Value RValueIRGenerator::genUnaryNot(UnaryExpr *expr) {
@@ -324,7 +385,8 @@ mlir::Value RValueIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
   case UnaryOperatorKind::AddressOf:
     return genUnaryAddressOf(expr);
   case UnaryOperatorKind::Deref:
-    return genUnaryDeref(expr);
+    llvm_unreachable("This is an LValue and should have been handled by the "
+                     "LValueIRGenerator!");
   case UnaryOperatorKind::Not:
     return genUnaryNot(expr);
   case UnaryOperatorKind::LNot:
@@ -341,6 +403,8 @@ mlir::Value RValueIRGenerator::visitUnaryExpr(UnaryExpr *expr) {
 //===- IRGen --------------------------------------------------------------===//
 
 mlir::Value IRGen::genExpr(mlir::OpBuilder &builder, Expr *expr) {
+  assert(!expr->getType()->is<LValueType>() &&
+         "This entry point is only for RValue expressions");
   return RValueIRGenerator(*this, builder).visit(expr);
 }
 
