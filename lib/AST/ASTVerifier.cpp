@@ -174,7 +174,11 @@ public:
 
   //===- Visit Methods ----------------------------------------------------===//
 
+  void visitDiscardExpr(DiscardExpr *expr);
+  void visitDeclRefExpr(DeclRefExpr *expr);
+  void visitTupleElementExpr(TupleElementExpr *expr);
   void visitLoadExpr(LoadExpr *expr);
+  void visitUnaryExpr(UnaryExpr *expr);
   void visitExpr(Expr *) {}
 
   void visitDecl(Decl *) {}
@@ -350,6 +354,23 @@ void BasicVerifierImpl::visitMaybeValuePattern(MaybeValuePattern *pattern) {}
 
 //===- CheckedVerifierImpl ------------------------------------------------===//
 
+void CheckedVerifierImpl::visitDiscardExpr(DiscardExpr *expr) {
+  if (!expr->getType()->is<LValueType>())
+    CREATE_FAILURE(expr) << "DiscardExpr does not have an LValue Type";
+}
+
+void CheckedVerifierImpl::visitDeclRefExpr(DeclRefExpr *expr) {
+  if (!expr->getType()->is<LValueType>())
+    CREATE_FAILURE(expr) << "DeclRefExpr does not have an LValue Type";
+}
+
+void CheckedVerifierImpl::visitTupleElementExpr(TupleElementExpr *expr) {
+  if (expr->getBase()->getType()->is<LValueType>() !=
+      expr->getType()->is<LValueType>())
+    CREATE_FAILURE(expr)
+        << "TupleElementExpr's type must be an LValue when its base is!";
+}
+
 void CheckedVerifierImpl::visitLoadExpr(LoadExpr *expr) {
   Type type = expr->getType();
   Type subExprType = expr->getSubExpr()->getType();
@@ -393,6 +414,14 @@ void CheckedVerifierImpl::visitMaybeValuePattern(MaybeValuePattern *pattern) {
         << "Pattern type: '" << type << "', Subpattern type: '" << subPatTy
         << "', Expected Type: '" << Type(MaybeType::get(subPatTy)) << "'";
   }
+}
+
+void CheckedVerifierImpl::visitUnaryExpr(UnaryExpr *expr) {
+  if (expr->getOpKind() != UnaryOperatorKind::Deref)
+    return;
+
+  if (!expr->getType()->is<LValueType>())
+    CREATE_FAILURE(expr) << "Dereference does not have an LValue Type";
 }
 
 } // namespace
