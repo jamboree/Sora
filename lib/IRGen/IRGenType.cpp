@@ -45,7 +45,7 @@ public:
   }
 
   mlir::Type visitVoidType(VoidType *type) {
-    return mlir::NoneType::get(&mlirCtxt);
+    return ir::VoidType::get(&mlirCtxt);
   }
 
   mlir::Type visitBoolType(BoolType *type) {

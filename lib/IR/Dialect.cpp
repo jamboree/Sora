@@ -32,6 +32,7 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
   addTypes<MaybeType>();
   addTypes<ReferenceType>();
   addTypes<LValueType>();
+  addTypes<VoidType>();
 }
 
 //===----------------------------------------------------------------------===//

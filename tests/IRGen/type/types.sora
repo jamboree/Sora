@@ -2,7 +2,7 @@
 
 // TODO: Use something other than functions to test this.
 
-// CHECK: func @void_t() -> none
+// CHECK: func @void_t() -> !sora.void
 func void_t() {}
 
 // CHECK: func @i8_t() -> i8
@@ -34,13 +34,13 @@ func f64_t() -> f64 {}
 // CHECK: func @bool_t() -> i1
 func bool_t() -> bool {}
 
-// CHECK: func @tuple_t0() -> none
+// CHECK: func @tuple_t0() -> !sora.void
 func tuple_t0() -> () {}
 // CHECK: func @tuple_t2() -> tuple<i1, i1>
 func tuple_t2() -> (bool, bool) {}
 // CHECK: func @tuple_t3() -> tuple<i1, i1, i32> 
 func tuple_t3() -> (bool, bool, i32) {}
-// CHECK: func @tuple_t4() -> tuple<i1, none, i32, i32>
+// CHECK: func @tuple_t4() -> tuple<i1, !sora.void, i32, i32>
 func tuple_t4() -> (bool, void, i32, i32) {}
 // CHECK: func @tuple_tfoo() -> tuple<i32, tuple<i32, tuple<i32, i32>>>
 func tuple_tfoo() -> (i32, (i32, (i32, i32))) {}

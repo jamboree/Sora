@@ -26,6 +26,8 @@ enum class SoraTypeKind {
   Reference,
   /// Sora LValues.
   LValue,
+  /// Sora 'Void' type (canonical form of '()' as well)
+  Void,
 
   Last_Type = Maybe
 };
@@ -90,6 +92,22 @@ public:
   static LValueType get(mlir::Type objectType);
 
   mlir::Type getObjectType() const;
+};
+
+/// The IR Representation of void types.
+///
+/// This type is written "sora.void"
+class VoidType : public mlir::Type::TypeBase<VoidType, SoraType> {
+public:
+  using Base::Base;
+
+  static bool kindof(unsigned kind) {
+    return kind == (unsigned)SoraTypeKind::Void;
+  }
+
+  static VoidType get(mlir::MLIRContext *ctxt) {
+    return Base::get(ctxt, (unsigned)SoraTypeKind::Void);
+  }
 };
 } // namespace ir
 } // namespace sora

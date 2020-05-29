@@ -26,6 +26,8 @@ static void print(LValueType type, mlir::DialectAsmPrinter &os) {
   os << "lvalue<" << type.getObjectType() << ">";
 }
 
+static void print(VoidType type, mlir::DialectAsmPrinter &os) { os << "void"; }
+
 void SoraDialect::printType(mlir::Type type,
                             mlir::DialectAsmPrinter &os) const {
   switch (SoraTypeKind(type.getKind())) {
@@ -35,6 +37,7 @@ void SoraDialect::printType(mlir::Type type,
     HANDLE(Maybe);
     HANDLE(Reference);
     HANDLE(LValue);
+    HANDLE(Void);
 #undef HANDLE
   default:
     llvm_unreachable("Unknown Sora Type!");

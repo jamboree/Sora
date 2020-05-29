@@ -10,9 +10,9 @@ func foo() {
 }
 
 // CHECK:      module @"{{.*}}" {
-// CHECK-NEXT:   func @foo() -> none {
+// CHECK-NEXT:   func @foo() -> !sora.void {
 // CHECK-NEXT:   ^bb1:  // no predecessors
-// CHECK-NEXT:     %0 = sora.create_default_value for none loc("{{.*}}":6:12)
+// CHECK-NEXT:     %0 = sora.create_default_value for !sora.void loc("{{.*}}":6:12)
 // CHECK-NEXT:     %c0_i32 = constant 0 : i32 loc("{{.*}}":8:19)
 // CHECK-NEXT:     %c1_i32 = constant 1 : i32 loc("{{.*}}":8:22)
 // CHECK-NEXT:     %1 = sora.create_tuple(%c0_i32, %c1_i32 : i32, i32) -> tuple<i32, i32> loc("{{.*}}":8:18)
