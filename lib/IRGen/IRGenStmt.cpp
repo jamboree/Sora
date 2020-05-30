@@ -48,7 +48,7 @@ public:
     llvm_unreachable("Unimplemented - visitReturnStmt");
   }
 
-  void visitBlockStmt(BlockStmt *stmt);
+  void visitBlockStmt(BlockStmt *stmt, bool isFree = true);
 
   void visitIfStmt(IfStmt *stmt) {
     llvm_unreachable("Unimplemented - visitIfStmt");
@@ -60,21 +60,33 @@ public:
 };
 } // namespace
 
-void StmtIRGenerator::visitBlockStmt(BlockStmt *stmt) {
-  // FIXME: Shouldn't this have a dedicated region or something?
+void StmtIRGenerator::visitBlockStmt(BlockStmt *stmt, bool isFree) {
+  // For free blocks, we have to emit a BlockOp whose region shall contain
+  // the BlockStmt's contents.
+  Optional<mlir::OpBuilder::InsertPoint> insertionPoint;
+  if (isFree) {
+    // Emit a BlockOp, save the insertion point (which is now after the
+    // BlockOp), create a new BB inside the BlockOp's region and set the
+    // insertion point to the start of that BB.
+    ir::BlockOp blockOp = builder.create<ir::BlockOp>(getNodeLoc(stmt));
+    insertionPoint = builder.saveInsertionPoint();
+    mlir::Block *block = builder.createBlock(&blockOp.region());
+    builder.setInsertionPointToStart(block);
+  }
+
+  // Emit the statements
   for (BlockStmtElement elem : stmt->getElements())
     visit(elem);
+
+  // If we modified the insertion point, restore it.
+  if (insertionPoint)
+    builder.restoreInsertionPoint(*insertionPoint);
 }
 
 //===- IRGen --------------------------------------------------------------===//
 
-void IRGen::genStmt(mlir::OpBuilder &builder, Stmt *stmt) {
-  builder.createBlock(builder.getBlock()->getParent());
-  StmtIRGenerator(*this, builder).visit(stmt);
-}
-
-void IRGen::genStmt(mlir::OpBuilder &builder, BlockStmt *stmt) {
-  return genStmt(builder, (Stmt *)stmt);
+void IRGen::genFunctionBody(mlir::OpBuilder &builder, BlockStmt *stmt) {
+  StmtIRGenerator(*this, builder).visitBlockStmt(stmt, /*isFree*/ false);
 }
 
 mlir::Location IRGen::getNodeLoc(Stmt *stmt) {

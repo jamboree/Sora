@@ -78,9 +78,8 @@ public:
   /// Generates IR for \p sf, returning the MLIR Module.
   void genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule);
 
-  /// Generates IR for a function's body.
-  /// This does nothing if the function's body has already been generated.
-  mlir::FuncOp genFunctionBody(FuncDecl *func);
+  /// Generates IR for a function.
+  mlir::FuncOp genFunction(FuncDecl *func);
 
   /// Generates IR for an Expression.
   mlir::Value genExpr(mlir::OpBuilder &builder, Expr *expr);
@@ -90,13 +89,10 @@ public:
   void genPattern(mlir::OpBuilder &builder, Pattern *pattern,
                   mlir::Value value = {});
 
-  /// Generates IR for a Statement.
-  void genStmt(mlir::OpBuilder &builder, Stmt *stmt);
-
-  /// Generates IR for a Block Statement.
-  /// This is simply an extra entry point so files don't have to include
-  /// Stmt.hpp just to implicitly convert BlockStmt into Stmts.
-  void genStmt(mlir::OpBuilder &builder, BlockStmt *stmt);
+  /// Generates IR for a function's body \p stmt.
+  /// This considers that \p stmt is not a free block, and will not emit a
+  /// sora.block operation for it.
+  void genFunctionBody(mlir::OpBuilder &builder, BlockStmt *stmt);
 
   /// Generates IR for a Declaration.
   void genDecl(mlir::OpBuilder &builder, Decl *decl);

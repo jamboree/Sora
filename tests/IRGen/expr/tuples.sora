@@ -10,7 +10,6 @@ func test() {
 
 // CHECK:      module @"{{.*}}" {
 // CHECK-NEXT:   func @test() -> !sora.void {
-// CHECK-NEXT:   ^bb1:  // no predecessors
 // CHECK-NEXT:     %0 = sora.create_default_value for !sora.void loc("{{.*}}":5:3)
 // CHECK-NEXT:     %c1_i32 = constant 1 : i32 loc("{{.*}}":6:4)
 // CHECK-NEXT:     %c2_i32 = constant 2 : i32 loc("{{.*}}":6:7)

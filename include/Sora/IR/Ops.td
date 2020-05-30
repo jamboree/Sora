@@ -164,6 +164,37 @@ def DestructureTupleOp : SoraOp<"destructure_tuple", [NoSideEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
+//  Block Operations
+//===----------------------------------------------------------------------===//
+
+//===- Any Block ----------------------------------------------------------===//
+
+class AnyBlock<string mnemonic, list<OpTrait> traits = []> 
+  : SoraOp<mnemonic, traits> {
+  let regions = (region AnyRegion:$region); 
+}
+
+//===- BlockOp ------------------------------------------------------------===//
+
+def BlockOp : AnyBlock<"block"> {
+  let summary = "sora block operation";
+
+  let description = [{
+    The Sora Block operation serves as a container for free blocks. A free block
+    is a block that does not belong to another construct, such as a condition,
+    loop or function.
+
+    Example:
+      sora.block {
+        
+      } loc(unknown)
+  }];
+
+  let printer = [{ return ::printAnyBlock(p, this->region(), "block"); }];
+  let parser = [{ return ::parseAnyBlock(parser, result); }];
+}
+
+//===----------------------------------------------------------------------===//
 //  Misc. Operations
 //===----------------------------------------------------------------------===//
 

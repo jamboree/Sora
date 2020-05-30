@@ -74,7 +74,7 @@ mlir::FuncOp IRGen::getFuncOp(FuncDecl *func) {
   return funcOp;
 }
 
-mlir::FuncOp IRGen::genFunctionBody(FuncDecl *func) {
+mlir::FuncOp IRGen::genFunction(FuncDecl *func) {
   mlir::FuncOp funcOp = getFuncOp(func);
   // FIXME: Is this the proper way to check if the body is empty?
   if (!funcOp.getBody().empty())
@@ -87,7 +87,7 @@ mlir::FuncOp IRGen::genFunctionBody(FuncDecl *func) {
 
   {
     BlockScope blockScope(*this);
-    genStmt(builder, func->getBody());
+    genFunctionBody(builder, func->getBody());
   }
 
   return funcOp;

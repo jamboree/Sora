@@ -131,6 +131,24 @@ static mlir::LogicalResult verifyDestructureTupleOp(DestructureTupleOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// AnyBlock
+//===----------------------------------------------------------------------===//
+
+static void printAnyBlock(mlir::OpAsmPrinter &p, mlir::Region &region,
+                          const char *name) {
+  p << "sora." << name << " ";
+  p.printRegion(region);
+}
+
+static mlir::ParseResult parseAnyBlock(mlir::OpAsmParser &parser,
+                                       mlir::OperationState &result) {
+  mlir::Region *region = result.addRegion();
+  if (parser.parseRegion(*region, llvm::None, llvm::None))
+    return mlir::failure();
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd Method Definitions
 //===----------------------------------------------------------------------===//
 

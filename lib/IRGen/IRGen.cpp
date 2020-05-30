@@ -34,7 +34,7 @@ IRGen::IRGen(ASTContext &astCtxt, mlir::MLIRContext &mlirCtxt,
 
 void IRGen::genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule) {
   for (ValueDecl *decl : sf.getMembers())
-    mlirModule.push_back(genFunctionBody(cast<FuncDecl>(decl)));
+    mlirModule.push_back(genFunction(cast<FuncDecl>(decl)));
 }
 
 mlir::Location IRGen::getFileLineColLoc(SourceLoc loc) {
