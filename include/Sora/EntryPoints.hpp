@@ -53,6 +53,13 @@ void performSema(SourceFile &sf);
 
 //===- IRGen - IR Generation Library --------------------------------------===//
 
+/// Adds the MLIR Dialects necessary for IRGen to MLIR's Dialect Registry.
+/// Currently, this adds the Sora and MLIR's StandardOps dialects.
+///
+/// This function must be called once before attempting any IR Generation
+/// operation. This should only be called once.
+void registerMLIRDialects();
+
 /// Creates a MLIR Module for \p sf using \p mlirCtxt
 mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 
@@ -62,6 +69,8 @@ mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 ///     emitted.
 ///   \param sf the target SourceFile
 ///   \param enableDebugInfo Whether Debug information will be emitted.
+///
+/// Note that \c registerMLIRDialects must be called before using this.
 void performIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,
                   SourceFile &sf, bool enableDebugInfo);
 

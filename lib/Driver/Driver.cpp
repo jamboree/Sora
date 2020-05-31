@@ -30,7 +30,7 @@ Driver::Driver(DiagnosticEngine &diagEngine, StringRef driverName,
                StringRef driverDesc)
     : diagEngine(diagEngine), name(driverName), description(driverDesc),
       optTable(createSoraOptTable()) {
-  mlir::registerDialect<sora::ir::SoraDialect>();
+  registerMLIRDialects();
 }
 
 std::unique_ptr<llvm::opt::InputArgList>

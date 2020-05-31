@@ -22,7 +22,7 @@ using namespace sora;
 static ir::SoraDialect &getSoraDialect(mlir::MLIRContext &mlirCtxt) {
   auto *dialect = mlirCtxt.getRegisteredDialect<ir::SoraDialect>();
   assert(dialect && "SoraDialect not registered! Did you call "
-                    "'mlir::registerDialect<sora::ir::SoraDialect>()'?");
+                    "'sora::registerMLIRDialects()'?");
   return *dialect;
 }
 
@@ -53,6 +53,23 @@ mlir::Identifier IRGen::getIRIdentifier(StringRef str) {
 }
 
 //===- Entry Points -------------------------------------------------------===//
+
+#ifndef NDEBUG
+static bool alreadyRegisteredMLIRDialects = false;
+#endif
+
+void sora::registerMLIRDialects() {
+  // Registering dialects multiple times shouldn't be an issue, but don't
+  // encourage it.
+  assert(!alreadyRegisteredMLIRDialects && "Registering dialects again!");
+
+  mlir::registerDialect<ir::SoraDialect>();
+  mlir::registerDialect<mlir::StandardOpsDialect>();
+
+#ifndef NDEBUG
+  alreadyRegisteredMLIRDialects = true;
+#endif
+}
 
 mlir::ModuleOp sora::createMLIRModule(mlir::MLIRContext &mlirCtxt,
                                       SourceFile &sf) {

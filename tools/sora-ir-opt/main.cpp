@@ -22,7 +22,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include "Sora/IR/Dialect.hpp"
+#include "Sora/EntryPoints.hpp"
 
 using namespace sora;
 
@@ -54,9 +54,8 @@ static llvm::cl::opt<bool> verifyPasses(
 int main(int argc, char **argv) {
   llvm::InitLLVM initLLVM(argc, argv);
 
-  mlir::registerDialect<ir::SoraDialect>();
-  mlir::registerDialect<mlir::StandardOpsDialect>();
-  mlir::registerDialect<mlir::LLVM::LLVMDialect>();
+  // Register the dialects that SOra needs.
+  registerMLIRDialects();
 
   // Register any pass manager command line options.
   mlir::registerPassManagerCLOptions();
