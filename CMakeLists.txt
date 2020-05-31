@@ -95,20 +95,33 @@ add_dependencies(libsora DriverOptionsTableGen SoraIROpsGen)
 
 # add MLIR libraries.
 list(APPEND libsora_mlir_libs
+  MLIRControlFlowInterfaces
   MLIRIR
   MLIRLLVMIR
-  MLIRStandardOps
+  MLIROptLib
+  MLIRParser
+  MLIRPass
   MLIRSideEffectInterfaces
+  MLIRStandardOps 
+  MLIRStandardOpsTransforms
   MLIRSupport
-  MLIRControlFlowInterfaces
+  MLIRTransforms
 )
 
 # add LLVM libraries.
-llvm_map_components_to_libnames(libsora_llvm_libs support option)
+llvm_map_components_to_libnames(libsora_llvm_libs
+  AsmParser 
+  BitReader
+  BitWriter 
+  Core
+  Option
+  Support
+)
 
 target_link_libraries(libsora PRIVATE ${libsora_mlir_libs} ${libsora_llvm_libs})
 
 add_subdirectory(tools/sorac)
+add_subdirectory(tools/sora-ir-opt)
 
 # Add a check-sora target
 set(LLVM_LIT_CMD "lit" CACHE STRING "Command to run llvm-lit")
