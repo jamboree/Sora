@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -183,6 +184,10 @@ private:
 
   /// The output stream where dumps (e.g. ast dumps) will be printed.
   raw_ostream &dump_os = llvm::outs();
+
+  /// The output file where we'll be writing the result of the compilation
+  /// process: object file, IR file, etc.
+  std::unique_ptr<llvm::ToolOutputFile> outputFile;
 
   /// Prints the memory usage of the ASTContext after \p step to debug_os.
   void printASTContextMemoryUsage(Step step) const;

@@ -6,6 +6,10 @@ def help : Flag<["-", "--"], "help">,
 def h : Flag<["-"], "h">, 
   Alias<help>;
 
+// Basic options
+def o : JoinedOrSeparate<["-"], "o">,
+  HelpText<"Write output to <file>">, MetaVarName<"<file>">;
+
 // Parsing-related options
 def parse_only : Flag<["-"], "parse-only">,
   HelpText<"Stops compilation after parsing">;

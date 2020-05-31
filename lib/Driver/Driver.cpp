@@ -97,6 +97,20 @@ bool CompilerInstance::handleOptions(InputArgList &argList) {
   options.dumpParse = argList.hasArg(opt::OPT_dump_parse);
   options.dumpAST = argList.hasArg(opt::OPT_dump_ast);
 
+  // Output file
+  StringRef outputFileName = "-";
+  if (Arg *arg = argList.getLastArg(opt::OPT_o))
+    outputFileName = arg->getValue();
+
+  std::error_code outputFileError;
+  outputFile = std::make_unique<llvm::ToolOutputFile>(
+      outputFileName, outputFileError, llvm::sys::fs::F_None);
+
+  if (outputFileError) {
+    success = false;
+    diagnose(diag::cannot_open_output_file, outputFileName);
+  }
+
   // Debug information: process g0 after g, as g0 has precedence over g.
   options.genDebugInfo = argList.hasArg(opt::OPT_dgb_g);
   options.genDebugInfo &= !argList.hasArg(opt::OPT_dgb_g0);
@@ -244,6 +258,7 @@ BufferID CompilerInstance::loadFile(StringRef filepath) {
 
 bool CompilerInstance::run() {
   assert(!ran && "already ran this CompilerInstance!");
+  assert(outputFile && "No output file?!");
   ran = true;
   // Check if we have input files
   if (inputBuffers.empty()) {
@@ -279,6 +294,10 @@ bool CompilerInstance::run() {
   // Helper function to finish processing. Returns true on success, false on
   // failure.
   auto finish = [&]() {
+    // If the compilation process was "truly" successful, keep the output file.
+    // Don't keep it if compilation failed but the verifier succeeded.
+    if (success)
+      outputFile->keep();
     // When the verifier is active, its output will be our return value.
     return verifier ? verifier->finish() : success;
   };
@@ -427,8 +446,7 @@ bool CompilerInstance::doIRGen(mlir::MLIRContext &mlirContext,
 }
 
 void CompilerInstance::emitIRModule(mlir::ModuleOp &mlirModule) {
-  // FIXME: Once I have a working -o option, write it to a file.
   mlir::OpPrintingFlags flags;
   flags.enableDebugInfo();
-  mlirModule.print(llvm::outs(), flags);
+  mlirModule.print(outputFile->os(), flags);
 }

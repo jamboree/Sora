@@ -52,6 +52,9 @@ ERROR(only_one_file_accepted,
   "currently, the compiler only accepts a single input file"
   " (number of files given: %0)", ())
 
+// Output file
+ERROR(cannot_open_output_file, "cannot open output file '%0'", (StringRef))
+
 //===----------------------------------------------------------------------===//
 
 #ifndef KEEP_DIAG_MACROS
