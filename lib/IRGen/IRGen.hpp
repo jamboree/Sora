@@ -17,6 +17,7 @@
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/IR/Dialect.hpp"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Location.h"

@@ -11,8 +11,7 @@
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Interfaces/SideEffects.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 namespace sora {
