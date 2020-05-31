@@ -5,13 +5,13 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/InitLLVM.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticsCommon.hpp"
 #include "Sora/Driver/Driver.hpp"
 #include "Sora/Driver/Options.hpp"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
@@ -20,7 +20,8 @@ using namespace sora;
 using namespace llvm::opt;
 
 int main(int argc, char **argv) {
-  PROGRAM_START(argc, argv);
+  llvm::InitLLVM initLLVM(argc, argv);
+
   llvm::setBugReportMsg("Please file an issue and include the crash backtrace: "
                         "https://github.com/Pierre-vh/Sora\n");
 

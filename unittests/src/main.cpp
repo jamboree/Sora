@@ -5,12 +5,12 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#include "Sora/Common/InitLLVM.hpp"
+#include "llvm/Support/InitLLVM.h"
 #include "gtest/gtest.h"
 #include <cstdio>
 
 int main(int argc, char **argv) {
-  PROGRAM_START(argc, argv);
+  llvm::InitLLVM initLLVM(argc, argv);
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
