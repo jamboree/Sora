@@ -22,8 +22,8 @@ static void print(ReferenceType type, mlir::DialectAsmPrinter &os) {
   os << "reference<" << type.getPointeeType() << ">";
 }
 
-static void print(LValueType type, mlir::DialectAsmPrinter &os) {
-  os << "lvalue<" << type.getObjectType() << ">";
+static void print(PointerType type, mlir::DialectAsmPrinter &os) {
+  os << "pointer<" << type.getObjectType() << ">";
 }
 
 static void print(VoidType type, mlir::DialectAsmPrinter &os) { os << "void"; }
@@ -36,7 +36,7 @@ void SoraDialect::printType(mlir::Type type,
     return print(type.cast<T##Type>(), os)
     HANDLE(Maybe);
     HANDLE(Reference);
-    HANDLE(LValue);
+    HANDLE(Pointer);
     HANDLE(Void);
 #undef HANDLE
   default:
@@ -88,12 +88,12 @@ ReferenceType ReferenceType::get(mlir::Type pointeeType) {
 
 mlir::Type ReferenceType::getPointeeType() const { return getImpl()->type; }
 
-//===- LValueType ---------------------------------------------------------===//
+//===- PointerType --------------------------------------------------------===//
 
-LValueType LValueType::get(mlir::Type objectType) {
+PointerType PointerType::get(mlir::Type objectType) {
   assert(objectType && "object type cannot be null!");
-  return Base::get(objectType.getContext(), (unsigned)SoraTypeKind::LValue,
+  return Base::get(objectType.getContext(), (unsigned)SoraTypeKind::Pointer,
                    objectType);
 }
 
-mlir::Type LValueType::getObjectType() const { return getImpl()->type; }
+mlir::Type PointerType::getObjectType() const { return getImpl()->type; }

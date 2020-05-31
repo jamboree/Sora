@@ -9,7 +9,7 @@
 #define SORAIR_OPS
 
 include "mlir/IR/OpBase.td"
-include "mlir/Interfaces/SideEffects.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 //  Dialect
@@ -44,12 +44,12 @@ def APFloatAttr : Attr<CPred<"$_self.isa<FloatAttr>()">,
 //===----------------------------------------------------------------------===//
 
 def SoraType : DialectType<SoraDialect,
-                            CPred<"$_self.isa<::sora::ir::SoraType>()">,
-                            "Sora dialect type">;
+                           CPred<"$_self.isa<::sora::ir::SoraType>()">,
+                           "Sora dialect type">;
 
-def LValueType : DialectType<SoraDialect,
-                              CPred<"$_self.isa<::sora::ir::LValueType>()">,
-                              "Sora LValue type">;
+def AnyPointerType : DialectType<SoraDialect,
+                                 CPred<"$_self.isa<::sora::ir::PointerType>()">,
+                                 "Any Sora Pointer type">;
 
 //===----------------------------------------------------------------------===//
 //  Type-Casting operation
@@ -57,7 +57,7 @@ def LValueType : DialectType<SoraDialect,
 
 //===- Static Cast --------------------------------------------------------===//
 
-def StaticCastOp : SoraOp<"static_cast", [NoSideEffect]> {
+def Sora_StaticCastOp : SoraOp<"static_cast", [NoSideEffect]> {
   let summary = "static casting operation";
   let description = [{
     The Static Cast operation converts an SSA value of some type into
@@ -75,32 +75,33 @@ def StaticCastOp : SoraOp<"static_cast", [NoSideEffect]> {
     "`(` $value `:` type($value) `)` attr-dict `to` type(results)";
 }
 
-//===- Load LValue --------------------------------------------------------===//
+//===- Load ---------------------------------------------------------------===//
 
-def LoadLValueOp : SoraOp<"load_lvalue", [NoSideEffect]> {
-  let summary = "lvalue loading operation";
+def Sora_LoadOp : SoraOp<"load", [NoSideEffect]> {
+  let summary = "load operation";
   let description = [{
-    The Load LValue operation loads an LValue, converting @lvalue T into T.
+    The Load operation dereferences a pointer value, 
+    converting !sora.pointer<T> into T.
 
     Example:
-      %1 = sora.load_lvalue(%1 : !sora.lvalue<i32>) -> i32
+      %1 = sora.load(%1 : !sora.pointer<i32>) -> i32
   }];
 
-  let arguments = (ins LValueType: $value);
+  let arguments = (ins AnyPointerType: $value);
 
   let results = (outs AnyType);
 
   let verifier = [{
-    return ::verifyLoadLValueOp(*this);
+    return ::verifyLoadOp(*this);
   }];
 
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, Value lvalue", [{
-      return ::buildLoadLValueOp(builder, result, lvalue);
+      return ::buildLoadOp(builder, result, lvalue);
   }]>];
 
   let assemblyFormat = 
-    "`(` $value `:` type($value) `)` attr-dict `->` type(results)";
+    "$value attr-dict `->` functional-type($value, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,7 +110,7 @@ def LoadLValueOp : SoraOp<"load_lvalue", [NoSideEffect]> {
 
 //===- Create Tuple -------------------------------------------------------===//
 
-def CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
+def Sora_CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
   let summary = "tuple creation operation";
   let description = [{
     The Create Tuple operation creates a tuple of values.
@@ -137,7 +138,7 @@ def CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
 
 //===- Destructure Tuple --------------------------------------------------===//
 
-def DestructureTupleOp : SoraOp<"destructure_tuple", [NoSideEffect]> {
+def Sora_DestructureTupleOp : SoraOp<"destructure_tuple", [NoSideEffect]> {
   let summary = "tuple destructuring operation";
   let description = [{
     The Destructure Tuple operation breaks up a tuple into all of its elements.
@@ -176,8 +177,8 @@ class AnyBlock<string mnemonic, list<OpTrait> traits = []>
 
 //===- BlockOp ------------------------------------------------------------===//
 
-def BlockOp : AnyBlock<"block"> {
-  let summary = "sora block operation";
+def Sora_BlockOp : AnyBlock<"block"> {
+  let summary = "block operation";
 
   let description = [{
     The Sora Block operation serves as a container for free blocks. A free block
@@ -200,7 +201,7 @@ def BlockOp : AnyBlock<"block"> {
 
 //===- Create Default Value -----------------------------------------------===//
 
-def CreateDefaultValueOp : SoraOp<"create_default_value", [NoSideEffect]> {
+def Sora_CreateDefaultValueOp : SoraOp<"create_default_value", [NoSideEffect]> {
   let summary = "default value creation operation";
   let description = [{
     The Create Default Value operation creates a default value of the return

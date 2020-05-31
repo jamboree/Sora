@@ -31,26 +31,25 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 
   addTypes<MaybeType>();
   addTypes<ReferenceType>();
-  addTypes<LValueType>();
+  addTypes<PointerType>();
   addTypes<VoidType>();
 }
 
 //===----------------------------------------------------------------------===//
-// LoadLValueOp
+// LoadOp
 //===----------------------------------------------------------------------===//
 
-static void buildLoadLValueOp(mlir::OpBuilder &builder,
-                              mlir::OperationState &result,
-                              mlir::Value &value) {
-  LValueType lvalue = value.getType().dyn_cast<LValueType>();
-  assert(lvalue && "Value is not an LValue type!");
-  result.addTypes(lvalue.getObjectType());
+static void buildLoadOp(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::Value &value) {
+  PointerType pointer = value.getType().dyn_cast<PointerType>();
+  assert(pointer && "Value is not a Pointer type!");
+  result.addTypes(pointer.getObjectType());
   result.addOperands(value);
 }
 
-static mlir::LogicalResult verifyLoadLValueOp(LoadLValueOp op) {
+static mlir::LogicalResult verifyLoadOp(LoadOp op) {
   mlir::Type resultType = op.getType();
-  LValueType operandType = op.getOperand().getType().cast<LValueType>();
+  PointerType operandType = op.getOperand().getType().cast<PointerType>();
   return (resultType == operandType.getObjectType()) ? mlir::success()
                                                      : mlir::failure();
 }

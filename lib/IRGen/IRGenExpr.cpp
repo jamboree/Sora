@@ -109,7 +109,9 @@ public:
   mlir::Value visit(Expr *expr) {
     assert(!expr->getType()->is<LValueType>() &&
            "Use genLValue to emit LValues!");
-    return Base::visit(expr);
+    mlir::Value result = Base::visit(expr);
+    assert(result.getType() == getType(expr) && "Unexpected Operation Type!");
+    return result;
   }
 
   /// Generates an LValue, returning a Value with an LValue type.
@@ -241,8 +243,8 @@ mlir::Value RValueIRGenerator::visitDestructuredTupleElementExpr(
 }
 
 mlir::Value RValueIRGenerator::visitLoadExpr(LoadExpr *expr) {
-  return builder.create<ir::LoadLValueOp>(getNodeLoc(expr),
-                                          genLValue(expr->getSubExpr()));
+  return builder.create<ir::LoadOp>(getNodeLoc(expr),
+                                    genLValue(expr->getSubExpr()));
 }
 
 mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {

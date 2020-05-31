@@ -24,8 +24,8 @@ enum class SoraTypeKind {
   Maybe,
   /// Sora References. (&T and &mut T)
   Reference,
-  /// Sora LValues.
-  LValue,
+  /// A non-nullable pointer type.
+  Pointer,
   /// Sora 'Void' type (canonical form of '()' as well)
   Void,
 
@@ -45,7 +45,7 @@ public:
 
 /// The IR Representation of "maybe" type.
 ///
-/// This type is written "sora.maybe<T>"
+/// This type is written "!sora.maybe<T>"
 class MaybeType : public mlir::Type::TypeBase<MaybeType, SoraType,
                                               detail::SingleTypeStorage> {
 public:
@@ -62,7 +62,7 @@ public:
 
 /// The IR Representation of references types.
 ///
-/// This type is written "sora.reference<T>"
+/// This type is written "!sora.reference<T>"
 class ReferenceType : public mlir::Type::TypeBase<ReferenceType, SoraType,
                                                   detail::SingleTypeStorage> {
 public:
@@ -77,26 +77,31 @@ public:
   mlir::Type getPointeeType() const;
 };
 
-/// The IR Representation of lvalues types.
+/// A non-nullable pointer type.
+/// This is different from the reference type, which is a "user type", a type
+/// that can be written by the user. This cannot be written by the user and is
+/// used by the compiler to manipulate memory, for instance, stack allocation.
+/// It's also important that there is a distinction between both types as we
+/// want to enforce some reference-only semantics in the IR.
 ///
-/// This type is written "sora.lvalue<T>"
-class LValueType : public mlir::Type::TypeBase<LValueType, SoraType,
-                                               detail::SingleTypeStorage> {
+/// This type is written "!sora.pointer<T>"
+class PointerType : public mlir::Type::TypeBase<PointerType, SoraType,
+                                                detail::SingleTypeStorage> {
 public:
   using Base::Base;
 
   static bool kindof(unsigned kind) {
-    return kind == (unsigned)SoraTypeKind::LValue;
+    return kind == (unsigned)SoraTypeKind::Pointer;
   }
 
-  static LValueType get(mlir::Type objectType);
+  static PointerType get(mlir::Type objectType);
 
   mlir::Type getObjectType() const;
 };
 
 /// The IR Representation of void types.
 ///
-/// This type is written "sora.void"
+/// This type is written "!sora.void"
 class VoidType : public mlir::Type::TypeBase<VoidType, SoraType> {
 public:
   using Base::Base;

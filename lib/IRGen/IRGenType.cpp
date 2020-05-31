@@ -85,7 +85,7 @@ public:
 
   mlir::Type visitLValueType(LValueType *type) {
     mlir::Type objectType = visit(type->getObjectType());
-    return ir::LValueType::get(objectType);
+    return ir::PointerType::get(objectType);
   }
 
   mlir::Type visitErrorType(ErrorType *) {
