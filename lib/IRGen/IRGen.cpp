@@ -22,7 +22,7 @@ using namespace sora;
 static ir::SoraDialect &getSoraDialect(mlir::MLIRContext &mlirCtxt) {
   auto *dialect = mlirCtxt.getRegisteredDialect<ir::SoraDialect>();
   assert(dialect && "SoraDialect not registered! Did you call "
-                    "'sora::registerMLIRDialects()'?");
+                    "'mlir::registerDialect<sora::ir::SoraDialect>()'?");
   return *dialect;
 }
 
@@ -53,16 +53,6 @@ mlir::Identifier IRGen::getIRIdentifier(StringRef str) {
 }
 
 //===- Entry Points -------------------------------------------------------===//
-
-static bool areMLIRDialectsRegistered = false;
-
-void sora::registerMLIRDialects() {
-  if (!areMLIRDialectsRegistered) {
-    mlir::registerDialect<ir::SoraDialect>();
-    mlir::registerDialect<mlir::StandardOpsDialect>();
-    areMLIRDialectsRegistered = true;
-  }
-}
 
 mlir::ModuleOp sora::createMLIRModule(mlir::MLIRContext &mlirCtxt,
                                       SourceFile &sf) {
