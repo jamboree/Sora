@@ -51,7 +51,7 @@ void SourceLoc::print(raw_ostream &out, const SourceManager &srcMgr,
   assert(buffer && "Invalid Buffer?!");
 
   if (printFileName) {
-    auto name = srcMgr.getBufferIdentifier(buffer);
+    auto name = srcMgr.getBufferName(buffer);
     out << (name.empty() ? "<unknown>" : name);
   }
   else

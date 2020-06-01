@@ -52,7 +52,7 @@ public:
   /// \returns the BufferID of this SourceFile
   BufferID getBufferID() const { return bufferID; }
   /// \returns the buffer identifier of this Sourcefile
-  StringRef getBufferIdentifier() const;
+  StringRef getBufferName() const;
   /// \returns true if this SourceFile is empty
   bool empty() const { return members.empty(); }
 

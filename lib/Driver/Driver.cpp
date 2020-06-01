@@ -187,7 +187,7 @@ void CompilerInstance::dump(raw_ostream &out) const {
   for (auto buffer : inputBuffers) {
     out << "  Buffer #" << buffer.getRawValue() << " (";
     if (buffer) {
-      StringRef name = srcMgr.getBufferIdentifier(buffer);
+      StringRef name = srcMgr.getBufferName(buffer);
       if (name.empty())
         out << "<unnamed>";
       else

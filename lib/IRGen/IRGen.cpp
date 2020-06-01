@@ -42,7 +42,7 @@ mlir::Location IRGen::getFileLineColLoc(SourceLoc loc) {
     return mlir::UnknownLoc::get(&mlirCtxt);
 
   BufferID buffer = srcMgr.findBufferContainingLoc(loc);
-  StringRef filename = srcMgr.getBufferIdentifier(buffer);
+  StringRef filename = srcMgr.getBufferName(buffer);
   std::pair<unsigned, unsigned> lineAndCol = srcMgr.getLineAndColumn(loc);
   return mlir::FileLineColLoc::get(filename, lineAndCol.first,
                                    lineAndCol.second, &mlirCtxt);
@@ -73,9 +73,9 @@ void sora::registerMLIRDialects() {
 
 mlir::ModuleOp sora::createMLIRModule(mlir::MLIRContext &mlirCtxt,
                                       SourceFile &sf) {
-  auto bufferID = mlir::Identifier::get(sf.getBufferIdentifier(), &mlirCtxt);
+  auto bufferID = mlir::Identifier::get(sf.getBufferName(), &mlirCtxt);
   auto nameLoc = mlir::NameLoc::get(bufferID, &mlirCtxt);
-  return mlir::ModuleOp::create(nameLoc, sf.getBufferIdentifier());
+  return mlir::ModuleOp::create(nameLoc, sf.getBufferName());
 }
 
 void sora::performIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,

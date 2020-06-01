@@ -67,7 +67,7 @@ DiagnosticVerifier::getNoteUnemitted(StringRef message,
     break;
   }
   rso << " '" << message << "' expected at line " << data.line << " of '"
-      << srcMgr.getBufferIdentifier(data.buffer) << "' was not emitted";
+      << srcMgr.getBufferName(data.buffer) << "' was not emitted";
   return rso.str();
 }
 

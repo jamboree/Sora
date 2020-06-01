@@ -91,8 +91,9 @@ public:
     return CharSourceRange(SourceLoc::fromPointer(str.data()), str.size());
   }
 
-  /// \returns the identifier of the MemoryBuffer with \p id
-  StringRef getBufferIdentifier(BufferID id) const {
+  /// \returns the name of the MemoryBuffer with \p id. If \p canonical is true,
+  /// returns the canonical form of the path.
+  StringRef getBufferName(BufferID id) const {
     assert(id && "id cannot be invalid!");
     return llvmSourceMgr.getMemoryBuffer(id.value)->getBufferIdentifier();
   }
