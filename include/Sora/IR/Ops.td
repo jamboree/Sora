@@ -27,7 +27,14 @@ def SoraDialect : Dialect {
 
 // Base class for Sora Dialect Operations 
 class SoraOp<string mnemonic, list<OpTrait> traits = []> :
-    Op<SoraDialect, mnemonic, traits>;
+  Op<SoraDialect, mnemonic, traits> {
+
+  // Sora operations should provide their own builder.
+  let skipDefaultBuilders = 1;  
+
+  // Sora operations should always have a verifier.
+  let verifier = [{ return ::verify(*this); }];
+}
 
 //===----------------------------------------------------------------------===//
 //  Types
@@ -47,43 +54,44 @@ def AnyPointerType : DialectType<SoraDialect,
 
 //===- Static Cast --------------------------------------------------------===//
 
-def Sora_StaticCastOp : SoraOp<"static_cast", [NoSideEffect]> {
+def StaticCastOp : SoraOp<"static_cast", [NoSideEffect]> {
   let summary = "static casting operation";
   let description = [{
     The Static Cast operation converts an SSA value of some type into
     another type.
 
     Example:
-      %1 = sora.static_cast(%1 : i1) to i32
+      %1 = sora.static_cast %1 : i1 to i32
   }];
 
   let arguments = (ins AnyType: $value);
 
   let results = (outs AnyType);
 
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value value, Type toType", 
+    [{ result.addOperands(value); result.addTypes(toType); }]
+  >];
+
   let assemblyFormat = 
-    "`(` $value `:` type($value) `)` attr-dict `to` type(results)";
+    "$value `:` type($value) attr-dict `to` type(results)";
 }
 
 //===- Load ---------------------------------------------------------------===//
 
-def Sora_LoadOp : SoraOp<"load", [NoSideEffect]> {
+def LoadOp : SoraOp<"load", [NoSideEffect]> {
   let summary = "load operation";
   let description = [{
     The Load operation dereferences a pointer value, 
     converting !sora.pointer<T> into T.
 
     Example:
-      %1 = sora.load(%1 : !sora.pointer<i32>) -> i32
+      %1 = sora.load %1 : (!sora.pointer<i32>) -> i32
   }];
 
   let arguments = (ins AnyPointerType: $value);
 
   let results = (outs AnyType);
-
-  let verifier = [{
-    return ::verifyLoadOp(*this);
-  }];
 
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, Value lvalue", [{
@@ -91,7 +99,7 @@ def Sora_LoadOp : SoraOp<"load", [NoSideEffect]> {
   }]>];
 
   let assemblyFormat = 
-    "$value attr-dict `->` functional-type($value, results)";
+    "$value attr-dict `:` functional-type($value, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,7 +108,7 @@ def Sora_LoadOp : SoraOp<"load", [NoSideEffect]> {
 
 //===- Create Tuple -------------------------------------------------------===//
 
-def Sora_CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
+def CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
   let summary = "tuple creation operation";
   let description = [{
     The Create Tuple operation creates a tuple of values.
@@ -113,10 +121,6 @@ def Sora_CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
 
   let results = (outs AnyTuple);
 
-  let verifier = [{
-    return ::verifyCreateTupleOp(*this);
-  }];
-
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, ArrayRef<Value> elts", [{
       return ::buildCreateTupleOp(builder, result, elts);
@@ -128,22 +132,18 @@ def Sora_CreateTupleOp : SoraOp<"create_tuple", [NoSideEffect]> {
 
 //===- Destructure Tuple --------------------------------------------------===//
 
-def Sora_DestructureTupleOp : SoraOp<"destructure_tuple", [NoSideEffect]> {
+def DestructureTupleOp : SoraOp<"destructure_tuple", [NoSideEffect]> {
   let summary = "tuple destructuring operation";
   let description = [{
     The Destructure Tuple operation breaks up a tuple into all of its elements.
 
     Example:
-      %3, %4 = sora.destructure_tuple(%2: tuple<i32, i32>) -> (i32, i32)
+      %3, %4 = sora.destructure_tuple %2: (tuple<i32, i32>) -> (i32, i32)
   }];
 
   let arguments = (ins AnyTuple: $value);
 
   let results = (outs Variadic<AnyType>);
-
-  let verifier = [{
-    return ::verifyDestructureTupleOp(*this);
-  }];
 
   let builders = [OpBuilder<
     "OpBuilder &builder, OperationState &result, Value tuple", [{
@@ -151,23 +151,42 @@ def Sora_DestructureTupleOp : SoraOp<"destructure_tuple", [NoSideEffect]> {
   }]>];
 
   let assemblyFormat = 
-    "`(` $value `:` type($value) `)` attr-dict `->` type(results)";
+    "$value attr-dict `:` functional-type($value, results)";
 }
 
 //===----------------------------------------------------------------------===//
 //  Block Operations
 //===----------------------------------------------------------------------===//
 
-//===- Any Block ----------------------------------------------------------===//
+//===- Implicit Terminator for Blocks -------------------------------------===//
 
-class AnyBlock<string mnemonic, list<OpTrait> traits = []> 
-  : SoraOp<mnemonic, traits> {
-  let regions = (region AnyRegion:$region); 
+def SoraBlockTerminatorOp : SoraOp<"block_terminator", 
+                                   [NoSideEffect, Terminator]> {
+  let summary = "block terminator operation";
+
+  let description = [{
+    The Block Terminator operation is a special terminator for Sora blocks.
+    It does not have custom syntax, and is omitted when printing 
+    the blocks for brevity.
+
+    Example:
+      sora.block_terminator
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result", [{ }]
+  >];
+
+  let printer = ?;
+  let parser = ?;
 }
+
+def ImplicitSoraBlockTerminator :
+  SingleBlockImplicitTerminator<"SoraBlockTerminatorOp">;
 
 //===- BlockOp ------------------------------------------------------------===//
 
-def Sora_BlockOp : AnyBlock<"block"> {
+def BlockOp : SoraOp<"block", [ImplicitSoraBlockTerminator]> {
   let summary = "block operation";
 
   let description = [{
@@ -175,14 +194,30 @@ def Sora_BlockOp : AnyBlock<"block"> {
     is a block that does not belong to another construct, such as a condition,
     loop or function.
 
+    This operations is always created with an entry block 
+    containing a terminator.
+
     Example:
       sora.block {
         
       } loc(unknown)
   }];
 
-  let printer = [{ return ::printAnyBlock(p, this->region(), "block"); }];
-  let parser = [{ return ::parseAnyBlock(parser, result); }];
+  let regions = (region SizedRegion<1>:$region); 
+
+  let printer = [{ return ::printBlockOp(p, *this); }];
+  let parser = [{ return ::parseBlockOp(parser, result); }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result", 
+      [{ ::buildBlockOp(builder, result); }]
+  >];
+
+  let extraClassDeclaration = [{
+    mlir::Block &getEntryBlock() {
+      return *region().begin();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -191,7 +226,7 @@ def Sora_BlockOp : AnyBlock<"block"> {
 
 //===- Create Default Value -----------------------------------------------===//
 
-def Sora_CreateDefaultValueOp : SoraOp<"create_default_value", [NoSideEffect]> {
+def CreateDefaultValueOp : SoraOp<"create_default_value", [NoSideEffect]> {
   let summary = "default value creation operation";
   let description = [{
     The Create Default Value operation creates a default value of the return
@@ -200,6 +235,11 @@ def Sora_CreateDefaultValueOp : SoraOp<"create_default_value", [NoSideEffect]> {
     Example:
       %1 = sora.create_default_value for i32
   }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Type ofType", 
+    [{ result.addTypes(ofType); }]
+  >];
 
   let results = (outs AnyType);
 

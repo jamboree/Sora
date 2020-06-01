@@ -266,7 +266,7 @@ mlir::Value RValueIRGenerator::visitCastExpr(CastExpr *expr) {
   // Currently, all sora casts are static casts, so just emit a static_cast op.
   // We do not need to handle things like creating maybe types - implicit casts
   // handle those.
-  return builder.create<ir::StaticCastOp>(loc, mlirType, subExprValue);
+  return builder.create<ir::StaticCastOp>(loc, subExprValue, mlirType);
 }
 
 mlir::Value RValueIRGenerator::visitTupleExpr(TupleExpr *expr) {

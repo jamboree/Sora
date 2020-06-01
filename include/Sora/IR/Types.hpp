@@ -96,7 +96,7 @@ public:
 
   static PointerType get(mlir::Type objectType);
 
-  mlir::Type getObjectType() const;
+  mlir::Type getPointeeType() const;
 };
 
 /// The IR Representation of void types.

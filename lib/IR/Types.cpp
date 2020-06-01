@@ -23,7 +23,7 @@ static void print(ReferenceType type, mlir::DialectAsmPrinter &os) {
 }
 
 static void print(PointerType type, mlir::DialectAsmPrinter &os) {
-  os << "pointer<" << type.getObjectType() << ">";
+  os << "pointer<" << type.getPointeeType() << ">";
 }
 
 static void print(VoidType type, mlir::DialectAsmPrinter &os) { os << "void"; }
@@ -128,4 +128,4 @@ PointerType PointerType::get(mlir::Type objectType) {
                    objectType);
 }
 
-mlir::Type PointerType::getObjectType() const { return getImpl()->type; }
+mlir::Type PointerType::getPointeeType() const { return getImpl()->type; }

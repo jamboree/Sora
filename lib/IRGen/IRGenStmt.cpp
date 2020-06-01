@@ -70,8 +70,7 @@ void StmtIRGenerator::visitBlockStmt(BlockStmt *stmt, bool isFree) {
     // insertion point to the start of that BB.
     ir::BlockOp blockOp = builder.create<ir::BlockOp>(getNodeLoc(stmt));
     insertionPoint = builder.saveInsertionPoint();
-    mlir::Block *block = builder.createBlock(&blockOp.region());
-    builder.setInsertionPointToStart(block);
+    builder.setInsertionPointToStart(&blockOp.getEntryBlock());
   }
 
   // Emit the statements

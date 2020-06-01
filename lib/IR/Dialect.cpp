@@ -10,6 +10,7 @@
 #include "Sora/Common/LLVM.hpp"
 #include "Sora/IR/Types.hpp"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Value.h"
@@ -36,6 +37,13 @@ SoraDialect::SoraDialect(mlir::MLIRContext *mlirCtxt)
 }
 
 //===----------------------------------------------------------------------===//
+// StaticCastOp
+//===----------------------------------------------------------------------===//
+
+/// FIXME: Are there really no invariants to verify?
+static mlir::LogicalResult verify(StaticCastOp op) { return mlir::success(); }
+
+//===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
@@ -43,15 +51,21 @@ static void buildLoadOp(mlir::OpBuilder &builder, mlir::OperationState &result,
                         mlir::Value &value) {
   PointerType pointer = value.getType().dyn_cast<PointerType>();
   assert(pointer && "Value is not a Pointer type!");
-  result.addTypes(pointer.getObjectType());
+  result.addTypes(pointer.getPointeeType());
   result.addOperands(value);
 }
 
-static mlir::LogicalResult verifyLoadOp(LoadOp op) {
+static mlir::LogicalResult verify(LoadOp op) {
   mlir::Type resultType = op.getType();
-  PointerType operandType = op.getOperand().getType().cast<PointerType>();
-  return (resultType == operandType.getObjectType()) ? mlir::success()
-                                                     : mlir::failure();
+  PointerType operandType = op.getOperand().getType().dyn_cast<PointerType>();
+
+  if (!operandType)
+    return op.emitOpError("operand type should be a pointer type!");
+
+  if (resultType != operandType.getPointeeType())
+    return op.emitOpError(
+        "the result type should be the same as the pointer's pointee type");
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -76,18 +90,24 @@ static void buildCreateTupleOp(mlir::OpBuilder &builder,
   result.addTypes(tupleType);
 }
 
-static mlir::LogicalResult verifyCreateTupleOp(CreateTupleOp op) {
+static mlir::LogicalResult verify(CreateTupleOp op) {
   if (op.getNumOperands() <= 1)
-    return mlir::failure();
+    return op.emitOpError(
+        "should have at least 2 operands - tuple of size <2 are not supported");
 
-  SmallVector<mlir::Type, 8> types;
-  types.reserve(op.getNumOperands());
+  mlir::TupleType tupleType = op.getType().dyn_cast<mlir::TupleType>();
+  if (!tupleType)
+    return op.emitOpError("result type should be a tuple type");
 
-  for (const mlir::Value &elt : op.getOperands())
-    types.push_back(elt.getType());
+  if (tupleType.size() != op.getNumOperands())
+    return op.emitOpError(
+        "the number of operands and result tuple elements should be equal");
 
-  if (op.getType() != mlir::TupleType::get(types, op.getContext()))
-    return mlir::failure();
+  for (size_t k = 0; k < op.getNumOperands(); ++k)
+    if (op.getOperand(k).getType() != tupleType.getType(k))
+      return op.emitOpError(
+          "the type of the operand and result tuple element at index '" +
+          std::to_string(k) + " is not equal");
 
   return mlir::success();
 }
@@ -107,43 +127,75 @@ static void buildDestructureTupleOp(mlir::OpBuilder &builder,
   result.addTypes(tupleType.getTypes());
 }
 
-static mlir::LogicalResult verifyDestructureTupleOp(DestructureTupleOp op) {
+static mlir::LogicalResult verify(DestructureTupleOp op) {
   mlir::TupleType tupleType =
       op.getOperand().getType().dyn_cast<mlir::TupleType>();
   if (!tupleType)
-    return mlir::failure();
+    return op.emitOpError("operand type should be a tuple type");
 
   ArrayRef<mlir::Type> results = op.getResultTypes();
   ArrayRef<mlir::Type> tupleElts = tupleType.getTypes();
 
   if (results.size() != tupleElts.size())
-    return mlir::failure();
+    return op.emitOpError(
+        "the number of results and operand tuple elements should be equal");
 
   if (results.size() <= 1)
-    return mlir::failure();
+    return op.emitOpError("Only tuples of size >2 are allowed");
 
   for (size_t k = 0; k < results.size(); ++k)
     if (results[k] != tupleElts[k])
-      return mlir::failure();
+      return op.emitOpError(
+          "the type of the result and tuple element at index '" +
+          std::to_string(k) + " is not equal");
 
   return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
-// AnyBlock
+// SoraBlockTerminatorOp
 //===----------------------------------------------------------------------===//
 
-static void printAnyBlock(mlir::OpAsmPrinter &p, mlir::Region &region,
-                          const char *name) {
-  p << "sora." << name << " ";
-  p.printRegion(region);
+/// FIXME: Are there really no invariants to verify?
+static mlir::LogicalResult verify(SoraBlockTerminatorOp op) {
+  return mlir::success();
 }
 
-static mlir::ParseResult parseAnyBlock(mlir::OpAsmParser &parser,
-                                       mlir::OperationState &result) {
+//===----------------------------------------------------------------------===//
+// BlockOp
+//===----------------------------------------------------------------------===//
+
+static void printBlockOp(mlir::OpAsmPrinter &p, BlockOp op) {
+  p << "sora.block ";
+  p.printRegion(op.region(), /*printEntryBlockArgs*/ true,
+                /*printBlockTerminators*/ false);
+}
+
+static mlir::ParseResult parseBlockOp(mlir::OpAsmParser &parser,
+                                      mlir::OperationState &result) {
   mlir::Region *region = result.addRegion();
   if (parser.parseRegion(*region, llvm::None, llvm::None))
     return mlir::failure();
+  BlockOp::ensureTerminator(*region, parser.getBuilder(), result.location);
+  return mlir::success();
+}
+
+static void buildBlockOp(mlir::OpBuilder &builder,
+                         mlir::OperationState &result) {
+  mlir::Region *region = result.addRegion();
+  region->push_back(new mlir::Block());
+  BlockOp::ensureTerminator(*region, builder, result.location);
+}
+
+/// FIXME: Are there really no invariants to verify?
+static mlir::LogicalResult verify(BlockOp op) { return mlir::success(); }
+
+//===----------------------------------------------------------------------===//
+// CreateDefaultValueOp
+//===----------------------------------------------------------------------===//
+
+/// FIXME: Are there really no invariants to verify?
+static mlir::LogicalResult verify(CreateDefaultValueOp op) {
   return mlir::success();
 }
 

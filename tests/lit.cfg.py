@@ -5,7 +5,7 @@ import lit.formats
 import subprocess
 
 config.name = 'Sora Unit Tests'
-config.suffixes = ['.sora']
+config.suffixes = ['.sora', '.sir']
 config.test_format = lit.formats.ShTest(execute_external=False)
 config.test_source_root = os.path.dirname(__file__)
 
