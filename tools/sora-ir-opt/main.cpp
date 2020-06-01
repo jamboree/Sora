@@ -9,6 +9,7 @@
 // IR and run passes.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -57,8 +58,11 @@ int main(int argc, char **argv) {
   // Register the dialects that SOra needs.
   registerMLIRDialects();
 
-  // Register any pass manager command line options.
+  // Register all command line options.
   mlir::registerPassManagerCLOptions();
+  mlir::registerAsmPrinterCLOptions();
+  mlir::registerMLIRContextCLOptions();
+
   mlir::PassPipelineCLParser passPipeline("", "Compiler passes to run");
 
   // Parse pass names in main to ensure static initialization completed.
