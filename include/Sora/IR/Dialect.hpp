@@ -21,6 +21,7 @@ public:
   explicit SoraDialect(mlir::MLIRContext *mlirCtxt);
 
   void printType(Type type, DialectAsmPrinter &os) const override;
+  Type parseType(DialectAsmParser &parser) const override; 
 
   static llvm::StringRef getDialectNamespace() { return "sora"; }
 };

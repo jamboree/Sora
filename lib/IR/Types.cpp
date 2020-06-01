@@ -44,6 +44,38 @@ void SoraDialect::printType(mlir::Type type,
   }
 }
 
+//===- Type Parsing -------------------------------------------------------===//
+
+mlir::Type SoraDialect::parseType(mlir::DialectAsmParser &parser) const {
+  StringRef keyword;
+  if (parser.parseKeyword(&keyword))
+    return Type();
+
+  // Parses '<' type '>'
+  auto parseTypeArgument = [&] {
+    mlir::Type result;
+    if (parser.parseLess() || parser.parseType(result) || parser.parseGreater())
+      return mlir::Type();
+    return result;
+  };
+
+  // sora-type = 'maybe' '<' type '>'
+  //           | 'reference' '<' type '>'
+  //           | 'pointer' '<' type '>'
+  //           | 'void'
+  if (keyword == "maybe")
+    return MaybeType::get(parseTypeArgument());
+  if (keyword == "reference")
+    return ReferenceType::get(parseTypeArgument());
+  if (keyword == "pointer")
+    return PointerType::get(parseTypeArgument());
+  if (keyword == "void")
+    return VoidType::get(getContext());
+
+  parser.emitError(parser.getNameLoc(), "unknown Sora type: ") << keyword;
+  return Type();
+}
+
 //===- Type Storage -------------------------------------------------------===//
 
 namespace sora {
