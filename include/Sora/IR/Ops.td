@@ -30,16 +30,6 @@ class SoraOp<string mnemonic, list<OpTrait> traits = []> :
     Op<SoraDialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
-//  Attributes
-//===----------------------------------------------------------------------===//
-
-def APFloatAttr : Attr<CPred<"$_self.isa<FloatAttr>()">,
-                       "arbitrary float attribute"> {
-  let storageType = [{ FloatAttr }];
-  let returnType = [{ APFloat }];
-}
-
-//===----------------------------------------------------------------------===//
 //  Types
 //===----------------------------------------------------------------------===//
 
