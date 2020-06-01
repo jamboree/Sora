@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace sora;
 using namespace llvm::opt;
@@ -245,7 +246,16 @@ void CompilerInstance::dump(raw_ostream &out) const {
 }
 
 BufferID CompilerInstance::loadFile(StringRef filepath) {
-  if (auto result = llvm::MemoryBuffer::getFile(filepath)) {
+  // Canonicalize the file path using a POSIX style.
+  //  -> (Try to) make the path absolute.
+  //  -> Make the path use / instead of \ on Windows
+  //  -> Remove extra . or .. in the filepath
+  llvm::SmallString<128> canonicalPath = filepath;
+  (void)llvm::sys::fs::make_absolute(canonicalPath);
+  llvm::sys::path::native(canonicalPath, llvm::sys::path::Style::posix);
+  llvm::sys::path::remove_dots(canonicalPath, /* remove_dot_dot */ true,
+                               llvm::sys::path::Style::posix);
+  if (auto result = llvm::MemoryBuffer::getFile(canonicalPath.str())) {
     auto buffer = srcMgr.giveBuffer(std::move(*result));
     assert(buffer && "invalid buffer id returned by giveBuffer");
     inputBuffers.push_back(buffer);
