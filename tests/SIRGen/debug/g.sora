@@ -1,0 +1,13 @@
+// RUN: sorac -emit-sirgen -g %s     | FileCheck %s --check-prefix DBG
+// RUN: sorac -emit-sirgen -g0 %s    | FileCheck %s --check-prefix NODBG
+// RUN: sorac -emit-sirgen -g -g0 %s | FileCheck %s --check-prefix NODBG
+// RUN: sorac -emit-sirgen -g0 -g %s | FileCheck %s --check-prefix NODBG
+
+// FIXME: Make this test more complete, test at least a dozen different instrs.
+func foo() {
+  // CHECK-DBG:   constant 0 {{.*}} loc({{.*}}:[[@LINE+2]]:3)
+  // CHECK-NODBG: constant 0 {{.*}} loc(unknown)
+  0
+}
+// DBG:     } loc({{.*}}:[[@LINE-5]]:6)
+// NODBG:   } loc(unknown)

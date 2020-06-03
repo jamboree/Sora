@@ -2,8 +2,8 @@ add_subdirectory(AST)
 add_subdirectory(Common)
 add_subdirectory(Diagnostics)
 add_subdirectory(Driver)
-add_subdirectory(IR)
-add_subdirectory(IRGen)
+add_subdirectory(SIR)
+add_subdirectory(SIRGen)
 add_subdirectory(Lexer)
 add_subdirectory(Parser)
 add_subdirectory(Sema)
@@ -13,10 +13,10 @@ set(libsora_src
   ${common_src}
   ${diagnostics_src}
   ${driver_src}
-  ${ir_src}
-  ${irgen_src}
   ${lexer_src}
   ${parser_src}
   ${sema_src}
+  ${sir_src}
+  ${sirgen_src}
   PARENT_SCOPE
 )

@@ -1,7 +1,0 @@
-// RUN: sorac -emit-raw-ir -emit-ir 2>&1 | FileCheck %s -check-prefix A
-// A:     error: cannot use '-emit-ir' with '-emit-raw-ir'
-// A-NOT: error: no input files
-
-// RUN: sorac -emit-ir -emit-raw-ir 2>&1 | FileCheck %s -check-prefix B
-// B:     error: cannot use '-emit-raw-ir' with '-emit-ir'
-// B-NOT: error: no input files

@@ -51,20 +51,20 @@ class CompilerInstance {
 
 public:
   enum class Step : uint8_t {
-    /// Parsing, done by the Lexer and Parser components
+    /// Parsing
     Parsing,
-    /// Semantic Analysis, done by Sema
+    /// Semantic Analysis
     Sema,
-    /// IR Generation, done by IRGen
-    IRGen,
-    /// IR Transformations (optimization & dialect lowering passes)
-    /// (Not implemented yet)
-    IRTransform,
-    /// Generation of LLVM IR from the lowered IR
+    /// Sora IR Generation
+    SIRGen,
+    /// Sora IR Transformations
+    /// (Not implemented yet - will likely be refactored)
+    SIRTransform,
+    /// Generation of LLVM IR from the MLIR module.
     /// (Not implemented yet)
     LLVMGen,
     /// The last step of the process
-    Last = IRGen
+    Last = SIRGen
   };
 
   enum class ScopeMapPrintingMode : uint8_t {
@@ -77,8 +77,9 @@ public:
   };
 
   enum class CompilerOutputType : uint8_t {
-    /// Emit IR (after IRGen or IRTransform, depending on options.stopAfterStep)
-    IR,
+    /// Emit the MLIR Module. Its content depends on how many
+    /// transformation/lowering passes were run.
+    MLIRModule,
     /// Emit a linked executable file
     Executable
   };
@@ -200,13 +201,13 @@ private:
   /// \returns false if errors were emitted during semantic analysis
   bool doSema(SourceFile &file);
 
-  /// Performs the IR Generation step on \p file
-  /// \returns false if errors were emitted during IR Generation
-  bool doIRGen(mlir::MLIRContext &mlirContext, mlir::ModuleOp &mlirModule,
-               SourceFile &file);
+  /// Performs the SIR Generation step on \p file
+  /// \returns false if errors were emitted during SIR Generation
+  bool doSIRGen(mlir::MLIRContext &mlirContext, mlir::ModuleOp &mlirModule,
+                SourceFile &file);
 
   /// Emits mlirModule as a product of the compilation process.
-  void emitIRModule(mlir::ModuleOp &mlirModule);
+  void emitMLIRModule(mlir::ModuleOp &mlirModule);
 };
 
 /// This is a high-level compiler driver. It handles command-line options and

@@ -91,7 +91,7 @@ endif()
 add_library(libsora ${LIBSORA_LIB_KIND} ${libsora_src})
 set_target_properties(libsora PROPERTIES PREFIX "")
 
-add_dependencies(libsora DriverOptionsTableGen SoraIROpsGen)
+add_dependencies(libsora DriverOptionsTableGen SoraSIROpsGen)
 
 # add MLIR libraries.
 list(APPEND libsora_mlir_libs
@@ -121,7 +121,7 @@ llvm_map_components_to_libnames(libsora_llvm_libs
 target_link_libraries(libsora PRIVATE ${libsora_mlir_libs} ${libsora_llvm_libs})
 
 add_subdirectory(tools/sorac)
-add_subdirectory(tools/sora-ir-opt)
+add_subdirectory(tools/sir-opt)
 
 # Add a check-sora target
 set(LLVM_LIT_CMD "lit" CACHE STRING "Command to run llvm-lit")

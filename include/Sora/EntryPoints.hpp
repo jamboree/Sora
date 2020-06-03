@@ -51,12 +51,12 @@ void parseSourceFile(SourceFile &sf);
 /// will be emitted using the ASTContext's DiagnosticEngine.
 void performSema(SourceFile &sf);
 
-//===- IRGen - IR Generation Library --------------------------------------===//
+//===- SIRGen - Sora IR Generation Library ---------------------------------===//
 
-/// Adds the MLIR Dialects necessary for IRGen to MLIR's Dialect Registry.
-/// Currently, this adds the Sora and MLIR's StandardOps dialects.
+/// Adds the MLIR Dialects necessary for SIRGen to MLIR's Dialect Registry.
+/// Currently, this adds the SIR, and MLIR's StandardOps dialects.
 ///
-/// This function must be called once before attempting any IR Generation
+/// This function must be called once before attempting any SIR Generation
 /// operation. This should only be called once.
 void registerMLIRDialects();
 
@@ -71,8 +71,8 @@ mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 ///   \param enableDebugInfo Whether Debug information will be emitted.
 ///
 /// Note that \c registerMLIRDialects must be called before using this.
-void performIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,
-                  SourceFile &sf, bool enableDebugInfo);
+void performSIRGen(mlir::MLIRContext &mlirCtxt, mlir::ModuleOp &mlirModule,
+                   SourceFile &sf, bool enableDebugInfo);
 
 //===----------------------------------------------------------------------===//
 
