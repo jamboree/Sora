@@ -5,8 +5,8 @@
 // Copyright (c) 2019 Pierre van Houtryve
 //===----------------------------------------------------------------------===//
 
-#ifndef SORAIR_OPS
-#define SORAIR_OPS
+#ifndef SIR_OPS
+#define SIR_OPS
 
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -240,4 +240,4 @@ def CreateDefaultValueOp : SIROp<"create_default_value", [NoSideEffect]> {
 
 //===----------------------------------------------------------------------===//
 
-#endif // SORAIR_OPS
+#endif // SIR_OPS
