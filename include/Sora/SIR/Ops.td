@@ -43,6 +43,10 @@ def AnyPointerType : DialectType<SIRDialect,
                                  CPred<"$_self.isa<::sora::sir::PointerType>()">,
                                  "Any Sora IR Pointer Type">;
 
+def VoidType : DialectType<SIRDialect, 
+                           CPred<"$_self.isa<::sora::sir::VoidType>()">,
+                           "Sora IR Void Type">;
+
 //===- Static Cast --------------------------------------------------------===//
 
 def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
@@ -258,7 +262,7 @@ def BlockTerminatorOp : SIROp<"block_terminator",
 def ImplicitSIRBlockTerminator :
   SingleBlockImplicitTerminator<"BlockTerminatorOp">;
 
-//===- BlockOp ------------------------------------------------------------===//
+//===- Free Blocks --------------------------------------------------------===//
 
 def BlockOp : SIROp<"block",
     [ImplicitSIRBlockTerminator, AutomaticAllocationScope]> {
@@ -295,26 +299,26 @@ def BlockOp : SIROp<"block",
   }];
 }
 
-//===- Create Default Value -----------------------------------------------===//
+//===- Void Constant ------------------------------------------------------===//
 
-def CreateDefaultValueOp : SIROp<"create_default_value", [NoSideEffect]> {
-  let summary = "default value creation operation";
+def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
+  let summary = "void constant operation";
   let description = [{
-    The Create Default Value operation creates a default value of the return
-    type.
+    The Void Constant operation simply creates a value of type !sir.void.
 
     Example:
-      %1 = sir.create_default_value for i32
+      %1 = sir.void_constant : !sora.void
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Type ofType", 
-    [{ result.addTypes(ofType); }]
+    "OpBuilder &builder, OperationState &result", 
+    [{ result.addTypes(::sora::sir::VoidType::get(result.getContext())); }]
   >];
 
-  let results = (outs AnyType);
+  let results = (outs VoidType);
 
-  let assemblyFormat = "attr-dict `for` type(results)";
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseVoidConstantOp(parser, result); }];
 }
 
 //===----------------------------------------------------------------------===//

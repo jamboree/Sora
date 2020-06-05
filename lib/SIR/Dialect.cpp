@@ -194,11 +194,21 @@ static void buildBlockOp(mlir::OpBuilder &builder,
 static mlir::LogicalResult verify(BlockOp op) { return mlir::success(); }
 
 //===----------------------------------------------------------------------===//
-// CreateDefaultValueOp
+// VoidConstantOp
 //===----------------------------------------------------------------------===//
 
-/// FIXME: Are there really no invariants to verify?
-static mlir::LogicalResult verify(CreateDefaultValueOp op) {
+static void print(mlir::OpAsmPrinter &p, VoidConstantOp op) {
+  p << op.getOperationName();
+}
+
+static mlir::ParseResult parseVoidConstantOp(mlir::OpAsmParser &parser,
+                                             mlir::OperationState &result) {
+  result.addTypes(VoidType::get(result.getContext()));
+  return mlir::success();
+}
+
+static mlir::LogicalResult verify(VoidConstantOp op) {
+  // Invariants are already enforced through constraints in tablegen.
   return mlir::success();
 }
 

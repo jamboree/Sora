@@ -270,10 +270,9 @@ mlir::Value RValueGenerator::visitCastExpr(CastExpr *expr) {
 mlir::Value RValueGenerator::visitTupleExpr(TupleExpr *expr) {
   mlir::Location loc = getNodeLoc(expr);
 
-  // Empty tuples are just 'void' literals.
+  // Empty tuples are just void constants.
   if (expr->isEmpty())
-    return builder.create<sir::CreateDefaultValueOp>(loc,
-                                                     getType(expr->getType()));
+    return builder.create<sir::VoidConstantOp>(loc);
 
   SmallVector<mlir::Value, 8> tupleElts;
   tupleElts.reserve(expr->getNumElements());
