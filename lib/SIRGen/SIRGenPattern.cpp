@@ -17,45 +17,53 @@ using namespace sora;
 namespace {
 class PatternGenerator
     : public SIRGeneratorBase,
-      public PatternVisitor<PatternGenerator, void, mlir::Value> {
+      public PatternVisitor<PatternGenerator, void, Optional<mlir::Value>> {
+
 public:
+  using Base = PatternVisitor<PatternGenerator, void, Optional<mlir::Value>>;
+
   PatternGenerator(SIRGen &sirGen, mlir::OpBuilder &builder)
       : SIRGeneratorBase(sirGen), builder(builder) {}
 
   mlir::OpBuilder &builder;
 
-  void visitVarPattern(VarPattern *pattern, mlir::Value value);
-  void visitDiscardPattern(DiscardPattern *pattern, mlir::Value value);
-  void visitMutPattern(MutPattern *pattern, mlir::Value value);
-  void visitParenPattern(ParenPattern *pattern, mlir::Value value);
-  void visitTuplePattern(TuplePattern *pattern, mlir::Value value);
-  void visitTypedPattern(TypedPattern *pattern, mlir::Value value);
-  void visitMaybeValuePattern(MaybeValuePattern *pattern, mlir::Value value);
+  void visitVarPattern(VarPattern *pattern, Optional<mlir::Value> value);
+  void visitDiscardPattern(DiscardPattern *pattern,
+                           Optional<mlir::Value> value);
+  void visitMutPattern(MutPattern *pattern, Optional<mlir::Value> value);
+  void visitParenPattern(ParenPattern *pattern, Optional<mlir::Value> value);
+  void visitTuplePattern(TuplePattern *pattern, Optional<mlir::Value> value);
+  void visitTypedPattern(TypedPattern *pattern, Optional<mlir::Value> value);
+  void visitMaybeValuePattern(MaybeValuePattern *pattern,
+                              Optional<mlir::Value> value);
 };
 
-void PatternGenerator::visitVarPattern(VarPattern *pattern, mlir::Value value) {
-  // Generate the VarDecl using 'value' as the initial value.
-  // If the value is null, this will generate a default initializer.
-  sirGen.genVarDecl(builder, pattern->getVarDecl(), value);
+void PatternGenerator::visitVarPattern(VarPattern *pattern,
+                                       Optional<mlir::Value> value) {
+  mlir::Value address = sirGen.genVarDeclAlloc(builder, pattern->getVarDecl());
+  if (value)
+    builder.create<sir::StoreOp>(getNodeLoc(pattern), *value, address);
 }
 
-void PatternGenerator::visitDiscardPattern(DiscardPattern *, mlir::Value) {
+void PatternGenerator::visitDiscardPattern(DiscardPattern *,
+                                           Optional<mlir::Value>) {
   // No-op, it just discards the value as the name implies.
 }
 
-void PatternGenerator::visitMutPattern(MutPattern *pattern, mlir::Value value) {
+void PatternGenerator::visitMutPattern(MutPattern *pattern,
+                                       Optional<mlir::Value> value) {
   // This pattern is "transparent". Just emit its subpattern.
   visit(pattern->getSubPattern(), value);
 }
 
 void PatternGenerator::visitParenPattern(ParenPattern *pattern,
-                                         mlir::Value value) {
+                                         Optional<mlir::Value> value) {
   // This pattern is "transparent". Just emit its subpattern.
   visit(pattern->getSubPattern(), value);
 }
 
 void PatternGenerator::visitTuplePattern(TuplePattern *pattern,
-                                         mlir::Value value) {
+                                         Optional<mlir::Value> value) {
   // If this is an empty pattern, don't do anything, the value is just
   // discarded.
   if (pattern->isEmpty())
@@ -72,10 +80,10 @@ void PatternGenerator::visitTuplePattern(TuplePattern *pattern,
   // If we have an initial value, generate a destructure_tuple for it, and
   // generate each element of the TuplePattern with the corresponding tuple
   // value as initial value.
-  assert(value.getType().isa<mlir::TupleType>() && "Value is not a tuple!");
+  assert(value->getType().isa<mlir::TupleType>() && "Value is not a tuple!");
 
   sir::DestructureTupleOp destructuredTuple =
-      builder.create<sir::DestructureTupleOp>(getNodeLoc(pattern), value);
+      builder.create<sir::DestructureTupleOp>(getNodeLoc(pattern), *value);
 
   mlir::ResultRange destructuredTupleValues = destructuredTuple.getResults();
   ArrayRef<Pattern *> patternElts = pattern->getElements();
@@ -88,13 +96,13 @@ void PatternGenerator::visitTuplePattern(TuplePattern *pattern,
 }
 
 void PatternGenerator::visitTypedPattern(TypedPattern *pattern,
-                                         mlir::Value value) {
+                                         Optional<mlir::Value> value) {
   // This pattern is "transparent". Just emit its subpattern.
   visit(pattern->getSubPattern(), value);
 }
 
 void PatternGenerator::visitMaybeValuePattern(MaybeValuePattern *pattern,
-                                              mlir::Value value) {
+                                              Optional<mlir::Value> value) {
   // These should only be present at the top level a LetDecl's pattern when it
   // is used as a condition, and need special handling.
   llvm_unreachable("Generation of MaybeValuePatterns through the "
@@ -106,7 +114,7 @@ void PatternGenerator::visitMaybeValuePattern(MaybeValuePattern *pattern,
 //===- SIRGen -------------------------------------------------------------===//
 
 void SIRGen::genPattern(mlir::OpBuilder &builder, Pattern *pattern,
-                        mlir::Value value) {
+                        Optional<mlir::Value> value) {
   PatternGenerator(*this, builder).visit(pattern, value);
 }
 

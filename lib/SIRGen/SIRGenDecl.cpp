@@ -17,16 +17,15 @@ using namespace sora;
 
 //===- SIRGen -------------------------------------------------------------===//
 
-void SIRGen::genVarDecl(mlir::OpBuilder &builder, VarDecl *decl,
-                        mlir::Value value) {
-  assert(vars.count(decl) == 0 && "Variable has already been declared");
+mlir::Value SIRGen::genVarDeclAlloc(mlir::OpBuilder &builder, VarDecl *decl) {
+  assert(varAddresses.count(decl) == 0 && "Variable has already been declared");
 
-  // If we don't have an initial value, generate a default one.
-  if (!value)
-    value = builder.create<sir::CreateDefaultValueOp>(
-        getNodeLoc(decl), getType(decl->getValueType()));
+  sir::PointerType type = sir::PointerType::get(getType(decl->getValueType()));
 
-  vars.insert(decl, value);
+  mlir::Value address =
+      builder.create<sir::AllocStackOp>(getNodeLoc(decl), type);
+  varAddresses.insert(decl, address);
+  return address;
 }
 
 void SIRGen::genDecl(mlir::OpBuilder &builder, Decl *decl) {
@@ -35,26 +34,22 @@ void SIRGen::genDecl(mlir::OpBuilder &builder, Decl *decl) {
 
   // This is temporary code for testing purposes.
   if (LetDecl *let = dyn_cast<LetDecl>(decl)) {
-    mlir::Value initialValue;
-    if (Expr *init = let->getInitializer())
-      initialValue = genExpr(builder, init);
-    genPattern(builder, let->getPattern(), initialValue);
+    Pattern *pattern = let->getPattern();
+    if (Expr *init = let->getInitializer()) {
+      mlir::Value value = genExpr(builder, init);
+      genPattern(builder, pattern, value);
+    }
+    else
+      genPattern(builder, pattern);
     return;
   }
 
   llvm_unreachable("Unimplemented - Decl SIRGen");
 }
 
-void SIRGen::setVarValue(VarDecl *decl, mlir::Value value) {
-  assert(vars.count(decl) != 0 &&
-         "Variable has not been declared yet, use genVarDecl first.");
-  assert(value && "value cannot be null!");
-  vars.insert(decl, value);
-}
-
-mlir::Value sora::SIRGen::getVarValue(VarDecl *decl) {
-  assert(vars.count(decl) != 0 && "Variable has not been declared yet!");
-  return vars.lookup(decl);
+mlir::Value sora::SIRGen::getVarDeclAddress(VarDecl *decl) {
+  assert(varAddresses.count(decl) != 0 && "Unknown variable");
+  return varAddresses.lookup(decl);
 }
 
 mlir::FuncOp SIRGen::getFuncOp(FuncDecl *func) {

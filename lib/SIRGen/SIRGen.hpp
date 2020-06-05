@@ -43,8 +43,8 @@ class SIRGen {
   llvm::DenseMap<TypeBase *, mlir::Type> typeCache;
   /// A Cache fo Function -> mlir Function Operation
   llvm::DenseMap<FuncDecl *, mlir::FuncOp> funcCache;
-  /// Maps VarDecls to their current value.
-  llvm::ScopedHashTable<VarDecl *, mlir::Value> vars;
+  /// Maps VarDecls to the Value containing their addresses.
+  llvm::ScopedHashTable<VarDecl *, mlir::Value> varAddresses;
 
 public:
   //===- Helper Classes ---------------------------------------------------===//
@@ -53,7 +53,7 @@ public:
   /// the var values.
   class BlockScope : llvm::ScopedHashTableScope<VarDecl *, mlir::Value> {
   public:
-    BlockScope(SIRGen &irGen) : ScopedHashTableScope(irGen.vars) {}
+    BlockScope(SIRGen &irGen) : ScopedHashTableScope(irGen.varAddresses) {}
   };
 
   //===- Constructor ------------------------------------------------------===//
@@ -63,13 +63,10 @@ public:
 
   //===- Generation Entry Points ------------------------------------------===//
 
-  /// Generates a variable declaration \p decl, optionally using \p value as its
-  /// initial value.
-  ///
-  /// If \p value is null, then a sora.create_default_value is used as the value
-  /// of the variable.
-  void genVarDecl(mlir::OpBuilder &builder, VarDecl *decl,
-                  mlir::Value value = {});
+  /// Generates memory allocations operations for \p decl.
+  /// \returns the Value containing the address of \p decl. This value always
+  /// has a sir::PointerType, and can be used with sir.load/sir.store.
+  mlir::Value genVarDeclAlloc(mlir::OpBuilder &builder, VarDecl *decl);
 
   /// Generates IR for \p sf, returning the MLIR Module.
   void genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule);
@@ -80,10 +77,10 @@ public:
   /// Generates IR for an Expression.
   mlir::Value genExpr(mlir::OpBuilder &builder, Expr *expr);
 
-  /// Generates IR for a Pattern \p pattern. \p value is an optional argument to
-  /// assign a value to the pattern.
+  /// Generates IR for a Pattern \p pattern and optionally destructures/stores
+  /// \p value in the pattern's elements.
   void genPattern(mlir::OpBuilder &builder, Pattern *pattern,
-                  mlir::Value value = {});
+                  Optional<mlir::Value> value = llvm::None);
 
   /// Generates IR for a function's body \p stmt.
   /// This considers that \p stmt is not a free block, and will not emit a
@@ -95,11 +92,10 @@ public:
 
   //===- Helpers/Conversion Functions -------------------------------------===//
 
-  /// Sets the value of \p decl to \p value.
-  void setVarValue(VarDecl *decl, mlir::Value value);
-
-  /// \returns the current value of \p decl
-  mlir::Value getVarValue(VarDecl *decl);
+  /// \returns the Value that contains the address of \p decl.
+  /// This value always has a sir::PointerType, and can be used with
+  /// sir.load/sir.store.
+  mlir::Value getVarDeclAddress(VarDecl *decl);
 
   /// \returns the MLIR FuncOp for \p func, creating it if needed.
   /// Note that this does not generate the body of the function. For that, see
