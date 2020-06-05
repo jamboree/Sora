@@ -17,6 +17,7 @@
 #include "Sora/SIR/Dialect.hpp"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/Verifier.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -426,7 +427,14 @@ bool CompilerInstance::doSema(SourceFile &file) {
 bool CompilerInstance::doSIRGen(mlir::MLIRContext &mlirContext,
                                 mlir::ModuleOp &mlirModule, SourceFile &file) {
   performSIRGen(mlirContext, mlirModule, file, options.genDebugInfo);
-  return !diagEng.hadAnyError();
+  bool success = true;
+  // FIXME: Once SIRGen is stable, uncomment this.
+/*
+#ifndef NDEBUG
+  success = mlir::succeeded(mlir::verify(mlirModule.getOperation()));
+#endif
+*/
+  return success && !diagEng.hadAnyError();
 }
 
 void CompilerInstance::emitMLIRModule(mlir::ModuleOp &mlirModule) {
