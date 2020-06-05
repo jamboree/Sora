@@ -13,8 +13,14 @@
 using namespace sora;
 
 //===- PatternGenerator ---------------------------------------------------===//
-
 namespace {
+
+/// The pattern generator works by visiting the pattern, and generating code for
+/// every node. Most patterns don't even generate any code, in fact only the
+/// VarPattern pattern generates something interesting - most of the work
+/// happens when a value is provided.
+/// When a value is provided (= the second arg isn't None), the pattern
+/// generator will destructure that value to assign it the pattern elements.
 class PatternGenerator
     : public SIRGeneratorBase,
       public PatternVisitor<PatternGenerator, void, Optional<mlir::Value>> {
@@ -69,11 +75,13 @@ void PatternGenerator::visitTuplePattern(TuplePattern *pattern,
   if (pattern->isEmpty())
     return;
 
-  // If we don't have an initial value, then this is easy: just generate the
-  // elements.
-  if (!value) {
+  // If we don't have an initial value, or if the pattern doesn't contain any
+  // VarDecl, just generate the elements.
+  /// This helps avoiding an extra useless sir.destructure_tuple in cases where
+  /// the pattern is something like (_, _)
+  if (!value || !pattern->hasVarPattern()) {
     for (Pattern *elt : pattern->getElements())
-      visit(elt, {});
+      visit(elt, None);
     return;
   }
 

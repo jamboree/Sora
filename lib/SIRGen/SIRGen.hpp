@@ -63,31 +63,36 @@ public:
 
   //===- Generation Entry Points ------------------------------------------===//
 
-  /// Generates memory allocations operations for \p decl.
+  /// Generates a memory allocation operation for \p decl.
   /// \returns the Value containing the address of \p decl. This value always
   /// has a sir::PointerType, and can be used with sir.load/sir.store.
   mlir::Value genVarDeclAlloc(mlir::OpBuilder &builder, VarDecl *decl);
 
-  /// Generates IR for \p sf, returning the MLIR Module.
+  /// Generates SIR for \p sf, returning the MLIR Module.
   void genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule);
 
-  /// Generates IR for a function.
+  /// Generates SIR for a function.
   mlir::FuncOp genFunction(FuncDecl *func);
 
-  /// Generates IR for an Expression.
+  /// Generates SIR for an Expression.
   mlir::Value genExpr(mlir::OpBuilder &builder, Expr *expr);
 
-  /// Generates IR for a Pattern \p pattern and optionally destructures/stores
-  /// \p value in the pattern's elements.
+  /// Generates IR for a Pattern \p pattern.
+  ///
+  /// VarPatterns will call \c genVarDeclAlloc to generate the allocation
+  /// operations.
+  ///
+  /// If \p value has a value, it will be destructured and assigned to the
+  /// VarPatterns in \p pattern.
   void genPattern(mlir::OpBuilder &builder, Pattern *pattern,
                   Optional<mlir::Value> value = llvm::None);
 
   /// Generates IR for a function's body \p stmt.
-  /// This considers that \p stmt is not a free block, and will not emit a
-  /// sora.block operation for it.
+  /// Note that this does not consider \p stmt to be free, so it won't generate
+  /// a sir.block operation.
   void genFunctionBody(mlir::OpBuilder &builder, BlockStmt *stmt);
 
-  /// Generates IR for a Declaration.
+  /// Generates IR for a Declaration \p decl.
   void genDecl(mlir::OpBuilder &builder, Decl *decl);
 
   //===- Helpers/Conversion Functions -------------------------------------===//
