@@ -43,10 +43,6 @@ def AnyPointerType : DialectType<SIRDialect,
                                  CPred<"$_self.isa<::sora::sir::PointerType>()">,
                                  "Any Sora IR Pointer Type">;
 
-//===----------------------------------------------------------------------===//
-//  Type-Casting operation
-//===----------------------------------------------------------------------===//
-
 //===- Static Cast --------------------------------------------------------===//
 
 def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
@@ -97,10 +93,6 @@ def LoadOp : SIROp<"load", [NoSideEffect]> {
     "$value attr-dict `:` functional-type($value, results)";
 }
 
-//===----------------------------------------------------------------------===//
-//  Tuple Manipulation Operations
-//===----------------------------------------------------------------------===//
-
 //===- Create Tuple -------------------------------------------------------===//
 
 def CreateTupleOp : SIROp<"create_tuple", [NoSideEffect]> {
@@ -148,10 +140,6 @@ def DestructureTupleOp : SIROp<"destructure_tuple", [NoSideEffect]> {
   let assemblyFormat = 
     "$value attr-dict `:` functional-type($value, results)";
 }
-
-//===----------------------------------------------------------------------===//
-//  Block Operations
-//===----------------------------------------------------------------------===//
 
 //===- Implicit Terminator for Blocks -------------------------------------===//
 
@@ -211,10 +199,6 @@ def BlockOp : SIROp<"block", [ImplicitSIRBlockTerminator]> {
     }
   }];
 }
-
-//===----------------------------------------------------------------------===//
-//  Misc. Operations
-//===----------------------------------------------------------------------===//
 
 //===- Create Default Value -----------------------------------------------===//
 
