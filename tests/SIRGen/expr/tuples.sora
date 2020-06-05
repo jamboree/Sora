@@ -10,7 +10,7 @@ func test() {
 
 // CHECK:      module @"{{.*}}" {
 // CHECK-NEXT:   func @test() {
-// CHECK-NEXT:     %0 = sir.create_default_value for !sir.void loc("{{.*}}":5:3)
+// CHECK-NEXT:     %0 = sir.void_constant loc("{{.*}}":5:3)
 // CHECK-NEXT:     %c1_i32 = constant 1 : i32 loc("{{.*}}":6:4)
 // CHECK-NEXT:     %c2_i32 = constant 2 : i32 loc("{{.*}}":6:7)
 // CHECK-NEXT:     %1 = sir.create_tuple(%c1_i32, %c2_i32 : i32, i32) -> tuple<i32, i32> loc("{{.*}}":6:3)

@@ -72,9 +72,9 @@ def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
     "$value `:` type($value) attr-dict `to` type(results)";
 }
 
-//===- SIRAllocOp ---------------------------------------------------------===//
+//===- AnyAllocOp ---------------------------------------------------------===//
 
-class SIRAllocOp<string mnemonic, Resource resource, list<OpTrait> traits = []> :
+class AnyAllocOp<string mnemonic, Resource resource, list<OpTrait> traits = []> :
     SIROp<mnemonic, !listconcat([MemoryEffects<[MemAlloc<resource>]>], traits)> {
 
   let builders = [OpBuilder<
@@ -95,7 +95,7 @@ class SIRAllocOp<string mnemonic, Resource resource, list<OpTrait> traits = []> 
 }
 //===- Alloc Stack --------------------------------------------------------===//
 
-def AllocStackOp : SIRAllocOp<"alloc_stack", AutomaticAllocationScopeResource> {
+def AllocStackOp : AnyAllocOp<"alloc_stack", AutomaticAllocationScopeResource> {
   let summary = "stack allocation operation";
   let description = [{
     The Alloc Stack operation allocates memory of the stack. The amount of
@@ -144,7 +144,7 @@ def LoadOp : SIROp<"load", [
     }
   }];
 
-  let assemblyFormat = "$pointer attr-dict `:` type($pointer)";
+  let assemblyFormat = "$pointer attr-dict `:` functional-type($pointer, results)";
 }
 
 //===- Store ---------------------------------------------------------------===//
@@ -188,7 +188,8 @@ def StoreOp : SIROp<"store", [
     }
   }];
 
-  let assemblyFormat = "$value `,` $pointer attr-dict `:` type($pointer)";
+  let assemblyFormat =
+    "$value `:` type($value) `into` $pointer `:` type($pointer) attr-dict";
 }
 
 //===- Create Tuple -------------------------------------------------------===//
@@ -197,6 +198,7 @@ def CreateTupleOp : SIROp<"create_tuple", [NoSideEffect]> {
   let summary = "tuple creation operation";
   let description = [{
     The Create Tuple operation creates a tuple of values.
+    There must be at least 2 operands: 0 or 1 element tuples are not permitted.
 
     Example:
       %2 = sir.create_tuple(%0: i32, %1: i32) -> tuple<i32, i32>
@@ -307,7 +309,7 @@ def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
     The Void Constant operation simply creates a value of type !sir.void.
 
     Example:
-      %1 = sir.void_constant : !sora.void
+      %1 = sir.void_constant
   }];
 
   let builders = [OpBuilder<
