@@ -2,7 +2,7 @@
 
 // TODO: Use something other than functions to test this.
 
-// CHECK: func @void_t() -> !sir.void
+// CHECK: func @void_t()
 func void_t() {}
 
 // CHECK: func @i8_t() -> i8
@@ -34,7 +34,7 @@ func f64_t() -> f64 {}
 // CHECK: func @bool_t() -> i1
 func bool_t() -> bool {}
 
-// CHECK: func @tuple_t0() -> !sir.void
+// CHECK: func @tuple_t0()
 func tuple_t0() -> () {}
 // CHECK: func @tuple_t2() -> tuple<i1, i1>
 func tuple_t2() -> (bool, bool) {}

@@ -21,8 +21,13 @@ namespace {
 /// Converts Sora AST Types to SIR Types.
 class TypeConverter : public SIRGeneratorBase,
                       public TypeVisitor<TypeConverter, mlir::Type> {
+  mlir::Type visit(Type type) { return Base::visit(type); }
+
 public:
   using SIRGeneratorBase::SIRGeneratorBase;
+  using Base = TypeVisitor<TypeConverter, mlir::Type>;
+
+  mlir::Type visit(CanType type) { return Base::visit(type); }
 
   mlir::Type visitIntegerType(IntegerType *type) {
     IntegerWidth integerWidth = type->getWidth();
@@ -75,12 +80,17 @@ public:
   }
 
   mlir::Type visitFunctionType(FunctionType *type) {
-    mlir::Type rtr = visit(type->getReturnType());
     SmallVector<mlir::Type, 4> args;
     args.reserve(type->getNumArgs());
     for (Type arg : type->getArgs())
       args.push_back(visit(arg));
-    return mlir::FunctionType::get(args, rtr, &mlirCtxt);
+
+    // If the return type is 'void', don't generate a VoidType and just leave
+    // the results empty.
+    Type returnType = type->getReturnType();
+    if (!returnType->is<VoidType>())
+      return mlir::FunctionType::get(args, visit(returnType), &mlirCtxt);
+    return mlir::FunctionType::get(args, {}, &mlirCtxt);
   }
 
   mlir::Type visitLValueType(LValueType *type) {

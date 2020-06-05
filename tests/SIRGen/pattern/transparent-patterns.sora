@@ -17,7 +17,7 @@ func foo() {
 }
 
 // CHECK:      module @"{{.*}}" {
-// CHECK-NEXT:   func @foo() -> !sir.void {
+// CHECK-NEXT:   func @foo() {
 // CHECK-NEXT:     %c0_i32 = constant 0 : i32 loc("{{.*}}":9:12)
 // CHECK-NEXT:     %c0_i32_0 = constant 0 : i32 loc("{{.*}}":10:16)
 // CHECK-NEXT:     %c0_i32_1 = constant 0 : i32 loc("{{.*}}":12:12)
