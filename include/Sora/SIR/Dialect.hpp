@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Sora/SIR/Types.hpp"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TypeSupport.h"

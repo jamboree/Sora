@@ -52,7 +52,7 @@ def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
     another type.
 
     Example:
-      %1 = sir.static_cast %1 : i1 to i32
+      %1 = sir.static_cast %1 : to i32
   }];
 
   let arguments = (ins AnyType: $value);
@@ -68,29 +68,123 @@ def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
     "$value `:` type($value) attr-dict `to` type(results)";
 }
 
-//===- Load ---------------------------------------------------------------===//
+//===- SIRAllocOp ---------------------------------------------------------===//
 
-def LoadOp : SIROp<"load", [NoSideEffect]> {
-  let summary = "load operation";
-  let description = [{
-    The Load operation dereferences a pointer value, 
-    converting !sir.pointer<T> into T.
-
-    Example:
-      %1 = sir.load %1 : (!sir.pointer<i32>) -> i32
-  }];
-
-  let arguments = (ins AnyPointerType: $value);
-
-  let results = (outs AnyType);
+class SIRAllocOp<string mnemonic, Resource resource, list<OpTrait> traits = []> :
+    SIROp<mnemonic, !listconcat([MemoryEffects<[MemAlloc<resource>]>], traits)> {
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value lvalue", [{
-      return ::buildLoadOp(builder, result, lvalue);
+    "OpBuilder &builder, OperationState &result, ::sora::sir::PointerType type", 
+    [{ result.addTypes(type); }]
+  >];
+
+  
+  let extraClassDeclaration = [{
+    ::sora::sir::PointerType getPointerType() { 
+      return getResult().getType().cast<::sora::sir::PointerType>(); 
+    }
+  }];
+
+  let results = (outs AnyPointerType);
+
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+//===- Alloc Stack --------------------------------------------------------===//
+
+def AllocStackOp : SIRAllocOp<"alloc_stack", AutomaticAllocationScopeResource> {
+  let summary = "stack allocation operation";
+  let description = [{
+    The Alloc Stack operation allocates memory of the stack. The amount of
+    memory allocated is specified by the pointee type of the pointer type.
+
+    Example: Allocating 32 bits (i32):
+      %0 = sir.alloc_stack: !sora.pointer<i32>
+      
+    Example: Allocating a pointer to a 32 bits value:
+      %1 = sir.alloc_stack: !sora.pointer<!sora.pointer<i32>>
+  }];
+}
+
+//===- Load ---------------------------------------------------------------===//
+
+def LoadOp : SIROp<"load", [
+  TypesMatchWith<"type of 'result' matches pointee type of 'pointer'", 
+                  "pointer", "result",
+                 "$_self.cast<::sora::sir::PointerType>().getPointeeType()">]> {
+
+  let summary = "load operation";
+  let description = [{
+    The Load operation loads a value from a pointer, converting 
+    !sir.pointer<T> into T.
+
+    Example:
+      %1 = sir.load %0 : !sir.pointer<i32>
+  }];
+
+  let arguments = (ins
+    Arg<AnyPointerType, "the pointer to load from", [MemRead]>: $pointer
+  );
+
+  let results = (outs AnyType: $result);
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value ptrValue", [{
+    auto ptrType = ptrValue.getType().cast<::sora::sir::PointerType>();
+    result.addTypes(ptrType.getPointeeType());
+    result.addOperands(ptrValue);
   }]>];
 
-  let assemblyFormat = 
-    "$value attr-dict `:` functional-type($value, results)";
+  let extraClassDeclaration = [{
+    ::sora::sir::PointerType getPointerType() { 
+      return getOperand().getType().cast<::sora::sir::PointerType>();
+    }
+  }];
+
+  let assemblyFormat = "$pointer attr-dict `:` type($pointer)";
+}
+
+//===- Store ---------------------------------------------------------------===//
+
+def StoreOp : SIROp<"store", [
+  TypesMatchWith<"type of 'value' matches pointee type of 'pointer'", 
+                  "pointer", "value",
+                 "$_self.cast<::sora::sir::PointerType>().getPointeeType()">]> {
+
+  let summary = "store operation";
+  let description = [{
+    The Store operation stores a value to a location specified by a pointer.
+    The type of the value must match the type of the pointer's pointee type.
+
+    Example:
+      %2 = sir.store %0, %1 : !sir.pointer<i32>
+  }];
+
+  let arguments = (ins
+    AnyType: $value,
+    Arg<AnyPointerType, "the pointer to load from", [MemWrite]>: $pointer
+  );
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value value, Value pointer", [{
+      result.addOperands(value);
+      result.addOperands(pointer);
+  }]>];
+
+  let extraClassDeclaration = [{
+    Value getPointer() {
+      return getOperand(1);
+    }
+
+    Value getValue() {
+      return getOperand(0);
+    }
+
+    ::sora::sir::PointerType getPointerType() { 
+      return getPointer().getType().cast<::sora::sir::PointerType>();
+    }
+  }];
+
+  let assemblyFormat = "$value `,` $pointer attr-dict `:` type($pointer)";
 }
 
 //===- Create Tuple -------------------------------------------------------===//
@@ -166,7 +260,8 @@ def ImplicitSIRBlockTerminator :
 
 //===- BlockOp ------------------------------------------------------------===//
 
-def BlockOp : SIROp<"block", [ImplicitSIRBlockTerminator]> {
+def BlockOp : SIROp<"block",
+    [ImplicitSIRBlockTerminator, AutomaticAllocationScope]> {
   let summary = "block operation";
 
   let description = [{
@@ -185,7 +280,7 @@ def BlockOp : SIROp<"block", [ImplicitSIRBlockTerminator]> {
 
   let regions = (region SizedRegion<1>:$region); 
 
-  let printer = [{ return ::printBlockOp(p, *this); }];
+  let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseBlockOp(parser, result); }];
 
   let builders = [OpBuilder<

@@ -44,27 +44,30 @@ SIRDialect::SIRDialect(mlir::MLIRContext *mlirCtxt)
 static mlir::LogicalResult verify(StaticCastOp op) { return mlir::success(); }
 
 //===----------------------------------------------------------------------===//
+// AllocStackOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(AllocStackOp op) {
+  // No invariants to verify. This operation has to have a PointerType result
+  // but that's already enforced in tablegen.
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-static void buildLoadOp(mlir::OpBuilder &builder, mlir::OperationState &result,
-                        mlir::Value &value) {
-  PointerType pointer = value.getType().dyn_cast<PointerType>();
-  assert(pointer && "Value is not a Pointer type!");
-  result.addTypes(pointer.getPointeeType());
-  result.addOperands(value);
+static mlir::LogicalResult verify(LoadOp op) {
+  // Invariants are already verified by the TypesMatchWith trait.
+  return mlir::success();
 }
 
-static mlir::LogicalResult verify(LoadOp op) {
-  mlir::Type resultType = op.getType();
-  PointerType operandType = op.getOperand().getType().dyn_cast<PointerType>();
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
 
-  if (!operandType)
-    return op.emitOpError("operand type should be a pointer type!");
-
-  if (resultType != operandType.getPointeeType())
-    return op.emitOpError(
-        "the result type should be the same as the pointer's pointee type");
+static mlir::LogicalResult verify(StoreOp op) {
+  // Invariants are already verified by the TypesMatchWith trait.
   return mlir::success();
 }
 
@@ -165,7 +168,7 @@ static mlir::LogicalResult verify(BlockTerminatorOp op) {
 // BlockOp
 //===----------------------------------------------------------------------===//
 
-static void printBlockOp(mlir::OpAsmPrinter &p, BlockOp op) {
+static void print(mlir::OpAsmPrinter &p, BlockOp op) {
   p << "sir.block ";
   p.printRegion(op.region(), /*printEntryBlockArgs*/ true,
                 /*printBlockTerminators*/ false);
