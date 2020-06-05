@@ -127,6 +127,9 @@ public:
   /// Call \p fn on each Pattern in this Pattern in pre-order.
   void forEachNode(llvm::function_ref<void(Pattern *)> fn);
 
+  /// \returns true if this pattern contains a VarPattern.
+  bool hasVarPattern() const;
+
   /// \returns the SourceLoc of the first token of the pattern
   SourceLoc getBegLoc() const;
   /// \returns the SourceLoc of the last token of the pattern

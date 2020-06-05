@@ -108,6 +108,29 @@ void Pattern::forEachNode(llvm::function_ref<void(Pattern *)> fn) {
   }
 }
 
+bool Pattern::hasVarPattern() const {
+  using Kind = PatternKind;
+  switch (getKind()) {
+  case Kind::Var:
+    return true;
+  case Kind::Discard:
+    return false;
+  case Kind::Mut:
+    return cast<MutPattern>(this)->getSubPattern()->hasVarPattern();
+  case Kind::Paren:
+    return cast<ParenPattern>(this)->getSubPattern()->hasVarPattern();
+  case Kind::Tuple:
+    for (Pattern *pattern : cast<TuplePattern>(this)->getElements())
+      if (pattern->hasVarPattern())
+        return true;
+    return false;
+  case Kind::Typed:
+    return cast<TypedPattern>(this)->getSubPattern()->hasVarPattern();
+  case Kind::MaybeValue:
+    return cast<MaybeValuePattern>(this)->getSubPattern()->hasVarPattern();
+  }
+}
+
 SourceLoc Pattern::getBegLoc() const {
   switch (getKind()) {
 #define PATTERN(ID, PARENT)                                                    \
