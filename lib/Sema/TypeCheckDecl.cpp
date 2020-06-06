@@ -235,7 +235,7 @@ public:
     }
 
     // Compute the function type and assign it to the function
-    decl->setValueType(FunctionType::get(paramTypes, returnType));
+    decl->setFunctionType(FunctionType::get(paramTypes, returnType));
 
     assert(!decl->getValueType()->hasLValue() &&
            "A function's type cannot contain LValues!");

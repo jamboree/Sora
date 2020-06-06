@@ -12,6 +12,7 @@
 #include "Sora/AST/Pattern.hpp"
 #include "Sora/AST/SourceFile.hpp"
 #include "Sora/AST/Stmt.hpp"
+#include "Sora/AST/Types.hpp"
 
 using namespace sora;
 
@@ -124,6 +125,8 @@ SourceLoc ParamDecl::getEndLoc() const {
     return tyLoc.getEndLoc();
   return getIdentifierLoc();
 }
+
+Type FuncDecl::getValueType() const { return type; }
 
 SourceLoc FuncDecl::getBegLoc() const { return funcLoc; }
 

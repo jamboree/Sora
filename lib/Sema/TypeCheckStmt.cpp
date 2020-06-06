@@ -49,8 +49,7 @@ public:
 
   void visitReturnStmt(ReturnStmt *stmt) {
     FuncDecl *fn = getCurrentFunction();
-    Type fnRetTy = fn->getReturnTypeLoc().getType();
-    assert(fnRetTy && "fn signature not checked yet?!");
+    Type fnRetTy = fn->getFunctionType()->getReturnType();
 
     // If the 'return' has an expression, check that its type is correct
     if (stmt->hasResult()) {

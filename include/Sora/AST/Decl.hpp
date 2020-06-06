@@ -27,6 +27,7 @@ class ASTWalker;
 class DiagnosticEngine;
 class PatternBindingDecl;
 class BlockStmt;
+class FunctionType;
 
 /// Kinds of Declarations
 enum class DeclKind : uint8_t {
@@ -366,7 +367,7 @@ class FuncDecl final : public ValueDecl, public DeclContext {
   SourceLoc funcLoc;
   ParamList *paramList = nullptr;
   BlockStmt *body = nullptr;
-  Type type;
+  FunctionType *type = nullptr;
   TypeLoc returnTypeLoc;
 
 public:
@@ -410,8 +411,11 @@ public:
   /// \returns true if the user wrote a return type for this function
   bool hasReturnType() const { return returnTypeLoc.hasTypeRepr(); }
 
-  void setValueType(Type type) { this->type = type; }
-  Type getValueType() const { return type; }
+  void setFunctionType(FunctionType *type) { this->type = type; }
+  FunctionType *getFunctionType() const { return type; }
+
+  /// \returns the type of this function.
+  Type getValueType() const;
 
   SourceLoc getFuncLoc() const { return funcLoc; }
 
