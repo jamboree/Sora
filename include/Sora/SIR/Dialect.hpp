@@ -10,9 +10,11 @@
 #include "Sora/SIR/Types.hpp"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Function.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 
 namespace mlir {
 namespace sir {

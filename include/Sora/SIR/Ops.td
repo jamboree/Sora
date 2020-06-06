@@ -9,6 +9,7 @@
 #define SIR_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -295,7 +296,7 @@ def BlockOp : SIROp<"block",
   >];
 
   let extraClassDeclaration = [{
-    mlir::Block &getEntryBlock() {
+    Block &getEntryBlock() {
       return *region().begin();
     }
   }];
@@ -321,6 +322,36 @@ def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseVoidConstantOp(parser, result); }];
+}
+
+//===- Default Return -----------------------------------------------------===//
+
+def DefaultReturnOp : SIROp<"default_return", [NoSideEffect, 
+    HasParent<"FuncOp">, ReturnLike, Terminator]> {
+
+  let summary = "default return operation";
+  let description = [{
+    The Default Return operation acts like a terminator for functions that do not
+    have an explicit return type.
+
+    This operation cannot be directly lowered, it has to be legalized: either
+    transformed into a std.return, or diagnosed as illegal.
+
+    Example:
+      sir.default_return
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result", [{ }]
+  >];
+
+  let extraClassDeclaration = [{
+    FuncOp getFuncOp() {
+      return getParentOfType<FuncOp>();
+    }
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
