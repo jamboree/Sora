@@ -21,9 +21,15 @@ class StmtGenerator : public SIRGeneratorBase,
 
 public:
   StmtGenerator(SIRGen &sirGen, mlir::OpBuilder &builder)
-      : SIRGeneratorBase(sirGen), builder(builder) {}
+      : SIRGeneratorBase(sirGen), builder(builder) {
+    func = builder.getInsertionBlock()
+               ->getParent()
+               ->getParentOfType<mlir::FuncOp>();
+    assert(func && "Not inserting in a function?!");
+  }
 
   mlir::OpBuilder &builder;
+  mlir::FuncOp func;
 
   using Visitor::visit;
 
@@ -45,7 +51,18 @@ public:
   }
 
   void visitReturnStmt(ReturnStmt *stmt) {
-    llvm_unreachable("Unimplemented - visitReturnStmt");
+    // if we have no result, then it's easy - just generate a return op.
+    if (!stmt->hasResult())
+      return (void)builder.create<mlir::ReturnOp>(getNodeLoc(stmt));
+
+    mlir::Value result = sirGen.genExpr(builder, stmt->getResult());
+
+    // If the function has no result (= we simplified the return type to void),
+    // discard the result.
+    if (func.getNumResults() == 0)
+      builder.create<mlir::ReturnOp>(getNodeLoc(stmt));
+    else
+      builder.create<mlir::ReturnOp>(getNodeLoc(stmt), result);
   }
 
   void visitBlockStmt(BlockStmt *stmt, bool isFree = true);

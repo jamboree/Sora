@@ -9,6 +9,7 @@
 
 #include "Sora/AST/Decl.hpp"
 #include "Sora/AST/SourceFile.hpp"
+#include "Sora/AST/Stmt.hpp"
 #include "Sora/AST/Types.hpp"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Types.h"
@@ -71,10 +72,11 @@ mlir::FuncOp SIRGen::getFuncOp(FuncDecl *func) {
 
 mlir::FuncOp SIRGen::genFunction(FuncDecl *func) {
   mlir::FuncOp funcOp = getFuncOp(func);
-  // FIXME: Is this the proper way to check if the body is empty?
+
   if (!funcOp.getBody().empty())
     return funcOp;
 
+  BlockStmt *body = func->getBody();
   mlir::Block *entryBlock = funcOp.addEntryBlock();
 
   mlir::OpBuilder builder(&mlirCtxt);
@@ -82,8 +84,20 @@ mlir::FuncOp SIRGen::genFunction(FuncDecl *func) {
 
   {
     BlockScope blockScope(*this);
-    genFunctionBody(builder, func->getBody());
+    genFunctionBody(builder, body);
   }
+
+  bool hasReturn = false;
+
+  if (!entryBlock->empty()) {
+    mlir::Block &lastBB = funcOp.getBlocks().back();
+    hasReturn = lastBB.back().hasTrait<mlir::OpTrait::ReturnLike>();
+  }
+
+  // If the function doesn't have an explicit return, add a default_return.
+  if (!hasReturn)
+    builder.create<sir::DefaultReturnOp>(
+        getFileLineColLoc(body->getRightCurlyLoc()));
 
   return funcOp;
 }

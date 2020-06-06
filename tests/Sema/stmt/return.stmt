@@ -65,3 +65,18 @@ func incorrect_2() -> &i32 {
   return null     // expect-error: cannot convert return expression of type 'null' to return type '&i32'
   return 0        // expect-error: cannot convert return expression of type 'i32' to return type '&i32'
 }
+
+func foo() {}
+
+func bar() { return }
+
+func baz() -> i32 {}
+
+func bux() -> i32 {
+  return 0
+}
+
+func qux() -> ((), ()) {
+  return ((), ())
+}
+

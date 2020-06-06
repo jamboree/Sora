@@ -36,13 +36,16 @@ func float_literals() {
 // CHECK-NEXT:     %c8_i32 = constant 8 : i32 loc("{{.*}}":12:3)
 // CHECK-NEXT:     %c9_i64 = constant 9 : i64 loc("{{.*}}":13:3)
 // CHECK-NEXT:     %c10_i64 = constant 10 : i64 loc("{{.*}}":14:3)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":15:1)
 // CHECK-NEXT:   } loc("{{.*}}":4:6)
 // CHECK-NEXT:   func @bool_literals() {
 // CHECK-NEXT:     %true = constant 1 : i1 loc("{{.*}}":18:3)
 // CHECK-NEXT:     %false = constant 0 : i1 loc("{{.*}}":19:3)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":20:1)
 // CHECK-NEXT:   } loc("{{.*}}":17:6)
 // CHECK-NEXT:   func @float_literals() {
 // CHECK-NEXT:     %cst = constant 0.000000e+00 : f32 loc("{{.*}}":23:3)
 // CHECK-NEXT:     %cst_0 = constant 1.000000e-01 : f64 loc("{{.*}}":24:3)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":25:1)
 // CHECK-NEXT:   } loc("{{.*}}":22:6)
 // CHECK-NEXT: }

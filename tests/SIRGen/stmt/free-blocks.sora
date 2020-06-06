@@ -48,5 +48,6 @@ func foo() {
 // CHECK-NEXT:       %c9_i32 = constant 9 : i32 loc("{{.*}}":23:5)
 // CHECK-NEXT:     } loc("{{.*}}":6:3)
 // CHECK-NEXT:     %c10_i32 = constant 10 : i32 loc("{{.*}}":25:3)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":26:1)
 // CHECK-NEXT:   } loc("{{.*}}":4:6)
 // CHECK-NEXT: }

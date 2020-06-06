@@ -18,5 +18,6 @@ func foo() {
 // CHECK-NEXT:     %c2_i32 = constant 2 : i32 loc("{{.*}}":8:14)
 // CHECK-NEXT:     %3 = sir.alloc_stack : !sir.pointer<i32> loc("{{.*}}":8:8)
 // CHECK-NEXT:     sir.store %c2_i32 : i32 into %3 : !sir.pointer<i32> loc("{{.*}}":8:8)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":9:1)
 // CHECK-NEXT:   } loc("{{.*}}":4:6)
 // CHECK-NEXT: }
