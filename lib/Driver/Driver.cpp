@@ -427,14 +427,13 @@ bool CompilerInstance::doSema(SourceFile &file) {
 bool CompilerInstance::doSIRGen(mlir::MLIRContext &mlirContext,
                                 mlir::ModuleOp &mlirModule, SourceFile &file) {
   performSIRGen(mlirContext, mlirModule, file, options.genDebugInfo);
-  bool success = true;
-  // FIXME: Once SIRGen is stable, uncomment this.
-/*
 #ifndef NDEBUG
-  success = mlir::succeeded(mlir::verify(mlirModule.getOperation()));
+  if (mlir::failed(mlir::verify(mlirModule.getOperation()))) {
+    diagnose(diag::sirgen_verification_failure);
+    return false;
+  }
 #endif
-*/
-  return success && !diagEng.hadAnyError();
+  return !diagEng.hadAnyError();
 }
 
 void CompilerInstance::emitMLIRModule(mlir::ModuleOp &mlirModule) {

@@ -51,7 +51,11 @@ ERROR(only_one_file_accepted,
   " (number of files given: %0)", ())
 
 // Output file
-ERROR(cannot_open_output_file, "cannot open output file '%0'", (StringRef))
+ERROR(cannot_open_output_file, "cannot open output file '%0'", (StringRef)) 
+
+// SIRGen
+ERROR(sirgen_verification_failure, 
+  "internal compiler error: SIRGen generated ill-formed MLIR", ())
 
 //===----------------------------------------------------------------------===//
 
