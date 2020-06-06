@@ -97,6 +97,12 @@ public:
 
   //===- Helpers/Conversion Functions -------------------------------------===//
 
+  /// \returns true if \p is a void, or void-like return type.
+  /// Void-like return types include tuple of void/void-like return types.
+  /// That way, silly things such as "-> ((), ((), ()))" are just lowered like
+  /// "-> void".
+  bool isVoidOrVoidLikeType(CanType type);
+
   /// \returns the Value that contains the address of \p decl.
   /// This value always has a sir::PointerType, and can be used with
   /// sir.load/sir.store.

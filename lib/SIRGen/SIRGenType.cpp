@@ -85,12 +85,12 @@ public:
     for (Type arg : type->getArgs())
       args.push_back(visit(arg));
 
-    // If the return type is 'void', don't generate a VoidType and just leave
-    // the results empty.
+    // If the return type is void, or void-like, don't generate a return type
+    // and leave the result set empty.
     Type returnType = type->getReturnType();
-    if (!returnType->is<VoidType>())
-      return mlir::FunctionType::get(args, visit(returnType), &mlirCtxt);
-    return mlir::FunctionType::get(args, {}, &mlirCtxt);
+    if (sirGen.isVoidOrVoidLikeType(returnType->getCanonicalType()))
+      return mlir::FunctionType::get(args, {}, &mlirCtxt);
+    return mlir::FunctionType::get(args, visit(returnType), &mlirCtxt);
   }
 
   mlir::Type visitLValueType(LValueType *type) {
@@ -109,6 +109,21 @@ public:
 } // namespace
 
 //===- SIRGen -------------------------------------------------------------===//
+
+bool SIRGen::isVoidOrVoidLikeType(CanType type) {
+  // void is obviously void-like.
+  if (type->isVoidType())
+    return true;
+  // tuples are void-like if their elements are.
+  if (TupleType *tuple = type->getAs<TupleType>()) {
+    for (Type tupleElt : tuple->getElements())
+      if (!isVoidOrVoidLikeType(CanType(tupleElt)))
+        return false;
+    return true;
+  }
+  // everything else isn't void-like.
+  return false;
+}
 
 mlir::Type SIRGen::getType(Type type) {
   assert(!type->hasNullType() && "Cannot lower Null Types");

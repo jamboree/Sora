@@ -37,6 +37,14 @@ func ref_tfoo() -> &(&mut i32, &mut i64) {}
 func fn_0(x: i32) -> i64 {}
 func fn_1(x: maybe u8) -> maybe u16 {}
 
+func voidlike_tuple0() -> ((), void) {}
+func voidlike_tuple1() -> (((), void), (void, ())) {}
+func voidlike_tuple2() -> (void, ((), void)) {}
+
+func nonvoidlike_tuple0() -> ((), &void) {}
+func nonvoidlike_tuple1() -> (((), maybe void), (void, ())) {}
+func nonvoidlike_tuple2() -> (void, ((), &void)) {}
+
 // CHECK:        func @void_t() {
 // CHECK:        func @i8_t() -> i8 {
 // CHECK:        func @i16_t() -> i16 {
@@ -63,3 +71,9 @@ func fn_1(x: maybe u8) -> maybe u16 {}
 // CHECK:        func @ref_tfoo() -> !sir.reference<tuple<!sir.reference<i32>, !sir.reference<i64>>> {
 // CHECK:        func @fn_0(%arg0: i32) -> i64 {
 // CHECK:        func @fn_1(%arg0: !sir.maybe<i8>) -> !sir.maybe<i16> {
+// CHECK:        func @voidlike_tuple0() {
+// CHECK:        func @voidlike_tuple1() {
+// CHECK:        func @voidlike_tuple2() {
+// CHECK:        func @nonvoidlike_tuple0() -> tuple<!sir.void, !sir.reference<!sir.void>> {
+// CHECK:        func @nonvoidlike_tuple1() -> tuple<tuple<!sir.void, !sir.maybe<!sir.void>>, tuple<!sir.void, !sir.void>> {
+// CHECK:        func @nonvoidlike_tuple2() -> tuple<!sir.void, tuple<!sir.void, !sir.reference<!sir.void>>> {
