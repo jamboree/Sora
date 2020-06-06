@@ -12,7 +12,7 @@ func @test() {
     sir.store %4#0 : i32 into %5 : !sir.pointer<i32>
     %6 = sir.load %5 : (!sir.pointer<i32>) -> i32
   }
-  return
+  sir.default_return
 }
 
 // CHECK:      module {
@@ -27,6 +27,6 @@ func @test() {
 // CHECK-NEXT:       sir.store %3#0 : i32 into %4 : !sir.pointer<i32>
 // CHECK-NEXT:       %5 = sir.load %4 : (!sir.pointer<i32>) -> i32
 // CHECK-NEXT:     }
-// CHECK-NEXT:     return
+// CHECK-NEXT:     sir.default_return
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
