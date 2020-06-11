@@ -212,6 +212,26 @@ public:
       CREATE_FAILURE(expr) << "Expression type cannot contain Type Variables!";
     if (type->hasErrorType())
       CREATE_FAILURE(expr) << "Expression type cannot contain Error Types!";
+
+    if (type->is<LValueType>()) {
+      ExprKind kind = expr->getKind();
+
+      auto isOk = [&] {
+        if (kind == ExprKind::DeclRef || kind == ExprKind::Discard ||
+            kind == ExprKind::TupleElement || kind == ExprKind::Paren)
+          return true;
+
+        if (UnaryExpr *unary = dyn_cast<UnaryExpr>(expr))
+          return unary->getOpKind() == UnaryOperatorKind::Deref;
+        return false;
+      };
+
+      // Only a few expressions should have LValue types. All other operations
+      // should load their operands and not produce LValues.
+      if (!isOk()) {
+        CREATE_FAILURE(expr) << "Expression should not have an LValue type!";
+      }
+    }
   }
 
   void checkValueDeclCommon(ValueDecl *decl) {
