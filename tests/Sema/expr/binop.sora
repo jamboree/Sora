@@ -284,6 +284,10 @@ func assign(p1: i32) {
     ref = &b
     ref = &m1           // expect-error: cannot assign value of type '&mut maybe i32' to type '&i32'
 
+    let mutRef: &mut i32
+    *mutRef = 0
+    *mutRef = *ref
+
     let mut emptyTuple = ()
     let mut voidVal: void 
     voidVal = emptyTuple
