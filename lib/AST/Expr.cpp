@@ -92,6 +92,10 @@ DeclRefExpr::DeclRefExpr(UnresolvedDeclRefExpr *udre, ValueDecl *decl)
          "Incorrect Resolution!");
 }
 
+bool DeclRefExpr::isFuncDeclRef() const {
+  return isa<FuncDecl>(decl);
+}
+
 APInt IntegerLiteralExpr::getValue(bool *overflows) const {
   Type type = getType();
   assert(type && type->is<IntegerType>());

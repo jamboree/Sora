@@ -279,6 +279,9 @@ public:
 
 /// Represents a resolved reference to an value. This is created by
 /// Semantic Analysis from UnresolvedDeclRefExprs.
+///
+/// When it references a variable or a parameter, it always has an LValue type,
+/// but it doesn't have one when it references a FuncDecl.
 class DeclRefExpr final : public Expr {
   SourceLoc identLoc;
   ValueDecl *decl;
@@ -293,6 +296,8 @@ public:
   DeclRefExpr(UnresolvedDeclRefExpr *udre, ValueDecl *decl);
 
   ValueDecl *getValueDecl() const { return decl; }
+
+  bool isFuncDeclRef() const;
 
   SourceLoc getBegLoc() const { return identLoc; }
   SourceLoc getEndLoc() const { return identLoc; }

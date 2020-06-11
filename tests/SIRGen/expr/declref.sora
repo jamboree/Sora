@@ -13,14 +13,14 @@ func varDecl() {
 
 // CHECK:      module @"{{.*}}" {
 // CHECK-NEXT:   func @varDecl() {
-// CHECK-NEXT:     %c0_i32 = constant 0 : i32 loc("{{.*}}":4:20)
-// CHECK-NEXT:     %0 = sir.alloc_stack : !sir.pointer<i32> loc("{{.*}}":4:11)
-// CHECK-NEXT:     sir.store %c0_i32 : i32 into %0 : !sir.pointer<i32> loc("{{.*}}":4:11)
-// CHECK-NEXT:     %c0_i32_0 = constant 0 : i32 loc("{{.*}}":5:13)
-// CHECK-NEXT:     %1 = sir.alloc_stack : !sir.pointer<i32> loc("{{.*}}":5:7)
-// CHECK-NEXT:     sir.store %c0_i32_0 : i32 into %1 : !sir.pointer<i32> loc("{{.*}}":5:7)
-// CHECK-NEXT:     %2 = sir.load %0 : (!sir.pointer<i32>) -> i32 loc("{{.*}}":7:3)
-// CHECK-NEXT:     %3 = sir.load %1 : (!sir.pointer<i32>) -> i32 loc("{{.*}}":8:3)
-// CHECK-NEXT:     sir.default_return loc("{{.*}}":9:1)
-// CHECK-NEXT:   } loc("{{.*}}":3:6)
+// CHECK-NEXT:     %c0_i32 = constant 0 : i32 loc("{{.*}}":5:20)
+// CHECK-NEXT:     %0 = sir.alloc_stack : !sir.pointer<i32> loc("{{.*}}":5:11)
+// CHECK-NEXT:     sir.store %c0_i32 : i32 into %0 : !sir.pointer<i32> loc("{{.*}}":5:11)
+// CHECK-NEXT:     %c0_i32_0 = constant 0 : i32 loc("{{.*}}":6:13)
+// CHECK-NEXT:     %1 = sir.alloc_stack : !sir.pointer<i32> loc("{{.*}}":6:7)
+// CHECK-NEXT:     sir.store %c0_i32_0 : i32 into %1 : !sir.pointer<i32> loc("{{.*}}":6:7)
+// CHECK-NEXT:     %2 = sir.load %0 : (!sir.pointer<i32>) -> i32 loc("{{.*}}":8:3)
+// CHECK-NEXT:     %3 = sir.load %1 : (!sir.pointer<i32>) -> i32 loc("{{.*}}":9:3)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":10:1)
+// CHECK-NEXT:   } loc("{{.*}}":4:6)
 // CHECK-NEXT: }

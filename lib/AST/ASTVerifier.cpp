@@ -380,8 +380,14 @@ void CheckedVerifierImpl::visitDiscardExpr(DiscardExpr *expr) {
 }
 
 void CheckedVerifierImpl::visitDeclRefExpr(DeclRefExpr *expr) {
-  if (!expr->getType()->is<LValueType>())
-    CREATE_FAILURE(expr) << "DeclRefExpr does not have an LValue Type";
+  bool isFn = isa<FuncDecl>(expr->getValueDecl());
+  if (!expr->getType()->is<LValueType>()) {
+    if (!isFn)
+      CREATE_FAILURE(expr) << "DeclRefExpr does not have an LValue Type";
+  }
+  else if (isFn)
+    CREATE_FAILURE(expr)
+        << "DeclRefExpr of FuncDecl should not have an LValue Type";
 }
 
 void CheckedVerifierImpl::visitTupleElementExpr(TupleElementExpr *expr) {

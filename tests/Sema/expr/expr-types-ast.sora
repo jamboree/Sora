@@ -154,8 +154,7 @@ func tuples() {
 // CHECK-NEXT:       LetDecl letLoc=line:33:3 equalLoc=line:33:9
 // CHECK:                VarDecl type=(i8, maybe i32, &mut usize) identifier=z identifierLoc=line:33:7 immutable
 // CHECK-NEXT:         CallExpr type=(i8, maybe i32, &mut usize) lParenLoc=line:33:14 rParenLoc=line:33:16 numArgs=1
-// CHECK-NEXT:           LoadExpr implicit type=(usize) -> (i8, maybe i32, &mut usize)
-// CHECK-NEXT:             DeclRefExpr type=@lvalue (usize) -> (i8, maybe i32, &mut usize) loc=line:33:11 decl='foo'@line:9:6
+// CHECK-NEXT:           DeclRefExpr type=(usize) -> (i8, maybe i32, &mut usize) loc=line:33:11 decl='foo'@line:9:6
 // CHECK-NEXT:           IntegerLiteralExpr type=usize loc=line:33:15 str='0' value=0
 // CHECK-NEXT:       LetDecl letLoc=line:35:3 equalLoc=line:35:16
 // CHECK:                  VarDecl type=bool identifier=cond identifierLoc=line:35:11 mutable

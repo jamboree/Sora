@@ -191,8 +191,14 @@ public:
     }
     assert(resolved->getValueType() && "ValueDecl type is null?");
 
+    Type type = resolved->getValueType();
+
+    // DeclRef have LValue types unless they're referencing functions.
+    if (!isa<FuncDecl>(resolved))
+      type = LValueType::get(type);
+
     DeclRefExpr *expr = new (ctxt) DeclRefExpr(udre, resolved);
-    expr->setType(LValueType::get(resolved->getValueType()));
+    expr->setType(type);
     return expr;
   }
 
@@ -438,16 +444,20 @@ Expr *ExprChecker::checkUnaryDereference(UnaryExpr *expr) {
 
 Expr *ExprChecker::checkUnaryAddressOf(UnaryExpr *expr) {
   Expr *subExpr = expr->getSubExpr();
-  // Check if we can take the address of the value
-  if (!subExpr->getType()->is<LValueType>()) {
+  Type subExprType = subExpr->getType();
+
+  // Check if we can take the address of the value. We can only take the address
+  // of LValues and Functions
+  if (!subExprType->is<LValueType>() && !subExprType->is<FunctionType>()) {
     diagnoseCannotTakeAddressOfExpr(expr, subExpr->ignoreParens());
     return nullptr;
   }
 
-  // The type of this expr is a reference type, mutable if the base is.
-  // Ignore LValues as well since we require that the operand is an LValue.
-  Type subExprType = expr->getSubExpr()->getType()->getRValueType();
-  expr->setType(ReferenceType::get(subExprType, isMutableLValue(subExpr)));
+  // The type of this expr is a reference type, mutable if the base is (it never
+  // is if it isn't an lvalue).
+  expr->setType(ReferenceType::get(
+      subExprType->getRValueType(),
+      subExprType->is<LValueType>() ? isMutableLValue(subExpr) : false));
   return expr;
 }
 

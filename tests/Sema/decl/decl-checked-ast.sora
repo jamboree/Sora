@@ -38,6 +38,6 @@ func foo() {
 // CHECK:                  LetDecl letLoc=line:13:8 equalLoc=line:13:16
 // CHECK:                        VarDecl type=u8 identifier=tmp identifierLoc=line:13:12 immutable
 // CHECK:                      DeclRefExpr type=@lvalue maybe u8 loc=line:13:18 decl='tmp'@line:12:9
-// CHECK:                        DeclRefExpr type=@lvalue (u8, &mut i64) -> maybe &i32 loc=line:14:7 decl='foo'@line:10:8
+// CHECK:                      DeclRefExpr type=(u8, &mut i64) -> maybe &i32 loc=line:14:7 decl='foo'@line:10:8
 // CHECK:                        DeclRefExpr type=@lvalue u8 loc=line:14:11 decl='tmp'@line:13:12
 // CHECK:                        DeclRefExpr type=@lvalue &mut i64 loc=line:14:16 decl='y'@line:10:19

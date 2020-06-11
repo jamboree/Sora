@@ -40,7 +40,7 @@ func nested(foo: i32, bar: i32) {
   nested2
 }
 
-// CHECK:                DeclRefExpr type=@lvalue () -> void loc=line:7:15 decl='foo'@line:6:6
+// CHECK:              DeclRefExpr type=() -> void loc=line:7:15 decl='foo'@line:6:6
 // CHECK:              DeclRefExpr type=@lvalue () -> void loc=line:8:5 decl='foo'@line:7:9
 // CHECK:                  DeclRefExpr type=@lvalue () -> void loc=line:10:19 decl='foo'@line:7:9
 // CHECK:                DeclRefExpr type=@lvalue () -> void loc=line:11:9 decl='foo'@line:10:13
@@ -50,10 +50,10 @@ func nested(foo: i32, bar: i32) {
 // CHECK:                      DeclRefExpr type=@lvalue maybe i32 loc=line:21:16 decl='x'@line:20:10
 // CHECK:                      DeclRefExpr type=@lvalue i32 loc=line:22:7 decl='x'@line:21:12
 // CHECK:                  DeclRefExpr type=@lvalue i32 loc=line:30:5 decl='foo'@line:28:16
-// CHECK:                      DeclRefExpr type=@lvalue (i32, i32) -> void loc=line:32:7 decl='nested'@line:27:6
-// CHECK:                      DeclRefExpr type=@lvalue (i32) -> void loc=line:33:7 decl='nested2'@line:28:8
-// CHECK:                      DeclRefExpr type=@lvalue () -> void loc=line:34:7 decl='nested3'@line:31:10
+// CHECK:                    DeclRefExpr type=(i32, i32) -> void loc=line:32:7 decl='nested'@line:27:6
+// CHECK-NEXT:               DeclRefExpr type=(i32) -> void loc=line:33:7 decl='nested2'@line:28:8
+// CHECK-NEXT:               DeclRefExpr type=() -> void loc=line:34:7 decl='nested3'@line:31:10
 // CHECK:              DeclRefExpr type=@lvalue i32 loc=line:37:3 decl='foo'@line:27:13
 // CHECK:              DeclRefExpr type=@lvalue i32 loc=line:38:3 decl='bar'@line:27:23
-// CHECK:              DeclRefExpr type=@lvalue (i32, i32) -> void loc=line:39:3 decl='nested'@line:27:6
-// CHECK:              DeclRefExpr type=@lvalue (i32) -> void loc=line:40:3 decl='nested2'@line:28:8
+// CHECK-NEXT:       DeclRefExpr type=(i32, i32) -> void loc=line:39:3 decl='nested'@line:27:6
+// CHECK-NEXT:       DeclRefExpr type=(i32) -> void loc=line:40:3 decl='nested2'@line:28:8
