@@ -9,6 +9,10 @@ func varDecl() {
   var
 }
 
+func fnDecl() {
+  fnDecl
+}
+
 // TODO: ParamDecl/FuncDecl tests
 
 // CHECK:      module @"{{.*}}" {
@@ -23,4 +27,8 @@ func varDecl() {
 // CHECK-NEXT:     %3 = sir.load %1 : (!sir.pointer<i32>) -> i32 loc("{{.*}}":9:3)
 // CHECK-NEXT:     sir.default_return loc("{{.*}}":10:1)
 // CHECK-NEXT:   } loc("{{.*}}":4:6)
+// CHECK-NEXT:   func @fnDecl() {
+// CHECK-NEXT:     %f = constant @fnDecl : () -> () loc("{{.*}}":13:3)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":14:1)
+// CHECK-NEXT:   } loc("{{.*}}":12:6)
 // CHECK-NEXT: }

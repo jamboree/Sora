@@ -87,14 +87,22 @@ mlir::Value ExprGenerator::visitDeclRefExpr(DeclRefExpr *expr) {
   // That way I can get rid of the Decl.hpp include.
   ValueDecl *vd = expr->getValueDecl();
 
+  /// This is an LValue (basically a pointer), so just return the value that
+  /// contains the address of the function.
   if (VarDecl *var = dyn_cast<VarDecl>(vd))
     return sirGen.getVarDeclAddress(var);
 
   if (ParamDecl *param = dyn_cast<ParamDecl>(vd))
     llvm_unreachable("visitDeclRefExpr - ParamDecl handling");
 
-  if (FuncDecl *func = dyn_cast<FuncDecl>(vd))
-    llvm_unreachable("visitDeclRefExpr - FuncDecl handling");
+  // If we get to this point, we want to generate an indirect call, so emit a
+  // constant.
+  if (FuncDecl *func = dyn_cast<FuncDecl>(vd)) {
+    mlir::FuncOp funcOp = sirGen.getFuncOp(func);
+    return builder.create<mlir::ConstantOp>(
+        getNodeLoc(expr), funcOp.getType(),
+        mlir::SymbolRefAttr::get(funcOp.getName(), &mlirCtxt));
+  }
 
   llvm_unreachable("Unknown ValueDecl kind!");
 }
