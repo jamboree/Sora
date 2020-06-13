@@ -15,6 +15,72 @@
 
 using namespace sora;
 
+//===- Helpers -----------------------------------------------------------===//
+
+/// \returns true if \p expr is an implicit conversion that needs codegen.
+bool needsCodeGen(ImplicitConversionExpr *expr) {
+  // Mut to Immut doesn't need codegen as there is no distinction between & and
+  // &mut in the IR.
+  return !isa<MutToImmutReferenceExpr>(expr);
+}
+
+/// \returns \p expr without parens and/or implicit conversions that don't need
+/// codegen.
+Expr *getCodeGenExpr(Expr *expr) {
+  // NOTE: The ASTVerifier enforces that implicit conversions never have
+  // ParenExpr as subexpression.
+
+  // First ignore parens.
+  expr = expr->ignoreParens();
+
+  // Then look at the implicit conversions inside.
+  while (auto *implConv = dyn_cast<ImplicitConversionExpr>(expr)) {
+    if (needsCodeGen(implConv))
+      break;
+    expr = implConv->getSubExpr();
+  }
+
+  return expr;
+}
+
+/// \returns true if \p expr has at least one meaningful implicit conversions.
+/// DTEs that don't have any can just be generated like tuples.
+bool hasMeaningfulImplicitConversions(DestructuredTupleExpr *expr) {
+  TupleExpr *tuple = cast<TupleExpr>(expr->getResultExpr());
+  for (Expr *elt : tuple->getElements())
+    if (!isa<DestructuredTupleExpr>(getCodeGenExpr(elt)))
+      return true;
+  return false;
+}
+
+/// This looks at \p expr and return each element of the expression.
+///   - For TupleExprs, stores each tuple element in \p elts.
+///   - For DestructureTupleExpr, stores each tuple element in \p elts iff no
+///   implicit conversion needs codegen (see \c needsCodeGen)
+///   - For everything else, just stores \p expr in \p elts.
+///
+/// Note that this doesn't use \c getCodeGenExpr on \p expr.
+void getExprElements(Expr *expr, SmallVectorImpl<Expr *> &elts) {
+  auto handleTuple = [&](TupleExpr *tuple) {
+    ArrayRef<Expr *> exprs = tuple->getElements();
+    elts.reserve(exprs.size());
+    elts.append(exprs.begin(), exprs.end());
+  };
+
+  // Tuples: Append elements to elts.
+  if (auto *tuple = dyn_cast<TupleExpr>(expr))
+    return handleTuple(tuple);
+
+  // DestructureTupleExpr: Act like tuples iff there is no meaningful implicit
+  // conversion.
+  if (auto *dte = dyn_cast<DestructuredTupleExpr>(expr))
+    if (!hasMeaningfulImplicitConversions(dte))
+      return handleTuple(cast<TupleExpr>(dte->getSubExpr()));
+
+  // Else, just store \p expr in \p elts.
+  elts.push_back(expr);
+}
+
 //===- ExprGenerator -----------------------------------------------------===//
 
 namespace {
@@ -50,12 +116,20 @@ public:
     return result;
   }
 
-  // UnaryExpr Helpers
-  mlir::Value genUnaryAddressOf(UnaryExpr *expr);
-  mlir::Value genUnaryNot(UnaryExpr *expr);
-  mlir::Value genUnaryLNot(UnaryExpr *expr);
-  mlir::Value genUnaryMinus(UnaryExpr *expr);
-  mlir::Value genUnaryPlus(UnaryExpr *expr);
+  /// Generates an address-of (&) operation on \p value.
+  mlir::Value genAddressOf(mlir::Location opLoc, mlir::Value value);
+  /// Generates a dereference (*) operation on \p value.
+  mlir::Value genDeref(mlir::Location opLoc, mlir::Value value);
+  /// Generates a bitwise not (~) operation on \p value.
+  mlir::Value genBitwiseNot(mlir::Location opLoc, mlir::Value value);
+  /// Generates a logical not (!) operation on \p value.
+  mlir::Value genLNot(mlir::Location opLoc, mlir::Value value);
+  /// Generates an unary minus (-) operation on \p value.
+  mlir::Value genUnaryMinus(mlir::Location opLoc, mlir::Value value);
+
+  /// Assigns \p rhs to \p lhs, using \p assignLoc as the loc of the store/set
+  /// operation, and returns the Value of the \p rhs.
+  mlir::Value genBasicAssign(Expr *lhs, mlir::Location assignLoc, Expr *rhs);
 
   // Visit Methods
   mlir::Value visitDeclRefExpr(DeclRefExpr *expr);
@@ -199,6 +273,8 @@ mlir::Value ExprGenerator::visitTupleElementExpr(TupleElementExpr *expr) {
   // on an LValue or not.
   // LValue tuple element should be a gep-like operation, others should be
   // extract_element-like.
+  // TODO: Once this is working, also add assignement tests in
+  // /test/SIRGen/expr/binary/simple-assigns.sora.
   llvm_unreachable("Unimplemented - visitTupleElementExpr");
 }
 
@@ -234,21 +310,63 @@ mlir::Value ExprGenerator::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   llvm_unreachable("Unimplemented - visitForceUnwrapExpr");
 }
 
+mlir::Value ExprGenerator::genBasicAssign(Expr *lhs, mlir::Location assignLoc,
+                                          Expr *rhs) {
+  lhs = getCodeGenExpr(lhs);
+  rhs = getCodeGenExpr(rhs);
+
+  // If the LHS has an LValue type, we can just store.
+  if (lhs->getType()->is<LValueType>()) {
+    // Sanity check: TupleExprs never have an LValue type.
+    assert(!isa<TupleExpr>(lhs) && "TupleExpr can never have an LValue type!");
+
+    mlir::Value destination = visit(lhs);
+    mlir::Value source = visit(rhs);
+
+    builder.create<sir::StoreOp>(assignLoc, source, destination);
+
+    return source;
+  }
+
+  // Handle tuples
+  if (auto *tuple = dyn_cast<TupleExpr>(lhs)) {
+    llvm_unreachable("Unimplemented - genBasicAssign - tuples");
+  }
+
+  llvm_unreachable("Unhandled assignement kind!");
+}
+
 mlir::Value ExprGenerator::visitBinaryExpr(BinaryExpr *expr) {
+  Expr *lhs = expr->getLHS();
+  Expr *rhs = expr->getRHS();
+  mlir::Location loc = getNodeLoc(expr);
+
+  if (expr->isAssignementOp()) {
+    if (expr->isCompoundAssignementOp())
+      llvm_unreachable(
+          "Unimplemented - visitBinaryExpr - isCompoundAssignementOp");
+    return genBasicAssign(lhs, loc, rhs);
+  }
   llvm_unreachable("Unimplemented - visitBinaryExpr");
 }
 
-mlir::Value ExprGenerator::genUnaryAddressOf(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - genUnaryAddressOf");
+mlir::Value ExprGenerator::genAddressOf(mlir::Location opLoc,
+                                        mlir::Value value) {
+  llvm_unreachable("Unimplemented - genAddressOf");
 }
 
-mlir::Value ExprGenerator::genUnaryNot(UnaryExpr *expr) {
-  llvm_unreachable("Unimplemented - genUnaryNot");
+mlir::Value ExprGenerator::genDeref(mlir::Location opLoc, mlir::Value value) {
+  // TODO: Once this is working, also add assignement tests in
+  // /test/SIRGen/expr/binary/simple-assigns.sora.
+  llvm_unreachable("Unimplemented - genDeref");
 }
 
-mlir::Value ExprGenerator::genUnaryLNot(UnaryExpr *expr) {
-  mlir::Location loc = getNodeLoc(expr);
-  mlir::Value value = visit(expr->getSubExpr());
+mlir::Value ExprGenerator::genBitwiseNot(mlir::Location opLoc,
+                                         mlir::Value value) {
+  llvm_unreachable("Unimplemented - genBitwiseNot");
+}
+
+mlir::Value ExprGenerator::genLNot(mlir::Location opLoc, mlir::Value value) {
   assert(value.getType().isInteger(1) && "Unexpected operand type for LNot!");
 
   // If the value is an ConstantIntOp, just swap its value instead of generating
@@ -261,9 +379,9 @@ mlir::Value ExprGenerator::genUnaryLNot(UnaryExpr *expr) {
 
   mlir::IntegerType intTy = value.getType().dyn_cast<mlir::IntegerType>();
   assert(intTy && "Not an integer type for Unary LNOT?!");
-  mlir::Value one = builder.create<mlir::ConstantIntOp>(loc, 1, intTy);
+  mlir::Value one = builder.create<mlir::ConstantIntOp>(opLoc, 1, intTy);
 
-  return builder.create<mlir::XOrOp>(loc, value, one);
+  return builder.create<mlir::XOrOp>(opLoc, value, one);
 }
 
 static mlir::Value genIntUnaryMinus(mlir::OpBuilder &builder,
@@ -297,38 +415,34 @@ static mlir::Value genFloatUnaryMinus(mlir::OpBuilder &builder,
   return builder.create<mlir::SubFOp>(loc, lhs, value);
 }
 
-mlir::Value ExprGenerator::genUnaryMinus(UnaryExpr *expr) {
-  mlir::Location loc = getNodeLoc(expr);
-  mlir::Value value = visit(expr->getSubExpr());
-
+mlir::Value ExprGenerator::genUnaryMinus(mlir::Location opLoc,
+                                         mlir::Value value) {
   if (auto intTy = value.getType().dyn_cast<mlir::IntegerType>())
-    return genIntUnaryMinus(builder, loc, value, intTy);
+    return genIntUnaryMinus(builder, opLoc, value, intTy);
   else if (auto fltTy = value.getType().dyn_cast<mlir::FloatType>())
-    return genFloatUnaryMinus(builder, loc, value, fltTy);
+    return genFloatUnaryMinus(builder, opLoc, value, fltTy);
   else
     llvm_unreachable("Unsupported type for Unary Minus!");
 }
 
-mlir::Value ExprGenerator::genUnaryPlus(UnaryExpr *expr) {
-  // Unary plus is syntactic sugar - it doesn't do anything.
-  return visit(expr->getSubExpr());
-}
-
 mlir::Value ExprGenerator::visitUnaryExpr(UnaryExpr *expr) {
+  mlir::Value value = visit(expr->getSubExpr());
+  mlir::Location loc = getLoc(expr->getOpLoc());
+
   switch (expr->getOpKind()) {
   case UnaryOperatorKind::AddressOf:
-    return genUnaryAddressOf(expr);
+    return genAddressOf(loc, value);
   case UnaryOperatorKind::Deref:
-    llvm_unreachable("This is an LValue and should have been handled by the "
-                     "LValueGenerator!");
+    return genDeref(loc, value);
   case UnaryOperatorKind::Not:
-    return genUnaryNot(expr);
+    return genBitwiseNot(loc, value);
   case UnaryOperatorKind::LNot:
-    return genUnaryLNot(expr);
+    return genLNot(loc, value);
   case UnaryOperatorKind::Minus:
-    return genUnaryMinus(expr);
+    return genUnaryMinus(loc, value);
   case UnaryOperatorKind::Plus:
-    return genUnaryPlus(expr);
+    // It's a no-op.
+    return value;
   default:
     llvm_unreachable("Unknown Unary Operator Kind");
   }
@@ -348,5 +462,5 @@ mlir::Value SIRGen::genExpr(mlir::OpBuilder &builder, Expr *expr) {
 mlir::Type SIRGen::getType(Expr *expr) { return getType(expr->getType()); }
 
 mlir::Location SIRGen::getNodeLoc(Expr *expr) {
-  return mlir::OpaqueLoc::get(expr, getFileLineColLoc(expr->getLoc()));
+  return mlir::OpaqueLoc::get(expr, getLoc(expr->getLoc()));
 }

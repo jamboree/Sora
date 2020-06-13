@@ -10,6 +10,7 @@
 #include "Sora/AST/Identifier.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/Common/LLVM.hpp"
+#include "Sora/Common/SourceLoc.hpp"
 #include "Sora/SIR/Dialect.hpp"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
@@ -129,7 +130,7 @@ public:
   /// Do not use this for an Op's location when generating IR for a node, use \c
   /// getNodeLoc instead.
   /// This returns mlir::UnknownLoc if debug info is disabled.
-  mlir::Location getFileLineColLoc(SourceLoc loc);
+  mlir::Location getLoc(SourceLoc loc);
 
   /// \returns the MLIR Type equivalent of \p type.
   /// Note that this can NOT lower types that contain Null types.
@@ -170,6 +171,8 @@ public:
   template <typename Ty> mlir::Location getNodeLoc(Ty &&value) {
     return sirGen.getNodeLoc(value);
   }
+
+  mlir::Location getLoc(SourceLoc loc) { return sirGen.getLoc(loc); }
 
   template <typename Ty> mlir::Type getType(Ty &&value) {
     return sirGen.getType(value);

@@ -106,5 +106,5 @@ void SIRGen::genFunctionBody(mlir::OpBuilder &builder, BlockStmt *stmt) {
 }
 
 mlir::Location SIRGen::getNodeLoc(Stmt *stmt) {
-  return mlir::OpaqueLoc::get(stmt, getFileLineColLoc(stmt->getLoc()));
+  return mlir::OpaqueLoc::get(stmt, getLoc(stmt->getLoc()));
 }

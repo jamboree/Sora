@@ -36,7 +36,7 @@ void SIRGen::genSourceFile(SourceFile &sf, mlir::ModuleOp &mlirModule) {
     mlirModule.push_back(genFunction(cast<FuncDecl>(decl)));
 }
 
-mlir::Location SIRGen::getFileLineColLoc(SourceLoc loc) {
+mlir::Location SIRGen::getLoc(SourceLoc loc) {
   if (!debugInfoEnabled)
     return mlir::UnknownLoc::get(&mlirCtxt);
 

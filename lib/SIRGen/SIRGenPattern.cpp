@@ -127,5 +127,5 @@ void SIRGen::genPattern(mlir::OpBuilder &builder, Pattern *pattern,
 }
 
 mlir::Location SIRGen::getNodeLoc(Pattern *pattern) {
-  return mlir::OpaqueLoc::get(pattern, getFileLineColLoc(pattern->getLoc()));
+  return mlir::OpaqueLoc::get(pattern, getLoc(pattern->getLoc()));
 }

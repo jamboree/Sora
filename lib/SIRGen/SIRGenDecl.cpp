@@ -97,11 +97,11 @@ mlir::FuncOp SIRGen::genFunction(FuncDecl *func) {
   // If the function doesn't have an explicit return, add a default_return.
   if (!hasReturn)
     builder.create<sir::DefaultReturnOp>(
-        getFileLineColLoc(body->getRightCurlyLoc()));
+        getLoc(body->getRightCurlyLoc()));
 
   return funcOp;
 }
 
 mlir::Location SIRGen::getNodeLoc(Decl *decl) {
-  return mlir::OpaqueLoc::get(decl, getFileLineColLoc(decl->getLoc()));
+  return mlir::OpaqueLoc::get(decl, getLoc(decl->getLoc()));
 }
