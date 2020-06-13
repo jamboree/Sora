@@ -174,6 +174,10 @@ public:
 
   //===- Visit Methods ----------------------------------------------------===//
 
+  void visitImplicitConversionExpr(ImplicitConversionExpr *expr);
+
+  void visitDestructuredTupleExpr(DestructuredTupleExpr *expr);
+
   void visitDiscardExpr(DiscardExpr *expr);
   void visitDeclRefExpr(DeclRefExpr *expr);
   void visitTupleElementExpr(TupleElementExpr *expr);
@@ -373,6 +377,35 @@ ASTVerificationFailure::~ASTVerificationFailure() {
 void BasicVerifierImpl::visitMaybeValuePattern(MaybeValuePattern *pattern) {}
 
 //===- CheckedVerifierImpl ------------------------------------------------===//
+
+void CheckedVerifierImpl::visitDestructuredTupleExpr(
+    DestructuredTupleExpr *expr) {
+  if (!isa<TupleExpr>(expr->getResultExpr()))
+    CREATE_FAILURE(expr) << "Result expression should always be a TupleExpr in "
+                            "DestructuredTupleExprs";
+
+  if (isa<TupleExpr>(expr->getSubExpr()))
+    CREATE_FAILURE(expr) << "Subexpression should never be a TupleExpr in "
+                            "DestructuredTupleExprs";
+
+  TupleExpr *result = cast<TupleExpr>(expr->getResultExpr());
+  for (Expr *elt : result->getElements()) {
+    if (!isa<DestructuredTupleElementExpr>(elt) &&
+        !isa<ImplicitConversionExpr>(elt))
+      CREATE_FAILURE(expr)
+          << "The result tuple of DestructuredTupleExprs should only contain "
+             "DestructuredTupleElementExprs or ImplicitConversionExprs";
+  }
+}
+
+void CheckedVerifierImpl::visitImplicitConversionExpr(
+    ImplicitConversionExpr *expr) {
+  // Implicit conversions should always be inserted inside ParenExprs, never
+  // outside.
+  if (isa<ParenExpr>(expr->getSubExpr()))
+    CREATE_FAILURE(expr) << "ImplicitConversionExpr should never have "
+                            "ParenExprs as subexpression";
+}
 
 void CheckedVerifierImpl::visitDiscardExpr(DiscardExpr *expr) {
   if (!expr->getType()->is<LValueType>())
