@@ -27,19 +27,21 @@ class DiagnosticEngine;
 class InFlightDiagnostic;
 class SourceManager;
 
-/// The unique identifier of a diagnostic
-enum class DiagID : uint32_t;
-
-/// Wrapper around a DiagID with additional template parameter describing the
-/// type of the arguments required by the diagnostic.
+/// Represent a diagnostic string with its kind and argument types as template
+/// parameters.
 ///
-/// This is a helpful tool because it allows diagnostics to be mostly type-safe,
-/// ensuring that no formatting error can occur due to mismatched types.
+/// This should usually be passed by const-reference.
 ///
-/// FIXME: Maybe this can have a better name?
+/// This is a helpful tool because it allows diagnostics to be type-safe,
+/// reducing the likelihood of a formatting error due to incorrect argument
+/// count/types.
 template <typename... ArgTypes> struct TypedDiag {
-  /// The unique id of the diagnostic
-  DiagID id;
+  const DiagnosticKind kind;
+  const char *const str;
+
+  TypedDiag(DiagnosticKind kind, const char *str) : kind(kind), str(str) {
+    assert(str && "Diagnostic string cannot be null!");
+  }
 };
 
 namespace detail {
@@ -121,7 +123,7 @@ public:
   /// Emits a \p diag at \p loc with \p args
   template <typename... Args>
   InFlightDiagnostic
-  diagnose(BufferID buffer, TypedDiag<Args...> diag,
+  diagnose(BufferID buffer, const TypedDiag<Args...> &diag,
            typename detail::PassArgument<Args>::type... args) {
     return diagnose(getLocForDiag(buffer), diag, std::forward(args)...);
   }
@@ -129,7 +131,7 @@ public:
   /// Emits a \p diag at \p loc with \p args
   template <typename... Args>
   InFlightDiagnostic
-  diagnose(SourceLoc loc, TypedDiag<Args...> diag,
+  diagnose(SourceLoc loc, const TypedDiag<Args...> &diag,
            typename detail::PassArgument<Args>::type... args) {
     assert(!activeDiagnostic.hasValue() &&
            "A diagnostic is already in-flight!");
@@ -187,11 +189,6 @@ private:
   /// function with the argument.
   using ArgProviderFn = std::function<std::string()>;
 
-  /// \returns the kind of diagnostic of \p id depending on the current
-  /// state of this DiagnosticEngine. Returns "None" if the diagnostic
-  /// should not be emitted.
-  Optional<DiagnosticKind> getDiagnosticKind(DiagID id);
-
   /// Method that should be called when a diagnostic of kind \p kind
   /// is about to be emitted.
   void actOnDiagnosticEmission(DiagnosticKind kind);
@@ -207,10 +204,9 @@ private:
   /// \returns true if we have an active diagnostic.
   bool hasActiveDiagnostic() const { return activeDiagnostic.hasValue(); }
 
-  /// \returns the diagnostic string of the diagnostic \p id, formatted using \p
-  /// providers.
-  std::string getFormattedDiagnosticString(DiagID id,
-                                           ArrayRef<ArgProviderFn> providers);
+  /// Formats \p diagStr using \p providers and returns the result.
+  std::string formatDiagnosticString(const char *diagStr,
+                                     ArrayRef<ArgProviderFn> providers);
 
   /// The Diagnostic Consumer
   std::unique_ptr<DiagnosticConsumer> consumer = nullptr;
@@ -222,18 +218,20 @@ private:
 
     /// Constructor for diagnostics with arguments
     template <typename... Args>
-    DiagnosticData(TypedDiag<Args...> diag, SourceLoc loc,
+    DiagnosticData(const TypedDiag<Args...> &diag, SourceLoc loc,
                    typename detail::PassArgument<Args>::type... args)
-        : id(diag.id), loc(loc) {
+        : str(diag.str), kind(diag.kind), loc(loc) {
       argProviders = {std::bind(DiagnosticArgument<Args>::format, args)...};
     }
 
     /// Constructor for diagnostics with no arguments
     template <typename... Args>
-    DiagnosticData(TypedDiag<> diag, SourceLoc loc) : id(diag.id), loc(loc) {}
+    DiagnosticData(const TypedDiag<> &diag, SourceLoc loc)
+        : str(diag.str), kind(diag.kind), loc(loc) {}
 
     SmallVector<ArgProviderFn, 4> argProviders;
-    const DiagID id;
+    const char *str;
+    const DiagnosticKind kind;
     SmallVector<FixIt, 2> fixits;
     const SourceLoc loc;
     SmallVector<CharSourceRange, 2> ranges;

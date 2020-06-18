@@ -105,7 +105,7 @@ public:
   /// \param ctxt the ASTContext
   /// \param toType the destination type - it can not contain LValues.
   /// \param expr the expression - it must not have LValues outside of
-  ///        LoadExprs! 
+  ///        LoadExprs!
   /// \returns the expr that should take \p expr's place in the AST.
   Expr *tryCoerceExpr(ConstraintSystem &cs, Expr *expr, Type toType);
 
@@ -162,7 +162,7 @@ public:
   /// Emits a diagnostic at \p loc
   template <typename... Args>
   InFlightDiagnostic
-  diagnose(SourceLoc loc, TypedDiag<Args...> diag,
+  diagnose(SourceLoc loc, const TypedDiag<Args...> &diag,
            typename detail::PassArgument<Args>::type... args) {
     assert(loc &&
            "TypeChecker can't emit diagnostics without valid SourceLocs");

@@ -38,7 +38,10 @@ TEST(DiagnosticEngineTest, diagnose) {
   DiagnosticEngine diagEngine(srcMgr);
   diagEngine.createConsumer<PrintingDiagnosticConsumer>(stream);
 
-  diagEngine.diagnose(loc, diag::unknown_arg, "Pierre")
+  TypedDiag<StringRef> testDiag(DiagnosticKind::Error,
+                                "this is a test for '%0'");
+
+  diagEngine.diagnose(loc, testDiag, "Pierre")
       .highlightChars(additionalRange)
       .fixitInsert(ins, "Incredibely")
       .fixitReplace(wordRange, "Hyperactive");
@@ -46,7 +49,7 @@ TEST(DiagnosticEngineTest, diagnose) {
   stream.str();
 
   ASSERT_NE(output.size(), 0) << "No Output.";
-  EXPECT_EQ(output, "some_file.sora:1:5: error: unknown argument 'Pierre'\n"
+  EXPECT_EQ(output, "some_file.sora:1:5: error: this is a test for 'Pierre'\n"
                     "The Lazy Brown Fox Jumps Over The Lazy Dog\n"
                     "    ^~~~\n"
                     "   Incredibely Hyperactive\n");
@@ -73,7 +76,10 @@ TEST(DiagnosticEngineTest, fixitRemove) {
   DiagnosticEngine diagEngine(srcMgr);
   diagEngine.createConsumer<PrintingDiagnosticConsumer>(stream);
 
-  diagEngine.diagnose(loc, diag::unknown_arg, "Pierre")
+  TypedDiag<StringRef> testDiag(DiagnosticKind::Error,
+                                "this is a test for '%0'");
+
+  diagEngine.diagnose(loc, testDiag, "Pierre")
       .fixitRemove(foo)   // should remove foo + extra whitespace
       .fixitRemove(bar)   // should remove bar + extra whitespace
       .fixitRemove(a)     // should remove only a
@@ -82,7 +88,7 @@ TEST(DiagnosticEngineTest, fixitRemove) {
   stream.str();
 
   ASSERT_NE(output.size(), 0) << "No Output.";
-  EXPECT_EQ(output, "some_file.sora:1:1: error: unknown argument 'Pierre'\n"
+  EXPECT_EQ(output, "some_file.sora:1:1: error: this is a test for 'Pierre'\n"
                     "foo  bar  a* a+ \n"
                     "^~~~ ~~~~ ~   ~\n"
                     "              \n");

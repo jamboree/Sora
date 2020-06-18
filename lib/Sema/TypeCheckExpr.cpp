@@ -287,13 +287,14 @@ public:
   }
 
   void diagnoseCannotTakeAddressOfExpr(UnaryExpr *expr, Expr *subExpr) {
-    TypedDiag<> diag;
+    SourceLoc loc = subExpr->getLoc();
+    InFlightDiagnostic diag;
+
     if (isa<AnyLiteralExpr>(subExpr))
-      diag = diag::cannot_take_address_of_literal;
-    // FIXME: Make this diagnostic a bit more precise.
+      diag = diagnose(loc, diag::cannot_take_address_of_literal);
     else
-      diag = diag::cannot_take_address_of_a_temporary;
-    diagnose(subExpr->getLoc(), diag).highlight(expr->getOpLoc());
+      diag = diagnose(loc, diag::cannot_take_address_of_a_temporary);
+    diag.highlight(expr->getOpLoc());
   }
 
   void diagnoseCannotTakeAddressOfFunc(UnaryExpr *expr, DeclRefExpr *subExpr,

@@ -296,7 +296,7 @@ public:
   /// Emits a diagnostic at \p tok's location.
   template <typename... Args>
   InFlightDiagnostic
-  diagnose(const Token &tok, TypedDiag<Args...> diag,
+  diagnose(const Token &tok, const TypedDiag<Args...> &diag,
            typename detail::PassArgument<Args>::type... args) {
     return diagnose(tok.getLoc(), diag, args...);
   }
@@ -304,7 +304,7 @@ public:
   /// Emits a diagnostic at \p loc
   template <typename... Args>
   InFlightDiagnostic
-  diagnose(SourceLoc loc, TypedDiag<Args...> diag,
+  diagnose(SourceLoc loc, const TypedDiag<Args...> &diag,
            typename detail::PassArgument<Args>::type... args) {
     assert(loc && "Parser can't emit diagnostics without SourceLocs");
     return diagEng.diagnose<Args...>(loc, diag, args...);
@@ -316,7 +316,7 @@ public:
   /// consumed by the parser.
   template <typename... Args>
   InFlightDiagnostic
-  diagnoseExpected(TypedDiag<Args...> diag,
+  diagnoseExpected(const TypedDiag<Args...> &diag,
                    typename detail::PassArgument<Args>::type... args) {
     SourceLoc loc;
     if (tok.isAtStartOfLine() && prevTokPastTheEnd)

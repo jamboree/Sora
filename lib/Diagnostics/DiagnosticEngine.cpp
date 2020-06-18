@@ -17,38 +17,14 @@ namespace sora {
 #define SORA_FWD_DECL(X) X;
 #include "Sora/Diagnostics/DiagnosticsAll.def"
 
-// Define the DiagID enum.
-enum class DiagID : uint32_t {
-#define DIAG(KIND, ID, TEXT, SIGNATURE) ID,
-#include "Sora/Diagnostics/DiagnosticsAll.def"
-};
-
-// Define & Initialize all diagnostic objects
+// Define all diagnostic objects.
 namespace diag {
 #define DIAG(KIND, ID, TEXT, SIGNATURE)                                        \
-  detail::TypedDiagHelper<void SIGNATURE>::type ID = {DiagID::ID};
+  detail::TypedDiagHelper<void SIGNATURE>::type ID = {DiagnosticKind::KIND,    \
+                                                      TEXT};
 #include "Sora/Diagnostics/DiagnosticsAll.def"
 } // namespace diag
 } // namespace sora
-
-namespace {
-/// Struct containing the information about a diagnostic.
-struct DiagnosticData {
-  const char *string;
-  DiagnosticKind kind;
-};
-
-/// Array containing information about every diagnostic.
-const constexpr DiagnosticData diagnosticData[] = {
-#define DIAG(KIND, ID, STRING, SIGNATURE) {STRING, DiagnosticKind::KIND},
-#include "Sora/Diagnostics/DiagnosticsAll.def"
-};
-
-/// \returns the default kind of a diagnostic
-DiagnosticKind getDefaultDiagnosticKind(DiagID id) {
-  return diagnosticData[(uint32_t)id].kind;
-}
-} // namespace
 
 DiagnosticEngine::DiagnosticData &InFlightDiagnostic::getDiagnosticData() {
   assert(isActive() && "Diagnostic isn't active!");
@@ -154,18 +130,6 @@ SourceLoc DiagnosticEngine::getLocForDiag(BufferID buffer) const {
   return srcMgr.getBufferCharSourceRange(buffer).getBegin();
 }
 
-Optional<DiagnosticKind> DiagnosticEngine::getDiagnosticKind(DiagID id) {
-  // If all diagnostics are to be ignored, don't even bother.
-  if (ignoreAll)
-    return None;
-  // Find the default kind of this diagnostic.
-  auto kind = getDefaultDiagnosticKind(id);
-  // Promote to error if needed.
-  if (warningsAreErrors && (kind == DiagnosticKind::Warning))
-    return DiagnosticKind::Error;
-  return kind;
-}
-
 void DiagnosticEngine::actOnDiagnosticEmission(DiagnosticKind kind) {
   if (kind == DiagnosticKind::Error)
     errorOccured = true;
@@ -207,21 +171,25 @@ void replaceArgument(std::string &str, std::size_t index,
 void DiagnosticEngine::emit() {
   assert(activeDiagnostic.hasValue() && "No active diagnostic!");
 
-  // Fetch the Diagnostic Kind, if it's null, abort the diag.
-  DiagnosticData &diagData = *activeDiagnostic;
-  auto optDiagKind = getDiagnosticKind(diagData.id);
-  if (!optDiagKind.hasValue()) {
+  if (ignoreAll) {
     abort();
     return;
   }
 
+  DiagnosticData &diagData = *activeDiagnostic;
+
+  // Promote the diagnostic to an error if needed.
+  DiagnosticKind kind = diagData.kind;
+  if (warningsAreErrors && (kind == DiagnosticKind::Warning))
+    kind = DiagnosticKind::Error;
+
   // Format the diagnsotic
   std::string diagStr =
-      getFormattedDiagnosticString(diagData.id, diagData.argProviders);
+      formatDiagnosticString(diagData.str, diagData.argProviders);
 
   // Create the diagnostic object
-  Diagnostic diag(diagStr, optDiagKind.getValue(), diagData.loc,
-                  diagData.ranges, diagData.fixits);
+  Diagnostic diag(diagStr, kind, diagData.loc, diagData.ranges,
+                  diagData.fixits);
 
   // Feed it to the consumer if there's one
   if (consumer)
@@ -233,9 +201,9 @@ void DiagnosticEngine::emit() {
 void DiagnosticEngine::abort() { activeDiagnostic.reset(); }
 
 /// \returns the diagnostic string for \p id, formatted with \p providers
-std::string DiagnosticEngine::getFormattedDiagnosticString(
-    DiagID id, ArrayRef<DiagnosticEngine::ArgProviderFn> providers) {
-  std::string str = StringRef(diagnosticData[(uint32_t)id].string).str();
+std::string DiagnosticEngine::formatDiagnosticString(
+    const char *diagStr, ArrayRef<DiagnosticEngine::ArgProviderFn> providers) {
+  std::string str = diagStr;
   for (std::size_t k = 0, size = providers.size(); k < size; ++k)
     replaceArgument(str, k, providers[k]());
   return str;

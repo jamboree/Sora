@@ -134,7 +134,7 @@ public:
 
   /// Utility function to emit CompilerInstance diagnostics.
   template <typename... Args>
-  void diagnose(TypedDiag<Args...> diag,
+  void diagnose(const TypedDiag<Args...> &diag,
                 typename detail::PassArgument<Args>::type... args) {
     diagEng.diagnose<Args...>(SourceLoc(), diag, args...);
   }
