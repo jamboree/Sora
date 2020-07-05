@@ -17,6 +17,23 @@
 
 using namespace sora;
 
+//===- Helpers ------------------------------------------------------------===//
+
+static void setTuplePatternType(ASTContext &ctxt, TuplePattern *pattern) {
+  // The type of this pattern is an tuple of its element's types.
+  assert(pattern->getNumElements() != 1 &&
+         "Single Element Tuples Shouldn't Exist!");
+  SmallVector<Type, 8> eltsTypes;
+  for (Pattern *elt : pattern->getElements())
+    eltsTypes.push_back(elt->getType());
+  pattern->setType(TupleType::get(ctxt, eltsTypes));
+}
+
+static void setMaybeValuePatternType(MaybeValuePattern *pattern) {
+  // The pattern has a "maybe T" type where T is the type of the subpattern.
+  pattern->setType(MaybeType::get(pattern->getSubPattern()->getType()));
+}
+
 //===- PatternChecker -----------------------------------------------------===//
 
 namespace {
@@ -54,8 +71,9 @@ public:
 
   void visitVarPattern(VarPattern *pattern);
   void visitDiscardPattern(DiscardPattern *pattern);
-  void visitMutPattern(MutPattern *pattern);
-  void visitParenPattern(ParenPattern *pattern);
+  void visitTransparentPattern(TransparentPattern *pattern){
+      /* no-op, type is automatically fetched from the subpattern */
+  };
   void visitTuplePattern(TuplePattern *pattern);
   void visitTypedPattern(TypedPattern *pattern);
   void visitMaybeValuePattern(MaybeValuePattern *pattern);
@@ -71,34 +89,19 @@ void PatternChecker::visitDiscardPattern(DiscardPattern *pattern) {
   pattern->setType(cs.createGeneralTypeVariable());
 }
 
-void PatternChecker::visitMutPattern(MutPattern *pattern) {
-  // This pattern is transparent: its type is simply the type of its subpattern.
-  pattern->setType(pattern->getSubPattern()->getType());
-}
-
-void PatternChecker::visitParenPattern(ParenPattern *pattern) {
-  // This pattern is transparent: its type is simply the type of its subpattern.
-  pattern->setType(pattern->getSubPattern()->getType());
-}
-
 void PatternChecker::visitTuplePattern(TuplePattern *pattern) {
-  // The type of this pattern is an tuple of its element's types.
-  assert(pattern->getNumElements() != 1 &&
-         "Single Element Tuples Shouldn't Exist!");
-  SmallVector<Type, 8> eltsTypes;
-  for (Pattern *elt : pattern->getElements())
-    eltsTypes.push_back(elt->getType());
-  pattern->setType(TupleType::get(ctxt, eltsTypes));
+  setTuplePatternType(ctxt, pattern);
 }
 
 void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
   Type subPatType = pattern->getSubPattern()->getType();
 
-  Type type = tc.resolveTypeRepr(pattern->getTypeRepr(), getSourceFile());
-  pattern->setType(type);
+  TypeLoc &typeLoc = pattern->getTypeLoc();
+  tc.resolveTypeLoc(typeLoc, getSourceFile());
 
   // If the type couldn't be resolved successfully, bind every type variable to
   // the error type and stop.
+  Type type = pattern->getType();
   if (type->hasErrorType()) {
     cs.bindAllToErrorType(subPatType);
     return;
@@ -109,9 +112,8 @@ void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
     return;
 
   // Diagnose the error, highlighting the subpattern & typerepr fully.
-  diagnose(pattern->getTypeRepr()->getLoc(), diag::cannot_convert_pattern,
-           subPatType, type)
-      .highlight(pattern->getTypeRepr()->getSourceRange())
+  diagnose(typeLoc.getLoc(), diag::cannot_convert_pattern, subPatType, type)
+      .highlight(typeLoc.getSourceRange())
       .highlight(pattern->getSubPattern()->getSourceRange());
 
   // Bind everything to the error type so we don't complain about this again.
@@ -119,13 +121,20 @@ void PatternChecker::visitTypedPattern(TypedPattern *pattern) {
 }
 
 void PatternChecker::visitMaybeValuePattern(MaybeValuePattern *pattern) {
-  // The pattern has a "maybe T" type where T is the type of the subpattern.
-  pattern->setType(MaybeType::get(pattern->getSubPattern()->getType()));
+  setMaybeValuePatternType(pattern);
 }
 
 //===- PatternCheckerEpilogue ---------------------------------------------===//
+// This class performs the epilogue of pattern type-checking. The visit methods
+// will simplify the types of the patterns, or recompute them when needed. This
+// will also trigger type-checking of VarDecls and set their types.
+//
+// Note that inference errors are only emitted for the Discard and Var patterns.
+//===----------------------------------------------------------------------===//
 
-class PatternCheckerEpilogue : public ASTCheckerBase, public ASTWalker {
+class PatternCheckerEpilogue : public ASTCheckerBase,
+                               public ASTWalker,
+                               public PatternVisitor<PatternCheckerEpilogue> {
 public:
   ConstraintSystem &cs;
   const bool canEmitInferenceErrors;
@@ -135,31 +144,16 @@ public:
       : ASTCheckerBase(tc), cs(cs),
         canEmitInferenceErrors(canEmitInferenceErrors) {}
 
-  void simplifyTypeOfPattern(Pattern *pattern) {
-    Type type = pattern->getType();
-    assert(type && "untyped pattern");
-    if (!type->hasTypeVariable())
-      return;
-
+  /// Simplifies \p type, returning true on success and false when an inference
+  /// error occured. The type is simplified in-place.
+  bool simplifyPatternType(Type &type) {
     bool wasDiagnosable = canDiagnose(type);
     bool isAmbiguous = false;
     type = cs.simplifyType(type, &isAmbiguous);
-    pattern->setType(type);
+    return !isAmbiguous || !(wasDiagnosable && canEmitInferenceErrors);
+  }
 
-    // Return if there was no error, if we can't diagnose this.
-    if (!isAmbiguous || !(wasDiagnosable && canEmitInferenceErrors))
-      return;
-
-    // We only complain about inference errors on VarPattern & DiscardPatterns.
-    if (!isa<VarPattern>(pattern) && !isa<DiscardPattern>(pattern))
-      return;
-
-    StringRef patternName;
-    if (isa<DiscardPattern>(pattern))
-      patternName = "_";
-    else
-      patternName = cast<VarPattern>(pattern)->getIdentifier().c_str();
-
+  void diagnoseAmbiguousPatternType(Pattern *pattern, StringRef patternName) {
     diagnose(pattern->getLoc(),
              diag::type_of_pattern_is_ambiguous_without_more_ctxt, patternName);
     diagnose(pattern->getLoc(), diag::add_type_annot_to_give_pattern_a_type,
@@ -167,8 +161,48 @@ public:
         .fixitInsertAfter(pattern->getEndLoc(), ": <type>");
   }
 
+  void visitVarPattern(VarPattern *pattern) {
+    Type type = pattern->getType();
+    if (simplifyPatternType(type)) {
+      pattern->setType(type);
+      return;
+    }
+
+    diagnoseAmbiguousPatternType(
+        pattern, pattern->getVarDecl()->getIdentifier().c_str());
+    pattern->setType(ctxt.errorType);
+  }
+  void visitDiscardPattern(DiscardPattern *pattern) {
+    Type type = pattern->getType();
+    if (simplifyPatternType(type)) {
+      pattern->setType(type);
+      return;
+    }
+
+    diagnoseAmbiguousPatternType(pattern, "_");
+    pattern->setType(ctxt.errorType);
+  }
+
+  void visitTuplePattern(TuplePattern *pattern) {
+    setTuplePatternType(ctxt, pattern);
+  }
+
+  void visitTransparentPattern(TransparentPattern *pattern){
+      /* no-op, type will be automatically updated when the subpattern is */
+  };
+
+  void visitTypedPattern(TypedPattern *pattern) {
+    llvm_unreachable(
+        "TypedPatterns should never have TypeVariables as their type!");
+  }
+
+  void visitMaybeValuePattern(MaybeValuePattern *pattern) {
+    setMaybeValuePatternType(pattern);
+  }
+
   bool walkToPatternPost(Pattern *pattern) override {
-    simplifyTypeOfPattern(pattern);
+    if (pattern->getType()->hasTypeVariable())
+      visit(pattern);
 
     if (VarPattern *varPat = dyn_cast<VarPattern>(pattern)) {
       VarDecl *varDecl = varPat->getVarDecl();

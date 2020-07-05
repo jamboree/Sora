@@ -35,14 +35,23 @@ enum class PatternKind : uint8_t {
 #include "Sora/AST/PatternNodes.def"
 };
 
-/// Base class for every Pattern node
+/// Base class for every Pattern node.
+///
+/// This is a fairly simple common base which is, in a way, similar to Expr with
+/// one major difference: the type isn't stored in the base class, but inside
+/// the derived classes. This means that Pattern does not offer a "setType"
+/// method like Expr does. This has the added advantage that some Patterns don't
+/// have to store a type at all since it's always the type of the subpattern
+/// (see TransparentPatterns), it also allows TypedPattern to store the type
+/// only once in its TypeLoc. This makes the storage of the Type as efficient as
+/// it can be.
+/// (n.b. Such a thing isn't really possible/worthwhile for the Expr tree which
+/// is much larger, and whose types can be updated much more often (due to Type
+/// inference).
 class alignas(PatternAlignement) Pattern {
   // Disable vanilla new/delete for patterns
   void *operator new(size_t) noexcept = delete;
   void operator delete(void *)noexcept = delete;
-
-  /// The type of the pattern
-  Type type;
 
 protected:
   /// Number of bits needed for PatternKind
@@ -106,9 +115,8 @@ public:
   void setImplicit(bool value = true) { bits.Pattern.isImplicit = value; }
   bool isImplicit() const { return bits.Pattern.isImplicit; }
 
-  bool hasType() const { return !type.isNull(); }
-  Type getType() const { return type; }
-  void setType(Type type) { this->type = type; }
+  bool hasType() const { return !getType().isNull(); }
+  Type getType() const;
 
   /// Skips parentheses around this Pattern: If this is a ParenPattern, returns
   /// getSubPattern()->ignoreParens(), else returns this.
@@ -159,12 +167,16 @@ static_assert(sizeof(Pattern) <= 16, "Pattern is too big!");
 /// BraceStmt.
 class VarPattern final : public Pattern {
   VarDecl *const varDecl = nullptr;
+  Type type;
 
 public:
   VarPattern(VarDecl *varDecl) : Pattern(PatternKind::Var), varDecl(varDecl) {}
 
   VarDecl *getVarDecl() const { return varDecl; }
   Identifier getIdentifier() const;
+
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
 
   SourceLoc getBegLoc() const;
   SourceLoc getEndLoc() const;
@@ -178,9 +190,13 @@ public:
 /// It is spelled '_'.
 class DiscardPattern final : public Pattern {
   SourceLoc loc;
+  Type type;
 
 public:
   DiscardPattern(SourceLoc loc) : Pattern(PatternKind::Discard), loc(loc) {}
+
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
 
   SourceLoc getBegLoc() const { return loc; }
   SourceLoc getEndLoc() const { return loc; }
@@ -190,24 +206,39 @@ public:
   }
 };
 
-/// Represents a "mut" pattern which indicates that, in the following pattern,
-/// every variable introduced should be mutable.
-class MutPattern final : public Pattern {
-  SourceLoc mutLoc;
+/// Common base class for patterns that are considered "transparent": patterns
+/// that only contain a subpattern and always have its type: fetching the type
+/// of this pattern is always equivalent to fetching the type of its subpattern!
+class TransparentPattern : public Pattern {
   Pattern *subPattern = nullptr;
 
+protected:
+  TransparentPattern(PatternKind kind, Pattern *subPattern)
+      : Pattern(kind), subPattern(subPattern) {}
+
 public:
-  MutPattern(SourceLoc mutLoc, Pattern *subPattern)
-      : Pattern(PatternKind::Mut), mutLoc(mutLoc), subPattern(subPattern) {}
-
-  SourceLoc getMutLoc() const { return mutLoc; }
-
   void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
 
+  /// \returns the type of this pattern, which is always the type of its
+  /// subpattern. If the subpattern is null, return a null Type.
+  Type getType() const { return subPattern ? subPattern->getType() : Type(); }
+};
+
+/// Represents a "mut" pattern which indicates that, in the following pattern,
+/// every variable introduced should be mutable.
+class MutPattern final : public TransparentPattern {
+  SourceLoc mutLoc;
+
+public:
+  MutPattern(SourceLoc mutLoc, Pattern *subPattern)
+      : TransparentPattern(PatternKind::Mut, subPattern), mutLoc(mutLoc) {}
+
+  SourceLoc getMutLoc() const { return mutLoc; }
+
   SourceLoc getBegLoc() const { return mutLoc; }
-  SourceLoc getLoc() const { return subPattern->getLoc(); }
-  SourceLoc getEndLoc() const { return subPattern->getEndLoc(); }
+  SourceLoc getLoc() const { return getSubPattern()->getLoc(); }
+  SourceLoc getEndLoc() const { return getSubPattern()->getEndLoc(); }
 
   static bool classof(const Pattern *pattern) {
     return pattern->getKind() == PatternKind::Mut;
@@ -216,23 +247,19 @@ public:
 
 /// Represents a pattern that only consists of grouping parentheses around
 /// another pattern.
-class ParenPattern final : public Pattern {
+class ParenPattern final : public TransparentPattern {
   SourceLoc lParenLoc, rParenLoc;
-  Pattern *subPattern = nullptr;
 
 public:
   ParenPattern(SourceLoc lParenLoc, Pattern *subPattern, SourceLoc rParenLoc)
-      : Pattern(PatternKind::Paren), lParenLoc(lParenLoc), rParenLoc(rParenLoc),
-        subPattern(subPattern) {}
-
-  void setSubPattern(Pattern *pattern) { subPattern = pattern; }
-  Pattern *getSubPattern() const { return subPattern; }
+      : TransparentPattern(PatternKind::Paren, subPattern),
+        lParenLoc(lParenLoc), rParenLoc(rParenLoc) {}
 
   SourceLoc getLParenLoc() const { return lParenLoc; }
   SourceLoc getRParenLoc() const { return rParenLoc; }
 
   SourceLoc getBegLoc() const { return lParenLoc; }
-  SourceLoc getLoc() const { return subPattern->getLoc(); }
+  SourceLoc getLoc() const { return getSubPattern()->getLoc(); }
   SourceLoc getEndLoc() const { return rParenLoc; }
 
   static bool classof(const Pattern *pattern) {
@@ -249,6 +276,7 @@ class TuplePattern final
   friend llvm::TrailingObjects<TuplePattern, Pattern *>;
 
   SourceLoc lParenLoc, rParenLoc;
+  Type type;
 
   TuplePattern(SourceLoc lParenLoc, ArrayRef<Pattern *> patterns,
                SourceLoc rParenLoc)
@@ -276,6 +304,9 @@ public:
                                    SourceLoc rParenLoc) {
     return create(ctxt, lParenLoc, {}, rParenLoc);
   }
+
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
 
   bool isEmpty() const { return getNumElements() == 0; }
   size_t getNumElements() const {
@@ -310,21 +341,23 @@ public:
 /// \endverbatim
 class TypedPattern final : public Pattern {
   Pattern *subPattern;
-  TypeRepr *typeRepr;
+  TypeLoc typeLoc;
 
 public:
-  TypedPattern(Pattern *subPattern, TypeRepr *typeRepr)
-      : Pattern(PatternKind::Typed), subPattern(subPattern),
-        typeRepr(typeRepr) {}
+  TypedPattern(Pattern *subPattern, TypeLoc typeLoc)
+      : Pattern(PatternKind::Typed), subPattern(subPattern), typeLoc(typeLoc) {}
 
   void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }
 
-  TypeRepr *getTypeRepr() const { return typeRepr; }
+  Type getType() const { return typeLoc.getType(); }
 
-  SourceLoc getBegLoc() const;
+  TypeLoc &getTypeLoc() { return typeLoc; }
+  const TypeLoc &getTypeLoc() const { return typeLoc; }
+
+  SourceLoc getBegLoc() const { return subPattern->getBegLoc(); }
   SourceLoc getLoc() const { return subPattern->getLoc(); }
-  SourceLoc getEndLoc() const;
+  SourceLoc getEndLoc() const { return typeLoc.getEndLoc(); }
 
   static bool classof(const Pattern *pattern) {
     return pattern->getKind() == PatternKind::Typed;
@@ -353,12 +386,16 @@ public:
 /// be the children of another pattern.
 class MaybeValuePattern : public RefutablePattern {
   Pattern *subPattern;
+  Type type;
 
 public:
   MaybeValuePattern(Pattern *subPattern, bool isImplicit = false)
       : RefutablePattern(PatternKind::MaybeValue), subPattern(subPattern) {
     setImplicit(isImplicit);
   }
+
+  Type getType() const { return type; }
+  void setType(Type type) { this->type = type; }
 
   void setSubPattern(Pattern *pattern) { subPattern = pattern; }
   Pattern *getSubPattern() const { return subPattern; }

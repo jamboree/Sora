@@ -26,6 +26,19 @@ void *Pattern::operator new(size_t size, ASTContext &ctxt, unsigned align) {
   return ctxt.allocate(size, align, ArenaKind::Permanent);
 }
 
+Type Pattern::getType() const {
+  switch (getKind()) {
+  default:
+    llvm_unreachable("unknown Pattern kind");
+#define PATTERN(ID, PARENT)                                                    \
+  static_assert(detail::isOverriden<Pattern>(&ID##Pattern::getType),           \
+                "Must override getType!");                                     \
+  case PatternKind::ID:                                                        \
+    return cast<ID##Pattern>(this)->getType();
+#include "Sora/AST/PatternNodes.def"
+  }
+}
+
 Pattern *Pattern::ignoreParens() {
   if (auto paren = dyn_cast<ParenPattern>(this))
     return paren->getSubPattern()->ignoreParens();
@@ -188,7 +201,3 @@ TuplePattern *TuplePattern::create(ASTContext &ctxt, SourceLoc lParenLoc,
   void *mem = ctxt.allocate(size, alignof(TuplePattern));
   return new (mem) TuplePattern(lParenLoc, patterns, rParenLoc);
 }
-
-SourceLoc TypedPattern::getBegLoc() const { return subPattern->getBegLoc(); }
-
-SourceLoc TypedPattern::getEndLoc() const { return typeRepr->getEndLoc(); }

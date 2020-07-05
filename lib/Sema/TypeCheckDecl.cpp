@@ -214,7 +214,7 @@ public:
 
     // Resolve the return type of the function
     Type returnType;
-    if (decl->hasReturnType()) {
+    if (decl->hasExplicitReturnType()) {
       // If there's an explicit return type, resolve it.
       TypeLoc &tyLoc = decl->getReturnTypeLoc();
       tc.resolveTypeLoc(tyLoc, file);

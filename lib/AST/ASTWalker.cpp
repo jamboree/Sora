@@ -170,7 +170,7 @@ struct Traversal : public SimpleASTVisitor<Traversal> {
 
   void visitTypedPattern(TypedPattern *pattern) {
     doIt(pattern->getSubPattern());
-    doIt(pattern->getTypeRepr());
+    doIt(pattern->getTypeLoc().getTypeRepr());
   }
 
   void visitMaybeValuePattern(MaybeValuePattern *pattern) {

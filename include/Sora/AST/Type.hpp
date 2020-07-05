@@ -136,36 +136,37 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &out, CanType type) {
   return out;
 }
 
-/// A simple Type/TypeRepr* pair, used to represent a type as written
-/// down by the user.
+/// A simple Type/TypeRepr* pair, used to represent a type that was explicitely
+/// written down by the user.
 ///
-/// This may not always have a valid TypeRepr*, because it can be used
-/// in places where an explicit type is optional.
-/// For instance, a TypeLoc inside a ParamDecl will always have a TypeRepr
-/// because the type annotation is mandatory, but it may not have a TypeRepr
-/// inside a VarDecl, because the type annotation is not mandatory for
-/// variable declarations.
+/// TypeLocs either contain a TypeRepr and (optionally) a Type, or nothing. They
+/// can never contain just a Type without TypeRepr (see \c isValid)
 class TypeLoc {
   Type type;
-  TypeRepr *tyRepr = nullptr;
+  TypeRepr *typeRepr = nullptr;
 
 public:
   TypeLoc() = default;
-  TypeLoc(Type type) : TypeLoc(nullptr, type) {}
-  TypeLoc(TypeRepr *tyRepr, Type type = Type()) : type(type), tyRepr(tyRepr) {}
+  TypeLoc(TypeRepr *typeRepr, Type type = Type())
+      : type(type), typeRepr(typeRepr) {}
 
   SourceRange getSourceRange() const;
   SourceLoc getBegLoc() const;
   SourceLoc getLoc() const;
   SourceLoc getEndLoc() const;
 
-  bool hasTypeRepr() const { return tyRepr != nullptr; }
+  /// \returns whether this TypeLoc is valid (whether it has a TypeRepr)
+  bool isValid() const { return typeRepr; }
+
   bool hasType() const { return !type.isNull(); }
 
-  TypeRepr *getTypeRepr() const { return tyRepr; }
+  TypeRepr *getTypeRepr() const { return typeRepr; }
 
   Type getType() const { return type; }
-  void setType(Type type) { this->type = type; }
+  void setType(Type type) {
+    assert(isValid() && "Cannot assign a type to an invalid TypeLoc!");
+    this->type = type;
+  }
 };
 
 template <typename Ty> struct DiagnosticArgument;

@@ -96,6 +96,8 @@ Type ValueDecl::getValueType() const {
   default:
     llvm_unreachable("unknown ValueDecl kind");
 #define VALUE_DECL(ID, PARENT)                                                 \
+  static_assert(detail::isOverriden<ValueDecl>(&ID##Decl::getValueType),       \
+                "Must override getValueType!");                                \
   case DeclKind::ID:                                                           \
     return cast<ID##Decl>(this)->getValueType();
 #include "Sora/AST/DeclNodes.def"
@@ -121,9 +123,7 @@ ParamList *ParamList::create(ASTContext &ctxt, SourceLoc lParenLoc,
 SourceLoc ParamDecl::getBegLoc() const { return getIdentifierLoc(); }
 
 SourceLoc ParamDecl::getEndLoc() const {
-  if (tyLoc.hasTypeRepr())
-    return tyLoc.getEndLoc();
-  return getIdentifierLoc();
+  return tyLoc.isValid() ? tyLoc.getEndLoc() : getIdentifierLoc();
 }
 
 Type FuncDecl::getValueType() const { return type; }

@@ -575,7 +575,7 @@ public:
 
     auto indent = increaseIndent();
     visit(pattern->getSubPattern());
-    visit(pattern->getTypeRepr());
+    visit(pattern->getTypeLoc().getTypeRepr());
   }
 
   void visitMaybeValuePattern(MaybeValuePattern *pattern) {

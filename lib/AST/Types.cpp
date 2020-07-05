@@ -262,19 +262,19 @@ bool CanType::isValid() const {
 }
 
 SourceRange TypeLoc::getSourceRange() const {
-  return tyRepr ? tyRepr->getSourceRange() : SourceRange();
+  return typeRepr ? typeRepr->getSourceRange() : SourceRange();
 }
 
 SourceLoc TypeLoc::getBegLoc() const {
-  return tyRepr ? tyRepr->getBegLoc() : SourceLoc();
+  return typeRepr ? typeRepr->getBegLoc() : SourceLoc();
 }
 
 SourceLoc TypeLoc::getLoc() const {
-  return tyRepr ? tyRepr->getLoc() : SourceLoc();
+  return typeRepr ? typeRepr->getLoc() : SourceLoc();
 }
 
 SourceLoc TypeLoc::getEndLoc() const {
-  return tyRepr ? tyRepr->getEndLoc() : SourceLoc();
+  return typeRepr ? typeRepr->getEndLoc() : SourceLoc();
 }
 
 static TypePrintOptions typePrintOptions = TypePrintOptions::forDiagnostics();

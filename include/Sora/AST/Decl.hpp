@@ -408,8 +408,8 @@ public:
 
   TypeLoc &getReturnTypeLoc() { return returnTypeLoc; }
   const TypeLoc &getReturnTypeLoc() const { return returnTypeLoc; }
-  /// \returns true if the user wrote a return type for this function
-  bool hasReturnType() const { return returnTypeLoc.hasTypeRepr(); }
+  /// \returns true if there is an explicit return type for this function
+  bool hasExplicitReturnType() const { return returnTypeLoc.isValid(); }
 
   void setFunctionType(FunctionType *type) { this->type = type; }
   FunctionType *getFunctionType() const { return type; }

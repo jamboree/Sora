@@ -25,10 +25,13 @@
 
 PATTERN(Var, Pattern)
 PATTERN(Discard, Pattern)
-PATTERN(Mut, Pattern)
-PATTERN(Paren, Pattern)
 PATTERN(Tuple, Pattern)
 PATTERN(Typed, Pattern)
+
+ABSTRACT_PATTERN(Transparent, Pattern)
+  PATTERN(Mut, TransparentPattern)
+  PATTERN(Paren, TransparentPattern)
+  PATTERN_RANGE(Transparent, Mut, Paren)
 
 ABSTRACT_PATTERN(Refutable, Pattern)
   PATTERN(MaybeValue, RefutablePattern)
