@@ -54,6 +54,44 @@ static mlir::LogicalResult verify(AllocStackOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// BitNotOp
+//===----------------------------------------------------------------------===//
+
+static void print(mlir::OpAsmPrinter &p, BitNotOp op) {
+  // 'sir.bitnot' operand ':' type
+  p << op.getOperationName();
+  p << " : " << op.getType();
+}
+
+static mlir::ParseResult parseBitNotOp(mlir::OpAsmParser &parser,
+                                       mlir::OperationState &result) {
+  // 'sir.bitnot' operand ':' type
+  mlir::OpAsmParser::OperandType operandType;
+  if (parser.parseOperand(operandType))
+    return mlir::failure();
+
+  mlir::Type type;
+  if (parser.parseColonType(type))
+    return mlir::failure();
+  result.addTypes(type);
+
+  // Resolve the operand
+  SmallVector<mlir::Value, 1> operand;
+  if (parser.resolveOperand(operandType, type, operand))
+    return mlir::failure();
+  assert(operand.size() == 1 && "Expected a single result!");
+  result.addOperands(operand[0]);
+
+  return mlir::success();
+}
+
+static mlir::LogicalResult verify(BitNotOp op) {
+  // Result type must be the same as the operand's type.
+  return (op.getOperand().getType() == op.getType()) ? mlir::success()
+                                                     : mlir::failure();
+}
+
+//===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
@@ -169,13 +207,15 @@ static mlir::LogicalResult verify(BlockTerminatorOp op) {
 //===----------------------------------------------------------------------===//
 
 static void print(mlir::OpAsmPrinter &p, BlockOp op) {
-  p << "sir.block ";
+  // 'sir.block' region
+  p << op.getOperationName();
   p.printRegion(op.region(), /*printEntryBlockArgs*/ true,
                 /*printBlockTerminators*/ false);
 }
 
 static mlir::ParseResult parseBlockOp(mlir::OpAsmParser &parser,
                                       mlir::OperationState &result) {
+  // 'sir.block' region
   mlir::Region *region = result.addRegion();
   if (parser.parseRegion(*region, llvm::None, llvm::None))
     return mlir::failure();
@@ -198,11 +238,13 @@ static mlir::LogicalResult verify(BlockOp op) { return mlir::success(); }
 //===----------------------------------------------------------------------===//
 
 static void print(mlir::OpAsmPrinter &p, VoidConstantOp op) {
+  // 'sir.void_constant'
   p << op.getOperationName();
 }
 
 static mlir::ParseResult parseVoidConstantOp(mlir::OpAsmParser &parser,
                                              mlir::OperationState &result) {
+  // 'sir.void_constant'
   result.addTypes(VoidType::get(result.getContext()));
   return mlir::success();
 }

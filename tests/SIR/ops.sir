@@ -11,13 +11,14 @@ func @test() {
     %5 = sir.alloc_stack : !sir.pointer<i32>
     sir.store %4#0 : i32 into %5 : !sir.pointer<i32>
     %6 = sir.load %5 : (!sir.pointer<i32>) -> i32
+    %7 = sir.bitnot %1 : i32
   }
   sir.default_return
 }
 
 // CHECK:      module {
 // CHECK-NEXT:   func @test() {
-// CHECK-NEXT:     sir.block  {
+// CHECK-NEXT:     sir.block {
 // CHECK-NEXT:       %0 = sir.void_constant
 // CHECK-NEXT:       %c0_i32 = constant 0 : i32
 // CHECK-NEXT:       %1 = sir.static_cast %c0_i32 : i32 to i64
@@ -26,6 +27,7 @@ func @test() {
 // CHECK-NEXT:       %4 = sir.alloc_stack : !sir.pointer<i32>
 // CHECK-NEXT:       sir.store %3#0 : i32 into %4 : !sir.pointer<i32>
 // CHECK-NEXT:       %5 = sir.load %4 : (!sir.pointer<i32>) -> i32
+// CHECK-NEXT:       %6 = sir.bitnot : i32
 // CHECK-NEXT:     }
 // CHECK-NEXT:     sir.default_return
 // CHECK-NEXT:   }

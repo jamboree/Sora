@@ -118,6 +118,32 @@ def AllocStackOp : AnyAllocOp<"alloc_stack", AutomaticAllocationScopeResource> {
   }];
 }
 
+//===- Bitwise NOT --------------------------------------------------------===//
+
+def BitNotOp : SIROp<"bitnot", [NoSideEffect]> {
+  let summary = "bitwise NOT operation";
+  let description = [{
+    The bitwise NOT operation simply inverts all of the bits of an integer.
+
+    Syntax:
+      'sir.bitnot' operand ':' type
+
+    Example:
+      %1 = sir.bitnot %0: i32
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value value", 
+    [{ result.addOperands(value); result.addTypes(value.getType()); }]
+  >];
+
+  let arguments = (ins SignlessIntegerLike: $value);
+  let results = (outs SignlessIntegerLike);
+
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseBitNotOp(parser, result); }];
+}
+
 //===- Free Blocks --------------------------------------------------------===//
 
 def BlockOp : SIROp<"block",
@@ -131,6 +157,9 @@ def BlockOp : SIROp<"block",
 
     This operations is always created with an entry block 
     containing a BlockTerminatorOp.
+
+    Syntax:
+      'sir.block' region
 
     Example:
       sir.block {
@@ -350,6 +379,9 @@ def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
   let summary = "void constant operation";
   let description = [{
     The Void Constant operation simply creates a value of type !sir.void.
+
+    Syntax:
+      'sir.void_constant'
 
     Example:
       %1 = sir.void_constant
