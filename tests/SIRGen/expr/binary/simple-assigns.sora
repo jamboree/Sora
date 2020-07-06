@@ -15,7 +15,23 @@ func declRef() {
   ((otherRef)) = ref
 }
 
-// TODO: Deref and TupleElementExpr tests.
+func deref() {
+  let mut (a: u8, b: bool, c: (u8, i8)) = (0, false, (2, 3))
+
+  *&a = 0
+  *&b = false
+  *&c = (0, 1)
+
+  let r_a: &mut u8 = &a
+  let r_b: &mut bool = &b
+  let r_c: &mut (u8, i8) = &c
+
+  *r_a = 0
+  *r_b = false
+  *r_c = (0, 1)
+}
+
+// TODO TupleElementExpr tests? Or do it in another file?
 
 // CHECK:      module @"{{.*}}" {
 // CHECK-NEXT:   func @declRef() {
@@ -34,4 +50,57 @@ func declRef() {
 // CHECK-NEXT:     sir.store %4 : !sir.reference<i32> into %2 : !sir.pointer<!sir.reference<i32>> loc("{{.*}}":15:16)
 // CHECK-NEXT:     sir.default_return loc("{{.*}}":16:1)
 // CHECK-NEXT:   } loc("{{.*}}":7:6)
+// CHECK-NEXT:   func @deref() {
+// CHECK-NEXT:     %c0_i8 = constant 0 : i8 loc("{{.*}}":19:44)
+// CHECK-NEXT:     %false = constant 0 : i1 loc("{{.*}}":19:47)
+// CHECK-NEXT:     %c2_i8 = constant 2 : i8 loc("{{.*}}":19:55)
+// CHECK-NEXT:     %c3_i8 = constant 3 : i8 loc("{{.*}}":19:58)
+// CHECK-NEXT:     %0 = sir.create_tuple(%c2_i8, %c3_i8 : i8, i8) -> tuple<i8, i8> loc("{{.*}}":19:54)
+// CHECK-NEXT:     %1 = sir.create_tuple(%c0_i8, %false, %0 : i8, i1, tuple<i8, i8>) -> tuple<i8, i1, tuple<i8, i8>> loc("{{.*}}":19:43)
+// CHECK-NEXT:     %2:3 = sir.destructure_tuple %1 : (tuple<i8, i1, tuple<i8, i8>>) -> (i8, i1, tuple<i8, i8>) loc("{{.*}}":19:11)
+// CHECK-NEXT:     %3 = sir.alloc_stack : !sir.pointer<i8> loc("{{.*}}":19:12)
+// CHECK-NEXT:     sir.store %2#0 : i8 into %3 : !sir.pointer<i8> loc("{{.*}}":19:12)
+// CHECK-NEXT:     %4 = sir.alloc_stack : !sir.pointer<i1> loc("{{.*}}":19:19)
+// CHECK-NEXT:     sir.store %2#1 : i1 into %4 : !sir.pointer<i1> loc("{{.*}}":19:19)
+// CHECK-NEXT:     %5 = sir.alloc_stack : !sir.pointer<tuple<i8, i8>> loc("{{.*}}":19:28)
+// CHECK-NEXT:     sir.store %2#2 : tuple<i8, i8> into %5 : !sir.pointer<tuple<i8, i8>> loc("{{.*}}":19:28)
+// CHECK-NEXT:     %6 = sir.static_cast %3 : !sir.pointer<i8> to !sir.reference<i8> loc("{{.*}}":21:4)
+// CHECK-NEXT:     %7 = sir.static_cast %6 : !sir.reference<i8> to !sir.pointer<i8> loc("{{.*}}":21:3)
+// CHECK-NEXT:     %c0_i8_0 = constant 0 : i8 loc("{{.*}}":21:9)
+// CHECK-NEXT:     sir.store %c0_i8_0 : i8 into %7 : !sir.pointer<i8> loc("{{.*}}":21:7)
+// CHECK-NEXT:     %8 = sir.static_cast %4 : !sir.pointer<i1> to !sir.reference<i1> loc("{{.*}}":22:4)
+// CHECK-NEXT:     %9 = sir.static_cast %8 : !sir.reference<i1> to !sir.pointer<i1> loc("{{.*}}":22:3)
+// CHECK-NEXT:     %false_1 = constant 0 : i1 loc("{{.*}}":22:9)
+// CHECK-NEXT:     sir.store %false_1 : i1 into %9 : !sir.pointer<i1> loc("{{.*}}":22:7)
+// CHECK-NEXT:     %10 = sir.static_cast %5 : !sir.pointer<tuple<i8, i8>> to !sir.reference<tuple<i8, i8>> loc("{{.*}}":23:4)
+// CHECK-NEXT:     %11 = sir.static_cast %10 : !sir.reference<tuple<i8, i8>> to !sir.pointer<tuple<i8, i8>> loc("{{.*}}":23:3)
+// CHECK-NEXT:     %c0_i8_2 = constant 0 : i8 loc("{{.*}}":23:10)
+// CHECK-NEXT:     %c1_i8 = constant 1 : i8 loc("{{.*}}":23:13)
+// CHECK-NEXT:     %12 = sir.create_tuple(%c0_i8_2, %c1_i8 : i8, i8) -> tuple<i8, i8> loc("{{.*}}":23:9)
+// CHECK-NEXT:     sir.store %12 : tuple<i8, i8> into %11 : !sir.pointer<tuple<i8, i8>> loc("{{.*}}":23:7)
+// CHECK-NEXT:     %13 = sir.static_cast %3 : !sir.pointer<i8> to !sir.reference<i8> loc("{{.*}}":25:22)
+// CHECK-NEXT:     %14 = sir.alloc_stack : !sir.pointer<!sir.reference<i8>> loc("{{.*}}":25:7)
+// CHECK-NEXT:     sir.store %13 : !sir.reference<i8> into %14 : !sir.pointer<!sir.reference<i8>> loc("{{.*}}":25:7)
+// CHECK-NEXT:     %15 = sir.static_cast %4 : !sir.pointer<i1> to !sir.reference<i1> loc("{{.*}}":26:24)
+// CHECK-NEXT:     %16 = sir.alloc_stack : !sir.pointer<!sir.reference<i1>> loc("{{.*}}":26:7)
+// CHECK-NEXT:     sir.store %15 : !sir.reference<i1> into %16 : !sir.pointer<!sir.reference<i1>> loc("{{.*}}":26:7)
+// CHECK-NEXT:     %17 = sir.static_cast %5 : !sir.pointer<tuple<i8, i8>> to !sir.reference<tuple<i8, i8>> loc("{{.*}}":27:28)
+// CHECK-NEXT:     %18 = sir.alloc_stack : !sir.pointer<!sir.reference<tuple<i8, i8>>> loc("{{.*}}":27:7)
+// CHECK-NEXT:     sir.store %17 : !sir.reference<tuple<i8, i8>> into %18 : !sir.pointer<!sir.reference<tuple<i8, i8>>> loc("{{.*}}":27:7)
+// CHECK-NEXT:     %19 = sir.load %14 : (!sir.pointer<!sir.reference<i8>>) -> !sir.reference<i8> loc("{{.*}}":29:4)
+// CHECK-NEXT:     %20 = sir.static_cast %19 : !sir.reference<i8> to !sir.pointer<i8> loc("{{.*}}":29:3)
+// CHECK-NEXT:     %c0_i8_3 = constant 0 : i8 loc("{{.*}}":29:10)
+// CHECK-NEXT:     sir.store %c0_i8_3 : i8 into %20 : !sir.pointer<i8> loc("{{.*}}":29:8)
+// CHECK-NEXT:     %21 = sir.load %16 : (!sir.pointer<!sir.reference<i1>>) -> !sir.reference<i1> loc("{{.*}}":30:4)
+// CHECK-NEXT:     %22 = sir.static_cast %21 : !sir.reference<i1> to !sir.pointer<i1> loc("{{.*}}":30:3)
+// CHECK-NEXT:     %false_4 = constant 0 : i1 loc("{{.*}}":30:10)
+// CHECK-NEXT:     sir.store %false_4 : i1 into %22 : !sir.pointer<i1> loc("{{.*}}":30:8)
+// CHECK-NEXT:     %23 = sir.load %18 : (!sir.pointer<!sir.reference<tuple<i8, i8>>>) -> !sir.reference<tuple<i8, i8>> loc("{{.*}}":31:4)
+// CHECK-NEXT:     %24 = sir.static_cast %23 : !sir.reference<tuple<i8, i8>> to !sir.pointer<tuple<i8, i8>> loc("{{.*}}":31:3)
+// CHECK-NEXT:     %c0_i8_5 = constant 0 : i8 loc("{{.*}}":31:11)
+// CHECK-NEXT:     %c1_i8_6 = constant 1 : i8 loc("{{.*}}":31:14)
+// CHECK-NEXT:     %25 = sir.create_tuple(%c0_i8_5, %c1_i8_6 : i8, i8) -> tuple<i8, i8> loc("{{.*}}":31:10)
+// CHECK-NEXT:     sir.store %25 : tuple<i8, i8> into %24 : !sir.pointer<tuple<i8, i8>> loc("{{.*}}":31:8)
+// CHECK-NEXT:     sir.default_return loc("{{.*}}":32:1)
+// CHECK-NEXT:   } loc("{{.*}}":18:6)
 // CHECK-NEXT: }

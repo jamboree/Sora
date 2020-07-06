@@ -120,16 +120,19 @@ public:
   mlir::Value genAddressOf(mlir::Location opLoc, mlir::Value value);
   /// Generates a dereference (*) operation on \p value.
   mlir::Value genDeref(mlir::Location opLoc, mlir::Value value);
-  /// Generates a bitwise not (~) operation on \p value.
-  mlir::Value genBitwiseNot(mlir::Location opLoc, mlir::Value value);
-  /// Generates a logical not (!) operation on \p value.
-  mlir::Value genLNot(mlir::Location opLoc, mlir::Value value);
+  /// Generates a NOT operation on \p value (invert all of its bits).
+  /// \p value must be a signless int.
+  /// This is for both bitwise and logical nots, which both produce a
+  /// sir.bitnot.
+  mlir::Value genNot(mlir::Location opLoc, mlir::Value value);
   /// Generates an unary minus (-) operation on \p value.
   mlir::Value genUnaryMinus(mlir::Location opLoc, mlir::Value value);
 
-  /// Assigns \p rhs to \p lhs, using \p assignLoc as the loc of the store/set
-  /// operation, and returns the Value of the \p rhs.
-  mlir::Value genBasicAssign(Expr *lhs, mlir::Location assignLoc, Expr *rhs);
+  /// Assigns a value to \p dest, using \p assignLoc as the loc of the store/set
+  /// operation, and returns the Value of the source.
+  /// The source is lazily fetched from \p getSrc before generating the store.
+  mlir::Value genBasicAssign(Expr *dest, mlir::Location assignLoc,
+                             llvm::function_ref<mlir::Value()> getSrc);
 
   // Visit Methods
   mlir::Value visitDeclRefExpr(DeclRefExpr *expr);
@@ -310,27 +313,52 @@ mlir::Value ExprGenerator::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   llvm_unreachable("Unimplemented - visitForceUnwrapExpr");
 }
 
-mlir::Value ExprGenerator::genBasicAssign(Expr *lhs, mlir::Location assignLoc,
-                                          Expr *rhs) {
-  lhs = getCodeGenExpr(lhs);
-  rhs = getCodeGenExpr(rhs);
+mlir::Value
+ExprGenerator::genBasicAssign(Expr *destExpr, mlir::Location assignLoc,
+                              llvm::function_ref<mlir::Value()> getSrc) {
+  destExpr = getCodeGenExpr(destExpr);
 
-  // If the LHS has an LValue type, we can just store.
-  if (lhs->getType()->is<LValueType>()) {
+  // If the LHS is a DiscardExpr, just gen the RHS and return.
+  if (isa<DiscardExpr>(destExpr))
+    return getSrc();
+
+  // If the LHS is any expression of LValue type, emit a simple store.
+  if (destExpr->getType()->is<LValueType>()) {
     // Sanity check: TupleExprs never have an LValue type.
-    assert(!isa<TupleExpr>(lhs) && "TupleExpr can never have an LValue type!");
+    assert(!isa<TupleExpr>(destExpr) &&
+           "TupleExpr can never have an LValue type!");
 
-    mlir::Value destination = visit(lhs);
-    mlir::Value source = visit(rhs);
+    mlir::Value dest = visit(destExpr);
+    mlir::Value src = getSrc();
 
-    builder.create<sir::StoreOp>(assignLoc, source, destination);
+    builder.create<sir::StoreOp>(assignLoc, src, dest);
 
-    return source;
+    return src;
   }
 
-  // Handle tuples
-  if (auto *tuple = dyn_cast<TupleExpr>(lhs)) {
-    llvm_unreachable("Unimplemented - genBasicAssign - tuples");
+  // We can also have TupleExprs on the LHS, in this case, decompose.
+  //
+  // NOTE: We don't special-case things like (a, b) = (0, 1) here. Instead, we
+  // let constant folding fold the create_tuple + destructure_tuple.
+  if (auto *destTupleExpr = dyn_cast<TupleExpr>(destExpr)) {
+    ArrayRef<Expr *> destTupleElts = destTupleExpr->getElements();
+
+    mlir::Value src = getSrc();
+
+    // FIXME: Is the Location right for this op?
+    auto destructureTupleOp =
+        builder.create<sir::DestructureTupleOp>(assignLoc, src);
+
+    mlir::ResultRange destructuredTupleValues = destructureTupleOp.getResults();
+
+    assert(destructuredTupleValues.size() == destTupleElts.size() &&
+           "Number of elements don't match on the lhs/rhs of the assignement!");
+
+    for (size_t k = 0; k < destTupleElts.size(); ++k)
+      genBasicAssign(destTupleElts[k], assignLoc,
+                     [&] { return destructuredTupleValues[k]; });
+
+    return src;
   }
 
   llvm_unreachable("Unhandled assignement kind!");
@@ -345,82 +373,48 @@ mlir::Value ExprGenerator::visitBinaryExpr(BinaryExpr *expr) {
     if (expr->isCompoundAssignementOp())
       llvm_unreachable(
           "Unimplemented - visitBinaryExpr - isCompoundAssignementOp");
-    return genBasicAssign(lhs, loc, rhs);
+    return genBasicAssign(lhs, loc, [&] { return visit(getCodeGenExpr(rhs)); });
   }
   llvm_unreachable("Unimplemented - visitBinaryExpr");
 }
 
 mlir::Value ExprGenerator::genAddressOf(mlir::Location opLoc,
                                         mlir::Value value) {
-  llvm_unreachable("Unimplemented - genAddressOf");
+  // AddressOf just converts a sir.pointer into a sir.reference (lvalue to &).
+  assert(value.getType().isa<sir::PointerType>() &&
+         "This operation should only be possible on pointers (lvalues)!");
+  auto ptrType = value.getType().cast<sir::PointerType>();
+  auto refType = sir::ReferenceType::get(ptrType.getPointeeType());
+  return builder.create<sir::StaticCastOp>(opLoc, value, refType);
 }
 
 mlir::Value ExprGenerator::genDeref(mlir::Location opLoc, mlir::Value value) {
-  // TODO: Once this is working, also add assignement tests in
-  // /test/SIRGen/expr/binary/simple-assigns.sora.
-  llvm_unreachable("Unimplemented - genDeref");
+  // AddressOf just converts a sir.reference into a sir.pointer (& to lvalue).
+  assert(value.getType().isa<sir::ReferenceType>() &&
+         "This operation should only be possible on reference types!");
+  auto refType = value.getType().cast<sir::ReferenceType>();
+  auto ptrType = sir::PointerType::get(refType.getPointeeType());
+  return builder.create<sir::StaticCastOp>(opLoc, value, ptrType);
 }
 
-mlir::Value ExprGenerator::genBitwiseNot(mlir::Location opLoc,
-                                         mlir::Value value) {
-  llvm_unreachable("Unimplemented - genBitwiseNot");
-}
-
-mlir::Value ExprGenerator::genLNot(mlir::Location opLoc, mlir::Value value) {
-  assert(value.getType().isInteger(1) && "Unexpected operand type for LNot!");
-
-  // If the value is an ConstantIntOp, just swap its value instead of generating
-  // a XOR.
-  if (auto constant = dyn_cast<mlir::ConstantIntOp>(value.getDefiningOp())) {
-    constant.setAttr("value", mlir::IntegerAttr::get(constant.getType(),
-                                                     !constant.getValue()));
-    return value;
-  }
-
-  mlir::IntegerType intTy = value.getType().dyn_cast<mlir::IntegerType>();
-  assert(intTy && "Not an integer type for Unary LNOT?!");
-  mlir::Value one = builder.create<mlir::ConstantIntOp>(opLoc, 1, intTy);
-
-  return builder.create<mlir::XOrOp>(opLoc, value, one);
-}
-
-static mlir::Value genIntUnaryMinus(mlir::OpBuilder &builder,
-                                    mlir::Location loc, mlir::Value value,
-                                    mlir::IntegerType intTy) {
-  // If the value is a ConstantIntOp, modify it in-place.
-  if (auto constant = dyn_cast<mlir::ConstantIntOp>(value.getDefiningOp())) {
-    constant.setAttr("value", mlir::IntegerAttr::get(constant.getType(),
-                                                     -constant.getValue()));
-    return value;
-  }
-
-  // Else generate a 0-value.
-  mlir::Value zero = builder.create<mlir::ConstantIntOp>(loc, 0, intTy);
-  return builder.create<mlir::SubIOp>(loc, zero, value);
-}
-
-static mlir::Value genFloatUnaryMinus(mlir::OpBuilder &builder,
-                                      mlir::Location loc, mlir::Value value,
-                                      mlir::FloatType fltTy) {
-  // If the value is a ConstantFloatOp, modify it in-place.
-  if (auto constant = dyn_cast<mlir::ConstantFloatOp>(value.getDefiningOp())) {
-    constant.setAttr("value", mlir::FloatAttr::get(constant.getType(),
-                                                   -constant.getValue()));
-    return value;
-  }
-
-  // Else generate a 0-value.
-  APFloat zero(fltTy.getFloatSemantics(), 0);
-  mlir::Value lhs = builder.create<mlir::ConstantFloatOp>(loc, zero, fltTy);
-  return builder.create<mlir::SubFOp>(loc, lhs, value);
+mlir::Value ExprGenerator::genNot(mlir::Location opLoc, mlir::Value value) {
+  assert(value.getType().isSignlessInteger() &&
+         "Operand must be a signless int!");
+  return builder.create<sir::BitNotOp>(opLoc, value);
 }
 
 mlir::Value ExprGenerator::genUnaryMinus(mlir::Location opLoc,
                                          mlir::Value value) {
-  if (auto intTy = value.getType().dyn_cast<mlir::IntegerType>())
-    return genIntUnaryMinus(builder, opLoc, value, intTy);
-  else if (auto fltTy = value.getType().dyn_cast<mlir::FloatType>())
-    return genFloatUnaryMinus(builder, opLoc, value, fltTy);
+  // Generate a 0 - value in both cases.
+  if (auto intTy = value.getType().dyn_cast<mlir::IntegerType>()) {
+    mlir::Value zero = builder.create<mlir::ConstantIntOp>(opLoc, 0, intTy);
+    return builder.create<mlir::SubIOp>(opLoc, zero, value);
+  }
+  else if (auto fltTy = value.getType().dyn_cast<mlir::FloatType>()) {
+    APFloat zero(fltTy.getFloatSemantics(), 0);
+    mlir::Value lhs = builder.create<mlir::ConstantFloatOp>(opLoc, zero, fltTy);
+    return builder.create<mlir::SubFOp>(opLoc, lhs, value);
+  }
   else
     llvm_unreachable("Unsupported type for Unary Minus!");
 }
@@ -435,9 +429,8 @@ mlir::Value ExprGenerator::visitUnaryExpr(UnaryExpr *expr) {
   case UnaryOperatorKind::Deref:
     return genDeref(loc, value);
   case UnaryOperatorKind::Not:
-    return genBitwiseNot(loc, value);
   case UnaryOperatorKind::LNot:
-    return genLNot(loc, value);
+    return genNot(loc, value);
   case UnaryOperatorKind::Minus:
     return genUnaryMinus(loc, value);
   case UnaryOperatorKind::Plus:

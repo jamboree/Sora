@@ -90,17 +90,17 @@ void PatternGenerator::visitTuplePattern(TuplePattern *pattern,
   // value as initial value.
   assert(value->getType().isa<mlir::TupleType>() && "Value is not a tuple!");
 
-  sir::DestructureTupleOp destructuredTuple =
+  auto destructureTupleOp =
       builder.create<sir::DestructureTupleOp>(getNodeLoc(pattern), *value);
 
-  mlir::ResultRange destructuredTupleValues = destructuredTuple.getResults();
+  mlir::ResultRange destructureTupleElts = destructureTupleOp.getResults();
   ArrayRef<Pattern *> patternElts = pattern->getElements();
 
-  assert(destructuredTupleValues.size() == patternElts.size() &&
+  assert(destructureTupleElts.size() == patternElts.size() &&
          "Illegal structure!");
 
   for (size_t k = 0; k < patternElts.size(); ++k)
-    visit(patternElts[k], destructuredTupleValues[k]);
+    visit(patternElts[k], destructureTupleElts[k]);
 }
 
 void PatternGenerator::visitTypedPattern(TypedPattern *pattern,
