@@ -48,30 +48,9 @@ def VoidType : DialectType<SIRDialect,
                            CPred<"$_self.isa<::sora::sir::VoidType>()">,
                            "Sora IR Void Type">;
 
-//===- Static Cast --------------------------------------------------------===//
-
-def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
-  let summary = "static casting operation";
-  let description = [{
-    The Static Cast operation converts an SSA value of some type into
-    another type.
-
-    Example:
-      %1 = sir.static_cast %1 : to i32
-  }];
-
-  let arguments = (ins AnyType: $value);
-
-  let results = (outs AnyType);
-
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value value, Type toType", 
-    [{ result.addOperands(value); result.addTypes(toType); }]
-  >];
-
-  let assemblyFormat = 
-    "$value `:` type($value) attr-dict `to` type(results)";
-}
+//===----------------------------------------------------------------------===//
+//  Utility Operations & Common Bases
+//===----------------------------------------------------------------------===//
 
 //===- AnyAllocOp ---------------------------------------------------------===//
 
@@ -94,6 +73,35 @@ class AnyAllocOp<string mnemonic, Resource resource, list<OpTrait> traits = []> 
 
   let assemblyFormat = "attr-dict `:` type(results)";
 }
+
+
+//===- Implicit Terminator for Blocks -------------------------------------===//
+
+def BlockTerminatorOp : SIROp<"block_terminator", 
+                                   [NoSideEffect, Terminator]> {
+  let summary = "block terminator operation";
+
+  let description = [{
+    The Block Terminator operation is a special terminator for SIR blocks.
+    It does not have custom syntax, and is omitted when printing 
+    the blocks for brevity.
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result", [{ }]
+  >];
+
+  let printer = ?;
+  let parser = ?;
+}
+
+def ImplicitSIRBlockTerminator :
+  SingleBlockImplicitTerminator<"BlockTerminatorOp">;
+
+//===----------------------------------------------------------------------===//
+//  Operations
+//===----------------------------------------------------------------------===//
+
 //===- Alloc Stack --------------------------------------------------------===//
 
 def AllocStackOp : AnyAllocOp<"alloc_stack", AutomaticAllocationScopeResource> {
@@ -108,6 +116,122 @@ def AllocStackOp : AnyAllocOp<"alloc_stack", AutomaticAllocationScopeResource> {
     Example: Allocating a pointer to a 32 bits value:
       %1 = sir.alloc_stack: !sora.pointer<!sora.pointer<i32>>
   }];
+}
+
+//===- Free Blocks --------------------------------------------------------===//
+
+def BlockOp : SIROp<"block",
+    [ImplicitSIRBlockTerminator, AutomaticAllocationScope]> {
+  let summary = "block operation";
+
+  let description = [{
+    The Block operation serves as a container for free blocks. A free block
+    is a block that does not belong to another construct, such as a condition,
+    loop or function.
+
+    This operations is always created with an entry block 
+    containing a BlockTerminatorOp.
+
+    Example:
+      sir.block {
+        
+      }
+  }];
+
+  let regions = (region SizedRegion<1>:$region); 
+
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parseBlockOp(parser, result); }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result", 
+      [{ ::buildBlockOp(builder, result); }]
+  >];
+
+  let extraClassDeclaration = [{
+    Block &getEntryBlock() {
+      return *region().begin();
+    }
+  }];
+}
+
+//===- Create Tuple -------------------------------------------------------===//
+
+def CreateTupleOp : SIROp<"create_tuple", [NoSideEffect]> {
+  let summary = "tuple creation operation";
+  let description = [{
+    The Create Tuple operation creates a tuple of values.
+    There must be at least 2 operands: 0 or 1 element tuples are not permitted.
+
+    Example:
+      %2 = sir.create_tuple(%0: i32, %1: i32) -> tuple<i32, i32>
+  }];
+
+  let arguments = (ins Variadic<AnyType>: $values);
+
+  let results = (outs AnyTuple);
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, ArrayRef<Value> elts", [{
+      return ::buildCreateTupleOp(builder, result, elts);
+  }]>];
+
+  let assemblyFormat = 
+    "`(` $values `:` type($values) `)` attr-dict `->` type(results)";
+}
+
+//===- Default Return -----------------------------------------------------===//
+
+def DefaultReturnOp : SIROp<"default_return", [NoSideEffect, 
+    HasParent<"FuncOp">, ReturnLike, Terminator]> {
+
+  let summary = "default return operation";
+  let description = [{
+    The Default Return operation acts like a terminator for functions that do not
+    have an explicit return type.
+
+    This operation cannot be directly lowered, it has to be legalized: either
+    transformed into a std.return, or diagnosed as illegal.
+
+    Example:
+      sir.default_return
+  }];
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result", [{ }]
+  >];
+
+  let extraClassDeclaration = [{
+    FuncOp getFuncOp() {
+      return getParentOfType<FuncOp>();
+    }
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===- Destructure Tuple --------------------------------------------------===//
+
+def DestructureTupleOp : SIROp<"destructure_tuple", [NoSideEffect]> {
+  let summary = "tuple destructuring operation";
+  let description = [{
+    The Destructure Tuple operation breaks up a tuple into all of its elements.
+
+    Example:
+      %3, %4 = sir.destructure_tuple %2: (tuple<i32, i32>) -> (i32, i32)
+  }];
+
+  let arguments = (ins AnyTuple: $value);
+
+  let results = (outs Variadic<AnyType>);
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value tuple", [{
+      return ::buildDestructureTupleOp(builder, result, tuple);
+  }]>];
+
+  let assemblyFormat = 
+    "$value attr-dict `:` functional-type($value, results)";
 }
 
 //===- Load ---------------------------------------------------------------===//
@@ -146,6 +270,33 @@ def LoadOp : SIROp<"load", [
   }];
 
   let assemblyFormat = "$pointer attr-dict `:` functional-type($pointer, results)";
+}
+
+//===- Static Cast --------------------------------------------------------===//
+
+def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
+  let summary = "static casting operation";
+  let description = [{
+    The Static Cast operation converts an SSA value of some type into
+    another type.
+
+    Example:
+      %1 = sir.static_cast %0 : to i32
+      %2 = sir.alloc_stack: !sora.pointer<i32>
+      %3 = sir.static_cast %2 : to !sir.reference<i32>
+  }];
+
+  let arguments = (ins AnyType: $value);
+
+  let results = (outs AnyType);
+
+  let builders = [OpBuilder<
+    "OpBuilder &builder, OperationState &result, Value value, Type toType", 
+    [{ result.addOperands(value); result.addTypes(toType); }]
+  >];
+
+  let assemblyFormat = 
+    "$value `:` type($value) attr-dict `to` type(results)";
 }
 
 //===- Store ---------------------------------------------------------------===//
@@ -193,115 +344,6 @@ def StoreOp : SIROp<"store", [
     "$value `:` type($value) `into` $pointer `:` type($pointer) attr-dict";
 }
 
-//===- Create Tuple -------------------------------------------------------===//
-
-def CreateTupleOp : SIROp<"create_tuple", [NoSideEffect]> {
-  let summary = "tuple creation operation";
-  let description = [{
-    The Create Tuple operation creates a tuple of values.
-    There must be at least 2 operands: 0 or 1 element tuples are not permitted.
-
-    Example:
-      %2 = sir.create_tuple(%0: i32, %1: i32) -> tuple<i32, i32>
-  }];
-
-  let arguments = (ins Variadic<AnyType>: $values);
-
-  let results = (outs AnyTuple);
-
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, ArrayRef<Value> elts", [{
-      return ::buildCreateTupleOp(builder, result, elts);
-  }]>];
-
-  let assemblyFormat = 
-    "`(` $values `:` type($values) `)` attr-dict `->` type(results)";
-}
-
-//===- Destructure Tuple --------------------------------------------------===//
-
-def DestructureTupleOp : SIROp<"destructure_tuple", [NoSideEffect]> {
-  let summary = "tuple destructuring operation";
-  let description = [{
-    The Destructure Tuple operation breaks up a tuple into all of its elements.
-
-    Example:
-      %3, %4 = sir.destructure_tuple %2: (tuple<i32, i32>) -> (i32, i32)
-  }];
-
-  let arguments = (ins AnyTuple: $value);
-
-  let results = (outs Variadic<AnyType>);
-
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value tuple", [{
-      return ::buildDestructureTupleOp(builder, result, tuple);
-  }]>];
-
-  let assemblyFormat = 
-    "$value attr-dict `:` functional-type($value, results)";
-}
-
-//===- Implicit Terminator for Blocks -------------------------------------===//
-
-def BlockTerminatorOp : SIROp<"block_terminator", 
-                                   [NoSideEffect, Terminator]> {
-  let summary = "block terminator operation";
-
-  let description = [{
-    The Block Terminator operation is a special terminator for SIR blocks.
-    It does not have custom syntax, and is omitted when printing 
-    the blocks for brevity.
-  }];
-
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", [{ }]
-  >];
-
-  let printer = ?;
-  let parser = ?;
-}
-
-def ImplicitSIRBlockTerminator :
-  SingleBlockImplicitTerminator<"BlockTerminatorOp">;
-
-//===- Free Blocks --------------------------------------------------------===//
-
-def BlockOp : SIROp<"block",
-    [ImplicitSIRBlockTerminator, AutomaticAllocationScope]> {
-  let summary = "block operation";
-
-  let description = [{
-    The Block operation serves as a container for free blocks. A free block
-    is a block that does not belong to another construct, such as a condition,
-    loop or function.
-
-    This operations is always created with an entry block 
-    containing a BlockTerminatorOp.
-
-    Example:
-      sir.block {
-        
-      }
-  }];
-
-  let regions = (region SizedRegion<1>:$region); 
-
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseBlockOp(parser, result); }];
-
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", 
-      [{ ::buildBlockOp(builder, result); }]
-  >];
-
-  let extraClassDeclaration = [{
-    Block &getEntryBlock() {
-      return *region().begin();
-    }
-  }];
-}
-
 //===- Void Constant ------------------------------------------------------===//
 
 def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
@@ -322,36 +364,6 @@ def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseVoidConstantOp(parser, result); }];
-}
-
-//===- Default Return -----------------------------------------------------===//
-
-def DefaultReturnOp : SIROp<"default_return", [NoSideEffect, 
-    HasParent<"FuncOp">, ReturnLike, Terminator]> {
-
-  let summary = "default return operation";
-  let description = [{
-    The Default Return operation acts like a terminator for functions that do not
-    have an explicit return type.
-
-    This operation cannot be directly lowered, it has to be legalized: either
-    transformed into a std.return, or diagnosed as illegal.
-
-    Example:
-      sir.default_return
-  }];
-
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", [{ }]
-  >];
-
-  let extraClassDeclaration = [{
-    FuncOp getFuncOp() {
-      return getParentOfType<FuncOp>();
-    }
-  }];
-
-  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
