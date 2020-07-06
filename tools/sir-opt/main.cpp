@@ -50,6 +50,26 @@ static llvm::cl::opt<bool> verifyPasses(
     llvm::cl::desc("Run the verifier after each transformation pass"),
     llvm::cl::init(true));
 
+namespace mlir {
+namespace sora {
+// Passes are added as-needed.
+void registerSupportedPasses() {
+#define GEN_PASS_REGISTRATION_CSE
+#define GEN_PASS_REGISTRATION_Canonicalizer
+#define GEN_PASS_REGISTRATION_Inliner
+#define GEN_PASS_REGISTRATION_PrintCFG
+#define GEN_PASS_REGISTRATION_PrintOp
+#define GEN_PASS_REGISTRATION_PrintOpStats
+#define GEN_PASS_REGISTRATION_SCCP
+#define GEN_PASS_REGISTRATION_StripDebugInfo
+#define GEN_PASS_REGISTRATION_SymbolDCE
+#include "mlir/Transforms/Passes.h.inc"
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/StandardOps/Transforms/Passes.h.inc"
+}
+} // namespace sora
+} // namespace mlir
+
 int main(int argc, char **argv) {
   llvm::InitLLVM initLLVM(argc, argv);
 
@@ -60,6 +80,9 @@ int main(int argc, char **argv) {
   mlir::registerPassManagerCLOptions();
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
+
+  // Register the passes supported by this tool.
+  mlir::sora::registerSupportedPasses();
 
   mlir::PassPipelineCLParser passPipeline("", "Compiler passes to run");
 

@@ -95,6 +95,8 @@ add_dependencies(libsora DriverOptionsTableGen SoraSIROpsGen)
 
 # add MLIR libraries.
 list(APPEND libsora_mlir_libs
+  MLIRAnalysis
+  MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRLLVMIR
@@ -102,10 +104,11 @@ list(APPEND libsora_mlir_libs
   MLIRParser
   MLIRPass
   MLIRSideEffectInterfaces
-  MLIRStandardOps 
+  MLIRStandardOps
   MLIRStandardOpsTransforms
   MLIRSupport
   MLIRTransforms
+  MLIRTransformUtils
 )
 
 # add LLVM libraries.

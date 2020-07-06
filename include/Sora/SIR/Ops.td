@@ -140,6 +140,8 @@ def BitNotOp : SIROp<"bitnot", [NoSideEffect]> {
   let arguments = (ins SignlessIntegerLike: $value);
   let results = (outs SignlessIntegerLike);
 
+  let hasFolder = 1;
+
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseBitNotOp(parser, result); }];
 }
@@ -258,6 +260,8 @@ def DestructureTupleOp : SIROp<"destructure_tuple", [NoSideEffect]> {
     "OpBuilder &builder, OperationState &result, Value tuple", [{
       return ::buildDestructureTupleOp(builder, result, tuple);
   }]>];
+
+  let hasFolder = 1;
 
   let assemblyFormat = 
     "$value attr-dict `:` functional-type($value, results)";
