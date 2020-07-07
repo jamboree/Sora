@@ -30,19 +30,21 @@ namespace {
 class TypeUnifier {
 
 public:
-  TypeUnifier(const UnificationOptions &options, bool canBindTypeVariables)
-      : options(options), canBindTypeVariables(canBindTypeVariables) {}
+  TypeUnifier(ConstraintSystem &cs, const UnificationOptions &options,
+              bool canBindTypeVariables)
+      : cs(cs), options(options), canBindTypeVariables(canBindTypeVariables) {}
 
+  ConstraintSystem &cs;
   const UnificationOptions &options;
   const bool canBindTypeVariables;
 
   /// Attempts to bind \p tv's to \p proposedBinding.
   bool tryBindTypeVariable(TypeVariableType *tv, Type proposedBinding) {
     proposedBinding = proposedBinding->rebuildTypeWithoutLValues();
-    if (!tv->canBindTo(proposedBinding))
+    if (!cs.canBind(tv, proposedBinding))
       return false;
     if (canBindTypeVariables)
-      tv->bindTo(proposedBinding);
+      cs.bind(tv, proposedBinding);
     return true;
   }
 
@@ -55,8 +57,8 @@ public:
       return true;
 
     auto setBindingOrUnify = [&](TypeVariableType *tv, Type proposedBinding) {
-      if (tv->isBound())
-        return unify(tv->getBinding(), proposedBinding);
+      if (cs.isBound(tv))
+        return unify(cs.getBinding(tv), proposedBinding);
       return tryBindTypeVariable(tv, proposedBinding);
     };
 
@@ -147,22 +149,21 @@ public:
 
   bool visitTypeVariableType(TypeVariableType *type, TypeVariableType *other) {
     // If they're both bound, unify their respective bindings.
-    if (type->isBound() && other->isBound())
-      return unify(type->getBinding(), other->getBinding());
+    if (cs.isBound(type) && cs.isBound(other))
+      return unify(cs.getBinding(type), cs.getBinding(other));
 
     // if only 'type' is bound, bind 'other' to 'type', unless 'type' is already
     // bound to 'other'.
-    if (type->isBound()) {
-      if (type->getBinding()->getCanonicalType()->getAs<TypeVariableType>() ==
-          other)
+    if (Type binding = cs.getBinding(type)) {
+      if (binding->getCanonicalType()->getAs<TypeVariableType>() == other)
         return true;
       return tryBindTypeVariable(other, type);
     }
 
     // if only 'other' is bound, bind 'type' to 'other', unless 'other' is
     // already bound to 'type'.
-    if (other->isBound()) {
-      if (other->getBinding()->getAs<TypeVariableType>() == type)
+    if (Type binding = cs.getBinding(other)) {
+      if (binding->getAs<TypeVariableType>() == type)
         return true;
       return tryBindTypeVariable(type, other);
     }
@@ -177,51 +178,16 @@ public:
 //===--- ConstraintSystem -------------------------------------------------===//
 
 TypeVariableType *ConstraintSystem::createTypeVariable(TypeVariableKind kind) {
-  auto *tyVar = new (ctxt) TypeVariableType(ctxt, kind, typeVariables.size());
+  auto *tyVar = new (*this) TypeVariableType(*this, kind, typeVariables.size());
   typeVariables.push_back(tyVar);
   return tyVar;
-}
-
-Type ConstraintSystem::simplifyType(Type type,
-                                    bool *hadUnboundGeneralTypeVariable) const {
-  if (!type->hasTypeVariable())
-    return type;
-
-  Type simplified = type->rebuildType([&](Type type) -> Type {
-    // We're only interested in type variables
-    TypeVariableType *tyVar = type->getAs<TypeVariableType>();
-    if (!tyVar)
-      return nullptr;
-
-    // Replace the TV by its binding if it's bound.
-    Type binding = tyVar->getBinding();
-    if (binding)
-      return binding->hasTypeVariable()
-                 ? simplifyType(binding, hadUnboundGeneralTypeVariable)
-                 : binding;
-    // For unbound float/int type variables, use their default types.
-    if (tyVar->isFloatTypeVariable())
-      return floatTVDefault;
-    if (tyVar->isIntegerTypeVariable())
-      return intTVDefault;
-
-    assert(tyVar->isGeneralTypeVariable() && "Unknown Type Variable Kind!");
-
-    // Everything else is an error.
-    if (hadUnboundGeneralTypeVariable)
-      *hadUnboundGeneralTypeVariable = true;
-    return ctxt.errorType;
-  });
-
-  assert(!simplified->hasTypeVariable() && "Type not fully simplified!");
-  return simplified;
 }
 
 bool ConstraintSystem::unify(Type a, Type b,
                              const UnificationOptions &options) {
   assert(a && "a is null");
   assert(b && "b is null");
-  TypeUnifier unifier(options, /*canBindTypeVariables*/ true);
+  TypeUnifier unifier(*this, options, /*canBindTypeVariables*/ true);
   bool result = unifier.unify(a, b);
   result ? ++numSuccessfulUnifications : ++numFailedUnifications;
   return result;
@@ -232,7 +198,9 @@ bool ConstraintSystem::canUnify(Type a, Type b,
   assert(a && "a is null");
   assert(b && "b is null");
   ++numCanUnifyCalls;
-  return TypeUnifier(options, /*canBindTypeVariables*/ false).unify(a, b);
+  return TypeUnifier(*const_cast<ConstraintSystem *>(this), options,
+                     /*canBindTypeVariables*/ false)
+      .unify(a, b);
 }
 
 void ConstraintSystem::dumpTypeVariables(raw_ostream &out,
@@ -242,8 +210,8 @@ void ConstraintSystem::dumpTypeVariables(raw_ostream &out,
   else
     for (TypeVariableType *tyVar : typeVariables) {
       out << "    " << *tyVar;
-      if (tyVar->isBound())
-        if (Type simplified = simplifyType(tyVar->getBinding()))
+      if (isBound(tyVar))
+        if (Type simplified = simplify(tyVar))
           if (simplified->hasErrorType())
             out << " AKA '" << simplified << "'";
       out << "\n";

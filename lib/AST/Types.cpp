@@ -9,6 +9,7 @@
 #include "Sora/AST/ASTContext.hpp"
 #include "Sora/AST/Type.hpp"
 #include "Sora/AST/TypeRepr.hpp"
+#include "Sora/AST/TypeVariableEnvironment.hpp"
 #include "Sora/AST/TypeVisitor.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/raw_ostream.h"
@@ -114,27 +115,42 @@ public:
   }
 
   void visitTypeVariableType(TypeVariableType *type) {
-    if (printOptions.printTypeVariablesAsUnderscore) {
-      out << '_';
+    if (printOptions.debugTypeVariables) {
+      char tyVarLetter;
+      switch (type->getTypeVariableKind()) {
+      case TypeVariableKind::General:
+        tyVarLetter = 'T';
+        break;
+      case TypeVariableKind::Integer:
+        tyVarLetter = 'I';
+        break;
+      case TypeVariableKind::Float:
+        tyVarLetter = 'F';
+        break;
+      }
+      out << '$' << tyVarLetter << type->getID();
+      if (Type binding = type->getEnvironment().getBinding(type)) {
+        out << '(';
+        visit(binding);
+        out << ')';
+      }
+    }
+    else {
+      const TypeVariableEnvironment &env = type->getEnvironment();
+
+      Type printedType;
+      if (Type binding = env.getBinding(type)) {
+        if (printOptions.printBoundTypeVariablesAsBinding)
+          printedType = binding;
+      }
+      else if (printOptions.printDefaultForUnboundTypeVariables)
+        printedType = env.getDefaultType(type->getTypeVariableKind());
+
+      if (printedType)
+        visit(printedType);
+      else
+        out << '_';
       return;
-    }
-    char tyVarLetter;
-    switch (type->getTypeVariableKind()) {
-    case TypeVariableKind::General:
-      tyVarLetter = 'T';
-      break;
-    case TypeVariableKind::Integer:
-      tyVarLetter = 'I';
-      break;
-    case TypeVariableKind::Float:
-      tyVarLetter = 'F';
-      break;
-    }
-    out << '$' << tyVarLetter << type->getID();
-    if (Type binding = type->getBinding()) {
-      out << '(';
-      visit(binding);
-      out << ')';
     }
   }
 };
@@ -484,42 +500,63 @@ void FunctionType::Profile(llvm::FoldingSetNodeID &id, ArrayRef<Type> args,
 
 //===- TypeVariableType ---------------------------------------------------===//
 
-void TypeVariableType::visitBindings(std::function<void(Type)> visitor) const {
-  if (!binding)
-    return;
-  visitor(binding);
-  auto *tvBinding = binding->getDesugaredType()->getAs<TypeVariableType>();
-  if (!tvBinding)
-    return;
-  tvBinding->visitBindings(visitor);
+TypeVariableType::TypeVariableType(TypeVariableEnvironment &env,
+                                   TypeVariableKind tvKind, unsigned id)
+    : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable,
+               env.getASTContext(),
+               /*isCanonical*/ true) {
+  bits.TypeVariableType.id = id;
+  setTypeVariableKind(tvKind);
 }
 
-void TypeVariableType::updateTypeVariableKind() {
-  assert(isBound() && "Can only use this on bound type variables!");
+//===- TypeVariableEnvironment --------------------------------------------===//
+
+void TypeVariableEnvironment::adjustTypeVariableKind(
+    TypeVariableType *typeVar) {
+  assert(typeVar && "TypeVariable is null!");
+  assert(isBound(typeVar) && "Can only use this on bound type variables!");
+
+  Type binding = getBinding(typeVar);
   if (binding->isAnyIntegerType())
-    return setTypeVariableKind(TypeVariableKind::Integer);
+    return typeVar->setTypeVariableKind(TypeVariableKind::Integer);
   if (binding->isAnyFloatType())
-    return setTypeVariableKind(TypeVariableKind::Float);
+    return typeVar->setTypeVariableKind(TypeVariableKind::Float);
   if (auto *typeVarBinding = binding->getAs<TypeVariableType>()) {
-    if (isGeneralTypeVariable()) {
+    if (typeVar->isGeneralTypeVariable()) {
       if (!typeVarBinding->isGeneralTypeVariable())
-        setTypeVariableKind(typeVarBinding->getTypeVariableKind());
+        typeVar->setTypeVariableKind(typeVarBinding->getTypeVariableKind());
     }
   }
 }
 
-bool TypeVariableType::canBindTo(Type type) const {
-  if (isBound() || type->hasLValue())
+Type TypeVariableEnvironment::getDefaultType(TypeVariableKind kind) const {
+  switch (kind) {
+  case TypeVariableKind::General:
+    return {};
+  case TypeVariableKind::Integer:
+    return intTypeVarDefault;
+  case TypeVariableKind::Float:
+    return floatTypeVarDefault;
+  }
+  llvm_unreachable("Unknown TypeVariableKind!");
+}
+
+bool TypeVariableEnvironment::canBind(TypeVariableType *typeVar,
+                                      Type binding) const {
+  assert(typeVar && "TypeVariable cannot be null!");
+  assert(binding && "Binding cannot be null!");
+
+  if (isBound(typeVar) || binding->hasLValue())
     return false;
 
-  CanType canType = type->getCanonicalType();
+  CanType canType = binding->getCanonicalType();
   // Cannot bind a type variable to itself.
   // FIXME: It'd be great to have a more advanced cycle detection system.
   if (auto *tv = canType->getAs<TypeVariableType>())
-    if (this == tv)
+    if (typeVar == tv)
       return false;
 
-  switch (getTypeVariableKind()) {
+  switch (typeVar->getTypeVariableKind()) {
   case TypeVariableKind::General:
     return true;
   case TypeVariableKind::Integer:
@@ -535,12 +572,72 @@ bool TypeVariableType::canBindTo(Type type) const {
       return tv->isFloatTypeVariable();
     return false;
   }
+
   llvm_unreachable("Unknown TypeVariableKind!");
 }
 
-void TypeVariableType::bindTo(Type type) {
-  assert(canBindTo(type) && "Cannot bind to this type!");
-  assert(binding.isNull() && "Overwriting binding!");
-  binding = type;
-  updateTypeVariableKind();
+void TypeVariableEnvironment::bind(TypeVariableType *typeVar, Type binding,
+                                   bool canAdjustKind) {
+  assert(typeVar && "TypeVariable cannot be null!");
+  assert(binding && "Binding cannot be null!");
+  assert(canBind(typeVar, binding) && "Binding is not allowed!");
+  typeVar->binding = binding;
+  if (canAdjustKind)
+    adjustTypeVariableKind(typeVar);
+}
+
+bool TypeVariableEnvironment::isBound(TypeVariableType *typeVar) const {
+  return !getBinding(typeVar).isNull();
+}
+
+Type TypeVariableEnvironment::simplify(Type type,
+                                       bool *hadUnboundTypeVar) const {
+  if (!type->hasTypeVariable())
+    return type;
+
+  if (hadUnboundTypeVar)
+    *hadUnboundTypeVar = false;
+
+  Type simplified = type->rebuildType([&](Type type) -> Type {
+    // We're only interested in type variables
+    TypeVariableType *tyVar = type->getAs<TypeVariableType>();
+    if (!tyVar)
+      return nullptr;
+
+    // Replace the TV by its binding if it's bound.
+    if (Type binding = getBinding(tyVar))
+      return binding->hasTypeVariable() ? simplify(binding) : binding;
+
+    // For unbound float/int type variables, use their default types (if there
+    // is one)
+    Type result;
+    if (tyVar->isFloatTypeVariable())
+      result = floatTypeVarDefault;
+    else if (tyVar->isIntegerTypeVariable())
+      result = intTypeVarDefault;
+
+    if (result)
+      return result;
+    else {
+      if (hadUnboundTypeVar)
+        *hadUnboundTypeVar = true;
+      return ctxt.errorType;
+    }
+  });
+
+  assert(!simplified->hasTypeVariable() && "Type not fully simplified!");
+  return simplified;
+}
+
+Type TypeVariableEnvironment::getBinding(TypeVariableType *typeVar) const {
+  assert(typeVar && "TypeVariable must not be null!");
+  return typeVar->binding;
+}
+
+Type TypeVariableEnvironment::getBindingOrDefault(
+    TypeVariableType *typeVar) const {
+  if (Type binding = getBinding(typeVar))
+    return binding;
+
+  return getDefaultType(typeVar->getTypeVariableKind());
 }

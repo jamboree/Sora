@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/TypeVariableEnvironment.hpp"
 #include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "TypeChecker.hpp"
@@ -34,7 +35,7 @@ struct UnificationOptions {
 ///
 /// Type variables should be created through the constraint system, it'll keep
 /// track of them and take care of giving them a unique id.
-class ConstraintSystem final {
+class ConstraintSystem final : public TypeVariableEnvironment {
 public:
   /// Default constructor that uses i32 and f32 for the default int/float type
   /// variable bindings.
@@ -46,31 +47,26 @@ public:
   /// \param intTVDefault The default binding for Integer type variables.
   /// \param floatTVDefault The default binding for Float type variables.
   ConstraintSystem(TypeChecker &tc, Type intTVDefault, Type floatTVDefault)
-      : ctxt(tc.ctxt), typeChecker(tc),
-        raiiCSArena(ctxt.createConstraintSystemArena()),
-        intTVDefault(intTVDefault), floatTVDefault(floatTVDefault) {
-    assert(intTVDefault && "No default binding for integer type variables");
-    assert(floatTVDefault && "No default binding for float type variables");
+      : TypeVariableEnvironment(tc.ctxt), typeChecker(tc) {
+
+    setIntegerTypeVariableDefaultType(intTVDefault);
+    setFloatTypeVariableDefaultType(floatTVDefault);
+
+    assert(getIntegerTypeVariableDefaultType() &&
+           "No default binding for integer type variables");
+    assert(getFloatTypeVariableDefaultType() &&
+           "No default binding for float type variables");
   }
 
   ConstraintSystem(const ConstraintSystem &) = delete;
   ConstraintSystem &operator=(const ConstraintSystem &) = delete;
 
-  ASTContext &ctxt;
   TypeChecker &typeChecker;
 
 private:
-  /// The Constraint System Arena RAII Object.
-  RAIIConstraintSystemArena raiiCSArena;
-
   /// The list of type variables created by this ConstraintSystem. Mostly used
   /// by dumpTypeVariables().
   SmallVector<TypeVariableType *, 8> typeVariables;
-
-  /// The default type of int type variables
-  const Type intTVDefault;
-  /// The default type of float type variables
-  const Type floatTVDefault;
 
   /// Creates a new type variable of kind \p kind
   TypeVariableType *createTypeVariable(TypeVariableKind kind);
@@ -90,11 +86,6 @@ public:
   TypeVariableType *createFloatTypeVariable() {
     return createTypeVariable(TypeVariableKind::Float);
   }
-
-  /// \returns the default binding for integer type variables.
-  Type getIntegerTypeVariableDefaultType() const { return intTVDefault; }
-  /// \returns the default binding for float type variables.
-  Type getFloatTypeVariableDefaultType() const { return floatTVDefault; }
 
   /// \returns true if \p tv is a integer type variable or any int type.
   /// This only looks through LValues, nothing else.
@@ -116,19 +107,6 @@ public:
     return type->isAnyFloatType();
   }
 
-  /// Simplifies \p type, replacing type variables with their bindings.
-  /// If a general type variable is unbound, an ErrorType is used, if
-  /// an Integer or Float type variable is unbound, the default type
-  /// for those type variables is used (see \c getIntegerTypeVariableDefaultType
-  /// and \c getFloatTypeVariableDefaultType)
-  ///
-  /// \param type the type to simplify
-  /// \param hadUnboundGeneralTypeVariable whether the type contained an unbound
-  /// general type variable.
-  /// \returns the simplified type, or the ErrorType on error (never nullptr)
-  Type simplifyType(Type type,
-                    bool *hadUnboundGeneralTypeVariable = nullptr) const;
-
   /// Unifies \p a with \p b using \p options.
   /// \returns true if unification was successful, false otherwise.
   bool unify(Type a, Type b,
@@ -146,8 +124,8 @@ public:
     // FIXME: it'd be great if there was a "walk" method.
     type->rebuildType([&](Type type) -> Type {
       if (TypeVariableType *tyVar = type->getAs<TypeVariableType>())
-        if (!tyVar->isBound())
-          tyVar->bindTo(ctxt.errorType);
+        if (!isBound(tyVar))
+          bind(tyVar, ctxt.errorType);
       return {};
     });
   }

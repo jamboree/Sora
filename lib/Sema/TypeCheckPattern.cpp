@@ -149,7 +149,7 @@ public:
   bool simplifyPatternType(Type &type) {
     bool wasDiagnosable = canDiagnose(type);
     bool isAmbiguous = false;
-    type = cs.simplifyType(type, &isAmbiguous);
+    type = cs.simplify(type, &isAmbiguous);
     return !isAmbiguous || !(wasDiagnosable && canEmitInferenceErrors);
   }
 

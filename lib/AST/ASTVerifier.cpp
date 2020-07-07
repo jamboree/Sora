@@ -48,8 +48,12 @@ public:
 
   SmallVectorImpl<VerifiedNode> &getNodeStack();
 
-  /// \returns the last verified node
-  VerifiedNode &getLastVerifiedNode() { return getNodeStack().back(); }
+  /// \returns the last verified node, or null if there is none.
+  VerifiedNode getLastVerifiedNode() {
+    if (getNodeStack().empty())
+      return {};
+    return getNodeStack().back();
+  }
 
   /// \returns the top-level node of some kind by walking the stack of visited
   /// nodes, and stopping and return the last node of type Ty. Returns nullptr
@@ -173,6 +177,8 @@ public:
   void visit(TypeRepr *tyRepr) { Base::visit(tyRepr); }
 
   //===- Visit Methods ----------------------------------------------------===//
+
+  void visitNullLiteralExpr(NullLiteralExpr *expr);
 
   void visitImplicitConversionExpr(ImplicitConversionExpr *expr);
 
@@ -396,6 +402,23 @@ void CheckedVerifierImpl::visitDestructuredTupleExpr(
           << "The result tuple of DestructuredTupleExprs should only contain "
              "DestructuredTupleElementExprs or ImplicitConversionExprs";
   }
+}
+
+void CheckedVerifierImpl::visitNullLiteralExpr(NullLiteralExpr *expr) {
+  /*
+  VerifiedNode failureNode = expr;
+  ImplicitMaybeConversionExpr *parent = nullptr;
+  if (VerifiedNode last = getLastVerifiedNode()) {
+    failureNode = last;
+    parent =
+        dyn_cast_or_null<ImplicitMaybeConversionExpr>(last.dyn_cast<Expr *>());
+  }
+
+  if (!parent)
+    CREATE_FAILURE(failureNode)
+        << "The immediate parent of a NullLiteralExpr should "
+           "always be an ImplicitMaybeConversionExpr";
+  */
 }
 
 void CheckedVerifierImpl::visitImplicitConversionExpr(

@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/TypeVariableEnvironment.hpp"
 #include "Sora/AST/Types.hpp"
 #include "Sora/Common/SourceManager.hpp"
 #include "Sora/Diagnostics/DiagnosticEngine.hpp"
@@ -17,13 +18,14 @@ using namespace sora;
 namespace {
 class TypeTest : public ::testing::Test {
 protected:
-  TypeTest() : csArena(ctxt->createConstraintSystemArena()) {
+  TypeTest() {
+    env = std::make_unique<TypeVariableEnvironment>(*ctxt);
 
     refType = ReferenceType::get(ctxt->i32Type, false);
     maybeType = MaybeType::get(ctxt->i32Type);
     lvalueType = LValueType::get(ctxt->i32Type);
     tupleType = TupleType::getEmpty(*ctxt);
-    tyVar = TypeVariableType::createGeneralTypeVariable(*ctxt, 0);
+    tyVar = TypeVariableType::createGeneralTypeVariable(*env, 0);
     fnType = FunctionType::get({}, refType);
   }
 
@@ -39,7 +41,7 @@ protected:
   DiagnosticEngine diagEng{srcMgr};
   std::unique_ptr<ASTContext> ctxt{ASTContext::create(srcMgr, diagEng)};
 
-  RAIIConstraintSystemArena csArena;
+  std::unique_ptr<TypeVariableEnvironment> env;
 
   Type refType;
   Type maybeType;
@@ -212,7 +214,7 @@ TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
   CHECK_ALWAYS_CANONICAL(ctxt->boolType);
   CHECK_ALWAYS_CANONICAL(ctxt->nullType);
   CHECK_ALWAYS_CANONICAL(ctxt->errorType);
-  Type tyVar = TypeVariableType::createGeneralTypeVariable(*ctxt, 0);
+  Type tyVar = TypeVariableType::createGeneralTypeVariable(*env, 0);
   CHECK_ALWAYS_CANONICAL(tyVar);
 #undef CHECK_ALWAYS_CANONICAL
 }
@@ -327,26 +329,35 @@ TEST_F(TypeTest, printingTest_func) {
 }
 
 TEST_F(TypeTest, printingTest_typeVariables) {
-  auto *generalTyVar = TypeVariableType::createGeneralTypeVariable(*ctxt, 0);
+  auto *generalTyVar = TypeVariableType::createGeneralTypeVariable(*env, 0);
   EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0");
   EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
-  generalTyVar->bindTo(ctxt->nullType);
+  env->bind(generalTyVar, ctxt->nullType);
   EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0(null)");
-  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+  TypePrintOptions tpo = TypePrintOptions::forDiagnostics();
+  EXPECT_EQ(generalTyVar->getString(tpo), "null");
+  tpo.printBoundTypeVariablesAsBinding = false;
+  EXPECT_EQ(generalTyVar->getString(tpo), "_");
 
-  auto *intTyVar = TypeVariableType::createIntegerTypeVariable(*ctxt, 0);
+  auto *intTyVar = TypeVariableType::createIntegerTypeVariable(*env, 0);
   EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDebug()), "$I0");
   EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
-  intTyVar->bindTo(ctxt->i32Type);
+  env->bind(intTyVar, ctxt->i32Type);
   EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDebug()), "$I0(i32)");
-  EXPECT_EQ(intTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+  tpo = TypePrintOptions::forDiagnostics();
+  EXPECT_EQ(intTyVar->getString(tpo), "i32");
+  tpo.printBoundTypeVariablesAsBinding = false;
+  EXPECT_EQ(intTyVar->getString(tpo), "_");
 
-  auto *floatTyVar = TypeVariableType::createFloatTypeVariable(*ctxt, 0);
+  auto *floatTyVar = TypeVariableType::createFloatTypeVariable(*env, 0);
   EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDebug()), "$F0");
   EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
-  floatTyVar->bindTo(ctxt->f64Type);
+  env->bind(floatTyVar, ctxt->f64Type);
   EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDebug()), "$F0(f64)");
-  EXPECT_EQ(floatTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
+  tpo = TypePrintOptions::forDiagnostics();
+  EXPECT_EQ(floatTyVar->getString(tpo), "f64");
+  tpo.printBoundTypeVariablesAsBinding = false;
+  EXPECT_EQ(floatTyVar->getString(tpo), "_");
 }
 
 TEST_F(TypeTest, rebuildType) {

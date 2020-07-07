@@ -281,8 +281,7 @@ public:
   /// subexpression may contain type variables)
   void diagnoseBadUnaryExpr(UnaryExpr *expr) {
     diagnose(expr->getOpLoc(), diag::cannot_use_unary_oper_on_operand_of_type,
-             expr->getOpSpelling(),
-             cs.simplifyType(expr->getSubExpr()->getType()))
+             expr->getOpSpelling(), expr->getSubExpr()->getType())
         .highlight(expr->getSubExpr()->getSourceRange());
   }
 
@@ -537,8 +536,7 @@ Expr *ExprChecker::checkCompoundAssignement(BinaryExpr *expr) {
   else {
     diagnose(expr->getOpLoc(),
              diag::cannot_use_binary_oper_on_operands_of_types,
-             expr->getOpSpelling(), cs.simplifyType(lhs->getType()),
-             cs.simplifyType(rhs->getType()));
+             expr->getOpSpelling(), lhs->getType(), rhs->getType());
   }
 
   return finalizeAssignBinaryExpr(expr);
@@ -562,7 +560,7 @@ Expr *ExprChecker::checkBasicAssignement(BinaryExpr *expr) {
   // 3. Check if LHS and RHS unify.
   if (!cs.unify(lhs->getType(), rhs->getType())) {
     diagnose(rhs->getLoc(), diag::cannot_assign_value_of_type_to_type,
-             cs.simplifyType(rhs->getType()), cs.simplifyType(lhs->getType()))
+             rhs->getType(), lhs->getType())
         .highlight(lhs->getSourceRange())
         .highlight(rhs->getSourceRange())
         .highlight(expr->getOpLoc());
@@ -605,12 +603,7 @@ bool ExprChecker::checkExprIsAssignable(Expr *expr, SourceLoc eqLoc,
     diag = diagnose(loc, diag::cannot_assign_to_immutable_named_value,
                     dre->getValueDecl()->getIdentifier());
   else {
-    Type simplified = cs.simplifyType(type);
-    if (simplified->hasErrorType())
-      return false;
-
-    diag = diagnose(loc, diag::cannot_assign_to_immutable_expr_of_type,
-                    cs.simplifyType(type));
+    diag = diagnose(loc, diag::cannot_assign_to_immutable_expr_of_type, type);
   }
   diag.highlight(eqLoc).highlight(expr->getSourceRange());
   return false;
@@ -637,9 +630,9 @@ Expr *ExprChecker::checkBinaryOp(BinaryExpr *expr) {
   expr->setRHS(rhs);
 
   if (!opType) {
-    diagnose(
-        expr->getOpLoc(), diag::cannot_use_binary_oper_on_operands_of_types,
-        expr->getOpSpelling(), cs.simplifyType(lhsTy), cs.simplifyType(rhsTy));
+    diagnose(expr->getOpLoc(),
+             diag::cannot_use_binary_oper_on_operands_of_types,
+             expr->getOpSpelling(), lhsTy, rhsTy);
     return nullptr;
   }
 
@@ -706,7 +699,7 @@ Type ExprChecker::checkBinaryOperatorApplication(Expr *lhs,
     if (!cs.unify(lhsType, rhsType, options))
       return nullptr;
     // Check if == and != can be used here
-    if (!isEqualityComparable(cs.simplifyType(lhsType)))
+    if (!isEqualityComparable(cs.simplify(lhsType)))
       return nullptr;
     // Equality operators always return bool
     return ctxt.boolType;
@@ -813,7 +806,7 @@ Expr *ExprChecker::visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr) {
 
   // #0
   //    - Compute the lookup type
-  CanType lookupTy = cs.simplifyType(baseTy)->getCanonicalType();
+  CanType lookupTy = cs.simplify(baseTy)->getCanonicalType();
 
   // If the type that we want to look into contains an ErrorType, stop here.
   if (lookupTy->hasErrorType())
@@ -955,8 +948,7 @@ Expr *ExprChecker::visitCastExpr(CastExpr *expr) {
   if (!tc.canExplicitlyCast(cs, subExprType, toType)) {
     // For the diagnostic, use the simplified type of the subexpression w/o
     // implicit conversions
-    Type fromType = cs.simplifyType(
-        expr->getSubExpr()->ignoreImplicitConversions()->getType());
+    Type fromType = expr->getSubExpr()->ignoreImplicitConversions()->getType();
     diagnose(expr->getSubExpr()->getLoc(), diag::cannot_cast_value_of_type,
              fromType, toType)
         .highlight(expr->getAsLoc())
@@ -1007,8 +999,7 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
     // Use cs.simplifyType so things like 0() are correctly diagnosed as i32 and
     // not diagnosed as '_'
     diagnose(expr->getFn()->getLoc(),
-             diag::value_of_non_function_type_isnt_callable,
-             cs.simplifyType(calleeType))
+             diag::value_of_non_function_type_isnt_callable, calleeType)
         .highlight({expr->getLParenLoc(), expr->getRParenLoc()});
     return nullptr;
   }
@@ -1061,7 +1052,7 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
     Type condTy = expr->getCond()->getType();
     if (!condTy->getDesugaredType()->is<BoolType>()) {
       diagnose(expr->getCond()->getLoc(), diag::value_cannot_be_used_as_cond,
-               cs.simplifyType(condTy), ctxt.boolType)
+               condTy, ctxt.boolType)
           .highlight(expr->getQuestionLoc());
       isValid = false;
     }
@@ -1084,8 +1075,8 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
   if (!cs.unify(elseTy, exprTV)) {
     // Simplify both types just in case
     diagnose(expr->getColonLoc(),
-             diag::result_values_in_ternary_have_different_types,
-             cs.simplifyType(thenTy), cs.simplifyType(elseTy))
+             diag::result_values_in_ternary_have_different_types, thenTy,
+             elseTy)
         .highlight(expr->getColonLoc())
         .highlight(expr->getThen()->getSourceRange())
         .highlight(expr->getElse()->getSourceRange());
@@ -1100,7 +1091,7 @@ Expr *ExprChecker::visitForceUnwrapExpr(ForceUnwrapExpr *expr) {
   expr->setSubExpr(coerceToRValue(expr->getSubExpr()));
 
   // Fetch the type of the subexpression and simplify it.
-  Type subExprType = cs.simplifyType(expr->getSubExpr()->getType());
+  Type subExprType = expr->getSubExpr()->getType();
 
   // Can't check the expression if it has an error type
   if (subExprType->hasErrorType())
@@ -1187,7 +1178,7 @@ public:
     // Whether the type is ambiguous
     bool isAmbiguous = false;
 
-    type = cs.simplifyType(type, &isAmbiguous);
+    type = cs.simplify(type, &isAmbiguous);
     expr->setType(type);
 
     if (isAmbiguous && canComplain && canDiagnose(expr)) {
@@ -1285,7 +1276,7 @@ class ImplicitConversionBuilder
 
 public:
   ImplicitConversionBuilder(TypeChecker &tc, ConstraintSystem &cs)
-      : tc(tc), cs(cs), ctxt(cs.ctxt) {}
+      : tc(tc), cs(cs), ctxt(cs.getASTContext()) {}
 
   TypeChecker &tc;
   ConstraintSystem &cs;
@@ -1455,7 +1446,7 @@ Expr *TypeChecker::typecheckExpr(
     Type exprTy = expr->getType();
     if (!cs.unify(ofType, exprTy)) {
       if (onUnificationFailure)
-        onUnificationFailure(cs.simplifyType(exprTy), ofType);
+        onUnificationFailure(exprTy, ofType);
     }
   }
 

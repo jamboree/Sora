@@ -178,7 +178,7 @@ public:
 
   bool visitTypeVariableType(TypeVariableType *from, Type to) {
     // "Dereference" bound type variables
-    if (Type fromBinding = from->getBinding())
+    if (Type fromBinding = cs.getBinding(from))
       return visit(fromBinding, to);
     // For Integer Type Variables, use canConvertIntegerTypeTo
     if (from->isIntegerTypeVariable() && canConvertIntegerTypeTo(to))

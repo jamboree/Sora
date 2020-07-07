@@ -183,13 +183,13 @@ TEST_F(ExprTest, UnresolvedExprs) {
   // ArenaKind::UnresolvedExpr.
   auto ctxt = ASTContext::create(srcMgr, diagEng);
   ASSERT_EQ(ctxt->getMemoryUsed(ArenaKind::UnresolvedExpr), 0);
-  ASSERT_EQ(ctxt->getMemoryUsed(ArenaKind::ConstraintSystem), 0);
+  ASSERT_EQ(ctxt->getMemoryUsed(ArenaKind::TypeVariableEnvironment), 0);
   size_t basePerma = ctxt->getMemoryUsed(ArenaKind::Permanent);
   new (*ctxt) UnresolvedDeclRefExpr({}, {});
   new (*ctxt) UnresolvedMemberRefExpr(nullptr, {}, false, {}, {});
   EXPECT_NE(ctxt->getMemoryUsed(ArenaKind::UnresolvedExpr), 0);
   EXPECT_EQ(ctxt->getMemoryUsed(ArenaKind::Permanent), basePerma);
-  EXPECT_EQ(ctxt->getMemoryUsed(ArenaKind::ConstraintSystem), 0);
+  EXPECT_EQ(ctxt->getMemoryUsed(ArenaKind::TypeVariableEnvironment), 0);
 }
 
 TEST_F(ExprTest, getSourceRange) {

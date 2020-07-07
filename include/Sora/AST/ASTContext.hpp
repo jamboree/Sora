@@ -34,33 +34,11 @@ enum class ArenaKind : uint8_t {
   /// fully typechecked.
   /// This arena is never used to allocate types;
   UnresolvedExpr,
-  /// The arena used by the Typechecker's ConstraintSystem. This is where
-  /// TypeVariables, types containing TypeVariables & constraints themselves are
-  /// allocated. This allocator is not active by default. It can ONLY be used
-  /// when a RAIIConstraintSystemArena object is alive.
-  ConstraintSystem
-};
-
-/// An RAII object that enables usage of the ConstraintSystem's arena.
-/// Once this object is destroyed, everything within the ConstraintSystem arena
-/// is freed.
-class RAIIConstraintSystemArena final {
-private:
-  /// This object shouldn't be copyable.
-  RAIIConstraintSystemArena(const RAIIConstraintSystemArena &) = delete;
-  RAIIConstraintSystemArena &
-  operator=(const RAIIConstraintSystemArena &) = delete;
-
-  /// Only the ASTContext can create those
-  friend class ASTContext;
-  RAIIConstraintSystemArena(ASTContext &ctxt);
-
-public:
-  RAIIConstraintSystemArena(RAIIConstraintSystemArena &&) = default;
-
-  ASTContext &ctxt;
-
-  ~RAIIConstraintSystemArena();
+  /// The arena used by the currently active TypeVariableEnvironment. This is
+  /// where TypeVariable & types containing TypeVariables are  allocated. This
+  /// allocator is not active by default. It can ONLY be used
+  /// when a TypeVariableEnvironment object is alive.
+  TypeVariableEnvironment
 };
 
 /// The ASTContext is a large object designed as the core of the AST.
@@ -110,14 +88,9 @@ public:
     return allocate(sizeof(Ty), alignof(Ty), allocator);
   }
 
-  /// \returns true if the ArenaKind::ConstraintSystem allocator is active.
-  /// It is only active if there's one active RAIIConstraintSystemArena.
-  bool hasConstraintSystemArena() const;
-
-  /// Creates a new ConstraintSystem arena with a lifetime tied to the returned
-  /// object's.
-  /// \c hasConstraintSystemArena() must return false for this to be used!
-  RAIIConstraintSystemArena createConstraintSystemArena();
+  /// \returns true if the ArenaKind::TypeVariableEnvironment allocator is
+  /// active. It is only active if a TypeVariableEnvironment is alive.
+  bool hasTypeVariableEnvironmentArena() const;
 
   /// Frees (deallocates) all UnresolvedExprs allocated within this ASTContext.
   void freeUnresolvedExprs();
@@ -168,7 +141,6 @@ public:
   DiagnosticEngine &diagEngine;
 
   //===- Frequently Used Types & Builtin Types ----------------------------===//
-
 
   const CanType i8Type;    /// "i8"
   const CanType i16Type;   /// "i16"

@@ -35,8 +35,9 @@ struct fltSemantics;
 } // namespace llvm
 
 namespace sora {
-class ASTContext;
 enum class ArenaKind : uint8_t;
+class ASTContext;
+class TypeVariableEnvironment;
 
 /// Kinds of Types
 enum class TypeKind : uint8_t {
@@ -687,51 +688,38 @@ enum class TypeVariableKind : uint8_t {
 /// Represents a type variable existing within a constraint system.
 ///
 /// Used by Sema, this type is never unique and is always allocated
-/// in the ASTContext's ConstraintSystem arena.
+/// in the ASTContext's TypeVariableEnvironment arena.
 /// Note that types containing TypeVariables are also allocated in the
-/// ASTContext's ConstraintSystem arena.
+/// ASTContext's TypeVariableEnvironment arena.
 ///
-/// This type is always canonical. It is also the only type that is never
-/// unique and is mutable.
+/// This type is always canonical.
 class TypeVariableType final : public TypeBase {
-  Type binding;
+  friend TypeVariableEnvironment;
 
-  /// Updates this TypeVariable's kind according to its binding.
-  void updateTypeVariableKind();
+  Type binding;
 
   void setTypeVariableKind(TypeVariableKind kind) {
     bits.TypeVariableType.tvKind = (unsigned)kind;
     assert(kind == getTypeVariableKind() && "Bits dropped!");
   }
 
-  /// This calls getBinding() and calls visitor with the result, but if the
-  /// result is another type variable, this keeps going until it finds an
-  /// unbound type variable, or something that isn't a type variable. This uses
-  /// getRValueType/getDesugaredType before checking if a type is a type
-  /// variable.
-  void visitBindings(std::function<void(Type)> visitor) const;
-
 public:
-  TypeVariableType(ASTContext &ctxt, TypeVariableKind tvKind, unsigned id)
-      : TypeBase(TypeKind::TypeVariable, TypeProperties::hasTypeVariable, ctxt,
-                 /*isCanonical*/ true) {
-    bits.TypeVariableType.id = id;
-    setTypeVariableKind(tvKind);
+  TypeVariableType(TypeVariableEnvironment &env, TypeVariableKind tvKind,
+                   unsigned id);
+
+  static TypeVariableType *
+  createGeneralTypeVariable(TypeVariableEnvironment &env, unsigned id) {
+    return new (env) TypeVariableType(env, TypeVariableKind::General, id);
   }
 
-  static TypeVariableType *createGeneralTypeVariable(ASTContext &ctxt,
-                                                     unsigned id) {
-    return new (ctxt) TypeVariableType(ctxt, TypeVariableKind::General, id);
+  static TypeVariableType *
+  createIntegerTypeVariable(TypeVariableEnvironment &env, unsigned id) {
+    return new (env) TypeVariableType(env, TypeVariableKind::Integer, id);
   }
 
-  static TypeVariableType *createIntegerTypeVariable(ASTContext &ctxt,
-                                                     unsigned id) {
-    return new (ctxt) TypeVariableType(ctxt, TypeVariableKind::Integer, id);
-  }
-
-  static TypeVariableType *createFloatTypeVariable(ASTContext &ctxt,
+  static TypeVariableType *createFloatTypeVariable(TypeVariableEnvironment &env,
                                                    unsigned id) {
-    return new (ctxt) TypeVariableType(ctxt, TypeVariableKind::Float, id);
+    return new (env) TypeVariableType(env, TypeVariableKind::Float, id);
   }
 
   /// Allow placement new for TypeVariables
@@ -740,26 +728,15 @@ public:
     return mem;
   }
 
-  // Allow allocation through the ASTContext's ConstraintSystem arena.
-  void *operator new(size_t size, ASTContext &ctxt,
+  // Allow allocation through the ASTContext's TypeVariableEnvironment arena.
+  void *operator new(size_t size, TypeVariableEnvironment &env,
                      unsigned align = alignof(TypeVariableType));
 
   /// \returns the ID of this type variable
   unsigned getID() const { return bits.TypeVariableType.id; }
 
-  /// \returns whether this TypeVariable can bind to \p type.
-  bool canBindTo(Type type) const;
-
-  /// Binds this type variable to \p type.
-  /// Bindings are definitive and cannot be changed later.
-  /// This asserts that the binding is possible.
-  void bindTo(Type type);
-
-  /// \returns whether this TypeVariable is bound.
-  bool isBound() const { return (bool)binding; }
-
-  /// \returns this type variable's binding (may be null)
-  Type getBinding() const { return binding; }
+  /// \returns this TypeVariable's environment.
+  const TypeVariableEnvironment &getEnvironment() const;
 
   /// \returns the kind of TypeVariable this is
   TypeVariableKind getTypeVariableKind() const {

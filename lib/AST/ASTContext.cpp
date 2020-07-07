@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sora/AST/ASTContext.hpp"
+#include "Sora/AST/TypeVariableEnvironment.hpp"
 #include "Sora/AST/Types.hpp"
 #include "Sora/Common/LLVM.hpp"
 #include "llvm/ADT/DenseMap.h"
@@ -75,25 +76,28 @@ struct ASTContext::Impl {
   TupleType *emptyTupleType = nullptr;
   /// for ArenaKind::UnresolvedExpr
   llvm::BumpPtrAllocator unresolvedExprArena;
-  /// for ArenaKind::ConstraintSystem
-  Optional<TypeArena> constraintSystemArena;
+  /// for ArenaKind::TypeVariableEnvironment
+  Optional<TypeArena> typeVariableEnvironmentArena;
+  TypeVariableEnvironment *currentTypeVariableEnvironment = nullptr;
 
   // Built-in types lookup map
   llvm::DenseMap<Identifier, CanType> builtinTypesLookupMap;
 
-  void initConstraintSystemArena() {
-    assert(!hasConstraintSystemArena() &&
-           "ConstraintSystem arena already active");
-    constraintSystemArena.emplace();
+  void initTypeVariableEnvironmentArena(TypeVariableEnvironment &env) {
+    assert(!hasTypeVariableEnvironmentArena() &&
+           "TypeVariableEnvironment arena already active");
+    currentTypeVariableEnvironment = &env;
+    typeVariableEnvironmentArena.emplace();
   }
 
-  void destroyConstraintSystemArena() {
-    assert(hasConstraintSystemArena() && "ConstraintSystem arena not active");
-    constraintSystemArena.reset();
+  void destroyTypeVariableEnvironmentArena() {
+    assert(hasTypeVariableEnvironmentArena() &&
+           "TypeVariableEnvironment arena not active");
+    typeVariableEnvironmentArena.reset();
   }
 
-  bool hasConstraintSystemArena() const {
-    return constraintSystemArena.hasValue();
+  bool hasTypeVariableEnvironmentArena() const {
+    return typeVariableEnvironmentArena.hasValue();
   }
 
   /// \returns the TypeArena for \p kind. \p kind can't be UnresolvedExpr!
@@ -101,10 +105,10 @@ struct ASTContext::Impl {
     switch (kind) {
     case ArenaKind::Permanent:
       return permanentArena;
-    case ArenaKind::ConstraintSystem:
-      assert(hasConstraintSystemArena() &&
-             "ConstraintSystem allocator isn't active!");
-      return *constraintSystemArena;
+    case ArenaKind::TypeVariableEnvironment:
+      assert(hasTypeVariableEnvironmentArena() &&
+             "TypeVariableEnvironment allocator isn't active!");
+      return *typeVariableEnvironmentArena;
     case ArenaKind::UnresolvedExpr:
       llvm_unreachable(
           "Can't allocate types inside the UnresolvedExpr allocator!");
@@ -131,8 +135,9 @@ struct ASTContext::Impl {
 
   /// Custom destructor that runs the cleanups.
   ~Impl() {
-    assert(!hasConstraintSystemArena() &&
-           "Destroying the ASTContext while the ConstraintSystem allocator is "
+    assert(!hasTypeVariableEnvironmentArena() &&
+           "Destroying the ASTContext while the TypeVariableEnvironment "
+           "allocator is "
            "active!");
     for (auto &cleanup : cleanups)
       cleanup();
@@ -145,7 +150,7 @@ size_t ASTContext::Impl::getTotalMemoryUsed() const {
   value += llvm::capacity_in_bytes(cleanups);
   value += getMemoryUsed(ArenaKind::Permanent);
   value += getMemoryUsed(ArenaKind::UnresolvedExpr);
-  value += getMemoryUsed(ArenaKind::ConstraintSystem);
+  value += getMemoryUsed(ArenaKind::TypeVariableEnvironment);
   return value;
 }
 
@@ -155,29 +160,25 @@ size_t ASTContext::Impl::getMemoryUsed(ArenaKind arena) const {
     return permanentArena.getTotalMemory();
   case ArenaKind::UnresolvedExpr:
     return unresolvedExprArena.getTotalMemory();
-  case ArenaKind::ConstraintSystem:
-    if (!constraintSystemArena)
+  case ArenaKind::TypeVariableEnvironment:
+    if (!typeVariableEnvironmentArena)
       return 0;
-    return constraintSystemArena->getTotalMemory();
+    return typeVariableEnvironmentArena->getTotalMemory();
   }
   llvm_unreachable("Unknown ArenaKind");
-}
-
-//===- RAIIConstraintSystemArena ------------------------------------------===//
-
-RAIIConstraintSystemArena::RAIIConstraintSystemArena(ASTContext &ctxt)
-    : ctxt(ctxt) {
-  ctxt.getImpl().initConstraintSystemArena();
-}
-
-RAIIConstraintSystemArena::~RAIIConstraintSystemArena() {
-  ctxt.getImpl().destroyConstraintSystemArena();
 }
 
 //===- Utilities ----------------------------------------------------------===//
 
 static IntegerWidth getPointerWidth(ASTContext &ctxt) {
   return IntegerWidth::pointer(ctxt.getTargetTriple());
+}
+
+/// \returns The ArenaKind to use for a type using \p properties.
+static ArenaKind getArena(TypeProperties properties) {
+  return (properties & TypeProperties::hasTypeVariable)
+             ? ArenaKind::TypeVariableEnvironment
+             : ArenaKind::Permanent;
 }
 
 //===- ASTContext ---------------------------------------------------------===//
@@ -286,22 +287,16 @@ llvm::BumpPtrAllocator &ASTContext::getArena(ArenaKind kind) {
     return getImpl().permanentArena;
   case ArenaKind::UnresolvedExpr:
     return getImpl().unresolvedExprArena;
-  case ArenaKind::ConstraintSystem:
-    assert(getImpl().hasConstraintSystemArena() &&
-           "ConstraintSystem arena not active!");
-    return *getImpl().constraintSystemArena;
+  case ArenaKind::TypeVariableEnvironment:
+    assert(getImpl().hasTypeVariableEnvironmentArena() &&
+           "TypeVariableEnvironment arena not active!");
+    return *getImpl().typeVariableEnvironmentArena;
   }
   llvm_unreachable("unknown allocator kind");
 }
 
-bool ASTContext::hasConstraintSystemArena() const {
-  return getImpl().hasConstraintSystemArena();
-}
-
-RAIIConstraintSystemArena ASTContext::createConstraintSystemArena() {
-  if (hasConstraintSystemArena())
-    llvm_unreachable("Only one ConstraintSystem Arena can exist at a time!");
-  return {*this};
+bool ASTContext::hasTypeVariableEnvironmentArena() const {
+  return getImpl().hasTypeVariableEnvironmentArena();
 }
 
 void ASTContext::freeUnresolvedExprs() {
@@ -360,14 +355,7 @@ void ASTContext::getAllBuiltinTypes(SmallVectorImpl<CanType> &results) const {
     results.push_back(entry.second);
 }
 
-//===- Types --------------------------------------------------------------===//
-
-/// \returns The ArenaKind to use for a type using \p properties.
-static ArenaKind getArena(TypeProperties properties) {
-  return (properties & TypeProperties::hasTypeVariable)
-             ? ArenaKind::ConstraintSystem
-             : ArenaKind::Permanent;
-}
+//===- IntegerType --------------------------------------------------------===//
 
 IntegerType *IntegerType::getSigned(ASTContext &ctxt, IntegerWidth width) {
   IntegerType *&ty = ctxt.getImpl()
@@ -389,6 +377,8 @@ IntegerType *IntegerType::getUnsigned(ASTContext &ctxt, IntegerWidth width) {
                    IntegerType(ctxt, width, /*isSigned*/ false));
 }
 
+//===- ReferenceType ------------------------------------------------------===//
+
 ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
   assert(pointee && "pointee type can't be null!");
   ASTContext &ctxt = pointee->getASTContext();
@@ -404,6 +394,8 @@ ReferenceType *ReferenceType::get(Type pointee, bool isMut) {
   return type = new (ctxt, arena) ReferenceType(props, ctxt, pointee, isMut);
 }
 
+//===- MaybeType ----------------------------------------------------------===//
+
 MaybeType *MaybeType::get(Type valueType) {
   assert(valueType && "value type is null");
   ASTContext &ctxt = valueType->getASTContext();
@@ -418,6 +410,8 @@ MaybeType *MaybeType::get(Type valueType) {
     return type;
   return type = new (ctxt, arena) MaybeType(props, ctxt, valueType);
 }
+
+//===- TupleType ----------------------------------------------------------===//
 
 Type TupleType::get(ASTContext &ctxt, ArrayRef<Type> elems) {
   // For empty tuples, don't bother doing any research, just return the
@@ -464,6 +458,8 @@ TupleType *TupleType::getEmpty(ASTContext &ctxt) {
              TupleType(TypeProperties(), ctxt, /*isCanonical*/ false, {});
 }
 
+//===- LValueType ---------------------------------------------------------===//
+
 LValueType *LValueType::get(Type objectType) {
   assert(objectType && "object type is null");
   ASTContext &ctxt = objectType->getASTContext();
@@ -477,6 +473,8 @@ LValueType *LValueType::get(Type objectType) {
     return type;
   return type = new (ctxt, arena) LValueType(props, ctxt, objectType);
 }
+
+//===- FunctionType -------------------------------------------------------===//
 
 FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   assert(rtr && "return type is null");
@@ -508,7 +506,32 @@ FunctionType *FunctionType::get(ArrayRef<Type> args, Type rtr) {
   return type;
 }
 
-void *TypeVariableType::operator new(size_t size, ASTContext &ctxt,
+//===- TypeVariableType ---------------------------------------------------===//
+
+void *TypeVariableType::operator new(size_t size, TypeVariableEnvironment &env,
                                      unsigned align) {
-  return TypeBase::operator new(size, ctxt, ArenaKind::ConstraintSystem, align);
+  return TypeBase::operator new(size, env.getASTContext(),
+                                ArenaKind::TypeVariableEnvironment, align);
+}
+
+//===- TypeVariableEnvironment --------------------------------------------===//
+
+TypeVariableEnvironment::TypeVariableEnvironment(ASTContext &ctxt)
+    : ctxt(ctxt) {
+  ctxt.getImpl().initTypeVariableEnvironmentArena(*this);
+}
+
+TypeVariableEnvironment::~TypeVariableEnvironment() {
+  ctxt.getImpl().destroyTypeVariableEnvironmentArena();
+}
+
+const TypeVariableEnvironment &TypeVariableType::getEnvironment() const {
+  TypeVariableEnvironment *env =
+      getASTContext().getImpl().currentTypeVariableEnvironment;
+  assert(env && "A TypeVariable is alive without a TypeVariableEnvironment?!");
+  return *env;
+}
+
+void *TypeVariableEnvironment::allocate(size_t size, size_t align) {
+  return ctxt.allocate(size, align, ArenaKind::TypeVariableEnvironment);
 }

@@ -70,8 +70,8 @@ public:
   /// \param ofType (Optional) The expected type of the expression. If non-null,
   /// implicit conversions may be added to \p expr to convert it to \p ofType
   /// \param onUnificationFailure Called if the Expr's type can't unify with \p
-  /// ofType. The first argument is the type of the Expr (simplified), the
-  /// second is \p ofType.
+  /// ofType. The first argument is the type of the Expr, the second is \p
+  /// ofType.
   /// \returns \p expr or the expr that should replace it in the tree.
   Expr *typecheckExpr(
       ConstraintSystem &cs, Expr *expr, DeclContext *dc, Type ofType = Type(),

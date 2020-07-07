@@ -34,18 +34,28 @@ public:
   /// If true, null types are printed as <null_type>, if false, traps on null
   /// type.
   bool allowNullTypes : 1;
-  /// If true, type variables are printed as '_' instead of '$Tx'.
-  bool printTypeVariablesAsUnderscore : 1;
   /// If true, lvalues are printed as @lvalue T instead of being "transparent"
   bool printLValues : 1;
   /// If true, null types are printed as <error_type>, if false, traps on error
   /// type.
   bool allowErrorTypes : 1;
+  /// If true, all type variables are printed as
+  /// "'$' ('T' | 'I' | 'F') id ('(' binding ')')?".
+  bool debugTypeVariables : 1;
+  /// Print the binding of bound type variables instead of using '_' or \c
+  /// printDefaultForUnboundTypeVariables. This is ignored if \c
+  /// debugTypeVariables is true.
+  bool printBoundTypeVariablesAsBinding : 1;
+  /// For unbound TypeVariables, print their default type or '_' if there is no
+  /// default. This is ignored if \c debugTypeVariables is true.
+  bool printDefaultForUnboundTypeVariables : 1;
 
   /// Creates a TypeOption for use in diagnostics
   static TypePrintOptions forDiagnostics() {
     TypePrintOptions opts;
-    opts.printTypeVariablesAsUnderscore = true;
+    opts.debugTypeVariables = false;
+    opts.printBoundTypeVariablesAsBinding = true;
+    opts.printDefaultForUnboundTypeVariables = true;
     opts.allowErrorTypes = false;
     opts.allowNullTypes = false;
     opts.printLValues = false;
@@ -55,7 +65,9 @@ public:
   /// Creates a TypeOption for use in debug messages.
   static TypePrintOptions forDebug() {
     TypePrintOptions opts;
-    opts.printTypeVariablesAsUnderscore = false;
+    opts.debugTypeVariables = true;
+    opts.printBoundTypeVariablesAsBinding = false;
+    opts.printDefaultForUnboundTypeVariables = false;
     opts.allowErrorTypes = true;
     opts.allowNullTypes = true;
     opts.printLValues = true;
