@@ -595,9 +595,6 @@ Type TypeVariableEnvironment::simplify(Type type,
   if (!type->hasTypeVariable())
     return type;
 
-  if (hadUnboundTypeVar)
-    *hadUnboundTypeVar = false;
-
   Type simplified = type->rebuildType([&](Type type) -> Type {
     // We're only interested in type variables
     TypeVariableType *tyVar = type->getAs<TypeVariableType>();
@@ -606,7 +603,7 @@ Type TypeVariableEnvironment::simplify(Type type,
 
     // Replace the TV by its binding if it's bound.
     if (Type binding = getBinding(tyVar))
-      return binding->hasTypeVariable() ? simplify(binding) : binding;
+      return binding->hasTypeVariable() ? simplify(binding, hadUnboundTypeVar) : binding;
 
     // For unbound float/int type variables, use their default types (if there
     // is one)
@@ -618,11 +615,9 @@ Type TypeVariableEnvironment::simplify(Type type,
 
     if (result)
       return result;
-    else {
-      if (hadUnboundTypeVar)
-        *hadUnboundTypeVar = true;
-      return ctxt.errorType;
-    }
+    if (hadUnboundTypeVar)
+      *hadUnboundTypeVar = true;
+    return ctxt.errorType;
   });
 
   assert(!simplified->hasTypeVariable() && "Type not fully simplified!");
