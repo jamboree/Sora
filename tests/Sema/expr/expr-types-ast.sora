@@ -34,7 +34,6 @@ func types() -> (u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, f32, f64) {
 
   let mut cond = false
   let _: i8 = cond ? 0 : 1
-  let _ = cond ? null : null
 
   let immutTuple : (i32, &i32, &mut i32)
   immutTuple.0
@@ -165,138 +164,132 @@ func tuples() {
 // CHECK-NEXT:             DeclRefExpr type=@lvalue bool loc=line:36:15 decl='cond'@line:35:11
 // CHECK-NEXT:           IntegerLiteralExpr type=i8 loc=line:36:22 str='0' value=0
 // CHECK-NEXT:           IntegerLiteralExpr type=i8 loc=line:36:26 str='1' value=1
-// CHECK-NEXT:       LetDecl letLoc=line:37:3 equalLoc=line:37:9
-// CHECK:              ConditionalExpr type=null questionLoc=line:37:16 colonLoc=line:37:23
-// CHECK-NEXT:           LoadExpr implicit type=bool
-// CHECK-NEXT:             DeclRefExpr type=@lvalue bool loc=line:37:11 decl='cond'@line:35:11
-// CHECK-NEXT:           NullLiteralExpr type=null loc=line:37:18
-// CHECK-NEXT:           NullLiteralExpr type=null loc=line:37:25
-// CHECK-NEXT:       LetDecl letLoc=line:39:3
-// CHECK:                  VarDecl type=(i32, &i32, &mut i32) identifier=immutTuple identifierLoc=line:39:7 immutable
+// CHECK-NEXT:       LetDecl letLoc=line:38:3
+// CHECK:                  VarDecl type=(i32, &i32, &mut i32) identifier=immutTuple identifierLoc=line:38:7 immutable
 // CHECK:            LoadExpr implicit type=i32
-// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:40:13 index=0 indexLoc=line:40:14
-// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, &i32, &mut i32) loc=line:40:3 decl='immutTuple'@line:39:7
+// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:39:13 index=0 indexLoc=line:39:14
+// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, &i32, &mut i32) loc=line:39:3 decl='immutTuple'@line:38:7
 // CHECK-NEXT:       LoadExpr implicit type=&i32
-// CHECK-NEXT:         TupleElementExpr type=@lvalue &i32 dot opLoc=line:41:13 index=1 indexLoc=line:41:14
-// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, &i32, &mut i32) loc=line:41:3 decl='immutTuple'@line:39:7
+// CHECK-NEXT:         TupleElementExpr type=@lvalue &i32 dot opLoc=line:40:13 index=1 indexLoc=line:40:14
+// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, &i32, &mut i32) loc=line:40:3 decl='immutTuple'@line:38:7
 // CHECK-NEXT:       LoadExpr implicit type=&mut i32
-// CHECK-NEXT:         TupleElementExpr type=@lvalue &mut i32 dot opLoc=line:42:13 index=2 indexLoc=line:42:14
-// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, &i32, &mut i32) loc=line:42:3 decl='immutTuple'@line:39:7
-// CHECK:              TupleExpr type=(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, f32, f64) numElements=12 lParenLoc=line:44:10 rParenLoc=line:44:61
-// CHECK-NEXT:           IntegerLiteralExpr type=u8 loc=line:44:11 str='8' value=8
-// CHECK-NEXT:           IntegerLiteralExpr type=u16 loc=line:44:14 str='16' value=16
-// CHECK-NEXT:           IntegerLiteralExpr type=u32 loc=line:44:18 str='32' value=32
-// CHECK-NEXT:           IntegerLiteralExpr type=u64 loc=line:44:22 str='64' value=64
-// CHECK-NEXT:           IntegerLiteralExpr type=usize loc=line:44:26 str='0' value=0
-// CHECK-NEXT:           IntegerLiteralExpr type=i8 loc=line:44:29 str='8' value=8
-// CHECK-NEXT:           IntegerLiteralExpr type=i16 loc=line:44:32 str='16' value=16
-// CHECK-NEXT:           UnaryExpr type=i32 + (Plus) opLoc=line:44:36
-// CHECK-NEXT:             IntegerLiteralExpr type=i32 loc=line:44:37 str='32' value=32
-// CHECK-NEXT:           UnaryExpr type=i64 - (Minus) opLoc=line:44:41
-// CHECK-NEXT:             IntegerLiteralExpr type=i64 loc=line:44:42 str='64' value=64
-// CHECK-NEXT:           UnaryExpr type=isize + (Plus) opLoc=line:44:46
-// CHECK-NEXT:             IntegerLiteralExpr type=isize loc=line:44:47 str='0' value=0
-// CHECK-NEXT:           UnaryExpr type=f32 + (Plus) opLoc=line:44:50
-// CHECK-NEXT:             FloatLiteralExpr type=f32 loc=line:44:51 str='3.14' value=3.1400001
-// CHECK-NEXT:           UnaryExpr type=f64 - (Minus) opLoc=line:44:57
-// CHECK-NEXT:             FloatLiteralExpr type=f64 loc=line:44:58 str='3.6' value=3.6000000000000001
-// CHECK-NEXT:   FuncDecl type=(&mut ((i32, i32), i16), (i32, i16), &((i32, i32), i16)) -> void identifier=membacc identifierLoc=line:48:6 fnLoc=line:48:1
-// CHECK:            ParamDecl type=&mut ((i32, i32), i16) identifier=a identifierLoc=line:48:14
-// CHECK:            ParamDecl type=(i32, i16) identifier=b identifierLoc=line:48:41
-// CHECK:            ParamDecl type=&((i32, i32), i16) identifier=c identifierLoc=line:48:56
+// CHECK-NEXT:         TupleElementExpr type=@lvalue &mut i32 dot opLoc=line:41:13 index=2 indexLoc=line:41:14
+// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, &i32, &mut i32) loc=line:41:3 decl='immutTuple'@line:38:7
+// CHECK:              TupleExpr type=(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, f32, f64) numElements=12 lParenLoc=line:43:10 rParenLoc=line:43:61
+// CHECK-NEXT:           IntegerLiteralExpr type=u8 loc=line:43:11 str='8' value=8
+// CHECK-NEXT:           IntegerLiteralExpr type=u16 loc=line:43:14 str='16' value=16
+// CHECK-NEXT:           IntegerLiteralExpr type=u32 loc=line:43:18 str='32' value=32
+// CHECK-NEXT:           IntegerLiteralExpr type=u64 loc=line:43:22 str='64' value=64
+// CHECK-NEXT:           IntegerLiteralExpr type=usize loc=line:43:26 str='0' value=0
+// CHECK-NEXT:           IntegerLiteralExpr type=i8 loc=line:43:29 str='8' value=8
+// CHECK-NEXT:           IntegerLiteralExpr type=i16 loc=line:43:32 str='16' value=16
+// CHECK-NEXT:           UnaryExpr type=i32 + (Plus) opLoc=line:43:36
+// CHECK-NEXT:             IntegerLiteralExpr type=i32 loc=line:43:37 str='32' value=32
+// CHECK-NEXT:           UnaryExpr type=i64 - (Minus) opLoc=line:43:41
+// CHECK-NEXT:             IntegerLiteralExpr type=i64 loc=line:43:42 str='64' value=64
+// CHECK-NEXT:           UnaryExpr type=isize + (Plus) opLoc=line:43:46
+// CHECK-NEXT:             IntegerLiteralExpr type=isize loc=line:43:47 str='0' value=0
+// CHECK-NEXT:           UnaryExpr type=f32 + (Plus) opLoc=line:43:50
+// CHECK-NEXT:             FloatLiteralExpr type=f32 loc=line:43:51 str='3.14' value=3.1400001
+// CHECK-NEXT:           UnaryExpr type=f64 - (Minus) opLoc=line:43:57
+// CHECK-NEXT:             FloatLiteralExpr type=f64 loc=line:43:58 str='3.6' value=3.6000000000000001
+// CHECK-NEXT:   FuncDecl type=(&mut ((i32, i32), i16), (i32, i16), &((i32, i32), i16)) -> void identifier=membacc identifierLoc=line:47:6 fnLoc=line:47:1
+// CHECK:            ParamDecl type=&mut ((i32, i32), i16) identifier=a identifierLoc=line:47:14
+// CHECK:            ParamDecl type=(i32, i16) identifier=b identifierLoc=line:47:41
+// CHECK:            ParamDecl type=&((i32, i32), i16) identifier=c identifierLoc=line:47:56
 // CHECK:            LoadExpr implicit type=i32
-// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:49:11 index=0 indexLoc=line:49:12
-// CHECK-NEXT:           ParenExpr type=@lvalue (i32, i32) lParenLoc=line:49:5 rParenLoc=line:49:10
-// CHECK-NEXT:             TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:49:7 index=0 indexLoc=line:49:9
-// CHECK-NEXT:               DeclRefExpr type=@lvalue &mut ((i32, i32), i16) loc=line:49:6 decl='a'@line:48:14
+// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:48:11 index=0 indexLoc=line:48:12
+// CHECK-NEXT:           ParenExpr type=@lvalue (i32, i32) lParenLoc=line:48:5 rParenLoc=line:48:10
+// CHECK-NEXT:             TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:48:7 index=0 indexLoc=line:48:9
+// CHECK-NEXT:               DeclRefExpr type=@lvalue &mut ((i32, i32), i16) loc=line:48:6 decl='a'@line:47:14
 // CHECK-NEXT:       LoadExpr implicit type=i32
-// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:50:6 index=0 indexLoc=line:50:7
-// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, i16) loc=line:50:5 decl='b'@line:48:41
+// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:49:6 index=0 indexLoc=line:49:7
+// CHECK-NEXT:           DeclRefExpr type=@lvalue (i32, i16) loc=line:49:5 decl='b'@line:47:41
 // CHECK-NEXT:       LoadExpr implicit type=i32
-// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:51:11 index=0 indexLoc=line:51:12
-// CHECK-NEXT:           ParenExpr type=@lvalue (i32, i32) lParenLoc=line:51:5 rParenLoc=line:51:10
-// CHECK-NEXT:             TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:51:7 index=0 indexLoc=line:51:9
-// CHECK-NEXT:               DeclRefExpr type=@lvalue &((i32, i32), i16) loc=line:51:6 decl='c'@line:48:56
-// CHECK-NEXT:   FuncDecl type=(i8) -> void identifier=implicit identifierLoc=line:54:6 fnLoc=line:54:1
-// CHECK:            ParamDecl type=i8 identifier=a identifierLoc=line:54:15
-// CHECK:            LetDecl letLoc=line:55:3 equalLoc=line:55:71
-// CHECK:              TupleExpr type=(maybe i32, maybe i32, (maybe i32, maybe i32)) numElements=3 lParenLoc=line:55:73 rParenLoc=line:55:86
+// CHECK-NEXT:         TupleElementExpr type=@lvalue i32 dot opLoc=line:50:11 index=0 indexLoc=line:50:12
+// CHECK-NEXT:           ParenExpr type=@lvalue (i32, i32) lParenLoc=line:50:5 rParenLoc=line:50:10
+// CHECK-NEXT:             TupleElementExpr type=@lvalue (i32, i32) arrow opLoc=line:50:7 index=0 indexLoc=line:50:9
+// CHECK-NEXT:               DeclRefExpr type=@lvalue &((i32, i32), i16) loc=line:50:6 decl='c'@line:47:56
+// CHECK-NEXT:   FuncDecl type=(i8) -> void identifier=implicit identifierLoc=line:53:6 fnLoc=line:53:1
+// CHECK:            ParamDecl type=i8 identifier=a identifierLoc=line:53:15
+// CHECK:            LetDecl letLoc=line:54:3 equalLoc=line:54:71
+// CHECK:              TupleExpr type=(maybe i32, maybe i32, (maybe i32, maybe i32)) numElements=3 lParenLoc=line:54:73 rParenLoc=line:54:86
 // CHECK-NEXT:           ImplicitMaybeConversionExpr implicit type=maybe i32
-// CHECK-NEXT:             IntegerLiteralExpr type=i32 loc=line:55:74 str='0' value=0
+// CHECK-NEXT:             IntegerLiteralExpr type=i32 loc=line:54:74 str='0' value=0
 // CHECK-NEXT:           ImplicitMaybeConversionExpr implicit type=maybe i32
-// CHECK-NEXT:             IntegerLiteralExpr type=i32 loc=line:55:77 str='0' value=0
-// CHECK-NEXT:           TupleExpr type=(maybe i32, maybe i32) numElements=2 lParenLoc=line:55:80 rParenLoc=line:55:85
+// CHECK-NEXT:             IntegerLiteralExpr type=i32 loc=line:54:77 str='0' value=0
+// CHECK-NEXT:           TupleExpr type=(maybe i32, maybe i32) numElements=2 lParenLoc=line:54:80 rParenLoc=line:54:85
 // CHECK-NEXT:             ImplicitMaybeConversionExpr implicit type=maybe i32
-// CHECK-NEXT:               IntegerLiteralExpr type=i32 loc=line:55:81 str='0' value=0
+// CHECK-NEXT:               IntegerLiteralExpr type=i32 loc=line:54:81 str='0' value=0
 // CHECK-NEXT:             ImplicitMaybeConversionExpr implicit type=maybe i32
-// CHECK-NEXT:               IntegerLiteralExpr type=i32 loc=line:55:84 str='0' value=0
-// CHECK-NEXT:       LetDecl letLoc=line:56:3 equalLoc=line:56:20
+// CHECK-NEXT:               IntegerLiteralExpr type=i32 loc=line:54:84 str='0' value=0
+// CHECK-NEXT:       LetDecl letLoc=line:55:3 equalLoc=line:55:20
 // CHECK:              ImplicitMaybeConversionExpr implicit type=maybe &i8
-// CHECK-NEXT:           UnaryExpr type=&i8 & (AddressOf) opLoc=line:56:22
-// CHECK-NEXT:             DeclRefExpr type=@lvalue i8 loc=line:56:23 decl='a'@line:54:15
-// CHECK-NEXT:       LetDecl letLoc=line:57:3 equalLoc=line:57:9
-// CHECK:                VarDecl type=(i8, i8) identifier=a identifierLoc=line:57:7 immutable
-// CHECK-NEXT:         TupleExpr type=(i8, i8) numElements=2 lParenLoc=line:57:11 rParenLoc=line:57:16
+// CHECK-NEXT:           UnaryExpr type=&i8 & (AddressOf) opLoc=line:55:22
+// CHECK-NEXT:             DeclRefExpr type=@lvalue i8 loc=line:55:23 decl='a'@line:53:15
+// CHECK-NEXT:       LetDecl letLoc=line:56:3 equalLoc=line:56:9
+// CHECK:                VarDecl type=(i8, i8) identifier=a identifierLoc=line:56:7 immutable
+// CHECK-NEXT:         TupleExpr type=(i8, i8) numElements=2 lParenLoc=line:56:11 rParenLoc=line:56:16
 // CHECK-NEXT:           LoadExpr implicit type=i8
-// CHECK-NEXT:             DeclRefExpr type=@lvalue i8 loc=line:57:12 decl='a'@line:54:15
+// CHECK-NEXT:             DeclRefExpr type=@lvalue i8 loc=line:56:12 decl='a'@line:53:15
 // CHECK-NEXT:           LoadExpr implicit type=i8
-// CHECK-NEXT:             DeclRefExpr type=@lvalue i8 loc=line:57:15 decl='a'@line:54:15
-// CHECK-NEXT:       LetDecl letLoc=line:58:3 equalLoc=line:58:32
+// CHECK-NEXT:             DeclRefExpr type=@lvalue i8 loc=line:56:15 decl='a'@line:53:15
+// CHECK-NEXT:       LetDecl letLoc=line:57:3 equalLoc=line:57:32
 // CHECK:              DestructuredTupleExpr implicit type=(maybe i8, maybe i8)
 // CHECK-NEXT:           LoadExpr implicit type=(i8, i8)
-// CHECK-NEXT:             DeclRefExpr type=@lvalue (i8, i8) loc=line:58:34 decl='a'@line:57:7
-// CHECK-NEXT:           TupleExpr implicit type=(maybe i8, maybe i8) numElements=2 range=[line:58:34, line:58:34]
+// CHECK-NEXT:             DeclRefExpr type=@lvalue (i8, i8) loc=line:57:34 decl='a'@line:56:7
+// CHECK-NEXT:           TupleExpr implicit type=(maybe i8, maybe i8) numElements=2 range=[line:57:34, line:57:34]
 // CHECK-NEXT:             ImplicitMaybeConversionExpr implicit type=maybe i8
 // CHECK-NEXT:               DestructuredTupleElementExpr implicit type=i8 index=0
 // CHECK-NEXT:             ImplicitMaybeConversionExpr implicit type=maybe i8
 // CHECK-NEXT:               DestructuredTupleElementExpr implicit type=i8 index=1
-// CHECK-NEXT:   FuncDecl type=(maybe maybe i32) -> void identifier=unwrap identifierLoc=line:61:6 fnLoc=line:61:1
-// CHECK:            ParamDecl type=maybe maybe i32 identifier=z identifierLoc=line:61:13
-// CHECK:            ForceUnwrapExpr type=i32 exclaimLoc=line:62:5
-// CHECK-NEXT:         ForceUnwrapExpr type=maybe i32 exclaimLoc=line:62:4
+// CHECK-NEXT:   FuncDecl type=(maybe maybe i32) -> void identifier=unwrap identifierLoc=line:60:6 fnLoc=line:60:1
+// CHECK:            ParamDecl type=maybe maybe i32 identifier=z identifierLoc=line:60:13
+// CHECK:            ForceUnwrapExpr type=i32 exclaimLoc=line:61:5
+// CHECK-NEXT:         ForceUnwrapExpr type=maybe i32 exclaimLoc=line:61:4
 // CHECK-NEXT:           LoadExpr implicit type=maybe maybe i32
-// CHECK-NEXT:             DeclRefExpr type=@lvalue maybe maybe i32 loc=line:62:3 decl='z'@line:61:13
-// CHECK-NEXT:   FuncDecl type=(&mut i32) -> void identifier=deref identifierLoc=line:65:6 fnLoc=line:65:1
-// CHECK:            ParamDecl type=&mut i32 identifier=ref identifierLoc=line:65:12
-// CHECK:            BinaryExpr type=i32 = (Assign) opLoc=line:66:8
-// CHECK-NEXT:         UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:66:3
+// CHECK-NEXT:             DeclRefExpr type=@lvalue maybe maybe i32 loc=line:61:3 decl='z'@line:60:13
+// CHECK-NEXT:   FuncDecl type=(&mut i32) -> void identifier=deref identifierLoc=line:64:6 fnLoc=line:64:1
+// CHECK:            ParamDecl type=&mut i32 identifier=ref identifierLoc=line:64:12
+// CHECK:            BinaryExpr type=i32 = (Assign) opLoc=line:65:8
+// CHECK-NEXT:         UnaryExpr type=@lvalue i32 * (Deref) opLoc=line:65:3
 // CHECK-NEXT:           LoadExpr implicit type=&mut i32
-// CHECK-NEXT:             DeclRefExpr type=@lvalue &mut i32 loc=line:66:4 decl='ref'@line:65:12
-// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:66:10 str='0' value=0
-// CHECK-NEXT:   FuncDecl type=(&mut i8, i64, usize, f32) -> void identifier=casts identifierLoc=line:69:6 fnLoc=line:69:1
-// CHECK:            ParamDecl type=&mut i8 identifier=a identifierLoc=line:69:12
-// CHECK:            ParamDecl type=i64 identifier=x identifierLoc=line:69:24
-// CHECK:            ParamDecl type=usize identifier=y identifierLoc=line:69:32
-// CHECK:            ParamDecl type=f32 identifier=z identifierLoc=line:69:42
-// CHECK:            CastExpr type=u16 asLoc=line:70:5 useless
-// CHECK-NEXT:         IntegerLiteralExpr type=u16 loc=line:70:3 str='0' value=0
-// CHECK:            CastExpr type=f64 asLoc=line:71:21
-// CHECK-NEXT:         CastExpr type=usize asLoc=line:71:12
-// CHECK-NEXT:           CastExpr type=f32 asLoc=line:71:5 useless
+// CHECK-NEXT:             DeclRefExpr type=@lvalue &mut i32 loc=line:65:4 decl='ref'@line:64:12
+// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:65:10 str='0' value=0
+// CHECK-NEXT:   FuncDecl type=(&mut i8, i64, usize, f32) -> void identifier=casts identifierLoc=line:68:6 fnLoc=line:68:1
+// CHECK:            ParamDecl type=&mut i8 identifier=a identifierLoc=line:68:12
+// CHECK:            ParamDecl type=i64 identifier=x identifierLoc=line:68:24
+// CHECK:            ParamDecl type=usize identifier=y identifierLoc=line:68:32
+// CHECK:            ParamDecl type=f32 identifier=z identifierLoc=line:68:42
+// CHECK:            CastExpr type=u16 asLoc=line:69:5 useless
+// CHECK-NEXT:         IntegerLiteralExpr type=u16 loc=line:69:3 str='0' value=0
+// CHECK:            CastExpr type=f64 asLoc=line:70:21
+// CHECK-NEXT:         CastExpr type=usize asLoc=line:70:12
+// CHECK-NEXT:           CastExpr type=f32 asLoc=line:70:5 useless
 // CHECK-NEXT:             LoadExpr implicit type=f32
-// CHECK-NEXT:               DeclRefExpr type=@lvalue f32 loc=line:71:3 decl='z'@line:69:42
-// CHECK:            CastExpr type=u8 asLoc=line:72:5
+// CHECK-NEXT:               DeclRefExpr type=@lvalue f32 loc=line:70:3 decl='z'@line:68:42
+// CHECK:            CastExpr type=u8 asLoc=line:71:5
 // CHECK-NEXT:         LoadExpr implicit type=usize
-// CHECK-NEXT:           DeclRefExpr type=@lvalue usize loc=line:72:3 decl='y'@line:69:32
-// CHECK:            CastExpr type=usize asLoc=line:73:5
+// CHECK-NEXT:           DeclRefExpr type=@lvalue usize loc=line:71:3 decl='y'@line:68:32
+// CHECK:            CastExpr type=usize asLoc=line:72:5
 // CHECK-NEXT:         LoadExpr implicit type=i64
-// CHECK-NEXT:           DeclRefExpr type=@lvalue i64 loc=line:73:3 decl='x'@line:69:24
-// CHECK:            CastExpr type=bool asLoc=line:74:14
-// CHECK-NEXT:         CastExpr type=u8 asLoc=line:74:8
-// CHECK-NEXT:           BooleanLiteralExpr type=bool loc=line:74:3 value=true
-// CHECK:            CastExpr type=maybe &i8 asLoc=line:75:5 useless
+// CHECK-NEXT:           DeclRefExpr type=@lvalue i64 loc=line:72:3 decl='x'@line:68:24
+// CHECK:            CastExpr type=bool asLoc=line:73:14
+// CHECK-NEXT:         CastExpr type=u8 asLoc=line:73:8
+// CHECK-NEXT:           BooleanLiteralExpr type=bool loc=line:73:3 value=true
+// CHECK:            CastExpr type=maybe &i8 asLoc=line:74:5 useless
 // CHECK-NEXT:         ImplicitMaybeConversionExpr implicit type=maybe &i8
 // CHECK-NEXT:           MutToImmutReferenceExpr implicit type=&i8
 // CHECK-NEXT:             LoadExpr implicit type=&mut i8
-// CHECK-NEXT:               DeclRefExpr type=@lvalue &mut i8 loc=line:75:3 decl='a'@line:69:12
-// CHECK:        FuncDecl type=() -> void identifier=tuples identifierLoc=line:78:6 fnLoc=line:78:1
-// CHECK:            TupleExpr type=() numElements=0 lParenLoc=line:79:3 rParenLoc=line:79:4
-// CHECK-NEXT:       ParenExpr type=i32 lParenLoc=line:80:3 rParenLoc=line:80:5
+// CHECK-NEXT:               DeclRefExpr type=@lvalue &mut i8 loc=line:74:3 decl='a'@line:68:12
+// CHECK:        FuncDecl type=() -> void identifier=tuples identifierLoc=line:77:6 fnLoc=line:77:1
+// CHECK:            TupleExpr type=() numElements=0 lParenLoc=line:78:3 rParenLoc=line:78:4
+// CHECK-NEXT:       ParenExpr type=i32 lParenLoc=line:79:3 rParenLoc=line:79:5
+// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:79:4 str='0' value=0
+// CHECK-NEXT:       TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:80:3 rParenLoc=line:80:8
 // CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:80:4 str='0' value=0
-// CHECK-NEXT:       TupleExpr type=(i32, i32) numElements=2 lParenLoc=line:81:3 rParenLoc=line:81:8
+// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:80:7 str='1' value=1
+// CHECK-NEXT:       TupleExpr type=(i32, i32, i32) numElements=3 lParenLoc=line:81:3 rParenLoc=line:81:11
 // CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:81:4 str='0' value=0
-// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:81:7 str='1' value=1
-// CHECK-NEXT:       TupleExpr type=(i32, i32, i32) numElements=3 lParenLoc=line:82:3 rParenLoc=line:82:11
-// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:82:4 str='0' value=0
-// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:82:7 str='2' value=2
-// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:82:10 str='3' value=3
+// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:81:7 str='2' value=2
+// CHECK-NEXT:         IntegerLiteralExpr type=i32 loc=line:81:10 str='3' value=3

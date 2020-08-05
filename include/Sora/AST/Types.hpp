@@ -53,8 +53,7 @@ struct TypeProperties {
   enum Property : value_t {
     hasErrorType = 0x01,
     hasTypeVariable = 0x02,
-    hasNullType = 0x04,
-    hasLValue = 0x08,
+    hasLValue = 0x04,
   };
 
   value_t value;
@@ -212,11 +211,6 @@ public:
     return getTypeProperties() & TypeProperties::hasTypeVariable;
   }
 
-  /// \returns whether this type contains a "null" type
-  bool hasNullType() const {
-    return getTypeProperties() & TypeProperties::hasNullType;
-  }
-
   /// \returns the ASTContext in which this type is allocated
   ASTContext &getASTContext() const {
     if (ASTContext *ctxt = ctxtOrCanType.dyn_cast<ASTContext *>()) {
@@ -231,7 +225,7 @@ public:
 
   /// "Rebuilds" this type using \p rebuilder.
   /// \param rebuilder a function that takes a type as input, and returns
-  /// null if the type must not be changed, or returns the type that should
+  /// nullptr if the type must not be changed, or returns the type that should
   /// replace that type in the tree.
   ///
   /// The rebuilder is called in post-order: the leaves of the type tree are
@@ -255,9 +249,6 @@ public:
   /// just returns this.
   Type getRValueType();
 
-  /// \returns whether this type is (canonically) the "null" type
-  bool isNullType();
-
   /// \returns whether this type is (canonically) the "bool" type
   bool isBoolType();
 
@@ -276,7 +267,7 @@ public:
   /// \returns whether this type is (canonically) a MaybeType
   bool isMaybeType();
 
-  /// \returns the value type of this MaybeType, or null if isMaybeType()
+  /// \returns the value type of this MaybeType, or nullptr if isMaybeType()
   /// returns false.
   Type getMaybeTypeValueType();
 
@@ -418,20 +409,6 @@ class VoidType final : public BuiltinType {
 public:
   static bool classof(const TypeBase *type) {
     return type->getKind() == TypeKind::Void;
-  }
-};
-
-/// The null type is the type of the 'null' literal.
-///
-/// This type is always canonical.
-class NullType final : public BuiltinType {
-  NullType(ASTContext &ctxt)
-      : BuiltinType(TypeKind::Null, TypeProperties::hasNullType, ctxt) {}
-  friend ASTContext;
-
-public:
-  static bool classof(const TypeBase *type) {
-    return type->getKind() == TypeKind::Null;
   }
 };
 

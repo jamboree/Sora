@@ -96,7 +96,6 @@ public:
   BUILTIN_TYPE(FloatType)
   BUILTIN_TYPE(VoidType)
   BUILTIN_TYPE(BoolType)
-  BUILTIN_TYPE(NullType)
 
 #undef BUILTIN_TYPE
 

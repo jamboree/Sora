@@ -15,7 +15,8 @@ func cond() {
   // incorrect
   if x {}                         // expect-error: value of non-boolean type 'i32' used as a condition
   while x {}                      // expect-error: value of non-boolean type 'i32' used as a condition
-  if null {}                      // expect-error: value of non-boolean type 'null' used as a condition
+  if null {}                      // expect-error: value of non-boolean type 'maybe _' used as a condition
+                                  // expect-error@-1: 'null' requires a contextual type
   while (x == 0, y == 0) {}       // expect-error: value of non-boolean type '(bool, bool)' used as a condition
   if (x == 0, y == 0) {}          // expect-error: value of non-boolean type '(bool, bool)' used as a condition
   if cond {}                      // expect-error: value of non-boolean type '() -> void' used as a condition

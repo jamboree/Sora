@@ -353,6 +353,11 @@ public:
   /// nullptr.
   Type checkNullCoalesceApplication(Expr *lhs, Expr *&rhs);
 
+  /// Prepares the operands of a ConditionalExpr, inserting implicit conversion
+  /// if needed. This will return false if the ConditionalExpr is invalid, true
+  /// if it can be checked further (and unified).
+  bool prepareConditionalExprOperands(ConditionalExpr *expr);
+
   Expr *visitUnresolvedDeclRefExpr(UnresolvedDeclRefExpr *expr);
   Expr *visitUnresolvedMemberRefExpr(UnresolvedMemberRefExpr *expr);
 
@@ -917,8 +922,8 @@ Expr *ExprChecker::visitBooleanLiteralExpr(BooleanLiteralExpr *expr) {
 }
 
 Expr *ExprChecker::visitNullLiteralExpr(NullLiteralExpr *expr) {
-  // The "null" literal has its own type
-  expr->setType(ctxt.nullType);
+  // The "null" literal has a "maybe $T0" type.
+  expr->setType(MaybeType::get(cs.createGeneralTypeVariable()));
   return expr;
 }
 
@@ -1040,6 +1045,55 @@ Expr *ExprChecker::visitCallExpr(CallExpr *expr) {
   return expr;
 }
 
+bool ExprChecker::prepareConditionalExprOperands(ConditionalExpr *expr) {
+  Expr *thenExpr = expr->getThen();
+  Expr *elseExpr = expr->getElse();
+
+  assert(!thenExpr->getType()->is<LValueType>() &&
+         !elseExpr->getType()->is<LValueType>() &&
+         "Operands should have been loaded!");
+
+  // Try to detect some basic cases and bail out early when possible, that way,
+  // we can avoid running the code below in most cases.
+  // Currently, we don't run if it there is no 'maybe' or tuple type in the
+  // operands.
+
+  auto isInteresting = [](Type type) {
+    return type->is<MaybeType>() || type->is<TupleType>();
+  };
+
+  if (!isInteresting(thenExpr->getType()) &&
+      !isInteresting(elseExpr->getType()))
+    return true;
+
+  // Now, we need to guess which side will be converted to the other, because we
+  // can coerce the "then" to the "else" type, or the opposite.
+  // Currently, we simply use "canCoerce", but in the future I think
+  // it'd be better to use a more advanced solution for this specific case.
+  // (Especially as I don't know the performance cost of canCoerce yet).
+
+  Type thenType = thenExpr->getType(), elseType = elseExpr->getType();
+
+  if (cs.canUnify(thenType, elseType))
+    return true;
+
+  if (tc.canCoerce(cs, thenType, elseType)) {
+    // We can convert the "then" to the "else" type.
+    thenExpr = tc.tryCoerceExpr(cs, thenExpr, elseType);
+    expr->setThen(thenExpr);
+    return true;
+  }
+
+  if (tc.canCoerce(cs, elseType, thenType)) {
+    // We can convert the "else" to the "then" type.
+    elseExpr = tc.tryCoerceExpr(cs, elseExpr, thenType);
+    expr->setElse(elseExpr);
+    return true;
+  }
+
+  return false;
+}
+
 Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
   // Coerce all operands to an RValue.
   expr->setCond(coerceToRValue(expr->getCond()));
@@ -1057,30 +1111,38 @@ Expr *ExprChecker::visitConditionalExpr(ConditionalExpr *expr) {
       isValid = false;
     }
   }
-  // Create a TypeVariable for the type of the expr
-  Type exprTV = cs.createGeneralTypeVariable();
-  expr->setType(exprTV);
 
-  Type thenTy = expr->getThen()->getType();
-  Type elseTy = expr->getElse()->getType();
-  // The type of both operands must unify w/ the TV.
+  bool operandsMatch = false;
 
-  // Start with the 'then' expr - the one between '?' and ':'
-  if (!cs.unify(thenTy, exprTV))
-    // Since the TV is general, unification should never fail here since the
-    // TV is unbound at this point
-    llvm_unreachable("First unification failed?");
+  if (prepareConditionalExprOperands(expr)) {
+    // Create a TypeVariable for the type of the expr
+    Type exprTV = cs.createGeneralTypeVariable();
+    expr->setType(exprTV);
 
-  // And now the else - the expr after ':'
-  if (!cs.unify(elseTy, exprTV)) {
-    // Simplify both types just in case
-    diagnose(expr->getColonLoc(),
-             diag::result_values_in_ternary_have_different_types, thenTy,
-             elseTy)
-        .highlight(expr->getColonLoc())
-        .highlight(expr->getThen()->getSourceRange())
-        .highlight(expr->getElse()->getSourceRange());
+    // The type of both operands must unify w/ the TV.
+
+    // Start with the 'then' expr - the one between '?' and ':'
+    if (!cs.unify(expr->getThen()->getType(), exprTV))
+      // Since the TV is general, unification should never fail here since the
+      // TV is unbound at this point
+      llvm_unreachable("First unification failed?");
+
+    // And now the else - the expr after ':'
+    operandsMatch = cs.unify(expr->getElse()->getType(), exprTV);
+  }
+
+  if (!operandsMatch) {
     isValid = false;
+
+    Expr *thenExpr = expr->getThen();
+    Expr *elseExpr = expr->getElse();
+
+    diagnose(expr->getColonLoc(),
+             diag::result_values_in_ternary_have_different_types,
+             thenExpr->getType(), elseExpr->getType())
+        .highlight(expr->getColonLoc())
+        .highlight(thenExpr->getSourceRange())
+        .highlight(elseExpr->getSourceRange());
   }
 
   return isValid ? expr : nullptr;
@@ -1164,42 +1226,52 @@ class ExprCheckerEpilogue : public ASTCheckerBase, public ASTWalker {
 public:
   ConstraintSystem &cs;
   bool canComplain = true;
-  Expr *parentWithErrorType = nullptr;
+  Expr *lastErrorNode = nullptr;
 
   ExprCheckerEpilogue(TypeChecker &tc, ConstraintSystem &cs)
       : ASTCheckerBase(tc), cs(cs) {}
 
-  /// Simplifies the type of \p expr.
+  void muteDiagnosticsExprAndChildren(Expr *expr) {
+    lastErrorNode = expr;
+    canComplain = false;
+  }
+
+  /// Simplifies the type of \p expr, returning false when a diagnostic has been
+  /// emitted.
   void simplifyTypeOfExpr(Expr *expr) {
     Type type = expr->getType();
     if (!type->hasTypeVariable())
       return;
 
     // Whether the type is ambiguous
-    bool isAmbiguous = false;
+    bool isAmbiguous = false, couldDiagnose = canDiagnose(expr);
 
     type = cs.simplify(type, &isAmbiguous);
     expr->setType(type);
 
-    if (isAmbiguous && canComplain && canDiagnose(expr)) {
-      // This shouldn't happen with the current iteration of Sora.
-      llvm_unreachable("Diagnostic emission for ambiguous expressions is "
-                       "currently not supported");
+    if (isAmbiguous && couldDiagnose && canComplain) {
+      if (isa<NullLiteralExpr>(expr))
+        diagnose(expr->getLoc(), diag::null_requires_contextual_type);
+      else
+        diagnose(expr->getLoc(), diag::type_of_expr_is_ambiguous);
+
+      // Don't spam - mute diags in the children nodes.
+      muteDiagnosticsExprAndChildren(expr);
     }
   }
 
   std::pair<Action, Expr *> walkToExprPre(Expr *expr) override {
-    // Mute diagnostics when walking into an Expr with an ErrorType
-    if (canComplain && expr->getType()->hasErrorType()) {
-      canComplain = false;
-      parentWithErrorType = expr;
-    }
+    // Mute diagnostics if this expr has an error type.
+    if (canComplain && expr->getType()->hasErrorType())
+      muteDiagnosticsExprAndChildren(expr);
+
+    simplifyTypeOfExpr(expr);
+
     return {Action::Continue, expr};
   }
 
   // Perform simplification in post-order (= children first)
   std::pair<bool, Expr *> walkToExprPost(Expr *expr) override {
-    simplifyTypeOfExpr(expr);
     // Some exprs require a bit of post processing
     if (CastExpr *cast = dyn_cast<CastExpr>(expr)) {
       // Check whether this cast is useful or not
@@ -1209,9 +1281,9 @@ public:
     }
 
     // If this expr is the one that muted diagnostics, unmute diagnostics.
-    if (parentWithErrorType == expr) {
+    if (lastErrorNode == expr) {
       canComplain = true;
-      parentWithErrorType = nullptr;
+      lastErrorNode = nullptr;
     }
 
     return {true, expr};
@@ -1289,7 +1361,7 @@ public:
     if (cs.unify(destType, expr->getType()))
       return expr;
 
-    if (!tc.canImplicitlyCast(cs, expr->getType(), destType))
+    if (!tc.canCoerce(cs, expr->getType(), destType))
       return expr;
 
     // Visit the Expr using the desugared destination type.
@@ -1367,9 +1439,9 @@ private:
       expr = visitExpr(expr, valueType);
 
       Type exprTy = expr->getType();
-      // If the Maybe Type's ValueType unifies w/ the expr's type, or if the
-      // expr's type is "null", insert the ImplicitMaybeConversionExpr.
-      if (exprTy->isNullType() || cs.unify(valueType, exprTy)) {
+      // If the Maybe Type's ValueType unifies w/ the expr's type, insert the
+      // ImplicitMaybeConversionExpr.
+      if (cs.unify(valueType, exprTy)) {
         // The Type of the ImplicitMaybeConversionExpr is the destination
         // type. for instance, in "let : maybe Foo = 0" where "Foo" is i32, we
         // want the the implicit conversion to have a "maybe Foo" type.

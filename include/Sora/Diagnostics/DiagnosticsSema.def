@@ -148,6 +148,11 @@ ERROR(value_of_type_has_no_member_named,
 ERROR(cannot_find_value_in_scope,
   "cannot find value '%0' in this scope", (Identifier))
 
+ERROR(null_requires_contextual_type, "'null' requires a contextual type", ())
+
+ERROR(type_of_expr_is_ambiguous, 
+  "type of expression is ambiguous without more context", ())
+
 ERROR(illegal_discard_expr,
   "'_' can only appear in a pattern or on the left side of an assignement", ())
 

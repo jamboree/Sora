@@ -219,7 +219,7 @@ bool TypeChecker::canExplicitlyCast(const ConstraintSystem &cs, Type from,
 
 //===- ASTCheckerBase -----------------------------------------------------===//
 
-bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
+bool TypeChecker::canCoerce(const ConstraintSystem &cs, Type from,
                                     Type to) {
   // FIXME: Ideally this should follow the same pattern as canExplicitlyCast
   assert(!to->hasErrorType() && "the 'to' type cannot contain error types");
@@ -232,10 +232,9 @@ bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
 
   to = to->getRValueType()->getDesugaredType();
 
-  // T to maybe T conversions, or null to maybe T conversion
+  // T to maybe T conversions
   if (MaybeType *toMaybe = to->getAs<MaybeType>())
-    return canImplicitlyCast(cs, from, toMaybe->getValueType()) ||
-           from->isNullType();
+    return canCoerce(cs, from, toMaybe->getValueType());
 
   // &mut T to &T conversions
   if (ReferenceType *toRef = to->getAs<ReferenceType>()) {
@@ -266,7 +265,7 @@ bool TypeChecker::canImplicitlyCast(const ConstraintSystem &cs, Type from,
     // 'toTuple'
     size_t numElts = toTuple->getNumElements();
     for (size_t k = 0; k < numElts; ++k) {
-      if (!canImplicitlyCast(cs, fromTuple->getElement(k),
+      if (!canCoerce(cs, fromTuple->getElement(k),
                              toTuple->getElement(k)))
         return false;
     }

@@ -57,10 +57,6 @@ public:
     return mlir::IntegerType::get(1, &mlirCtxt);
   }
 
-  mlir::Type visitNullType(NullType *type) {
-    llvm_unreachable("Cannot lower a Null Type");
-  }
-
   mlir::Type visitReferenceType(ReferenceType *type) {
     mlir::Type pointeeType = visit(type->getPointeeType());
     return sir::ReferenceType::get(pointeeType);
@@ -126,7 +122,6 @@ bool SIRGen::isVoidOrVoidLikeType(CanType type) {
 }
 
 mlir::Type SIRGen::getType(Type type) {
-  assert(!type->hasNullType() && "Cannot lower Null Types");
   auto iter = typeCache.find(type.getPtr());
   if (iter != typeCache.end())
     return iter->second;

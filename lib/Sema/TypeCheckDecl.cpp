@@ -161,11 +161,6 @@ public:
 
     Type type = decl->getValueType();
     assert(type && "untyped variable");
-    // Don't allow VarDecls that contain "null" types.
-    if (!type->hasErrorType() && type->hasNullType()) {
-      diagnose(decl->getLoc(), diag::cannot_create_var_of_type, type);
-      decl->setValueType(ctxt.errorType);
-    }
     assert(!type->hasLValue() && "A variable's type cannot contain LValues!");
   }
 
@@ -179,7 +174,6 @@ public:
     // ParamDecls can shadow anything. Duplicate parameter names in the same
     // parameter list are handled by visitFuncDecl.
     tc.resolveTypeLoc(decl->getTypeLoc(), file);
-    assert(!decl->getValueType()->hasNullType() && "NullType in ParamDecl?");
     assert(!decl->getValueType()->hasLValue() &&
            "A param's type cannot contain LValues!");
   }
@@ -320,6 +314,7 @@ public:
             decl->getPattern()->forEachVarDecl(
                 [&](VarDecl *var) { var->setValueType(ctxt.errorType); });
           });
+
       // Replace the initializer w/ the type-checked one
       decl->setInitializer(init);
 

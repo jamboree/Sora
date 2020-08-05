@@ -10,7 +10,7 @@ func test() {
 
     err()    // expect-error: cannot find value 'err' in this scope
     0.0()    // expect-error: value of non-function type 'f32' is not callable
-    null()   // expect-error: value of non-function type 'null' is not callable
+    null()   // expect-error: value of non-function type 'maybe _' is not callable
     a()()    // expect-error: value of non-function type 'i32' is not callable
     foo()    // expect-error: value of non-function type 'i32' is not callable
     ()()     // expect-error: value of non-function type '()' is not callable
@@ -20,7 +20,8 @@ func test() {
     b(1, 2)   // expect-error: function of type '(i32) -> void' takes '1' parameter but '2' were supplied
     b(1)
     b(true)   // expect-error: cannot convert value of type 'bool' to expected argument type 'i32'
-    b(null)   // expect-error: cannot convert value of type 'null' to expected argument type 'i32'
+    b(null)   // expect-error: cannot convert value of type 'maybe _' to expected argument type 'i32'
+              // expect-error@-1: 'null' requires a contextual type
     b(&foo)   // expect-error: cannot convert value of type '&mut i32' to expected argument type 'i32'
     c(&foo)
     d(1, 2, 3, 4, 5, 6, 7)

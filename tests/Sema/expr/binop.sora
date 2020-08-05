@@ -249,8 +249,8 @@ func binOp() {
   vI8 + vU8         // expect-error: cannot use binary operator '+' on operands of type 'i8' and 'u8'
   vI8 + vI16        // expect-error: cannot use binary operator '+' on operands of type 'i8' and 'i16'
   vI8 + vF32        // expect-error: cannot use binary operator '+' on operands of type 'i8' and 'f32'
-  null < ()         // expect-error: cannot use binary operator '<' on operands of type 'null' and '()'
-  null + null       // expect-error: cannot use binary operator '+' on operands of type 'null' and 'null'
+  null < ()         // expect-error: cannot use binary operator '<' on operands of type 'maybe _' and '()'
+  null + null       // expect-error: cannot use binary operator '+' on operands of type 'maybe _' and 'maybe _'
   true + false      // expect-error: cannot use binary operator '+' on operands of type 'bool' and 'bool'
   () % ()           // expect-error: cannot use binary operator '%' on operands of type '()' and '()'
 }
@@ -512,9 +512,9 @@ func shiftAssign() {
 }
 
 func nullOps() {
-  null + null  // expect-error: cannot use binary operator '+' on operands of type 'null' and 'null'
-  null + 0     // expect-error: cannot use binary operator '+' on operands of type 'null' and 'i32'
-  0 + null     // expect-error: cannot use binary operator '+' on operands of type 'i32' and 'null'
-  0.0 + null   // expect-error: cannot use binary operator '+' on operands of type 'f32' and 'null'
-  null + 0.0   // expect-error: cannot use binary operator '+' on operands of type 'null' and 'f32'
+  null + null  // expect-error: cannot use binary operator '+' on operands of type 'maybe _' and 'maybe _'
+  null + 0     // expect-error: cannot use binary operator '+' on operands of type 'maybe _' and 'i32'
+  0 + null     // expect-error: cannot use binary operator '+' on operands of type 'i32' and 'maybe _'
+  0.0 + null   // expect-error: cannot use binary operator '+' on operands of type 'f32' and 'maybe _'
+  null + 0.0   // expect-error: cannot use binary operator '+' on operands of type 'maybe _' and 'f32'
 }

@@ -133,7 +133,7 @@ public:
   /// \param to must not contain an error type
   /// \param from must not contain an error type.
   /// NOTE: This does NOT unify the types
-  bool canImplicitlyCast(const ConstraintSystem &cs, Type from, Type to);
+  bool canCoerce(const ConstraintSystem &cs, Type from, Type to);
 
   /// \returns whether we can emit a diagnostic involving \p type
   static bool canDiagnose(Type type);

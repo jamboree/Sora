@@ -66,8 +66,6 @@ public:
 
   void visitVoidType(VoidType *type) { out << "void"; }
 
-  void visitNullType(NullType *type) { out << "null"; }
-
   void visitBoolType(BoolType *type) { out << "bool"; }
 
   void visitReferenceType(ReferenceType *type) {
@@ -341,7 +339,6 @@ CanType TypeBase::getCanonicalType() {
   case TypeKind::Float:
   case TypeKind::Void:
   case TypeKind::Bool:
-  case TypeKind::Null:
   case TypeKind::Error:
   case TypeKind::TypeVariable:
     llvm_unreachable("Type is always canonical!");
@@ -409,8 +406,6 @@ Type TypeBase::getRValueType() {
 bool TypeBase::isBoolType() { return getCanonicalType()->is<BoolType>(); }
 
 bool TypeBase::isVoidType() { return getCanonicalType()->is<VoidType>(); }
-
-bool TypeBase::isNullType() { return getCanonicalType()->is<NullType>(); }
 
 bool TypeBase::isAnyIntegerType() {
   return getCanonicalType()->is<IntegerType>();

@@ -158,7 +158,6 @@ public:
   const CanType f64Type; /// "f64"
 
   const CanType voidType; /// "void"
-  const CanType nullType; /// "null"
   const CanType boolType; /// "bool"
 
   const CanType errorType; // The "error" type.

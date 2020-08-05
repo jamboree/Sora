@@ -10,5 +10,15 @@ func foo(cond: bool) {
 }
 
 func bar(cond: bool) {
-  let _ = cond ? null : null
+  let _ = cond ? null : null // expect-error: type of expression is ambiguous without more context
+
+  let _: maybe i32 = cond ? null : null
+  let _: maybe i32 = cond ? 0 : null
+  let _: maybe i32 = cond ? null : 0
+  let _: maybe i32 = cond ? 0 : 0
+
+  let _: maybe maybe i32 = cond ? null : null
+  let _: maybe maybe i32 = cond ? 0 : null
+  let _: maybe maybe i32 = cond ? null : 0
+  let _: maybe maybe i32 = cond ? 0 : 0
 }

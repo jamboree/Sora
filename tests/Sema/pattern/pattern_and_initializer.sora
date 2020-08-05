@@ -10,7 +10,8 @@ func correct() {
 
    let a: u8 = false  // expect-error: cannot convert value of type 'bool' to 'u8'
    let b: f32 = 0     // expect-error: cannot convert value of type 'i32' to 'f32'
-   let () = null      // expect-error: cannot convert value of type 'null' to '()'
+   let () = null      // expect-error: cannot convert value of type 'maybe _' to '()'
+                      // expect-error@-1: 'null' requires a contextual type
    let () = (0, 1)    // expect-error: cannot convert value of type '(i32, i32)' to '()'
    let (z, y) = 0     // expect-error: cannot convert value of type 'i32' to '(_, _)'
 }

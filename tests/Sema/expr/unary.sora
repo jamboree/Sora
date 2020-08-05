@@ -68,7 +68,7 @@ func lNot(x: bool) {
 
   !0              // expect-error: cannot use unary operator '!' on operand of type 'i32'
   !0.0            // expect-error: cannot use unary operator '!' on operand of type 'f32'
-  !null           // expect-error: cannot use unary operator '!' on operand of type 'null'
+  !null           // expect-error: cannot use unary operator '!' on operand of type 'maybe _'
   !(0, 1)         // expect-error: cannot use unary operator '!' on operand of type '(i32, i32)'
 }
 
@@ -85,7 +85,7 @@ func not() {
   ~0.0       // expect-error: cannot use unary operator '~' on operand of type 'f32'
   ~false     // expect-error: cannot use unary operator '~' on operand of type 'bool'
   ~true      // expect-error: cannot use unary operator '~' on operand of type 'bool'
-  ~null      // expect-error: cannot use unary operator '~' on operand of type 'null'
+  ~null      // expect-error: cannot use unary operator '~' on operand of type 'maybe _'
   ~(0, 1)    // expect-error: cannot use unary operator '~' on operand of type '(i32, i32)'
 }
 

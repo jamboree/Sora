@@ -244,16 +244,14 @@ Expr *TypeChecker::typecheckPatternAndInitializer(
   pat->walk(PatternChecker(*this, cs, dc));
 
   // Fully check the expr, unifying it with the type of the pattern
-  bool emitInferenceErrors = true;
   init = typecheckExpr(cs, init, dc, pat->getType(), [&](Type from, Type to) {
     if (onUnificationFailure)
       onUnificationFailure(from, to);
-    // Don't emit inference errors in the pattern
-    emitInferenceErrors = false;
   });
 
-  // Perform the epilogue
-  pat->walk(PatternCheckerEpilogue(*this, cs, emitInferenceErrors));
+  // Perform the epilogue and don't emit inference error as we count on the
+  // ExprCheckerEpilogue to do it for us.
+  pat->walk(PatternCheckerEpilogue(*this, cs, /*emitInferenceErrors*/ false));
 
   return init;
 }

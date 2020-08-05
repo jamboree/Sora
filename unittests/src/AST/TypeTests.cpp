@@ -65,9 +65,6 @@ TEST_F(TypeTest, rtti) {
   EXPECT_TRUE(ctxt->boolType->is<BoolType>());
   EXPECT_TRUE(ctxt->boolType->is<BuiltinType>());
 
-  EXPECT_TRUE(ctxt->nullType->is<NullType>());
-  EXPECT_TRUE(ctxt->nullType->is<BuiltinType>());
-
   EXPECT_TRUE(ctxt->errorType->is<ErrorType>());
 
   EXPECT_TRUE(refType->is<ReferenceType>());
@@ -116,7 +113,6 @@ TEST_F(TypeTest, simpleTypePropertiesPropagation) {
     auto ty = CREATE;                                                          \
     EXPECT_EQ(ty->hasTypeVariable(), HAS_TV);                                  \
     EXPECT_EQ(ty->hasErrorType(), HAS_ERR);                                    \
-    EXPECT_EQ(ty->hasNullType(), HAS_NULL);                                    \
   }
 
   // i32: no properties set
@@ -135,12 +131,6 @@ TEST_F(TypeTest, simpleTypePropertiesPropagation) {
   CHECK(LValueType::get(ctxt->errorType), false, true, false);
   CHECK(ReferenceType::get(ctxt->errorType, false), false, true, false);
   CHECK(MaybeType::get(ctxt->errorType), false, true, false);
-
-  // NullType
-  ASSERT_TRUE(ctxt->nullType->hasNullType());
-  CHECK(LValueType::get(ctxt->nullType), false, false, true);
-  CHECK(ReferenceType::get(ctxt->nullType, false), false, false, true);
-  CHECK(MaybeType::get(ctxt->nullType), false, false, true);
 
 #undef CHECK
 }
@@ -212,7 +202,6 @@ TEST_F(TypeTest, canonicalTypes_alwaysCanonicalTypes) {
   CHECK_ALWAYS_CANONICAL(ctxt->usizeType);
   CHECK_ALWAYS_CANONICAL(ctxt->voidType);
   CHECK_ALWAYS_CANONICAL(ctxt->boolType);
-  CHECK_ALWAYS_CANONICAL(ctxt->nullType);
   CHECK_ALWAYS_CANONICAL(ctxt->errorType);
   Type tyVar = TypeVariableType::createGeneralTypeVariable(*env, 0);
   CHECK_ALWAYS_CANONICAL(tyVar);
@@ -262,7 +251,6 @@ TEST_F(TypeTest, printingTest_simple) {
   CHECK(ctxt->usizeType, "usize");
   CHECK(ctxt->voidType, "void");
   CHECK(ctxt->boolType, "bool");
-  CHECK(ctxt->nullType, "null");
   CHECK(ctxt->errorType, "<error_type>");
   CHECK(tyVar, "$T0");
   CHECK(Type(nullptr), "<null_type>");
@@ -332,10 +320,10 @@ TEST_F(TypeTest, printingTest_typeVariables) {
   auto *generalTyVar = TypeVariableType::createGeneralTypeVariable(*env, 0);
   EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0");
   EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDiagnostics()), "_");
-  env->bind(generalTyVar, ctxt->nullType);
-  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0(null)");
+  env->bind(generalTyVar, ctxt->voidType);
+  EXPECT_EQ(generalTyVar->getString(TypePrintOptions::forDebug()), "$T0(void)");
   TypePrintOptions tpo = TypePrintOptions::forDiagnostics();
-  EXPECT_EQ(generalTyVar->getString(tpo), "null");
+  EXPECT_EQ(generalTyVar->getString(tpo), "void");
   tpo.printBoundTypeVariablesAsBinding = false;
   EXPECT_EQ(generalTyVar->getString(tpo), "_");
 
