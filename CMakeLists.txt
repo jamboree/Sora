@@ -26,7 +26,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # add LLVM
 find_package(LLVM REQUIRED CONFIG)
+find_package(MLIR REQUIRED CONFIG)
+
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
 add_definitions(${LLVM_DEFINITIONS})
 
 # set _HAS_EXCEPTIONS to 0
@@ -52,6 +55,7 @@ include(TableGen)
 # add include paths 
 include_directories(include)                              # lib includes
 include_directories(${LLVM_INCLUDE_DIRS})                 # llvm includes 
+include_directories(${MLIR_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)  # tablegen'd stuff
 
 # Disable RTTI, exceptions and enable /Wall

@@ -47,7 +47,9 @@ void PrintingDiagnosticConsumer::handleSimpleDiagnostic(
     llvm::WithColor::error(out, "", !showColors);
     break;
   }
-  llvm::WithColor(out, raw_ostream::SAVEDCOLOR, true, false, !showColors)
+  llvm::WithColor(out, raw_ostream::SAVEDCOLOR, true, false,
+                  showColors ? llvm::ColorMode::Enable
+                             : llvm::ColorMode::Disable)
       << diagnostic.message << "\n";
 }
 
