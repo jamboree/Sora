@@ -58,8 +58,8 @@ class AnyAllocOp<string mnemonic, Resource resource, list<OpTrait> traits = []> 
     SIROp<mnemonic, !listconcat([MemoryEffects<[MemAlloc<resource>]>], traits)> {
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, ::sora::sir::PointerType type", 
-    [{ result.addTypes(type); }]
+    (ins "::sora::sir::PointerType":$type), 
+    [{ $_state.addTypes(type); }]
   >];
 
   
@@ -88,7 +88,7 @@ def BlockTerminatorOp : SIROp<"block_terminator",
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", [{ }]
+    (ins), [{ }]
   >];
 
   let printer = ?;
@@ -133,8 +133,8 @@ def BitNotOp : SIROp<"bitnot", [NoSideEffect]> {
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value value", 
-    [{ result.addOperands(value); result.addTypes(value.getType()); }]
+    (ins "Value":$value), 
+    [{ $_state.addOperands(value); $_state.addTypes(value.getType()); }]
   >];
 
   let arguments = (ins SignlessIntegerLike: $value);
@@ -175,8 +175,8 @@ def BlockOp : SIROp<"block",
   let parser = [{ return ::parseBlockOp(parser, result); }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", 
-      [{ ::buildBlockOp(builder, result); }]
+    (ins), 
+      [{ ::buildBlockOp($_builder, $_state); }]
   >];
 
   let extraClassDeclaration = [{
@@ -203,8 +203,8 @@ def CreateTupleOp : SIROp<"create_tuple", [NoSideEffect]> {
   let results = (outs AnyTuple);
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, ArrayRef<Value> elts", [{
-      return ::buildCreateTupleOp(builder, result, elts);
+    (ins "ArrayRef<Value>":$elts), [{
+      return ::buildCreateTupleOp($_builder, $_state, elts);
   }]>];
 
   let assemblyFormat = 
@@ -229,7 +229,7 @@ def DefaultReturnOp : SIROp<"default_return", [NoSideEffect,
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", [{ }]
+    (ins), [{ }]
   >];
 
   let extraClassDeclaration = [{
@@ -257,8 +257,8 @@ def DestructureTupleOp : SIROp<"destructure_tuple", [NoSideEffect]> {
   let results = (outs Variadic<AnyType>);
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value tuple", [{
-      return ::buildDestructureTupleOp(builder, result, tuple);
+    (ins "Value":$tuple), [{
+      return ::buildDestructureTupleOp($_builder, $_state, tuple);
   }]>];
 
   let hasFolder = 1;
@@ -290,10 +290,10 @@ def LoadOp : SIROp<"load", [
   let results = (outs AnyType: $result);
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value ptrValue", [{
+    (ins "Value":$ptrValue), [{
     auto ptrType = ptrValue.getType().cast<::sora::sir::PointerType>();
-    result.addTypes(ptrType.getPointeeType());
-    result.addOperands(ptrValue);
+    $_state.addTypes(ptrType.getPointeeType());
+    $_state.addOperands(ptrValue);
   }]>];
 
   let extraClassDeclaration = [{
@@ -324,8 +324,8 @@ def StaticCastOp : SIROp<"static_cast", [NoSideEffect]> {
   let results = (outs AnyType);
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value value, Type toType", 
-    [{ result.addOperands(value); result.addTypes(toType); }]
+    (ins "Value":$value, "Type":$toType), 
+    [{ $_state.addOperands(value); $_state.addTypes(toType); }]
   >];
 
   let assemblyFormat = 
@@ -354,9 +354,9 @@ def StoreOp : SIROp<"store", [
   );
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value value, Value pointer", [{
-      result.addOperands(value);
-      result.addOperands(pointer);
+    (ins "Value":$value, "Value":$pointer), [{
+      $_state.addOperands(value);
+      $_state.addOperands(pointer);
   }]>];
 
   let extraClassDeclaration = [{
@@ -392,8 +392,8 @@ def VoidConstantOp : SIROp<"void_constant", [NoSideEffect]> {
   }];
 
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result", 
-    [{ result.addTypes(::sora::sir::VoidType::get(result.getContext())); }]
+    (ins), 
+    [{ $_state.addTypes(::sora::sir::VoidType::get($_state.getContext())); }]
   >];
 
   let results = (outs VoidType);
