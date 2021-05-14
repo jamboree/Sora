@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def SIRDialect : Dialect {
   let name = "sir";
 
-  let cppNamespace = "::mlir::sir";
+  let cppNamespace = "::sora::sir";
 }
 
 class SIROp<string mnemonic, list<OpTrait> traits = []> :

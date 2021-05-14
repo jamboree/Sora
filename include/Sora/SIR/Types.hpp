@@ -17,30 +17,12 @@ namespace detail {
 struct SingleTypeStorage;
 } // namespace detail
 
-enum class SIRTypeKind {
-  First_Type = mlir::Type::FIRST_PRIVATE_EXPERIMENTAL_0_TYPE,
-
-  /// Sora Maybe Type. (maybe T)
-  Maybe,
-  /// Sora References. (&T and &mut T)
-  Reference,
-  /// A non-nullable pointer type.
-  Pointer,
-  /// Sora 'Void' type (canonical form of '()' as well)
-  Void,
-
-  Last_Type = Maybe
-};
-
 /// Common base for all Sora IR Types.
 class SIRType : public mlir::Type {
 public:
   using Type::Type;
 
-  static bool classof(Type type) {
-    return type.getKind() >= (unsigned)SIRTypeKind::First_Type &&
-           type.getKind() <= (unsigned)SIRTypeKind::Last_Type;
-  }
+  static bool classof(Type type);
 };
 
 /// Sora "maybe" types. Equivalent to a AST MaybeType.
@@ -50,10 +32,6 @@ class MaybeType : public mlir::Type::TypeBase<MaybeType, SIRType,
                                               detail::SingleTypeStorage> {
 public:
   using Base::Base;
-
-  static bool kindof(unsigned kind) {
-    return kind == (unsigned)SIRTypeKind::Maybe;
-  }
 
   static MaybeType get(mlir::Type valueType);
 
@@ -68,10 +46,6 @@ class ReferenceType : public mlir::Type::TypeBase<ReferenceType, SIRType,
                                                   detail::SingleTypeStorage> {
 public:
   using Base::Base;
-
-  static bool kindof(unsigned kind) {
-    return kind == (unsigned)SIRTypeKind::Reference;
-  }
 
   static ReferenceType get(mlir::Type pointeeType);
 
@@ -91,10 +65,6 @@ class PointerType : public mlir::Type::TypeBase<PointerType, SIRType,
 public:
   using Base::Base;
 
-  static bool kindof(unsigned kind) {
-    return kind == (unsigned)SIRTypeKind::Pointer;
-  }
-
   static PointerType get(mlir::Type objectType);
 
   mlir::Type getPointeeType() const;
@@ -103,17 +73,18 @@ public:
 /// Sora 'void' type. Equivalent to the AST VoidType;
 ///
 /// This type is written "!sir.void"
-class VoidType : public mlir::Type::TypeBase<VoidType, SIRType> {
+class VoidType
+    : public mlir::Type::TypeBase<VoidType, SIRType, mlir::TypeStorage> {
 public:
   using Base::Base;
 
-  static bool kindof(unsigned kind) {
-    return kind == (unsigned)SIRTypeKind::Void;
-  }
-
-  static VoidType get(mlir::MLIRContext *ctxt) {
-    return Base::get(ctxt, (unsigned)SIRTypeKind::Void);
-  }
+  // static VoidType get(mlir::MLIRContext *ctxt) {
+  //  return Base::get(ctxt, (unsigned)SIRTypeKind::Void);
+  //}
 };
+
+inline bool SIRType::classof(Type type) {
+  return type.isa<MaybeType, ReferenceType, PointerType, VoidType>();
+}
 } // namespace sir
 } // namespace sora

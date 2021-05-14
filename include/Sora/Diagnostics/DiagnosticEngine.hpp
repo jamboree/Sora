@@ -132,12 +132,7 @@ public:
   template <typename... Args>
   InFlightDiagnostic
   diagnose(SourceLoc loc, const TypedDiag<Args...> &diag,
-           typename detail::PassArgument<Args>::type... args) {
-    assert(!activeDiagnostic.hasValue() &&
-           "A diagnostic is already in-flight!");
-    activeDiagnostic.emplace(diag, loc, std::move(args)...);
-    return InFlightDiagnostic(this);
-  }
+           typename detail::PassArgument<Args>::type... args);
 
   /// \returns a observing pointer to the current diagnostic consumer
   DiagnosticConsumer *getConsumer() { return consumer.get(); }
@@ -314,4 +309,12 @@ public:
   InFlightDiagnostic &fixitRemove(SourceRange range);
 };
 
+template <typename... Args>
+InFlightDiagnostic
+DiagnosticEngine::diagnose(SourceLoc loc, const TypedDiag<Args...> &diag,
+                           typename detail::PassArgument<Args>::type... args) {
+  assert(!activeDiagnostic.hasValue() && "A diagnostic is already in-flight!");
+  activeDiagnostic.emplace(diag, loc, std::move(args)...);
+  return InFlightDiagnostic(this);
+}
 } // namespace sora

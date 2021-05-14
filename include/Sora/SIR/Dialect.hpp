@@ -13,18 +13,18 @@
 //#include "mlir/IR/Function.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-namespace sir {
-
+namespace sora::sir {
+using mlir::Value;
+using mlir::Block;
 class SIRDialect : public mlir::Dialect {
 public:
   explicit SIRDialect(mlir::MLIRContext *mlirCtxt);
 
-  void printType(Type type, DialectAsmPrinter &os) const override;
-  Type parseType(DialectAsmParser &parser) const override;
+  void printType(mlir::Type type, mlir::DialectAsmPrinter &os) const override;
+  mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
 
   static llvm::StringRef getDialectNamespace() { return "sir"; }
 };
@@ -33,11 +33,9 @@ public:
 // Operations.
 #define GET_OP_CLASSES
 #include "Sora/SIR/Ops.h.inc"
-} // namespace sir
-} // namespace mlir
+} // namespace sora::sir
 
-namespace sora {
-namespace sir {
+namespace mlir {
 /// This is a small hack to have the Sora IR reside in the sora::sir namespace.
 ///
 /// Why? The MLIR TableGen backend doesn't fully qualify names, so the dialect
@@ -45,6 +43,5 @@ namespace sir {
 /// sora::sir namespace.
 ///
 /// TL;DR: Always use sora::sir to access SIR stuff.
-using namespace ::mlir::sir;
-} // namespace sir
-} // namespace sora
+namespace sir = sora::sir;
+} // namespace mlir
