@@ -53,13 +53,6 @@ void performSema(SourceFile &sf);
 
 //===- SIRGen - Sora IR Generation Library ---------------------------------===//
 
-/// Adds the MLIR Dialects necessary for SIRGen to MLIR's Dialect Registry.
-/// Currently, this adds the SIR, and MLIR's StandardOps dialects.
-///
-/// This function must be called once before attempting any SIR Generation
-/// operation. This should only be called once.
-void registerMLIRDialects();
-
 /// Creates a MLIR Module for \p sf using \p mlirCtxt
 mlir::ModuleOp createMLIRModule(mlir::MLIRContext &mlirCtxt, SourceFile &sf);
 

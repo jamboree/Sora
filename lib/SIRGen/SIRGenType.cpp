@@ -9,9 +9,7 @@
 
 #include "Sora/AST/TypeVisitor.hpp"
 #include "Sora/AST/Types.hpp"
-#include "Sora/SIR/Types.hpp"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
 
 using namespace sora;
 
@@ -34,8 +32,8 @@ public:
     assert(!integerWidth.isArbitraryPrecision() &&
            "arbitrary-precision integer are not supported in SIRGen");
     unsigned width = integerWidth.getWidth();
-    return mlir::IntegerType::get(width, mlir::IntegerType::Signless,
-                                  &mlirCtxt);
+    return mlir::IntegerType::get(&mlirCtxt, width,
+                                  mlir::IntegerType::Signless);
   }
 
   mlir::Type visitFloatType(FloatType *type) {
@@ -54,7 +52,7 @@ public:
   }
 
   mlir::Type visitBoolType(BoolType *type) {
-    return mlir::IntegerType::get(1, &mlirCtxt);
+    return mlir::IntegerType::get(&mlirCtxt, 1);
   }
 
   mlir::Type visitReferenceType(ReferenceType *type) {
@@ -72,7 +70,7 @@ public:
     elts.reserve(type->getNumElements());
     for (Type elt : type->getElements())
       elts.push_back(visit(elt));
-    return mlir::TupleType::get(elts, &mlirCtxt);
+    return mlir::TupleType::get(&mlirCtxt, elts);
   }
 
   mlir::Type visitFunctionType(FunctionType *type) {
@@ -85,8 +83,8 @@ public:
     // and leave the result set empty.
     Type returnType = type->getReturnType();
     if (sirGen.isVoidOrVoidLikeType(returnType->getCanonicalType()))
-      return mlir::FunctionType::get(args, {}, &mlirCtxt);
-    return mlir::FunctionType::get(args, visit(returnType), &mlirCtxt);
+      return mlir::FunctionType::get(&mlirCtxt, args, {});
+    return mlir::FunctionType::get(&mlirCtxt, args, visit(returnType));
   }
 
   mlir::Type visitLValueType(LValueType *type) {

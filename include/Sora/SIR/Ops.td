@@ -234,7 +234,7 @@ def DefaultReturnOp : SIROp<"default_return", [NoSideEffect,
 
   let extraClassDeclaration = [{
     FuncOp getFuncOp() {
-      return getParentOfType<FuncOp>();
+      return getOperation()->getParentOfType<FuncOp>();
     }
   }];
 

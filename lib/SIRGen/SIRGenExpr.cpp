@@ -178,7 +178,7 @@ mlir::Value ExprGenerator::visitDeclRefExpr(DeclRefExpr *expr) {
     mlir::FuncOp funcOp = sirGen.getFuncOp(func);
     return builder.create<mlir::ConstantOp>(
         getNodeLoc(expr), funcOp.getType(),
-        mlir::SymbolRefAttr::get(funcOp.getName(), &mlirCtxt));
+        mlir::SymbolRefAttr::get(&mlirCtxt, funcOp.getName()));
   }
 
   llvm_unreachable("Unknown ValueDecl kind!");

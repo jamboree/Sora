@@ -16,7 +16,6 @@
 #include "Sora/EntryPoints.hpp"
 #include "Sora/SIR/Dialect.hpp"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -31,9 +30,7 @@ using namespace llvm::opt;
 Driver::Driver(DiagnosticEngine &diagEngine, StringRef driverName,
                StringRef driverDesc)
     : diagEngine(diagEngine), name(driverName), description(driverDesc),
-      optTable(createSoraOptTable()) {
-  registerMLIRDialects();
-}
+      optTable(createSoraOptTable()) {}
 
 std::unique_ptr<llvm::opt::InputArgList>
 Driver::parseArgs(ArrayRef<const char *> args) {
@@ -309,6 +306,7 @@ bool CompilerInstance::run() {
 
   // Perform SIRGen
   mlir::MLIRContext mlirCtxt;
+  mlirCtxt.getOrLoadDialect<sir::SIRDialect>();
   mlir::ModuleOp mlirModule = createMLIRModule(mlirCtxt, sf);
   success = doSIRGen(mlirCtxt, mlirModule, sf);
   if (isDone(Step::SIRGen)) {

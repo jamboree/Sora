@@ -8,32 +8,129 @@
 #include "Sora/SIR/Dialect.hpp"
 
 #include "Sora/Common/LLVM.hpp"
-#include "Sora/SIR/Types.hpp"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace sora;
 using namespace sora::sir;
+
+//===- Type Storage -------------------------------------------------------===//
+
+namespace sora::sir::detail {
+/// Common storage class for types that only contain another type.
+struct SingleTypeStorage : public mlir::TypeStorage {
+  SingleTypeStorage(mlir::Type type) : type(type) {}
+
+  using KeyTy = mlir::Type;
+  bool operator==(const KeyTy &key) const { return key == type; }
+
+  static SingleTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                      mlir::Type type) {
+    return new (allocator.allocate<SingleTypeStorage>())
+        SingleTypeStorage(type);
+  }
+
+  mlir::Type type;
+};
+} // namespace sora::sir::detail
+
+//===- Type Printing ------------------------------------------------------===//
+
+static void print(MaybeType type, mlir::DialectAsmPrinter &os) {
+  os << "maybe<" << type.getValueType() << ">";
+}
+
+static void print(ReferenceType type, mlir::DialectAsmPrinter &os) {
+  os << "reference<" << type.getPointeeType() << ">";
+}
+
+static void print(PointerType type, mlir::DialectAsmPrinter &os) {
+  os << "pointer<" << type.getPointeeType() << ">";
+}
+
+static void print(VoidType type, mlir::DialectAsmPrinter &os) { os << "void"; }
+
+void SIRDialect::printType(mlir::Type type, mlir::DialectAsmPrinter &os) const {
+  llvm::TypeSwitch<mlir::Type>(type)
+      .Case<MaybeType, ReferenceType, PointerType, VoidType>(
+          [&os](auto t) { print(t, os); });
+}
+
+//===- Type Parsing -------------------------------------------------------===//
+
+mlir::Type SIRDialect::parseType(mlir::DialectAsmParser &parser) const {
+  StringRef keyword;
+  if (parser.parseKeyword(&keyword))
+    return Type();
+
+  // Parses '<' type '>'
+  auto parseTypeArgument = [&] {
+    mlir::Type result;
+    if (parser.parseLess() || parser.parseType(result) || parser.parseGreater())
+      return mlir::Type();
+    return result;
+  };
+
+  // sora-type = 'maybe' '<' type '>'
+  //           | 'reference' '<' type '>'
+  //           | 'pointer' '<' type '>'
+  //           | 'void'
+  if (keyword == "maybe")
+    return MaybeType::get(parseTypeArgument());
+  if (keyword == "reference")
+    return ReferenceType::get(parseTypeArgument());
+  if (keyword == "pointer")
+    return PointerType::get(parseTypeArgument());
+  if (keyword == "void")
+    return VoidType::get(getContext());
+
+  parser.emitError(parser.getNameLoc(), "unknown Sora type: ") << keyword;
+  return Type();
+}
+
+//===- MaybeType ----------------------------------------------------------===//
+
+MaybeType MaybeType::get(mlir::Type valueType) {
+  assert(valueType && "value type cannot be null!");
+  return Base::get(valueType.getContext(), valueType);
+}
+
+mlir::Type MaybeType::getValueType() const { return getImpl()->type; }
+
+//===- ReferenceType ------------------------------------------------------===//
+
+ReferenceType ReferenceType::get(mlir::Type pointeeType) {
+  assert(pointeeType && "pointee type cannot be null!");
+  return Base::get(pointeeType.getContext(), pointeeType);
+}
+
+mlir::Type ReferenceType::getPointeeType() const { return getImpl()->type; }
+
+//===- PointerType --------------------------------------------------------===//
+
+PointerType PointerType::get(mlir::Type objectType) {
+  assert(objectType && "object type cannot be null!");
+  return Base::get(objectType.getContext(), objectType);
+}
+
+mlir::Type PointerType::getPointeeType() const { return getImpl()->type; }
 
 //===----------------------------------------------------------------------===//
 // Dialect
 //===----------------------------------------------------------------------===//
 
-SIRDialect::SIRDialect(mlir::MLIRContext *mlirCtxt)
-    : mlir::Dialect("sir", mlirCtxt) {
+void SIRDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "Sora/SIR/Ops.cpp.inc"
       >();
 
-  addTypes<MaybeType>();
-  addTypes<ReferenceType>();
-  addTypes<PointerType>();
-  addTypes<VoidType>();
+  addTypes<MaybeType, ReferenceType, PointerType, VoidType>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -125,7 +222,7 @@ static void buildCreateTupleOp(mlir::OpBuilder &builder,
   for (const mlir::Value &elt : elts)
     types.push_back(elt.getType());
 
-  mlir::TupleType tupleType = mlir::TupleType::get(types, builder.getContext());
+  mlir::TupleType tupleType = mlir::TupleType::get(builder.getContext(), types);
 
   result.addOperands(elts);
   result.addTypes(tupleType);
@@ -174,7 +271,7 @@ static mlir::LogicalResult verify(DestructureTupleOp op) {
   if (!tupleType)
     return op.emitOpError("operand type should be a tuple type");
 
-  ArrayRef<mlir::Type> results = op.getResultTypes();
+  auto results = op.getResultTypes();
   ArrayRef<mlir::Type> tupleElts = tupleType.getTypes();
 
   if (results.size() != tupleElts.size())

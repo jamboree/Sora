@@ -14,7 +14,6 @@
 #include "Sora/SIR/Dialect.hpp"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/DenseMap.h"
@@ -158,7 +157,6 @@ public:
   ASTContext &astCtxt;
   const SourceManager &srcMgr;
   mlir::MLIRContext &mlirCtxt;
-  sir::SIRDialect &sirDialect;
 };
 
 /// A small common base class for SIR Generators of different AST hierarchies

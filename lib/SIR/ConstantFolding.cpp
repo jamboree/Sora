@@ -18,7 +18,7 @@ using namespace sora::sir;
 
 //===- BitNotOp -----------------------------------------------------------===//
 
-mlir::OpFoldResult BitNotOp::fold(ArrayRef<Attribute> operands) {
+mlir::OpFoldResult BitNotOp::fold(ArrayRef<mlir::Attribute> operands) {
   mlir::Operation *op = getOperand().getDefiningOp();
 
   // If the operand is a constant, we can just invert the constant's bits.
